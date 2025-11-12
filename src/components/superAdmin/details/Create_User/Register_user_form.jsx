@@ -1,3 +1,4 @@
+// src/components/superAdmin/RegisterUserForm.jsx
 "use client"
 
 import { useState } from "react"
@@ -8,10 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Form } from "@/components/ui/form"
 import { Loader2 } from "lucide-react"
 import { NotificationModal } from "../../common/notificationModal"
-import config from "@/config"
 import { PersonalInfoSection } from "./Personal_info_section"
 import { RestaurantInfoSection } from "./Restaurant-info-section"
 import { RoleSection } from "./Role_section"
+import { useRegisterUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
 
 // Updated schema with all roles
 const registerSchema = z.object({
@@ -36,7 +37,7 @@ const registerSchema = z.object({
 })
 
 export function RegisterUserForm() {
-  const [loading, setLoading] = useState(false)
+  const [register, { isLoading }] = useRegisterUserMutation();
   const [notification, setNotification] = useState({ show: false, message: "", type: "" })
 
   const form = useForm({
@@ -62,27 +63,8 @@ export function RegisterUserForm() {
   }
 
   const onSubmit = async (values) => {
-    setLoading(true)
     try {
-      const response = await fetch(`${config.BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Handle duplicate domain error
-        if (data.message && data.message.includes('domain')) {
-          form.setError('domain', {
-            type: 'manual',
-            message: 'Domain already exists. Please choose a different one.'
-          })
-          throw new Error(data.message)
-        }
-        throw new Error(data.message || 'Registration failed')
-      }
+      const data = await register(values).unwrap();
 
       // Show appropriate success message based on role
       let successMessage = "";
@@ -106,9 +88,14 @@ export function RegisterUserForm() {
       showNotification(successMessage, "success")
       form.reset()
     } catch (error) {
-      showNotification(error.message, "error")
-    } finally {
-      setLoading(false)
+      // Handle duplicate domain error
+      if (error.data?.message && error.data.message.includes('domain')) {
+        form.setError('domain', {
+          type: 'manual',
+          message: 'Domain already exists. Please choose a different one.'
+        })
+      }
+      showNotification(error.data?.message || 'Registration failed', "error")
     }
   }
 
@@ -136,10 +123,10 @@ export function RegisterUserForm() {
               <Button 
                 type="submit" 
                 className="w-auto min-w-[200px]" 
-                disabled={loading} 
+                disabled={isLoading} 
                 size="lg"
               >
-                {loading ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating {selectedRole || "User"}...

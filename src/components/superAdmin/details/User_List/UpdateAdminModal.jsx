@@ -1,3 +1,4 @@
+// src/components/superAdmin/UpdateAdminModal.jsx
 "use client"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -5,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, User, Mail, Globe, Building, Calendar, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react"
-import config from "@/config"
+import { useUpdateUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
 
-export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
-  const [loading, setLoading] = useState(false)
+export default function UpdateAdminModal({ open, admin, onClose }) {
+  const [updateUser, { isLoading }] = useUpdateUserMutation();
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [formData, setFormData] = useState({
@@ -45,9 +46,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
       return
     }
 
-    setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const payload = { 
         name: formData.name, 
         email: formData.email, 
@@ -61,30 +60,16 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
       // Add subscription date if provided
       if (formData.subscriptionDate) payload.subscriptionDate = formData.subscriptionDate
 
-      const response = await fetch(`${config.BASE_URL}/api/auth/${admin._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) throw new Error(result.message || 'Update failed')
+      await updateUser({ userId: admin._id, ...payload }).unwrap();
 
       showMessage('Admin updated successfully!')
-      onUpdate(admin._id, payload)
       setTimeout(() => {
         onClose()
         setFormData({ name: "", email: "", domain: "", restaurantName: "", password: "", subscriptionDate: "" })
       }, 1000)
 
     } catch (error) {
-      showMessage(error.message || 'Failed to update admin', 'error')
-    } finally {
-      setLoading(false)
+      showMessage(error.data?.message || 'Failed to update admin', 'error')
     }
   }
 
@@ -126,7 +111,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
             <Label htmlFor="name">Full Name</Label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="name" value={formData.name} onChange={(e) => handleChange("name", e.target.value)} className="pl-10" required disabled={loading} />
+              <Input id="name" value={formData.name} onChange={(e) => handleChange("name", e.target.value)} className="pl-10" required disabled={isLoading} />
             </div>
           </div>
 
@@ -134,7 +119,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
             <Label htmlFor="email">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="email" type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} className="pl-10" required disabled={loading} />
+              <Input id="email" type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} className="pl-10" required disabled={isLoading} />
             </div>
           </div>
 
@@ -142,7 +127,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
             <Label htmlFor="domain">Domain</Label>
             <div className="relative">
               <Globe className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="domain" value={formData.domain} onChange={(e) => handleChange("domain", e.target.value)} className="pl-10" required disabled={loading} />
+              <Input id="domain" value={formData.domain} onChange={(e) => handleChange("domain", e.target.value)} className="pl-10" required disabled={isLoading} />
             </div>
           </div>
 
@@ -150,7 +135,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
             <Label htmlFor="restaurantName">Restaurant Name</Label>
             <div className="relative">
               <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="restaurantName" value={formData.restaurantName} onChange={(e) => handleChange("restaurantName", e.target.value)} className="pl-10" required disabled={loading} />
+              <Input id="restaurantName" value={formData.restaurantName} onChange={(e) => handleChange("restaurantName", e.target.value)} className="pl-10" required disabled={isLoading} />
             </div>
           </div>
 
@@ -164,7 +149,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
                 value={formData.subscriptionDate} 
                 onChange={(e) => handleChange("subscriptionDate", e.target.value)} 
                 className="pl-10" 
-                disabled={loading} 
+                disabled={isLoading} 
               />
             </div>
           </div>
@@ -178,7 +163,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
                 value={formData.password} 
                 onChange={(e) => handleChange("password", e.target.value)} 
                 placeholder="Leave blank to keep current password" 
-                disabled={loading} 
+                disabled={isLoading} 
                 className="pr-10"
               />
               <Button
@@ -187,7 +172,7 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={togglePasswordVisibility}
-                disabled={loading}
+                disabled={isLoading}
               >
                 {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
               </Button>
@@ -195,9 +180,9 @@ export default function UpdateAdminModal({ open, admin, onClose, onUpdate }) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose} className="flex-1" disabled={loading}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Updating...</> : "Update Admin"}
+            <Button type="button" variant="outline" onClick={handleClose} className="flex-1" disabled={isLoading}>Cancel</Button>
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Updating...</> : "Update Admin"}
             </Button>
           </div>
         </form>

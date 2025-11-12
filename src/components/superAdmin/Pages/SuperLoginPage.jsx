@@ -1,4 +1,4 @@
-// components/superAdmin/Pages/SuperLoginPage.jsx
+// src/components/superAdmin/Pages/SuperLoginPage.jsx
 "use client"
 import React, { useState } from 'react'
 import { Mail, Lock, Loader2 } from 'lucide-react'
@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
 import { NotificationModal } from '../common/notificationModal'
-import config from '@/config'
+import { useRegisterMutation } from '@/redux/superAdminRedux/superAdminAPI' // ✅ Fixed import
 
 const SuperLoginPage = () => {
-  const [loading, setLoading] = useState(false)
+  const [login, { isLoading }] = useRegisterMutation(); // ✅ Fixed hook name
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [notification, setNotification] = useState({ show: false, message: "", type: "" })
   const navigate = useNavigate()
@@ -31,32 +31,11 @@ const SuperLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
 
     try {
-      const response = await fetch(`${config.BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
+      const data = await login(formData).unwrap();
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed')
-      }
-
-      // Check if user is superadmin
-      if (data.user.role !== 'superadmin') {
-        throw new Error('Access denied. Superadmin privileges required.')
-      }
-
-      // Save token to localStorage
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-
+      // The role check is now handled in transformResponse, so we don't need to check here
       showNotification('Login successful! Redirecting...')
       
       // Redirect to super admin dashboard
@@ -65,9 +44,7 @@ const SuperLoginPage = () => {
       }, 1000)
 
     } catch (error) {
-      showNotification(error.message, "error")
-    } finally {
-      setLoading(false)
+      showNotification(error.data?.message || error.message || 'Login failed', "error")
     }
   }
 
@@ -134,10 +111,10 @@ const SuperLoginPage = () => {
                   {/* Login Button */}
                   <Button 
                     type="submit" 
-                    disabled={loading}
+                    disabled={isLoading}
                     className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-lg"
                   >
-                    {loading ? (
+                    {isLoading ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />
                         Signing In...
