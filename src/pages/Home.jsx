@@ -2,22 +2,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMenu } from "../hooks/useMenu";
-import { useRestaurant } from "../hooks/useRestaurant";
+import { useGetRestaurantQuery, useGetMenuQuery } from "../redux/clientRedux/clientAPI";
 import Header from "@/components/Client/Header";
-import Filter from "@/components/Client/Filter";
 import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
-import Copywright from "@/components/Client/Copywright";
 import loader from "@/assets/loader.gif";
+import Filter from "@/components/Client/Filter";
+import RestaurantClosed from "@/components/Client/RestaurantClosed";
 
 export default function Home() {
-  const { data: menuData, loading: menuLoading, error: menuError } = useMenu();
+  const { data: menuData, isLoading: menuLoading, error: menuError } = useGetMenuQuery();
   const {
     data: restaurantData,
-    loading: restaurantLoading,
+    isLoading: restaurantLoading,
     error: restaurantError,
-  } = useRestaurant();
+  } = useGetRestaurantQuery();
   
 
   const [showLoader, setShowLoader] = useState(true);
@@ -49,14 +48,28 @@ export default function Home() {
       </div>
     );
 
-  if (error) return <p>Error: {error}</p>;
-
-  const restaurant = restaurantData || {};
+  const restaurant = restaurantData?.restaurant || restaurantData || {};
   const menu = Array.isArray(menuData)
     ? menuData
     : Array.isArray(menuData?.menu)
     ? menuData.menu
     : [];
+  const isRestaurantOpen =
+    restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
+
+  if (error) {
+    return <p>Error: {error?.data?.message || error?.message || "An error occurred"}</p>;
+  }
+
+  if (!isRestaurantOpen) {
+    return (
+      <RestaurantClosed
+        logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
+        siteName={restaurant?.restaurantName || restaurantData?.restaurant?.restaurantName}
+        reopenAt={restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt}
+      />
+    );
+  }
 
   // Apply filters (search + veg/non-veg + category)
   const filteredMenu = menu.filter((item) => {
@@ -84,8 +97,8 @@ export default function Home() {
     <>
       <div className="sticky top-0 bg-white z-20 border-b shadow-sm ">
         <Header
-          logo={restaurantData.restaurant?.logo?.url}
-          siteName={restaurantData.restaurant?.restaurantName}
+          logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
+          siteName={restaurant?.restaurantName || restaurantData?.restaurant?.restaurantName}
           search={search}
           onSearch={setSearch}
         />

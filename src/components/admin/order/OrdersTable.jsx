@@ -130,49 +130,56 @@ const OrdersTable = ({
                   <span className="font-medium">Table:</span>{" "}
                   {order.tableId || "N/A"}
                 </p>
+                <button
+                  onClick={() => setOrderForBillModal(order)}
+                  className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition font-medium"
+                >
+                  View Items
+                </button>
+                {tableType === "pending" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>
+                      <div className="flex-1">
+                        <select
+                          value={order.status}
+                          onChange={(e) =>
+                            updateOrder(order._id, {
+                              tableId: order.tableId,
+                              items: order.items,
+                              totalAmount: order.totalAmount,
+                              status: e.target.value,
+                            })
+                          }
+                          className="px-3 py-1 rounded-full text-xs font-medium border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="pending">⏳ Pending</option>
+                          <option value="completed">🏁 Completed</option>
+                          <option value="cancelled">❌ Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Status:</span>
-                  <div className="flex-1">
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        updateOrder(order._id, {
-                          tableId: order.tableId,
-                          items: order.items,
-                          totalAmount: order.totalAmount,
-                          status: e.target.value,
-                        })
-                      }
-                      className="px-3 py-1 rounded-full text-xs font-medium border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="pending">⏳ Pending</option>
-                      <option value="completed">🏁 Completed</option>
-                      <option value="cancelled">❌ Cancelled</option>
-                    </select>
-                  </div>
-                </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <button
-                    onClick={() => setOrderForBillModal(order)}
-                    className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition font-medium"
-                  >
-                    View Items
-                  </button>
-                  <button
-                    onClick={() => setEditingOrder(order)}
-                    className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition font-medium"
-                  >
-                    <MdModeEdit />
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmDelete(order)}
-                    className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition font-medium"
-                  >
-                    <MdDelete />
-                  </button>
-                </div>
+
+                      <button
+                        onClick={() => setEditingOrder(order)}
+                        className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition font-medium"
+                      >
+                        <MdModeEdit />
+                      </button>
+                      <button
+                        onClick={() => setShowConfirmDelete(order)}
+                        className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition font-medium"
+                      >
+                        <MdDelete />
+                      </button>
+                    </div>
+                  </>
+
+                )}
+
               </div>
             ))}
           </div>

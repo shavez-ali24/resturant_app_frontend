@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -33,6 +33,53 @@ export default function OrderFormModal({
   resetForm
 }) {
   const [selectedOrderType, setSelectedOrderType] = useState(orderType);
+  const orderModes = restaurantData?.restaurant?.orderModes;
+
+  const orderTypeOptions = useMemo(() => {
+    const baseOptions = [
+      {
+        value: "Eat Here",
+        label: "Eat Here",
+        description: "Dine in at our restaurant",
+        icon: Utensils,
+        color: "bg-green-500",
+        modeKey: "eathere",
+      },
+      {
+        value: "Take Away",
+        label: "Take Away",
+        description: "Pick up your order",
+        icon: Home,
+        color: "bg-blue-500",
+        modeKey: "takeaway",
+      },
+      {
+        value: "Delivery",
+        label: "Delivery",
+        description: "Get it delivered to you",
+        icon: Truck,
+        color: "bg-orange-500",
+        modeKey: "delivery",
+      },
+    ];
+
+    if (!orderModes || typeof orderModes !== "object") {
+      return baseOptions;
+    }
+
+    return baseOptions.filter((option) => Boolean(orderModes?.[option.modeKey]));
+  }, [orderModes]);
+
+  useEffect(() => {
+    setSelectedOrderType(orderType);
+  }, [orderType]);
+
+  useEffect(() => {
+    if (orderType && !orderTypeOptions.some((option) => option.value === orderType)) {
+      setOrderType("");
+      setSelectedOrderType("");
+    }
+  }, [orderType, orderTypeOptions, setOrderType]);
 
   const handleOrderTypeSelect = (type) => {
     setOrderType(type);
@@ -85,30 +132,6 @@ export default function OrderFormModal({
     }
   };
 
-  const orderTypeOptions = [
-    {
-      value: "Eat Here",
-      label: "Eat Here",
-      description: "Dine in at our restaurant",
-      icon: Utensils,
-      color: "bg-green-500"
-    },
-    {
-      value: "Take Away",
-      label: "Take Away",
-      description: "Pick up your order",
-      icon: Home,
-      color: "bg-blue-500"
-    },
-    {
-      value: "Delivery",
-      label: "Delivery",
-      description: "Get it delivered to you",
-      icon: Truck,
-      color: "bg-orange-500"
-    }
-  ];
-
   if (!showModal) return null;
 
   return (
@@ -152,31 +175,39 @@ export default function OrderFormModal({
           {!orderType ? (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800">Choose Order Type</h3>
-              {orderTypeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleOrderTypeSelect(option.value)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
-                    selectedOrderType === option.value
-                      ? "border-primary bg-primary bg-opacity-5 shadow-lg"
-                      : "border-gray-200 bg-white hover:border-gray-300 shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`${option.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
-                      <option.icon className="w-6 h-6 text-white" />
+              {orderTypeOptions.length > 0 ? (
+                orderTypeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleOrderTypeSelect(option.value)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+                      selectedOrderType === option.value
+                        ? "border-primary bg-primary bg-opacity-5 shadow-lg"
+                        : "border-gray-200 bg-white hover:border-gray-300 shadow-md"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`${option.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
+                        <option.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <div className="font-semibold text-gray-800">{option.label}</div>
+                        <div className="text-sm text-gray-600">{option.description}</div>
+                      </div>
+                      <div
+                        className={`w-3 h-3 rounded-full border-2 ${
+                          selectedOrderType === option.value ? "bg-primary border-primary" : "border-gray-300"
+                        }`}
+                      />
                     </div>
-                    <div className="text-left flex-1">
-                      <div className="font-semibold text-gray-800">{option.label}</div>
-                      <div className="text-sm text-gray-600">{option.description}</div>
-                    </div>
-                    <div className={`w-3 h-3 rounded-full border-2 ${
-                      selectedOrderType === option.value ? "bg-primary border-primary" : "border-gray-300"
-                    }`} />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4">
+                  Ordering is currently unavailable. Please check back soon.
+                </p>
+              )}
             </div>
           ) : (
             <>

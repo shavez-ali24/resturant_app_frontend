@@ -8,7 +8,8 @@ import {
   removeFromCart,
   incrementQuantity,
   clearCart,
-} from "../../features/cartSlice";
+} from "../../redux/clientRedux/clientSlice";
+import { useGetRestaurantQuery, useCreateOrderMutation } from "../../redux/clientRedux/clientAPI";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import OrderComplete from "@/components/Client/OrderComplete";
@@ -19,8 +20,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Copywright from "@/components/Client/Copywright";
-import { useRestaurant } from "../../hooks/useRestaurant";
-import config from "../../config";
 import OrderFormModal from "./OrderFormModal";
 
 export default function Header({
@@ -32,9 +31,9 @@ export default function Header({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { data: restaurantData } = useRestaurant();
+  const { data: restaurantData } = useGetRestaurantQuery();
+  const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
 
   const [customerName, setCustomerName] = useState("");
@@ -45,7 +44,7 @@ export default function Header({
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
   const dispatch = useDispatch();
-  const cartItems = useSelector((state) => state.cart.items);
+  const cartItems = useSelector((state) => state.client.cart.items || {});
 
   const cartCount = Object.values(cartItems).reduce(
     (acc, item) => acc + item.quantity,
@@ -150,7 +149,7 @@ export default function Header({
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
               </svg>
-              <span class="text-sm font-medium">Ready in 10-15 minutes</span>
+              <span class="text-sm font-medium">Your order is on its way.</span>
             </div>
           </div>
           
@@ -281,13 +280,13 @@ export default function Header({
         return;
       }
 
-      setLoading(true);
-
       const orderItems = Object.values(cartItems).map((item) => ({
         menuItemId: item._id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
+        ...(item.variantKey && { variant: item.variantKey }),
+        ...(item.variantLabel && { variantLabel: item.variantLabel }),
       }));
 
       const orderData = {
@@ -305,17 +304,10 @@ export default function Header({
         orderData.address = address.trim();
       }
 
-      const response = await fetch(`${config.BASE_URL}/api/order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) throw new Error("Failed to place order");
-
-      const data = await response.json();
+      const response = await createOrder(orderData).unwrap();
+      
       const completeOrderData = {
-        id: data?.orderId || `ORD${Date.now()}`,
+        id: response?.orderId || `ORD${Date.now()}`,
         ...orderData,
         createdAt: Date.now(),
       };
@@ -343,9 +335,8 @@ export default function Header({
       }, 300);
     } catch (error) {
       console.error("Error placing order:", error);
-      showErrorMessage("Failed to place order. Please try again.");
-    } finally {
-      setLoading(false);
+      const errorMessage = error?.data?.message || error?.message || "Failed to place order. Please try again.";
+      showErrorMessage(errorMessage);
     }
   };
 
@@ -393,6 +384,11 @@ export default function Header({
                               <p className="font-medium text-gray-800 text-[14px] leading-tight">
                                 {item.name}
                               </p>
+                              {item.variantLabel && (
+                                <span className="text-xs text-gray-500">
+                                  {item.variantLabel}
+                                </span>
+                              )}
                               <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                                 {/* Quantity Controls */}
                                 <button
@@ -414,7 +410,7 @@ export default function Header({
                                 </button>
 
                                 <span className="ml-2 text-gray-600">
-                                  × ₹{item.price.toFixed(2)}
+                                  × ₹{item.price}
                                 </span>
                               </div>
                             </div>
@@ -667,7 +663,13 @@ export default function Header({
                             className="flex justify-between text-sm"
                           >
                             <span className="text-gray-700">
-                              {item.name} × {item.quantity}
+                              {item.name}
+                              {item.variantLabel && (
+                                <span className="ml-1 text-xs text-gray-500">
+                                  ({item.variantLabel})
+                                </span>
+                              )}{" "}
+                              × {item.quantity}
                             </span>
                             <span className="font-medium text-gray-800">
                               ₹{(item.price * item.quantity).toFixed(2)}
@@ -714,9 +716,9 @@ export default function Header({
           setAddress={setAddress}
           useCurrentLocation={useCurrentLocation}
           setUseCurrentLocation={setUseCurrentLocation}
-          loading={loading}
+          loading={isOrderLoading}
           handleOrderSubmit={handleOrderSubmit}
-          restaurantData={restaurantData}
+          restaurantData={restaurantData?.restaurant ? restaurantData : { restaurant: restaurantData }}
           logo={logo}
           resetForm={resetForm}
         />

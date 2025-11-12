@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -9,7 +10,7 @@ import Admin from "./pages/Admin";
 import AdminLayout from "./layouts/AdminLayout";
 import Menu from "./components/admin/Menu/Menu.jsx";
 import { Provider } from "react-redux";
-import { store } from "./store";
+import { store } from "./redux/store";
 import OrdersList from "./components/admin/order/OrdersList.jsx";
 import Filter from "./components/Client/Filter";
 import LoginPage from "./components/admin/LoginPage";
@@ -59,6 +60,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route index element={<Admin />} />
           <Route path="menu" element={<Menu />} />
           
+          {/* <Route path="orderlist" element={<OrdersList />} /> */}
           <Route path="completedorder" element={<CompletedOrders />} />
           <Route path="orders" element={<Orders />} />
           <Route path="cancelledorder" element={<CancelledOrders />} />

@@ -1,13 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useCallback } from "react";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import OrdersTable from "./OrdersTable";
 import EditOrderModal from "./EditOrderModal";
 import DeleteModal from "./DeleteModal";
-import ItemsModal from "./ItemsModal"; // This is the Bill Modal
+import ItemsModal from "./ItemsModal";
 import config from "../../../config";
-import { SlRefresh } from "react-icons/sl"; // ✅ 1. ADDED IMPORT
+import { SlRefresh } from "react-icons/sl";
+import Heading from "../ui/Heading";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -15,7 +16,7 @@ const Orders = () => {
   const [error, setError] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
-  const [orderForBillModal, setOrderForBillModal] = useState(null); 
+  const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [restaurantDetails, setRestaurantDetails] = useState(null);
   const [notification, setNotification] = useState({
@@ -48,20 +49,20 @@ const Orders = () => {
     setNotification({ show: false, message: "", type: "" });
 
   const fetchRestaurantDetails = useCallback(async () => {
-    if (!token) return; 
+    if (!token) return;
     try {
       const res = await fetch(`${config.BASE_URL}/api/restaurant/admin`, {
-      headers: {
-            "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
       });
       if (!res.ok) throw new Error("Failed to fetch restaurant details");
-      
+
       const data = await res.json();
-      
+
       if (data.restaurant) {
-        setRestaurantDetails(data.restaurant); 
+        setRestaurantDetails(data.restaurant);
       } else {
         throw new Error("Restaurant data not found in response");
       }
@@ -111,7 +112,7 @@ const Orders = () => {
     }
   }, [token]);
 
- const updateOrder = async (orderId, updatedData) => {
+  const updateOrder = async (orderId, updatedData) => {
     try {
       const res = await fetch(`${API_URL}/${orderId}`, {
         method: "PUT",
@@ -131,22 +132,22 @@ const Orders = () => {
     }
   };
   useEffect(() => {
-    
+
     if (orderForBillModal) {
-      
+
       const updatedOrder = orders.find(
         (o) => o._id === orderForBillModal._id
       );
 
       if (updatedOrder) {
-       
+
         setOrderForBillModal(updatedOrder);
       } else {
-        
+
         setOrderForBillModal(null);
       }
     }
-   
+
   }, [orders]);
 
   // ✅ 2. FILLED IN deleteOrder (copied from PendingOrders)
@@ -218,8 +219,8 @@ const Orders = () => {
   const pendingOrders = orders.filter((o) => o.status === "pending");
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8 relative">
-      
+    <div className="min-h-screen  px-4 py-6 sm:px-6 lg:px-8 relative">
+
       {/* ✅ 5. ADDED Notification Modal JSX (copied from PendingOrders) */}
       <AnimatePresence>
         {notification.show && (
@@ -235,20 +236,18 @@ const Orders = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ type: "spring", damping: 25, stiffness: 300, duration: 0.3 }}
-              className={`relative rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-auto ${
-                notification.type === "success"
-                  ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200"
-                  : "bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200"
-              }`}
+              className={`relative rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-auto ${notification.type === "success"
+                ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200"
+                : "bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200"
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center">
                 <div
-                  className={`w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-                    notification.type === "success"
-                      ? "bg-green-100 text-green-600 border-2 border-green-200"
-                      : "bg-red-100 text-red-600 border-2 border-red-200"
-                  }`}
+                  className={`w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6 ${notification.type === "success"
+                    ? "bg-green-100 text-green-600 border-2 border-green-200"
+                    : "bg-red-100 text-red-600 border-2 border-red-200"
+                    }`}
                 >
                   {notification.type === "success" ? (
                     <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,11 +269,10 @@ const Orders = () => {
                   onClick={closeNotification}
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.02 }}
-                  className={`w-full py-5 rounded-2xl text-xl font-bold shadow-lg transition-all ${
-                    notification.type === "success"
-                      ? "bg-green-500 text-white hover:bg-green-600 shadow-green-200"
-                      : "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
-                  }`}
+                  className={`w-full py-5 rounded-2xl text-xl font-bold shadow-lg transition-all ${notification.type === "success"
+                    ? "bg-green-500 text-white hover:bg-green-600 shadow-green-200"
+                    : "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
+                    }`}
                 >
                   Done
                 </motion.button>
@@ -283,12 +281,11 @@ const Orders = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* ✅ 6. ADDED Header/Buttons JSX (copied from PendingOrders) */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-row items-center justify-between mb-6 gap-3">
-          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 whitespace-nowrap">⏳ Pending</h2>
 
+      {/* ✅ 6. ADDED Header/Buttons JSX (copied from PendingOrders) */}
+      <div className="">
+        <div className="flex flex-row items-center justify-between mb-6 gap-3">
+          <Heading title="Pending Orders" />
           <div className="flex items-center gap-2">
             {/* Refresh Button */}
             <button
@@ -340,14 +337,14 @@ const Orders = () => {
           error={error}
           setEditingOrder={setEditingOrder}
           setShowConfirmDelete={setShowConfirmDelete}
-          setOrderForBillModal={setOrderForBillModal} 
+          setOrderForBillModal={setOrderForBillModal}
           updateOrder={updateOrder}
           tableType="pending" // ✅ 7. Added tableType prop
         />
       </div>
 
       {/* Modals (Unchanged) */}
-      {orderForBillModal && ( 
+      {orderForBillModal && (
         <ItemsModal
           order={orderForBillModal}
           restaurantDetails={restaurantDetails} // 👈 Your prop is preserved

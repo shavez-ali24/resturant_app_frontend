@@ -42,7 +42,7 @@ export function NavUser({ user }) {
   };
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="bg-gray-100 mb-1">
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>

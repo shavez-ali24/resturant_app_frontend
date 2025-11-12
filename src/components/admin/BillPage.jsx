@@ -3,6 +3,7 @@ import React, { useRef } from "react";
 import { motion } from "framer-motion"; // Optional: for modal animation
 
 const BillPage = ({ order, restaurantDetails, onClose }) => {
+  console.log(order)
   const billRef = useRef();
 
   const handlePrint = () => {
@@ -48,22 +49,27 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
         </style>`;
     const originalContents = document.body.innerHTML;
 
-    document.body.innerHTML = styles + `<div class="printable-bill">${printContents}</div>`;
+    document.body.innerHTML =
+      styles + `<div class="printable-bill">${printContents}</div>`;
     window.print();
     document.body.innerHTML = originalContents;
     onClose(); // Close modal after print
   };
 
-  // --- Dynamic Calculations ---
-  const calculatedSubtotal = order.items.reduce(
+  const fallbackSubtotal = order.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const gstRate = restaurantDetails?.gstEnabled
-    ? restaurantDetails.gstRate || 0
-    : 0;
-  const gstAmount = calculatedSubtotal * (gstRate / 100);
-  const grandTotal = calculatedSubtotal + gstAmount;
+
+  // Use the saved 'subtotal' if it exists, otherwise use the fallback.
+  const displaySubtotal =
+    order.subtotal !== undefined ? order.subtotal : fallbackSubtotal;
+
+  // Use the saved GST rate, GST amount, and Grand Total from the order.
+  const displayGstRate = order.gstRate || 0;
+  const displayGstAmount = order.gstAmount || 0;
+  const displayGrandTotal = order.totalAmount || 0;
+  // --- End Bill Totals ---
   // --- End Dynamic Calculations ---
 
   // --- Safe Restaurant Details ---
@@ -120,7 +126,6 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
             </svg>
           </button>
         </div>
-
         {/* Scrollable Bill Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Bill content area for printing */}
@@ -150,8 +155,7 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
               {/* Only show Table row if tableId exists */}
               {order.tableId && (
                 <p>
-                  <span className="font-semibold">Table:</span>{" "}
-                  {order.tableId}
+                  <span className="font-semibold">Table:</span> {order.tableId}
                 </p>
               )}
               {/* ✅✅✅ END OF FIX ✅✅✅ */}
@@ -168,7 +172,7 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
                 <span className="font-semibold">Date:</span>{" "}
                 {new Date(order.createdAt).toLocaleString()}
               </p>
-            
+
               <p>
                 <span className="font-semibold">Type:</span>{" "}
                 <span className="capitalize">{order.orderType || "N/A"}</span>
@@ -179,13 +183,14 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
             {order.orderType === "Delivery" && order.address && (
               <div className="mb-4 text-sm p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <p>
-                  <span className="font-semibold text-gray-800">Delivery Address:</span>
+                  <span className="font-semibold text-gray-800">
+                    Delivery Address:
+                  </span>
                   <br />
                   <span className="text-gray-600">{order.address}</span>
                 </p>
               </div>
             )}
-
 
             {/* Items Table - Dynamic */}
             <table className="w-full text-sm border-t border-b mb-4">
@@ -204,9 +209,7 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
                     className="border-b last:border-b-0"
                   >
                     <td className="py-1.5 px-2">{item.name}</td>
-                    <td className="py-1.5 px-1 text-center">
-                      {item.quantity}
-                    </td>
+                    <td className="py-1.5 px-1 text-center">{item.quantity}</td>
                     <td className="py-1.5 px-2 text-right">
                       ₹{item.price.toFixed(2)}
                     </td>
@@ -222,19 +225,20 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
             <div className="text-sm space-y-1 mb-6 flex flex-col items-end w-full max-w-xs ml-auto">
               <div className="flex justify-between w-full">
                 <span>Subtotal</span>
-                <span>₹{calculatedSubtotal.toFixed(2)}</span>
+                <span>₹{displaySubtotal.toFixed(2)}</span>
               </div>
-              {gstRate > 0 && ( // Only show if GST rate is > 0
+              {displayGstAmount > 0 && ( // Show if GST *amount* is > 0
                 <div className="flex justify-between w-full">
-                  <span>GST ({gstRate}%)</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
+                  <span>GST ({displayGstRate}%)</span>
+                  <span>₹{displayGstAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold border-t pt-2 mt-2 w-full">
                 <span>Grand Total</span>
-                <span>₹{grandTotal.toFixed(2)}</span>
+                <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
             </div>
+            {/* Totals - Dynamic */}
 
             {/* Footer */}
             <p className="text-center text-gray-600 text-xs border-t pt-3">
@@ -244,7 +248,6 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
           {/* End printable-bill */}
         </div>{" "}
         {/* End Scrollable Area */}
-
         {/* Modal Footer with Buttons */}
         <div className="flex justify-end gap-3 p-4 border-t bg-gray-50 rounded-b-xl no-print">
           <button
@@ -257,11 +260,7 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
             onClick={handlePrint}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium flex items-center gap-1.5 transition-colors"
           >
-            <svg
-              className="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M5 4v3H4a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm2 0v1h6V4H7zm6 5H7a1 1 0 000 2h6a1 1 0 100-2zm-3 4H7a1 1 0 100 2h3a1 1 0 100-2z"

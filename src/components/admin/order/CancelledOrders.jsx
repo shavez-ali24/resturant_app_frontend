@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
-import React, { useCallback, useEffect, useState } from "react";
+
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
 import OrdersTable from "./OrdersTable";
@@ -7,6 +8,7 @@ import EditOrderModal from "./EditOrderModal";
 import DeleteModal from "./DeleteModal";
 import ItemsModal from "./ItemsModal";
 import config from "../../../config";
+import Heading from "../ui/Heading";
 
 const CancelledOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -21,9 +23,10 @@ const CancelledOrders = () => {
     message: "",
     type: "",
   });
-
-  // 1. Add state for restaurant details
   const [restaurantDetails, setRestaurantDetails] = useState(null);
+
+  // ✅ 2. Add state for the date filter
+  const [dateFilter, setDateFilter] = useState("today");
 
   const [token] = useState(() => localStorage.getItem("token") || "");
   const API_URL = `${config.BASE_URL}/api/order`;
@@ -39,9 +42,8 @@ const CancelledOrders = () => {
   const closeNotification = () =>
     setNotification({ show: false, message: "", type: "" });
 
-  // Wrapped in useCallback
   const fetchOrders = useCallback(async () => {
-    if (!token) return; // Guard clause
+    if (!token) return;
     try {
       setLoading(true);
       const res = await fetch(API_URL, {
@@ -56,7 +58,7 @@ const CancelledOrders = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, API_URL]); // Added dependencies
+  }, [token, API_URL]);
 
   const fetchMenuItems = useCallback(async () => {
     if (!token) return;
@@ -73,17 +75,14 @@ const CancelledOrders = () => {
     }
   }, [token]);
 
-  // 2. Add function to fetch restaurant details
- 
-
   const fetchRestaurantDetails = useCallback(async () => {
     if (!token) return;
     try {
       const res = await fetch(`${config.BASE_URL}/api/restaurant/admin`, {
         headers: {
-            "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
       });
       if (!res.ok) throw new Error("Failed to fetch restaurant details");
       const data = await res.json();
@@ -132,7 +131,6 @@ const CancelledOrders = () => {
     }
   };
 
-  // Cleaned up useEffect
   useEffect(() => {
     if (!token) {
       setLoading(false);
@@ -142,14 +140,42 @@ const CancelledOrders = () => {
 
     fetchOrders();
     fetchMenuItems();
-    fetchRestaurantDetails(); // Call the new function
-  }, [token, fetchOrders, fetchMenuItems, fetchRestaurantDetails]); // Add dependencies
+    fetchRestaurantDetails();
+  }, [token, fetchOrders, fetchMenuItems, fetchRestaurantDetails]);
 
-  const cancelledOrders = orders.filter((o) => o.status === "cancelled");
+  const filteredCancelledOrders = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return orders
+      .filter((o) => o.status === "cancelled")
+      .filter((o) => {
+        const orderDate = new Date(o.createdAt);
+        switch (dateFilter) {
+          case "today":
+            return orderDate >= today;
+          case "yesterday":
+            return orderDate >= yesterday && orderDate < today;
+          case "week":
+            return orderDate >= startOfWeek;
+          case "month":
+            return orderDate >= startOfMonth;
+          case "all":
+          default:
+            return true;
+        }
+      });
+  }, [orders, dateFilter]);
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8 relative">
-      {/* ... (Notification Modal remains the same) ... */}
+    <div className="min-h-screen  px-4 py-6 sm:px-6 lg:px-8 relative">
       <AnimatePresence>
         {notification.show && (
           <motion.div
@@ -169,20 +195,18 @@ const CancelledOrders = () => {
                 stiffness: 300,
                 duration: 0.3,
               }}
-              className={`relative rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-auto ${
-                notification.type === "success"
-                  ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200"
-                  : "bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200"
-              }`}
+              className={`relative rounded-3xl shadow-2xl p-8 w-full max-w-sm mx-auto ${notification.type === "success"
+                ? "bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200"
+                : "bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200"
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center">
                 <div
-                  className={`w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-                    notification.type === "success"
-                      ? "bg-green-100 text-green-600 border-2 border-green-200"
-                      : "bg-red-100 text-red-600 border-2 border-red-200"
-                  }`}
+                  className={`w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6 ${notification.type === "success"
+                    ? "bg-green-100 text-green-600 border-2 border-green-200"
+                    : "bg-red-100 text-red-600 border-2 border-red-200"
+                    }`}
                 >
                   {notification.type === "success" ? (
                     <svg
@@ -214,39 +238,30 @@ const CancelledOrders = () => {
                     </svg>
                   )}
                 </div>
-                {/* FIX 1: Added `className` prop and some matching styles.
-                 */}
                 <h3
-                  className={`text-2xl font-bold mb-4 ${
-                    notification.type === "success"
-                      ? "text-green-900"
-                      : "text-red-900"
-                  }`}
+                  className={`text-2xl font-bold mb-4 ${notification.type === "success"
+                    ? "text-green-900"
+                    : "text-red-900"
+                    }`}
                 >
                   {notification.type === "success" ? "Success!" : "Oops!"}
                 </h3>
                 <p
-                  className={`text-xl mb-8 leading-relaxed ${
-                    notification.type === "success"
-                      ? "text-green-700"
-                      : "text-red-700"
-                  }`}
+                  className={`text-xl mb-8 leading-relaxed ${notification.type === "success"
+                    ? "text-green-700"
+                    : "text-red-700"
+                    }`}
                 >
                   {notification.message}
-                  {/* FIX 2: Removed extra 's' and '</div>' from here.
-                   */}
                 </p>
                 <motion.button
                   onClick={closeNotification}
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.02 }}
-                  className={`w-full py-5 rounded-2xl text-xl font-bold shadow-lg transition-all ${
-                    /* FIX 3: Removed stray 'C' and 'Â' characters from this template literal.
-                     */
-                    notification.type === "success"
-                      ? "bg-green-500 text-white hover:bg-green-600 shadow-green-200"
-                      : "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
-                  }`}
+                  className={`w-full py-5 rounded-2xl text-xl font-bold shadow-lg transition-all ${notification.type === "success"
+                    ? "bg-green-500 text-white hover:bg-green-600 shadow-green-200"
+                    : "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
+                    }`}
                 >
                   Done
                 </motion.button>
@@ -256,25 +271,39 @@ const CancelledOrders = () => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6 flex justify-center">
-          ❌ Cancelled Orders
-        </h2>
+      <div>
+        {/* ✅ 4. Update the UI for the filter */}
+        <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <Heading title={"Cancelled Orders"} />
 
+          {/* Date Filter Dropdown */}
+          <select
+            id="dateFilter"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-2 py-2 sm:px-3 border rounded-lg text-xs sm:text-sm font-medium bg-white hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 min-w-20 sm:min-w-32"
+          >
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="all">All Time</option>
+          </select>
+        </div>
         <OrdersTable
-          orders={cancelledOrders}
+          // ✅ 5. Pass the new filtered list
+          orders={filteredCancelledOrders}
           loading={loading}
           error={error}
           setEditingOrder={setEditingOrder}
           setShowConfirmDelete={setShowConfirmDelete}
-          // 3. FIX: Pass the correct prop name (Your comment was correct)
           setOrderForBillModal={setSelectedItems}
           updateOrder={updateOrder}
           tableType={tableType}
         />
       </div>
 
-      {/* 4. Pass restaurantDetails to the modal */}
+      {/* ... (Your Modals: ItemsModal, EditOrderModal, DeleteModal) ... */}
       {selectedItems && (
         <ItemsModal
           order={selectedItems}

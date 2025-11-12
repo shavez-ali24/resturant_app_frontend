@@ -54,6 +54,7 @@ export function AppSidebar({ ...props }) {
         isActive: true,
         items: [
           { title: "Menu", url: "/admin/menu" },
+          // {title: "Demo Menu", url: "/admin/demomenu"}
         ],
       },
       {
@@ -78,7 +79,7 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar
-      className="overflow-y-auto !h-[calc(100svh-var(--header-height))]"
+      className="overflow-y-auto  !h-[calc(100svh-var(--header-height))]"
       {...props}
     >
       {/* Header */}
@@ -98,7 +99,7 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
 
       {/* Main Navigation */}
-      <SidebarContent>
+      <SidebarContent className="mt-2">
         <NavMain
           items={data.navMain.map((section) => ({
             ...section,

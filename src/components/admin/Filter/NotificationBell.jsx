@@ -75,7 +75,6 @@ export default function NotificationBell() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Initial order fetch failed");
-
       let data = await res.json();
       const allOrders = Array.isArray(data) ? data : data.orders || [];
 

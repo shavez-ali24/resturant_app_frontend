@@ -72,7 +72,7 @@ export function NavMain({ items }) {
                                 to={subItem.url}
                                 className={`block px-3 py-1 text-sm rounded transition-colors duration-200
                                   ${isSubActive
-                                    ? "bg-gray-200 text-gray-800" // active dull gray
+                                    ? "bg-gra" // active dull gray
                                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-800" // hover soft gray
                                   }`}
                               >

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import config from "../../../config"
+import Heading from "../ui/Heading"
 
 const chartConfig = {
   revenue: { label: "Revenue", color: "#f97316" },
@@ -41,9 +42,9 @@ export default function RevenueWithDatePicker() {
   const [domain, setDomain] = useState("")
   const [currentFilter, setCurrentFilter] = useState("all")
   const [xAxisFormat, setXAxisFormat] = useState("day") // 'hour', 'day', 'month'
-  
+
   const [chartDomain, setChartDomain] = useState(['auto', 'auto'])
-  
+
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function RevenueWithDatePicker() {
     setAllChartData(demoData)
     setTotalOrders(totalOrd)
     setTotalRevenue(totalRev)
-    
+
     // Apply default filter (which will be 'all' initially)
     filterData("all", "", "", demoData, totalOrd, totalRev)
     setCurrentFilter("demo")
@@ -98,11 +99,11 @@ export default function RevenueWithDatePicker() {
     allRevenue = totalRevenue     // Allow passing in fresh totals
   ) => {
     if (!dataToFilter.length && range !== "all") { // Keep 'all' to set empty domain
-        setFilteredChartData([]);
-        setFilteredOrders(0);
-        setFilteredRevenue(0);
-        setCurrentFilter("nodata");
-        return;
+      setFilteredChartData([]);
+      setFilteredOrders(0);
+      setFilteredRevenue(0);
+      setCurrentFilter("nodata");
+      return;
     }
 
     const now = new Date()
@@ -167,17 +168,17 @@ export default function RevenueWithDatePicker() {
 
     // --- Set Domain ---
     if (filterType === "all") {
-        if (filtered.length > 0) {
-            // Use the full range of the available data
-            const firstDate = filtered[0].date.getTime();
-            const lastDate = filtered[filtered.length - 1].date.getTime();
-            setChartDomain([firstDate, lastDate]);
-        } else {
-            setChartDomain(['auto', 'auto']); // Fallback
-        }
+      if (filtered.length > 0) {
+        // Use the full range of the available data
+        const firstDate = filtered[0].date.getTime();
+        const lastDate = filtered[filtered.length - 1].date.getTime();
+        setChartDomain([firstDate, lastDate]);
+      } else {
+        setChartDomain(['auto', 'auto']); // Fallback
+      }
     } else {
-        // Force the domain to the selected filter range
-        setChartDomain([startDate.getTime(), endDate.getTime()]);
+      // Force the domain to the selected filter range
+      setChartDomain([startDate.getTime(), endDate.getTime()]);
     }
     // --- End Set Domain ---
 
@@ -226,7 +227,7 @@ export default function RevenueWithDatePicker() {
       const data = await response.json()
 
       if (data && data.chartData && Array.isArray(data.chartData) && data.chartData.length > 0) {
-        
+
         // ✅✅✅ THIS IS THE FIX ✅✅✅
         // Robust date parsing to ensure UTC time is handled correctly
         const transformedData = data.chartData.map((item) => {
@@ -235,13 +236,13 @@ export default function RevenueWithDatePicker() {
           if (typeof dateString === 'string') {
             // 1. Replace any space with 'T'
             dateString = dateString.replace(' ', 'T');
-          
+
             // 2. Add 'Z' if it's a T-string and has no timezone info
             if (dateString.includes('T') && !dateString.endsWith('Z') && !dateString.includes('+') && !dateString.includes('-')) {
               dateString += 'Z';
             }
           }
-          
+
           return {
             date: new Date(dateString), // This will now parse correctly as UTC
             revenue: item.revenue || 0,
@@ -259,7 +260,7 @@ export default function RevenueWithDatePicker() {
 
         setTotalOrders(totalOrd)
         setTotalRevenue(totalRev)
-        
+
         // Apply filter
         filterData(currentRange, "", "", transformedData, totalOrd, totalRev)
       } else {
@@ -286,7 +287,7 @@ export default function RevenueWithDatePicker() {
     setTimeRange(value)
     setFromDate("")
     setToDate("")
-    
+
     // If data is hourly, we *must* refetch from the API
     if (value === "1d" || value === "7d") {
       fetchAllData(value)
@@ -354,15 +355,17 @@ export default function RevenueWithDatePicker() {
   }
 
   return (
-    <Card className="pt-0 relative">
+    <Card className="rounder-none border-0 shadow-none">
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:gap-4 border-b py-5">
-        <div className="flex-1 grid gap-1">
-          <CardTitle>Revenue Analytics</CardTitle>
-          <CardDescription>
+    
+        <div className="flex-1 grid gap-3 ">
+          <Heading title={"Revenue Analytics"} />
+          
+          <div className="mt-2 text-sm">
+            <CardDescription>
             {domain && `Domain: ${domain} | `}
             {loading ? "Loading..." : getFilterDescription()}
           </CardDescription>
-          <div className="mt-2 text-sm">
             <span className="font-semibold text-orange-600">
               {currentFilter === "all" ? "Total Orders:" : "Orders:"}
             </span>{" "}
@@ -459,7 +462,7 @@ export default function RevenueWithDatePicker() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              
+
               <XAxis
                 dataKey="date"
                 type="number" // Use 'number' for timestamps
