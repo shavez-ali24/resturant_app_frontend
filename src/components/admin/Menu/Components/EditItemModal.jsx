@@ -165,22 +165,20 @@ const EditItemModal = ({
                   <button
                     type="button"
                     onClick={() => setEditPricingType("single")}
-                    className={`py-2 px-4 rounded-md text-sm font-semibold transition-all ${
-                      (editFormData.pricingType || "single") === "single"
-                        ? "bg-white text-orange-600 shadow-sm"
-                        : "bg-transparent text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`py-2 px-4 rounded-md text-sm font-semibold transition-all ${(editFormData.pricingType || "single") === "single"
+                      ? "bg-white text-orange-600 shadow-sm"
+                      : "bg-transparent text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     Single Price
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditPricingType("variant")}
-                    className={`py-2 px-4 rounded-md text-sm font-semibold transition-all ${
-                      editFormData.pricingType === "variant"
-                        ? "bg-white text-orange-600 shadow-sm"
-                        : "bg-transparent text-gray-600 hover:bg-gray-200"
-                    }`}
+                    className={`py-2 px-4 rounded-md text-sm font-semibold transition-all ${editFormData.pricingType === "variant"
+                      ? "bg-white text-orange-600 shadow-sm"
+                      : "bg-transparent text-gray-600 hover:bg-gray-200"
+                      }`}
                   >
                     Variant Pricing
                   </button>
@@ -194,15 +192,17 @@ const EditItemModal = ({
                     Price (₹)
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     name="price"
                     value={editFormData.price}
-                    onChange={handleEditFormChange}
-                    min="0"
-                    step="0.01"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, ""); // ONLY DIGITS
+                      setEditFormData({ ...editFormData, price: val });
+                    }}
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
                     placeholder="e.g. 299"
                   />
+
                 </div>
               )}
 
@@ -218,15 +218,21 @@ const EditItemModal = ({
                           {key}
                         </label>
                         <input
-                          type="number"
+                          type="text"
                           name={key}
                           value={editFormData.variantRates?.[key] || ""}
-                          onChange={handleEditFormChange}
-                          min="0"
-                          step="0.01"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, ""); // ONLY DIGITS
+                            setEditFormData((prev) => ({
+                              ...prev,
+                              variantRates: { ...prev.variantRates, [key]: val },
+                            }));
+                          }}
                           className="w-full border border-gray-300 rounded-lg p-3 text-sm"
-                          placeholder={`e.g. ${key === "quarter" ? 150 : key === "half" ? 299 : 499}`}
+                          placeholder={`e.g. ${key === "quarter" ? 150 : key === "half" ? 299 : 499
+                            }`}
                         />
+
                       </div>
                     ))}
                   </div>
@@ -309,7 +315,7 @@ const EditItemModal = ({
                     newImageFile
                       ? URL.createObjectURL(newImageFile)
                       : editFormData.image?.url ||
-                        "https://placehold.co/300x200?text=No+Image"
+                      "https://placehold.co/300x200?text=No+Image"
                   }
                   alt="preview"
                   className="w-full h-40 object-cover rounded-lg mb-2 border"

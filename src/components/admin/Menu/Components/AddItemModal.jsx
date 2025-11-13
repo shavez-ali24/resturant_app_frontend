@@ -41,18 +41,32 @@ const AddItemModal = ({
 
   const handleAddFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === "quarter" || name === "half" || name === "full") {
-      setAddFormData((prev) => ({
-        ...prev,
-        variantRates: { ...prev.variantRates, [name]: value },
-      }));
-    } else {
-      setAddFormData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
+
+    // Fields that must allow only digits (no decimals, no scroll, no arrows)
+    const numericFields = ["price", "quarter", "half", "full"];
+
+    if (numericFields.includes(name)) {
+      const cleaned = value.replace(/[^0-9]/g, ""); // keep digits only
+
+      if (name === "price") {
+        setAddFormData((prev) => ({ ...prev, price: cleaned }));
+      } else {
+        // quarter, half, full
+        setAddFormData((prev) => ({
+          ...prev,
+          variantRates: { ...prev.variantRates, [name]: cleaned },
+        }));
+      }
+      return;
     }
+
+    // Normal text / checkbox fields
+    setAddFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
+
 
   const setPricingType = (type) => {
     setAddFormData((prev) => {
@@ -202,16 +216,16 @@ const AddItemModal = ({
                         Price (₹)
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         name="price"
                         value={addFormData.price}
                         onChange={handleAddFormChange}
                         required={addFormData.pricingType === "single"}
-                        min="0"
-                        step="0.01"
+                        inputMode="numeric"
                         className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white text-sm"
                         placeholder="e.g. 299"
                       />
+
                     </div>
                   )}
 
@@ -224,41 +238,41 @@ const AddItemModal = ({
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Quarter</label>
                           <input
-                            type="number"
+                            type="text"
                             name="quarter"
                             value={addFormData.variantRates.quarter}
                             onChange={handleAddFormChange}
-                            min="0"
-                            step="0.01"
+                            inputMode="numeric"
                             className="w-full border border-gray-300 rounded-lg p-3 text-sm"
                             placeholder="e.g. 150"
                           />
+
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Half</label>
                           <input
-                            type="number"
+                            type="text"
                             name="half"
                             value={addFormData.variantRates.half}
                             onChange={handleAddFormChange}
-                            min="0"
-                            step="0.01"
+                            inputMode="numeric"
                             className="w-full border border-gray-300 rounded-lg p-3 text-sm"
                             placeholder="e.g. 299"
                           />
+
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Full</label>
                           <input
-                            type="number"
+                            type="text"
                             name="full"
                             value={addFormData.variantRates.full}
                             onChange={handleAddFormChange}
-                            min="0"
-                            step="0.01"
+                            inputMode="numeric"
                             className="w-full border border-gray-300 rounded-lg p-3 text-sm"
                             placeholder="e.g. 499"
                           />
+
                         </div>
                       </div>
                     </div>

@@ -1,154 +1,128 @@
-// src/components/common/SiteHeader.jsx
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
-import { PanelRightClose, Store } from "lucide-react";
+import { PanelRightClose } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useSidebar } from "@/components/ui/sidebar";
 import NotificationBell from "./Filter/NotificationBell";
+
 import {
   useGetRestaurantProfileQuery,
   useToggleRestaurantMutation,
-} from "../../redux/adminRedux/adminAPI";
+} from "@/redux/adminRedux/adminAPI";
 
 export function SiteHeader() {
   const { toggleSidebar } = useSidebar();
-  const [isOpenLocal, setIsOpenLocal] = useState(false);
-  const [loadingLocal, setLoadingLocal] = useState(false);
-  const [showStatus, setShowStatus] = useState(false);
 
-  const { data: profileData, isLoading: profileLoading, isError } =
+  const { data: profileData, isLoading: profileLoading } =
     useGetRestaurantProfileQuery();
 
   const [toggleRestaurant, { isLoading: toggleLoading }] =
     useToggleRestaurantMutation();
 
+  const [isOpen, setIsOpen] = useState(null);
+
+  // For showing animated alert
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+
   useEffect(() => {
-    if (profileData && typeof profileData.isOpen !== "undefined") {
-      setIsOpenLocal(Boolean(profileData.isOpen));
+    if (!profileData) return;
+
+    let status = null;
+
+    if (typeof profileData.isOpen === "boolean") {
+      status = profileData.isOpen;
+    } else if (
+      profileData.restaurant &&
+      typeof profileData.restaurant.isOpen === "boolean"
+    ) {
+      status = profileData.restaurant.isOpen;
     }
+
+    setIsOpen(status ?? false);
   }, [profileData]);
 
   const handleToggle = async () => {
-    const newStatus = !isOpenLocal;
-    
+    const newStatus = !isOpen;
+
     try {
-      setLoadingLocal(true);
       await toggleRestaurant({ isOpen: newStatus }).unwrap();
-      setIsOpenLocal(newStatus);
-      
-      setShowStatus(true);
+      setIsOpen(newStatus);
+
+      // Show animated CSS alert
+      setAlertMessage(newStatus ? "Restaurant is now OPEN" : "Restaurant is now CLOSED");
+      setShowAlert(true);
+
       setTimeout(() => {
-        setShowStatus(false);
-      }, 2000);
-      
+        setShowAlert(false);
+      }, 2000); // auto close
     } catch (err) {
-      console.error("Failed to toggle restaurant:", err);
-    } finally {
-      setLoadingLocal(false);
+      setAlertMessage("Failed to update status");
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 2000);
     }
   };
 
+  const loading = profileLoading || toggleLoading;
+
   return (
-    <header className="flex sticky top-0 z-50 w-full items-center border-b bg-white/80 backdrop-blur-sm p-1 shadow-sm">
-      <div className="flex h-12 w-full items-center gap-3 px-4">
-        {/* Sidebar Toggle */}
-        <div 
-          onClick={toggleSidebar}
-          className="cursor-pointer hover:bg-orange-50 rounded-lg transition-all duration-200 p-1.5"
-        >
-          <PanelRightClose 
-            size={22} 
-            className="text-gray-600 hover:text-orange-500 transition-colors" 
-          />
+    <>
+      {showAlert && (
+        <div className="fixed top-4 right-4 px-4 py-2 rounded-lg shadow-md bg-black text-white animate-fadeInOut z-[9999]">
+          {alertMessage}
         </div>
+      )}
 
-        <Separator orientation="vertical" className="h-5" />
-        
-        {/* Compact Restaurant Status */}
-        <div className="w-full flex justify-end">
-          <div className="flex items-center rounded-lg justify-between gap-3 p-2   transition-shadow">
-            
-            {/* Status Indicator */}
-            <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg ${
-                isOpenLocal ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                <Store 
-                  size={16} 
-                  className={isOpenLocal ? 'text-green-600' : 'text-red-500'} 
+      <header className="flex sticky top-0 z-50 w-full items-center border-b bg-background p-1">
+        <div className="flex h-[--header-height] w-full items-center gap-2 px-4">
+          <PanelRightClose size={30} onClick={toggleSidebar} className="cursor-pointer" />
+          <Separator orientation="vertical" />
+
+          <div className="w-full flex justify-end sm:ml-auto sm:w-auto">
+            <div className="flex items-center rounded-xl justify-between border gap-5 border-gray-200 p-2 bg-gray-50">
+              <label className="text-gray-700 font-semibold">🏬 Restaurant</label>
+
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isOpen === true}
+                  disabled={loading}
+                  onChange={handleToggle}
                 />
-              </div>
-              
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-500 font-medium">Status</span>
-                <span className={`text-sm font-bold ${
-                  isOpenLocal ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {isOpenLocal ? 'OPEN' : 'CLOSED'}
-                </span>
-              </div>
-            </div>
 
-            {/* Compact Toggle */}
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={isOpenLocal}
-                disabled={loadingLocal || toggleLoading || profileLoading}
-                onChange={handleToggle}
-              />
-              <div className={`
-                w-12 h-6 rounded-full peer 
-                transition-all duration-300
-                ${isOpenLocal 
-                  ? 'bg-green-400' 
-                  : 'bg-gray-300'
-                }
-                ${(loadingLocal || toggleLoading || profileLoading) 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:opacity-80'
-                }
-              `}>
-                <div className={`
-                  absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md
-                  transition-all duration-300
-                  transform ${isOpenLocal ? 'translate-x-6' : 'translate-x-0'}
-                `}></div>
-              </div>
-            </label>
+                <div
+                  className="
+                    w-11 h-6 bg-gray-200 rounded-full peer
+                    peer-checked:bg-orange-500
+                    peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
+                    after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                    after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all
+                    peer-checked:after:translate-x-full
+                  "
+                ></div>
+              </label>
 
-            <Separator orientation="vertical" className="h-6 mx-1" />
-            
-            {/* Notification Bell */}
-            <div className="pl-1">
               <NotificationBell />
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Compact Status Notification */}
-      {showStatus && (
-        <div className={`
-          absolute top-14 right-4 px-4 py-2 rounded-lg shadow-lg 
-          border backdrop-blur-sm transform transition-all duration-300
-          animate-in slide-in-from-right-5
-          ${isOpenLocal 
-            ? 'bg-green-50 border-green-200 text-green-700' 
-            : 'bg-red-50 border-red-200 text-red-700'
+      <style>
+        {`
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
           }
-        `}>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              isOpenLocal ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            <span className="text-sm font-medium">
-              {isOpenLocal ? 'Open for orders' : 'Closed'}
-            </span>
-          </div>
-        </div>
-      )}
-    </header>
+          .animate-fadeInOut {
+            animation: fadeInOut 2s ease-in-out forwards;
+          }
+        `}
+      </style>
+    </>
   );
 }
 
