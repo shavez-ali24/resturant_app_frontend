@@ -29,9 +29,12 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
       menu.forEach((item) => {
         if (item?.pricingType === "variant") {
-          const variantKeys = item?.variantRates ? Object.keys(item.variantRates) : [];
-          if (variantKeys.length > 0 && !next[item._id]) {
-            next[item._id] = variantKeys[0];
+          const variantRates = item?.variantRates || {};
+          const validVariants = Object.entries(variantRates)
+            .filter(([key, price]) => price != null && price !== undefined)
+            .map(([key]) => key);
+          if (validVariants.length > 0 && !next[item._id]) {
+            next[item._id] = validVariants[0];
             changed = true;
           }
         }
@@ -158,14 +161,14 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
                       {/* ✅ Description with preview and modal on Read more */}
                       <p className="text-gray-600 text-sm leading-relaxed">
-                        {(item.description || "").slice(0, 45)}
-                        {(item.description || "").length > 45 && "…"}
-                        {(item.description || "").length > 45 && (
+                        {(item.description || "").slice(0, 36)}
+                        {(item.description || "").length > 36 && "…"}
+                        {(item.description || "").length > 36 && (
                           <button
                             onClick={() => openDescription(item)}
                             className="ml-1 text-primary font-medium hover:underline"
                           >
-                            Read more
+                            more
                           </button>
                         )}
                       </p>
@@ -185,7 +188,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                             >
                               <span>
                                 ₹{Number(displayPrice ?? item.price ?? 0).toFixed(2)}
-                                {selectedVariant ? ` • ${formatVariantLabel(selectedVariant)}` : ""}
+                                {selectedVariant && variantPrice != null && variantPrice !== undefined ? ` • ${formatVariantLabel(selectedVariant)}` : ""}
                               </span>
                               <ChevronsUpDown className="h-3 w-3" />
                             </button>
@@ -195,31 +198,33 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                 className="absolute left-0 top-full mt-2 min-w-[200px] rounded-2xl border border-orange-100 bg-white shadow-xl z-[60] overflow-hidden"
                                 onClick={(event) => event.stopPropagation()}
                               >
-                                {Object.entries(variantRates).map(([key, price]) => {
-                                  const isActive = selectedVariant === key;
-                                  return (
-                                    <button
-                                      key={key}
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedVariants((prev) => ({
-                                          ...prev,
-                                          [item._id]: key,
-                                        }));
-                                        setOpenVariantMenu(null);
-                                      }}
-                                      className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
-                                        isActive
-                                          ? "bg-orange-50 text-orange-700 font-semibold"
-                                          : "text-gray-700 hover:bg-orange-50"
-                                      }`}
-                                    >
-                                      <span>{formatVariantLabel(key)}</span>
-                                      <span className="text-xs text-gray-500">₹{price}</span>
-                                    </button>
-                                  );
-                                })}
+                                {Object.entries(variantRates)
+                                  .filter(([key, price]) => price != null && price !== undefined)
+                                  .map(([key, price]) => {
+                                    const isActive = selectedVariant === key;
+                                    return (
+                                      <button
+                                        key={key}
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          setSelectedVariants((prev) => ({
+                                            ...prev,
+                                            [item._id]: key,
+                                          }));
+                                          setOpenVariantMenu(null);
+                                        }}
+                                        className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
+                                          isActive
+                                            ? "bg-orange-50 text-orange-700 font-semibold"
+                                            : "text-gray-700 hover:bg-orange-50"
+                                        }`}
+                                      >
+                                        <span>{formatVariantLabel(key)}</span>
+                                        <span className="text-xs text-gray-500">₹{price}</span>
+                                      </button>
+                                    );
+                                  })}
                               </div>
                             )}
                           </div>
@@ -254,7 +259,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                         ...item,
                                         price: displayPrice,
                                         variantKey: selectedVariant,
-                                        variantLabel: formatVariantLabel(selectedVariant),
+                                        variantLabel: selectedVariant && variantPrice != null && variantPrice !== undefined ? formatVariantLabel(selectedVariant) : null,
                                       },
                                       price: displayPrice,
                                     })
@@ -277,7 +282,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                       ...item,
                                       price: displayPrice,
                                       variantKey: selectedVariant,
-                                      variantLabel: formatVariantLabel(selectedVariant),
+                                      variantLabel: selectedVariant && variantPrice != null && variantPrice !== undefined ? formatVariantLabel(selectedVariant) : null,
                                     },
                                     price: displayPrice,
                                   })

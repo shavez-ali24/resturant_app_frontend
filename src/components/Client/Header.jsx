@@ -519,22 +519,15 @@ export default function Header({
                     placeholder="Search for food items..."
                     value={search || ""}
                     onChange={(e) => onSearch(e.target.value)}
-                    className="w-full rounded-3xl pl-11 pr-20 py-3 bg-gray-50 border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary"
+                    className="w-full rounded-3xl pl-11 pr-12 py-3 bg-gray-50 border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary"
                     autoFocus
                   />
-                  {/* Clear typed search (small X icon) */}
-                  {(search || "").trim() && (
-                    <button
-                      onClick={() => onSearch("")}
-                      className="absolute right-10 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Clear search"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
                   {/* Close search dropdown button */}
                   <button
-                    onClick={() => setIsSearchOpen(false)}
+                    onClick={() => {
+                      onSearch("");
+                      setIsSearchOpen(false);
+                    }}
                     className="absolute right-3 text-gray-500 hover:text-red-500 transition-colors"
                     title="Close search"
                   >
