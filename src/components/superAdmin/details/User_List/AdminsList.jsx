@@ -1,50 +1,19 @@
+// src/components/superAdmin/AdminsList.jsx
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Loader2, User, Mail, Calendar, Building, Globe, Clock } from "lucide-react"
-import config from "@/config"
 import UpdateAdminModal from "./UpdateAdminModal"
+import { useGetAdminsQuery } from "@/redux/superAdminRedux/superAdminAPI"
 
 export default function AdminsList() {
-  const [admins, setAdmins] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: adminsData, isLoading, error } = useGetAdminsQuery();
   const [updateModal, setUpdateModal] = useState({ open: false, admin: null })
 
-  const fetchAdmins = async () => {
-    try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`${config.BASE_URL}/api/auth/admins`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message)
-      setAdmins(data.admins)
-    } catch (error) {
-      console.error('Error fetching admins:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleUpdate = async (adminId, updateData) => {
-    try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`${config.BASE_URL}/api/auth/users/${adminId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(updateData)
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message)
-      setUpdateModal({ open: false, admin: null })
-      fetchAdmins()
-    } catch (error) {
-      console.error('Error updating admin:', error)
-    }
-  }
+  const admins = adminsData?.admins || [];
 
   // Calculate remaining subscription days
   const getRemainingDays = (createdAt) => {
@@ -72,9 +41,7 @@ export default function AdminsList() {
     }
   }
 
-  useEffect(() => { fetchAdmins() }, [])
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="flex justify-center items-center h-64">
       <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
     </div>
@@ -86,7 +53,6 @@ export default function AdminsList() {
         open={updateModal.open}
         admin={updateModal.admin}
         onClose={() => setUpdateModal({ open: false, admin: null })}
-        onUpdate={handleUpdate}
       />
       
       <Card>
@@ -123,7 +89,6 @@ export default function AdminsList() {
                         <div className="flex items-center gap-3">
                           <div className="flex flex-row gap-2">
                             <div className="font-medium text-gray-900">{admin.name}</div>
-                            
                           </div>
                         </div>
                       </TableCell>

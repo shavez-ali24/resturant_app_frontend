@@ -16,7 +16,7 @@ export const superAdminApi = createApi({
   }),
   tagTypes: ["Admins"],
   endpoints: (builder) => ({
-    loginSuperAdmin: builder.mutation({
+    register: builder.mutation({
       query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
@@ -50,9 +50,9 @@ export const superAdminApi = createApi({
     }),
 
     // 🔵 Update admin by ID
-   updateAdmin: builder.mutation({
-      query: ({ adminId, updateData }) => ({
-        url: `/auth/${adminId}`,
+   updateUser: builder.mutation({
+      query: ({ userId, updateData }) => ({
+        url: `/auth/${userId}`,
         method: "PUT",
         body: updateData,
       }),
@@ -62,8 +62,8 @@ export const superAdminApi = createApi({
 });
 
 export const {
-  useLoginSuperAdminMutation,
+  useRegisterMutation,
   useRegisterUserMutation,
   useGetAdminsQuery,
-  useUpdateAdminMutation,
+  useUpdateUserMutation,
 } = superAdminApi;
