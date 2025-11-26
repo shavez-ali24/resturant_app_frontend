@@ -2,7 +2,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { addToCart, removeFromCart } from "../../redux/clientRedux/clientSlice";
-import { Dot, ChevronsUpDown } from "lucide-react";
+import { Dot, ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "../ui/button";
 
 const groupByCategory = (items) => {
@@ -44,6 +44,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
     });
   }, [menu]);
 
+  // Close open variant dropdown on any outside click
   useEffect(() => {
     const handleClickOutside = () => {
       setOpenVariantMenu(null);
@@ -69,7 +70,9 @@ export default function FoodListing({ menu, onQuantityChange }) {
   }, [cartItems, onQuantityChange]);
 
   const formatVariantLabel = (key) =>
-    key ? key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) : "";
+    key
+      ? key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+      : "";
 
   const openDescription = (item) => {
     if (!item) return;
@@ -81,177 +84,275 @@ export default function FoodListing({ menu, onQuantityChange }) {
   };
 
   return (
-    <div className="bg-gray-50 flex flex-col pb-20 px-3 pt-6">
-      {Object.keys(groupedMenu).map((category) => (
-        <div key={category} id={`category-${category}`} className="mb-10">
-          {/* ✅ Category Header */}
-          <div className="flex items-center gap-2 mb-4">
-            <Dot className="text-primary" size={14} strokeWidth={24} />
-            <h2 className="text-xl font-semibold text-gray-800 tracking-wide">
-              {category}
-            </h2>
-          </div>
+    <div className="bg-white flex flex-col pb-12 px-2 sm:px-3 pt-6">
+      {Object.keys(groupedMenu).map((category) => {
+        const itemsInCategory = groupedMenu[category] || [];
+        const layoutMode =
+          itemsInCategory.length === 1
+            ? "single"
+            : itemsInCategory.length === 2
+            ? "double"
+            : "multi";
 
-          {/* ✅ Food Cards */}
-          <div className="flex flex-col gap-5">
-            {groupedMenu[category].map((item) => {
-              const isMenuOpen = openVariantMenu === item._id;
-              const variantRates = item.variantRates || {};
-              const selectedVariant = item.pricingType === "variant" ? selectedVariants[item._id] : null;
-              const variantPrice =
-                item.pricingType === "variant" && selectedVariant
-                  ? variantRates?.[selectedVariant]
-                  : null;
-              const cartKey =
-                item.pricingType === "variant"
-                  ? selectedVariant
-                    ? `${item._id}-${selectedVariant}`
-                    : `${item._id}-unselected`
-                  : item._id;
-              const quantity =
-                item.pricingType === "variant" && !selectedVariant
-                  ? 0
-                  : cartItems[cartKey]?.quantity || 0;
-              const displayPrice =
-                item.pricingType === "variant"
-                  ? variantPrice ?? item.price
-                  : item.price;
-              const canAdd =
-                item.pricingType !== "variant" ||
-                (selectedVariant && variantPrice !== undefined);
-              const isUnavailable = !item.available;
-              // Description preview length set to 40 characters
+        const containerClass =
+          layoutMode === "multi"
+            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3"
+            : `grid gap-4 ${
+                layoutMode === "single" ? "grid-cols-1" : "grid-cols-2"
+              }`;
 
-              return (
-                <div
-                  key={item._id}
-                  className={`relative flex items-start bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 ring-1 ring-transparent hover:ring-primary/20 ${
-                    isUnavailable ? "opacity-60 grayscale" : "opacity-100"
-                  } ${isMenuOpen ? "z-50" : "z-auto"}`}
-                >
-                  {/* ✅ Image Section */}
-                  <div className="relative w-40 h-32 flex-shrink-0 overflow-hidden rounded-l-2xl">
-                    <img
-                      src={item.image?.url}
-                      alt={item.name}
-                      className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-110"
-                    />
-                    {/* Veg / Non-Veg dot badge over image */}
-                    <div className="absolute top-2 left-2 backdrop-blur-sm bg-white/80 p-1 rounded-full shadow-sm border border-white/70">
-                      {item.type === "veg" ? (
-                        <Dot size={14} strokeWidth={12} className="border-2 border-green-700 text-green-700" />
-                      ) : (
-                        <Dot size={14} strokeWidth={12} className="border-2 border-red-600 text-red-600" />
+        return (
+          <div key={category} id={`category-${category}`} className="mb-10">
+            {/* ✅ Category Header */}
+            <div className="flex items-center gap-2 mb-2">
+              <Dot className="text-primary" size={14} strokeWidth={24} />
+              <h2 className="text-base font-semibold text-gray-800 tracking-wide">
+                {category}
+              </h2>
+            </div>
+
+            {/* ✅ Food Cards - Responsive Layout */}
+            <div className={containerClass} style={{ position: "relative" }}>
+              {itemsInCategory.map((item) => {
+                const isMenuOpen = openVariantMenu === item._id;
+                const variantRates = item.variantRates || {};
+                const selectedVariant =
+                  item.pricingType === "variant"
+                    ? selectedVariants[item._id]
+                    : null;
+                const variantPrice =
+                  item.pricingType === "variant" && selectedVariant
+                    ? variantRates?.[selectedVariant]
+                    : null;
+                const cartKey =
+                  item.pricingType === "variant"
+                    ? selectedVariant
+                      ? `${item._id}-${selectedVariant}`
+                      : `${item._id}-unselected`
+                    : item._id;
+                const quantity =
+                  item.pricingType === "variant" && !selectedVariant
+                    ? 0
+                    : cartItems[cartKey]?.quantity || 0;
+                const displayPrice =
+                  item.pricingType === "variant"
+                    ? variantPrice ?? item.price
+                    : item.price;
+                const canAdd =
+                  item.pricingType !== "variant" ||
+                  (selectedVariant && variantPrice !== undefined);
+                const isUnavailable = !item.available;
+                // Description preview length set to 40 characters
+
+                return (
+                  <div
+                    key={item._id}
+                    className={`relative bg-white rounded-2xl border border-gray-100 shadow-md ${
+                      isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                    } ${
+                      layoutMode === "multi"
+                        ? "flex-shrink-0 w-[160px] sm:w-[180px] md:w-[200px]"
+                        : "w-full"
+                    } ${isMenuOpen ? "z-10" : "z-auto"}`}
+                    style={{ position: "relative" }}
+                  >
+                    {/* ✅ Image Section */}
+                    <div
+                      className={`relative w-full overflow-hidden rounded-t-2xl ${
+                        layoutMode === "single"
+                          ? "h-40 sm:h-52"
+                          : layoutMode === "double"
+                          ? "h-32 sm:h-40"
+                          : "h-32 sm:h-36 md:h-40"
+                      }`}
+                    >
+                      <img
+                        src={item.image?.url}
+                        alt={item.name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                      {/* Veg / Non-Veg dot badge over image */}
+                      <div className="absolute top-2 left-2 backdrop-blur-sm bg-white/80 p-1 rounded-full shadow-sm border border-white/70">
+                        {item.type === "veg" ? (
+                          <Dot
+                            size={12}
+                            strokeWidth={12}
+                            className="border-2 border-green-700 text-green-700"
+                          />
+                        ) : (
+                          <Dot
+                            size={12}
+                            strokeWidth={12}
+                            className="border-2 border-red-600 text-red-600"
+                          />
+                        )}
+                      </div>
+                      {isUnavailable && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-semibold">
+                          Not Available
+                        </div>
                       )}
                     </div>
-                    {isUnavailable && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-sm font-semibold">
-                        Not Available
-                      </div>
-                    )}
-                  </div>
 
                     {/* ✅ Details Section */}
-                  <div className="flex flex-col justify-between p-2 flex-1 min-h-32">
-                    {/* Top Info */}
-                    <div className="mb-1">
-                      <h3 className="text-base font-semibold text-gray-900 leading-snug">
+                    <div className="p-2 flex flex-col gap-1">
+                      {/* Item Name */}
+                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-tight line-clamp-2">
                         {item.name}
                       </h3>
 
-                      {/* ✅ Description with preview and modal on Read more */}
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        {(item.description || "").slice(0, 36)}
-                        {(item.description || "").length > 36 && "…"}
-                        {(item.description || "").length > 36 && (
-                          <button
-                            onClick={() => openDescription(item)}
-                            className="ml-1 text-primary font-medium hover:underline"
-                          >
-                            more
-                          </button>
-                        )}
-                      </p>
-                    </div>
-
-                    {/* Bottom Info */}
-                      <div className="flex justify-between items-end">
-                        {item.pricingType === "variant" && Object.keys(variantRates).length > 0 ? (
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setOpenVariantMenu((prev) => (prev === item._id ? null : item._id));
-                              }}
-                              className="inline-flex items-center gap-1 p-1 rounded-full bg-orange-50 text-orange-700 text-[13px] font-semibold border border-orange-200"
-                            >
-                              <span>
-                                ₹{Number(displayPrice ?? item.price ?? 0).toFixed(2)}
-                                {selectedVariant && variantPrice != null && variantPrice !== undefined ? ` • ${formatVariantLabel(selectedVariant)}` : ""}
-                              </span>
-                              <ChevronsUpDown className="h-3 w-3" />
-                            </button>
-
-                            {isMenuOpen && (
-                              <div
-                                className="absolute left-0 top-full mt-2 min-w-[200px] rounded-2xl border border-orange-100 bg-white shadow-xl z-[60] overflow-hidden"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                {Object.entries(variantRates)
-                                  .filter(([key, price]) => price != null && price !== undefined)
-                                  .map(([key, price]) => {
-                                    const isActive = selectedVariant === key;
-                                    return (
-                                      <button
-                                        key={key}
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          setSelectedVariants((prev) => ({
-                                            ...prev,
-                                            [item._id]: key,
-                                          }));
-                                          setOpenVariantMenu(null);
-                                        }}
-                                        className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
-                                          isActive
-                                            ? "bg-orange-50 text-orange-700 font-semibold"
-                                            : "text-gray-700 hover:bg-orange-50"
-                                        }`}
-                                      >
-                                        <span>{formatVariantLabel(key)}</span>
-                                        <span className="text-xs text-gray-500">₹{price}</span>
-                                      </button>
+                      {/* Description with "more" link + Price Dropdown */}
+                      {(item.description || "").length > 0 && (
+                        <div className="flex items-center justify-between gap-1 flex-shrink-0 h-4">
+                          {/* Price Section (moved here) */}
+                          <div className="flex-1 min-w-0">
+                            {item.pricingType === "variant" &&
+                            Object.keys(variantRates).length > 0 ? (
+                              <div className="relative z-10">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setOpenVariantMenu((prev) =>
+                                      prev === item._id ? null : item._id
                                     );
-                                  })}
+                                  }}
+                                  className="text-primary text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1"
+                                >
+                                  <span className="truncate">
+                                    {selectedVariant &&
+                                    variantPrice != null &&
+                                    variantPrice !== undefined
+                                      ? formatVariantLabel(selectedVariant)
+                                      : "Select size"}
+                                  </span>
+                                  <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
+                                </button>
+
+                                {isMenuOpen && (
+                                  <div
+                                    className="absolute left-0 top-full mt-2 min-w-[180px] sm:min-w-[200px] max-w-[250px] rounded-2xl border border-orange-100 bg-white shadow-2xl overflow-hidden z-[200]"
+                                    onClick={(event) =>
+                                      event.stopPropagation()
+                                    }
+                                  >
+                                    {Object.entries(variantRates)
+                                      .filter(
+                                        ([key, price]) =>
+                                          price != null && price !== undefined
+                                      )
+                                      .map(([key, price]) => {
+                                        const isActive =
+                                          selectedVariant === key;
+                                        return (
+                                          <button
+                                            key={key}
+                                            type="button"
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              setSelectedVariants((prev) => ({
+                                                ...prev,
+                                                [item._id]: key,
+                                              }));
+                                              setOpenVariantMenu(null);
+                                            }}
+                                            className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
+                                              isActive
+                                                ? "bg-orange-50 text-orange-700 font-semibold"
+                                                : "text-gray-700 hover:bg-orange-50"
+                                            }`}
+                                          >
+                                            <span>
+                                              {formatVariantLabel(key)}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                              ₹{price}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+                                )}
                               </div>
+                            ) : (
+                              <span className="text-primary text-xs sm:text-sm font-semibold">
+                                ₹
+                                {Number(
+                                  displayPrice ?? item.price ?? 0
+                                ).toFixed(2)}
+                              </span>
                             )}
                           </div>
-                        ) : (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-[13px] font-semibold border border-orange-200">
-                            ₹{Number(displayPrice ?? item.price ?? 0).toFixed(2)}
-                          </span>
-                        )}
 
-                      {!isUnavailable && (
-                        <div className="flex items-center gap-1">
-                          {quantity > 0 ? (
-                            <>
+                          <button
+                            onClick={() => openDescription(item)}
+                            className="text-xs text-gray-500 hover:text-primary text-left w-fit"
+                          >
+                            View details
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Price and Add Button Row */}
+                      <div className="flex flex-col justify-between mt-auto">
+                        {/* Add/Quantity Controls */}
+                        {!isUnavailable && (
+                          <div className="flex items-center justify-between gap-1 flex-shrink-0">
+                            {/* Selected price shown next to Add button */}
+                            <span className="text-lg sm:text-sm font-semibold text-gray-800 mr-1">
+                              ₹{Number(displayPrice ?? item.price ?? 0)}
+                            </span>
+
+                            {quantity > 0 ? (
+                              <>
+                                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      dispatch(removeFromCart(cartKey))
+                                    }
+                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400"
+                                  >
+                                    -
+                                  </Button>
+                                  <span className="text-xs sm:text-sm font-medium min-w-[16px] sm:min-w-[20px] text-center">
+                                    {quantity}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      dispatch(
+                                        addToCart({
+                                          id: cartKey,
+                                          item: {
+                                            ...item,
+                                            price: displayPrice,
+                                            variantKey: selectedVariant,
+                                            variantLabel:
+                                              selectedVariant &&
+                                              variantPrice != null &&
+                                              variantPrice !== undefined
+                                                ? formatVariantLabel(
+                                                    selectedVariant
+                                                  )
+                                                : null,
+                                          },
+                                          price: displayPrice,
+                                        })
+                                      )
+                                    }
+                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
                               <Button
                                 size="sm"
-                                variant="outline"
-                                onClick={() => dispatch(removeFromCart(cartKey))}
-                                className="rounded-full h-7 w-7 p-0 text-lg font-bold border-gray-300 hover:border-gray-400"
-                              >
-                                -
-                              </Button>
-                              <span className="text-sm font-medium min-w-[24px] text-center">
-                                {quantity}
-                              </span>
-                              <Button
-                                size="sm"
-                                onClick={() =>
+                                onClick={() => {
+                                  if (!canAdd) return;
                                   dispatch(
                                     addToCart({
                                       id: cartKey,
@@ -259,51 +360,36 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                         ...item,
                                         price: displayPrice,
                                         variantKey: selectedVariant,
-                                        variantLabel: selectedVariant && variantPrice != null && variantPrice !== undefined ? formatVariantLabel(selectedVariant) : null,
+                                        variantLabel:
+                                          selectedVariant &&
+                                          variantPrice != null &&
+                                          variantPrice !== undefined
+                                            ? formatVariantLabel(
+                                                selectedVariant
+                                              )
+                                            : null,
                                       },
                                       price: displayPrice,
                                     })
-                                  )
-                                }
-                                className="rounded-full h-7 w-7 p-0 text-lg font-bold bg-primary text-white hover:bg-primary/90 shadow-sm"
-                              >
-                                +
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                if (!canAdd) return;
-                                dispatch(
-                                  addToCart({
-                                    id: cartKey,
-                                    item: {
-                                      ...item,
-                                      price: displayPrice,
-                                      variantKey: selectedVariant,
-                                      variantLabel: selectedVariant && variantPrice != null && variantPrice !== undefined ? formatVariantLabel(selectedVariant) : null,
-                                    },
-                                    price: displayPrice,
-                                  })
-                                );
-                              }}
-                              className="rounded-full px-4 text-sm font-semibold bg-primary hover:bg-primary/90 text-white shadow-sm"
+                                  );
+                                }}
+                                className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center"
                                 disabled={!canAdd}
-                            >
-                              Add
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                              >
+                                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {/* Description Modal (tooltip-like) */}
       {descModal.open && descModal.item && (
         <div
@@ -366,7 +452,9 @@ export default function FoodListing({ menu, onQuantityChange }) {
                     ? (() => {
                         const variantRates = descModal.item.variantRates || {};
                         const firstVariant = Object.entries(variantRates)[0];
-                        return firstVariant ? Number(firstVariant[1]).toFixed(2) : Number(descModal.item.price || 0).toFixed(2);
+                        return firstVariant
+                          ? Number(firstVariant[1]).toFixed(2)
+                          : Number(descModal.item.price || 0).toFixed(2);
                       })()
                     : Number(descModal.item.price || 0).toFixed(2)}
                 </span>

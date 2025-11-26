@@ -1,15 +1,23 @@
-import { SlidersHorizontal } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
 
 export default function Filter({ filters, onChange }) {
-  const handleFilterChange = (key) => {
-    if (key === "veg") {
-      onChange("veg", !filters.veg);
-      if (!filters.veg) onChange("nonVeg", false);
-    } else if (key === "nonVeg") {
-      onChange("nonVeg", !filters.nonVeg);
-      if (!filters.nonVeg) onChange("veg", false);
+  const currentMode =
+    filters.veg && !filters.nonVeg
+      ? "veg"
+      : filters.nonVeg && !filters.veg
+      ? "nonVeg"
+      : "all";
+
+  const setMode = (mode) => {
+    if (mode === "veg") {
+      onChange("veg", true);
+      onChange("nonVeg", false);
+    } else if (mode === "nonVeg") {
+      onChange("veg", false);
+      onChange("nonVeg", true);
+    } else {
+      onChange("veg", false);
+      onChange("nonVeg", false);
     }
   };
 
@@ -18,47 +26,45 @@ export default function Filter({ filters, onChange }) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex items-center justify-between bg-gradient-to-r from-white/70 to-white/40 backdrop-blur-xl border-gray-200 px-2 pt-2"
+      className="w-full flex items-center py-2 justify-end bg-gradient-to-r from-white/70 to-white/40 backdrop-blur-xl border-gray-200 px-2 pt-2"
     >
-      {/* Filter Title */}
-      <div className="flex items-center gap-2">
-        <div className="bg-gray-100 p-2 rounded-xl shadow-sm">
-          <SlidersHorizontal
-            className="text-gray-700"
-            size={20}
-            strokeWidth={2.2}
-          />
+      {/* Veg / Non-Veg Toggle */}
+      <div className="flex items-center text-gray-800 text-xs sm:text-sm md:text-base">
+        <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMode("all")}
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+              currentMode === "all"
+                ? "bg-white text-gray-900 shadow"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("veg")}
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+              currentMode === "veg"
+                ? "bg-green-500 text-white shadow"
+                : "text-green-700 hover:bg-green-50"
+            }`}
+          >
+            Veg
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("nonVeg")}
+            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+              currentMode === "nonVeg"
+                ? "bg-red-500 text-white shadow"
+                : "text-red-700 hover:bg-red-50"
+            }`}
+          >
+            Non-Veg
+          </button>
         </div>
-        <h2 className="text-xl font-semibold text-gray-800 tracking-wide">
-          Filters
-        </h2>
-      </div>
-
-      {/* Veg / Non-Veg Options */}
-      <div className="flex items-center gap-6 text-gray-800 text-sm md:text-base">
-        {/* Veg Option */}
-        <label className="flex items-center gap-2 cursor-pointer group transition">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-500 bg-green-50 group-hover:bg-green-100 shadow-sm transition-all">
-            <span className="font-medium text-green-700">Veg</span>
-            <Checkbox
-              checked={filters.veg}
-              onCheckedChange={() => handleFilterChange("veg")}
-              className="border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-            />
-          </div>
-        </label>
-
-        {/* Non-Veg Option */}
-        <label className="flex items-center gap-2 cursor-pointer group transition">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-500 bg-red-50 group-hover:bg-red-100 shadow-sm transition-all">
-            <span className="font-medium text-red-700">Non-Veg</span>
-            <Checkbox
-              checked={filters.nonVeg}
-              onCheckedChange={() => handleFilterChange("nonVeg")}
-              className="border-red-600 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
-            />
-          </div>
-        </label>
       </div>
     </motion.div>
   );

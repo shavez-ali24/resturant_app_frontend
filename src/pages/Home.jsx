@@ -1,8 +1,10 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { useGetRestaurantQuery, useGetMenuQuery } from "../redux/clientRedux/clientAPI";
+import {
+  useGetRestaurantQuery,
+  useGetMenuQuery,
+} from "../redux/clientRedux/clientAPI";
 import Header from "@/components/Client/Header";
 import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
@@ -11,13 +13,16 @@ import Filter from "@/components/Client/Filter";
 import RestaurantClosed from "@/components/Client/RestaurantClosed";
 
 export default function Home() {
-  const { data: menuData, isLoading: menuLoading, error: menuError } = useGetMenuQuery();
+  const {
+    data: menuData,
+    isLoading: menuLoading,
+    error: menuError,
+  } = useGetMenuQuery();
   const {
     data: restaurantData,
     isLoading: restaurantLoading,
     error: restaurantError,
   } = useGetRestaurantQuery();
-  
 
   const [showLoader, setShowLoader] = useState(true);
   const [filters, setFilters] = useState({ veg: false, nonVeg: false });
@@ -58,14 +63,21 @@ export default function Home() {
     restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
 
   if (error) {
-    return <p>Error: {error?.data?.message || error?.message || "An error occurred"}</p>;
+    return (
+      <p>
+        Error: {error?.data?.message || error?.message || "An error occurred"}
+      </p>
+    );
   }
 
   if (!isRestaurantOpen) {
     return (
       <RestaurantClosed
         logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
-        siteName={restaurant?.restaurantName || restaurantData?.restaurant?.restaurantName}
+        siteName={
+          restaurant?.restaurantName ||
+          restaurantData?.restaurant?.restaurantName
+        }
         reopenAt={restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt}
       />
     );
@@ -95,20 +107,24 @@ export default function Home() {
 
   return (
     <>
-      <div className="sticky top-0 bg-white z-20 border-b shadow-sm ">
+      <div className="sticky top-0 bg-white z-20">
         <Header
           logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
-          siteName={restaurant?.restaurantName || restaurantData?.restaurant?.restaurantName}
+          siteName={
+            restaurant?.restaurantName ||
+            restaurantData?.restaurant?.restaurantName
+          }
           search={search}
           onSearch={setSearch}
         />
-        <Filter filters={filters} onChange={handleFilterChange} />
+
         <Category
           title="Food Categories"
           categories={menu}
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
         />
+        <Filter filters={filters} onChange={handleFilterChange} />
       </div>
       <FoodListing menu={filteredMenu} onQuantityChange={setTotal} />
     </>
