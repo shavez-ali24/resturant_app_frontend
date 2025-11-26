@@ -1,59 +1,277 @@
 import React, { useRef } from "react";
 // eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion"; // Optional: for modal animation
+import { motion } from "framer-motion";
 
 const BillPage = ({ order, restaurantDetails, onClose }) => {
-  console.log(order)
   const billRef = useRef();
 
   const handlePrint = () => {
-    const printContents = billRef.current.innerHTML;
-    const styles = `<style>
-            @media print {
-                body * { visibility: hidden; }
-                .printable-bill, .printable-bill * { visibility: visible; }
-                .printable-bill { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; font-family: sans-serif; font-size: 10pt; }
-                .no-print { display: none !important; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-                th { background-color: #eee; font-weight: bold; }
-                .text-right { text-align: right; }
-                .text-center { text-align: center; }
-                .font-bold { font-weight: bold; }
-                .border-t { border-top: 1px solid #ccc; }
-                .pt-2 { padding-top: 8px; }
-                .mt-2 { margin-top: 0.5rem; }
-                .mb-4 { margin-bottom: 1rem; }
-                .mb-6 { margin-bottom: 1.5rem; }
-                .space-y-1 > * + * { margin-top: 0.25rem; }
-                .flex { display: flex; }
-                .justify-between { justify-content: space-between; }
-                .grid { display: grid; }
-                .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-                .gap-x-4 { column-gap: 1rem; }
-                .gap-y-1 { row-gap: 0.25rem; }
-                .capitalize { text-transform: capitalize; }
-                .w-full { width: 100%; }
-                .max-w-xs { max-width: 20rem; }
-                .ml-auto { margin-left: auto; }
-                .flex-col { flex-direction: column; }
-                .items-end { align-items: flex-end; }
-                .p-3 { padding: 0.75rem; }
-                .bg-gray-50 { background-color: #f9fafb; }
-                .rounded-lg { border-radius: 0.5rem; }
-                .border { border: 1px solid #e5e7eb; }
-                .text-gray-800 { color: #1f2937; }
-                .text-gray-600 { color: #4b5563; }
-                .mt-1 { margin-top: 0.25rem; }
-            }
-        </style>`;
-    const originalContents = document.body.innerHTML;
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
 
-    document.body.innerHTML =
-      styles + `<div class="printable-bill">${printContents}</div>`;
-    window.print();
-    document.body.innerHTML = originalContents;
-    onClose(); // Close modal after print
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+
+    // --- PREPARE DATA VARIABLES FOR PRINT ---
+    const rName = restaurantDetails?.restaurantName || restaurantDetails?.name || "Restaurant Name";
+    const rAddress = restaurantDetails?.address || "";
+    const rPhone = restaurantDetails?.phoneNumber ? `Tel: ${restaurantDetails.phoneNumber}` : "";
+    const rGst = restaurantDetails?.gstEnabled && restaurantDetails.gstNumber ? `GSTIN: ${restaurantDetails.gstNumber}` : "";
+
+    const orderId = order._id.slice(-6).toUpperCase();
+    const orderDate = new Date(order.createdAt).toLocaleString();
+    const customerName = order.customerName || "Guest";
+    const customerPhone = order.customerPhone || "";
+    const tableInfo = order.tableId ? `Table: ${order.tableId}` : (order.orderType === 'Delivery' ? 'Delivery Order' : 'Takeaway');
+
+    // Items Row Generation
+    const itemsRows = order.items.map(item => `
+      <tr>
+        <td class="col-item">
+          <span class="item-name">${item.name}</span>
+        </td>
+        <td class="col-qty">${item.quantity}</td>
+        <td class="col-price">₹${item.price}</td>
+        <td class="col-total">₹${item.price * item.quantity}</td>
+      </tr>
+    `).join('');
+
+    // Totals Calculation
+    const subtotal = order.subtotal !== undefined ? order.subtotal : order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const gstRow = order.gstAmount > 0 ? `
+      <div class="summary-row">
+        <span>GST (${order.gstRate}%)</span>
+        <span>₹${order.gstAmount}</span>
+      </div>` : '';
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice #${orderId}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
+            body {
+              font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+              background-color: #fff;
+              color: #1a1a1a;
+              margin: 0;
+              padding: 20px; /* Padding for A4/Page logic */
+              font-size: 13px;
+              line-height: 1.5;
+            }
+
+            /* Container to constrain width for thermal or look like A4 center */
+            .invoice-container {
+              max-width: 80mm; /* Adjust to 100% or 210mm for A4, 80mm is standard thermal receipt width */
+              margin: 0 auto;
+              background: white;
+            }
+
+            /* --- HEADER --- */
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 1px dashed #ccc;
+              padding-bottom: 15px;
+            }
+            .brand-name {
+              font-size: 20px;
+              font-weight: 800;
+              text-transform: uppercase;
+              margin: 0 0 5px 0;
+              letter-spacing: 0.5px;
+            }
+            .brand-details {
+              font-size: 11px;
+              color: #555;
+            }
+
+            /* --- META INFO (Customer, Date) --- */
+            .invoice-meta {
+              margin-bottom: 15px;
+              padding-bottom: 15px;
+              border-bottom: 1px solid #eee;
+            }
+            .meta-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 4px;
+            }
+            .label { font-weight: 600; color: #555; }
+            .val { font-weight: 500; text-align: right; }
+
+            /* --- TABLE --- */
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 15px;
+            }
+            th {
+              text-align: left;
+              font-size: 10px;
+              text-transform: uppercase;
+              color: #555;
+              border-bottom: 1px solid #000;
+              padding: 5px 0;
+            }
+            td {
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+              vertical-align: top;
+            }
+            
+            /* Column Widths */
+            .col-item { width: 55%; }
+            .col-qty { width: 10%; text-align: center; }
+            .col-price { width: 15%; text-align: right; }
+            .col-total { width: 20%; text-align: right; }
+
+            .item-name {
+              font-weight: 600;
+              display: block;
+            }
+
+            /* --- SUMMARY / TOTALS --- */
+            .summary-section {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-end;
+              margin-top: 10px;
+              border-top: 1px dashed #ccc;
+              padding-top: 10px;
+            }
+            .summary-row {
+              display: flex;
+              justify-content: space-between;
+              width: 100%; /* Or smaller width like 60% if you want it compact right */
+              margin-bottom: 4px;
+            }
+            .grand-total {
+              font-size: 16px;
+              font-weight: 800;
+              border-top: 2px solid #000;
+              border-bottom: 2px solid #000;
+              padding: 8px 0;
+              margin-top: 5px;
+            }
+
+            /* --- FOOTER --- */
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              font-size: 11px;
+              color: #777;
+            }
+            .footer strong {
+              color: #000;
+              display: block;
+              margin-bottom: 4px;
+              font-size: 12px;
+            }
+
+            /* PRINT SETTINGS */
+            @media print {
+              body { margin: 0; padding: 0; }
+              .no-print { display: none; }
+              @page { margin: 0; } /* Removes browser header/footer info */
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            
+            <div class="header">
+              <div class="brand-name">${rName}</div>
+              <div class="brand-details">
+                ${rAddress}<br/>
+                ${rPhone}<br/>
+                ${rGst}
+              </div>
+            </div>
+
+            <div class="invoice-meta">
+              <div class="meta-row">
+                <span class="label">Invoice No:</span>
+                <span class="val">#${orderId}</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Date:</span>
+                <span class="val">${orderDate}</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Type:</span>
+                <span class="val">${tableInfo}</span>
+              </div>
+              <div class="meta-row">
+                <span class="label">Customer:</span>
+                <span class="val">${customerName} ${customerPhone ? `(${customerPhone})` : ''}</span>
+              </div>
+              ${order.address ? `
+              <div class="meta-row" style="margin-top:5px">
+                <span class="label">Del. Address:</span>
+                <span class="val" style="font-size:11px; max-width:60%;">${order.address}</span>
+              </div>` : ''}
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-item">Item Name</th>
+                  <th class="col-qty">Qty</th>
+                  <th class="col-price">Price</th>
+                  <th class="col-total">Amt</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsRows}
+              </tbody>
+            </table>
+
+            <div class="summary-section">
+              <div class="summary-row">
+                <span class="label">Subtotal</span>
+                <span class="val">₹${subtotal}</span>
+              </div>
+              ${gstRow}
+              <div class="summary-row grand-total">
+                <span>Total</span>
+                <span>₹${order.totalAmount}</span>
+              </div>
+            </div>
+
+            <div class="footer">
+              <strong>Thank You for Visiting!</strong>
+              Please come again.
+            </div>
+
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.onload = () => {
+      // Small delay to ensure styles render before print dialog
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 500);
+
+      // Cleanup after print
+      // Note: Some browsers pause JS during print dialog, so this runs after dialog closes
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        onClose();
+      }, 1000);
+    };
   };
 
   const fallbackSubtotal = order.items.reduce(
@@ -211,10 +429,10 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
                     <td className="py-1.5 px-2">{item.name}</td>
                     <td className="py-1.5 px-1 text-center">{item.quantity}</td>
                     <td className="py-1.5 px-2 text-right">
-                      ₹{item.price.toFixed(2)}
+                      ₹{item.price}
                     </td>
                     <td className="py-1.5 px-2 text-right">
-                      ₹{(item.price * item.quantity).toFixed(2)}
+                      ₹{(item.price * item.quantity)}
                     </td>
                   </tr>
                 ))}
@@ -225,17 +443,17 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
             <div className="text-sm space-y-1 mb-6 flex flex-col items-end w-full max-w-xs ml-auto">
               <div className="flex justify-between w-full">
                 <span>Subtotal</span>
-                <span>₹{displaySubtotal.toFixed(2)}</span>
+                <span>₹{displaySubtotal}</span>
               </div>
               {displayGstAmount > 0 && ( // Show if GST *amount* is > 0
                 <div className="flex justify-between w-full">
                   <span>GST ({displayGstRate}%)</span>
-                  <span>₹{displayGstAmount.toFixed(2)}</span>
+                  <span>₹{displayGstAmount}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold border-t pt-2 mt-2 w-full">
                 <span>Grand Total</span>
-                <span>₹{displayGrandTotal.toFixed(2)}</span>
+                <span>₹{displayGrandTotal}</span>
               </div>
             </div>
             {/* Totals - Dynamic */}

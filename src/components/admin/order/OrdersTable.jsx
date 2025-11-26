@@ -4,17 +4,24 @@ import React from "react";
 import OrderRow from "./OrderRow";
 import { MdModeEdit } from "react-icons/md";
 import { MdDelete } from "react-icons/md";
+import { useDispatch } from "react-redux";
+import { showBill } from "@/redux/adminRedux/billSlice";
 
-const OrdersTable = ({
-  orders,
-  loading,
-  error,
-  setEditingOrder,
-  setShowConfirmDelete,
-  setOrderForBillModal,
-  updateOrder,
-  tableType,
-}) => {
+
+const OrdersTable = (
+  {
+    orders,
+    loading,
+    error,
+    setEditingOrder,
+    setShowConfirmDelete,
+    setOrderForBillModal,
+    updateOrder,
+    tableType,
+  }
+) => {
+  // dispatch(showBill(order));
+  const dispatch = useDispatch();
   // ✅ 12-hour format time with AM/PM
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -26,25 +33,25 @@ const OrdersTable = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="shadow-sm overflow-hidden">
       {/* ✅ Desktop / Tablet View (Table) */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full text-sm text-left">
-          <thead className="bg-gray-50 text-gray-600 uppercase tracking-wide text-xs">
+        <table className="min-w-full">
+          <thead className="bg-gray-900 text-white  uppercase tracking-wide text-xs ">
             <tr>
-              <th className="px-6 py-4">Time</th>
-              <th className="px-6 py-4">Order No</th>
-              <th className="px-6 py-4">Customer</th>
-              <th className="px-6 py-4">Phone</th>
-              <th className="px-6 py-4">Table ID</th>
-              <th className="px-6 py-4">Order Type</th>
+              <th className="text-center border p-3">Time</th>
+              <th className="text-center p-3 border">Order No</th>
+              <th className="text-center p-3 border">Customer</th>
+              <th className="text-center p-3 border">Phone</th>
+              {/* <th className="text-center p-3 border">Table ID</th> */}
+              <th className="text-center p-3 border">Order Type</th>
               {/* <th className="px-6 py-4">Status</th> */}
               {/* 👇 Only show Actions column if tableType is "pending" */}
-              <th className="px-6 py-4">Items</th>
+              <th className="text-center p-3 border">Items</th>
               {tableType === "pending" && (
                 <>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="text-center p-3 border">Status</th>
+                  <th className="">Actions</th>
                 </>
               )}
             </tr>
@@ -126,12 +133,26 @@ const OrdersTable = ({
                   <span className="font-medium">Phone:</span>{" "}
                   {order.customerPhone}
                 </p>
+                {/* ORDER TYPE BADGE */}
                 <p className="text-gray-700">
-                  <span className="font-medium">Table:</span>{" "}
-                  {order.tableId || "N/A"}
+                  <span className="font-medium">Order Type:</span>{" "}
+                  {order.orderType === "Eat Here" ? (
+                    <span className="px-2 py-1 ml-1 rounded-full text-white text-xs font-semibold bg-green-600">
+                      {order.orderType} {order.tableId ? `: ${order.tableId}` : ""}
+                    </span>
+                  ) : order.orderType === "Take Away" ? (
+                    <span className="px-2 py-1 ml-1 rounded-full text-white text-xs font-semibold bg-blue-600">
+                      {order.orderType}
+                    </span>
+                  ) : order.orderType === "Delivery" ? (
+                    <span className="px-2 py-1 ml-1 rounded-full text-white text-xs font-semibold bg-orange-500">
+                      {order.orderType}
+                    </span>
+                  ) : null}
                 </p>
+
                 <button
-                  onClick={() => setOrderForBillModal(order)}
+                  onClick={() => dispatch(showBill(order))}
                   className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition font-medium"
                 >
                   View Items

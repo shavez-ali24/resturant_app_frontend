@@ -35,7 +35,7 @@ export function AppSidebar({ ...props }) {
   const data = {
     user: userData,
     navMain: [
-     
+
       {
         title: "Order Management",
         url: "#",
@@ -67,6 +67,13 @@ export function AppSidebar({ ...props }) {
           { title: "Revenue", url: "/admin/revenue" },
         ],
       },
+      {
+        title: "Profile",
+        url: "/admin/profile",
+        icon: User,
+        isActive: location.pathname === "/admin/profile",
+        items: [],
+      }
     ],
   };
 
@@ -86,7 +93,7 @@ export function AppSidebar({ ...props }) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="mt-12">
+            <SidebarMenuButton size="lg" asChild className="mt-20">
               <Link
                 to="/admin"
                 onClick={() => window.innerWidth < 1024 && toggleSidebar(false)}
@@ -107,7 +114,7 @@ export function AppSidebar({ ...props }) {
               ...item,
               onClick: () => window.innerWidth < 1024 && toggleSidebar(false),
             })),
-          }))}
+          })).filter((item) => item.items.length == 0 ? false : true)}
         />
       </SidebarContent>
 

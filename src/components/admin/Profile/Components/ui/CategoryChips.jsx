@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export const CategoryChips = ({ categories }) => (
     <div className="flex flex-wrap gap-2">
-        {categories.length > 0 ? (
+        {categories?.length > 0 ? (
             categories.map((category) => (
                 <span
                     key={category}

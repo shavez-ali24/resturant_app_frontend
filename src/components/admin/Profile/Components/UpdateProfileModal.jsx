@@ -10,10 +10,14 @@ import UpdateOrderModeForm from './UpdateOrderModeForm';
 import UpdateFinancialsForm from './UpdateFinancialsForm';
 import UpdateBrandingForm from './UpdateBrandingForm';
 import UpdateFormActions from './UpdateFormActions';
+// import { useGetRestaurantProfileQuery, useUpdateRestaurantProfileMutation } from '@/redux/adminRedux/adminAPI';
 
 
 export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSuccess }) => {
-
+// const [updateProfile] = useUpdateRestaurantProfileMutation();
+// const {profileData}
+// const {} = useGetRestaurantProfileQuery();
+// console.log(updateProfile)
     const {
         formData, categories, currentCategoryInput, setCurrentCategoryInput,
         file, fileError, isSubmitting, notification, categorySuggestions,
@@ -28,7 +32,7 @@ export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSucces
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4"
             onClick={onClose}
         >
             {/* 1. Notification Popup */}
@@ -46,7 +50,7 @@ export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSucces
             <motion.div
                 variants={modalContentVariant}
                 // Use bg-gray-50 to match your old cards
-                className="relative mt-10 bg-gray-50 rounded-xl shadow-2xl w-full max-w-3xl mx-auto max-h-[90vh] overflow-y-auto"
+                className="relative mt-10 bg-gray-50 rounded-xl shadow-2xl w-full max-w-3xl mx-auto max-h-[80vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="w-full p-4 md:p-8 space-y-6">

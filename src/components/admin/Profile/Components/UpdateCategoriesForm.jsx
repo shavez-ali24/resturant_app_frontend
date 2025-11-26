@@ -11,7 +11,7 @@ export default function UpdateCategoriesForm({ categories, chipVariant, currentC
             <div className="flex flex-wrap items-center gap-2 w-full border border-gray-300 rounded-xl p-2 focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500 transition-all">
                 {" "}
                 <AnimatePresence>
-                    {categories.map((category) => (
+                    {categories?.map((category) => (
                         <motion.span
                             key={category}
                             {...chipVariant}
