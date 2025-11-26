@@ -182,7 +182,7 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className="h-12 w-full md:w-auto flex-shrink-0 rounded-xl border border-transparent px-4 py-2 text-base font-medium text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900"
+        className="h-12 w-full md:w-auto bg-black text-white flex-shrink-0 rounded-xl border border-transparent px-4 py-2 text-base font-medium text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900"
       >
         Reset Filters
       </button>
@@ -242,7 +242,7 @@ export default function MenuFilter({ onFilterChange, categories, value }) {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-200">
+    <div>
       <div className="hidden md:flex flex-wrap items-center gap-4">
         <FilterControls
           filters={filters}

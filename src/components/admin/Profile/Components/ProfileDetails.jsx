@@ -1,10 +1,11 @@
-import React from 'react'
 import { ProfileField } from './Ui/ProfileField';
 import { CategoryChips } from './Ui/CategoryChips';
 import { OrderModeStatus } from './Ui/OrderModeStatus';
-import { UserCircleIcon, BuildingOfficeIcon, CreditCardIcon, PhotoIcon, TagIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { Image, Landmark, QrCode, Tag, User, Utensils } from 'lucide-react';
 
-export default function ProfileDetails({ profileData, onDownloadQRCode }) {
+export default function ProfileDetails({ profileData }) {
+
+    const emailOfAdmin = localStorage.getItem("userEmail") || "";
     return (
         <div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -13,19 +14,19 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <UserCircleIcon className="w-6 h-6 text-orange-500" />
+                                <User />
                                 Admin Account
                             </h3>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ProfileField
                                 label="Full Name"
-                                value={profileData.name}
+                                value={profileData?.name}
                                 icon="👤"
                             />
                             <ProfileField
                                 label="Email Address"
-                                value={profileData.email}
+                                value={emailOfAdmin}
                                 icon="📧"
                             />
                         </div>
@@ -35,7 +36,7 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <BuildingOfficeIcon className="w-6 h-6 text-orange-500" />
+                                <Utensils />
                                 Restaurant Details
                             </h3>
                         </div>
@@ -44,24 +45,24 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                                 <ProfileField
                                     className="w-64"
                                     label="Full Address"
-                                    value={profileData.address}
+                                    value={profileData?.address}
                                     icon="📍"
                                 />
                             </div>
                             <ProfileField
                                 label="Contact Phone"
-                                value={profileData.phoneNumber}
+                                value={profileData?.phoneNumber}
                                 icon="📞"
                             />
                             <ProfileField
                                 label="Total Tables"
-                                value={profileData.tableNumbers}
+                                value={profileData?.tableNumbers}
                                 icon="🪑"
                             />
                             <div className="md:col-span-2">
                                 <ProfileField
                                     label="Client Domain"
-                                    value={profileData.domain}
+                                    value={profileData?.domain}
                                     icon="🌐"
                                 />
                             </div>
@@ -75,17 +76,17 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                                     <OrderModeStatus
                                         mode="Eat Here"
                                         Note icon="🍴"
-                                        isEnabled={profileData.orderModes.eathere}
+                                        isEnabled={profileData?.orderModes.eathere}
                                     />
                                     <OrderModeStatus
                                         mode="Takeaway"
                                         icon="🛍️"
-                                        isEnabled={profileData.orderModes.takeaway}
+                                        isEnabled={profileData?.orderModes.takeaway}
                                     />
                                     <OrderModeStatus
                                         mode="Delivery"
                                         icon="🛵"
-                                        isEnabled={profileData.orderModes.delivery}
+                                        isEnabled={profileData?.orderModes.delivery}
                                     />
                                 </div>
                             </div>
@@ -97,24 +98,24 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <CreditCardIcon className="w-6 h-6 text-orange-500" />
+                                <Landmark />
                                 Financial Settings
                             </h3>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ProfileField
                                 label="GST Status"
-                                value={profileData.gstEnabled ? "Enabled" : "Disabled"}
+                                value={profileData?.gstEnabled ? "Enabled" : "Disabled"}
                                 icon="🧾"
                             />
                             <ProfileField label="GST Rate"
-                                value={`${profileData.gstRate}%`}
+                                value={`${profileData?.gstRate}%`}
                                 icon="%"
                             />
                             <div className="md:col-span-2">
                                 <ProfileField
                                     label="GST Number"
-                                    value={profileData.gstNumber}
+                                    value={profileData?.gstNumber}
                                     icon="🔢"
                                 />
                             </div>
@@ -128,14 +129,15 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <PhotoIcon className="w-6 h-6 text-orange-500" />
+                                {/* <Image /> */}
+                                <Image />
                                 Restaurant Logo
                             </h3>
                         </div>
                         <div className="p-6 flex justify-center items-center">
-                            {profileData.logoUrl ? (
+                            {profileData?.logo ? (
                                 <img
-                                    src={profileData.logoUrl}
+                                    src={profileData?.logo?.url}
                                     alt="Restaurant Logo"
                                     className="w-48 h-48 object-cover rounded-xl border p-1 bg-gray-50"
                                 />
@@ -151,12 +153,12 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <TagIcon className="w-6 h-6 text-orange-500" />
+                                <Tag />
                                 Categories
                             </h3>
                         </div>
                         <div className="p-6">
-                            <CategoryChips categories={profileData.categories} />
+                            <CategoryChips categories={profileData?.categories} />
                         </div>
                     </div>
 
@@ -164,27 +166,30 @@ export default function ProfileDetails({ profileData, onDownloadQRCode }) {
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <QrCodeIcon className="w-6 h-6 text-orange-500" />
+                                <QrCode />
                                 Tap N' Order QR
                             </h3>
                         </div>
+
                         <div className="p-6">
-                            {profileData.qrCode ? (
+                            {profileData?.qrCode ? (
                                 <div className="text-center">
                                     <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 inline-block">
                                         <img
-                                            src={profileData.qrCode}
+                                            src={profileData?.qrCode}
                                             alt="QR Code"
                                             className="w-48 h-48 object-contain"
                                         />
                                     </div>
-                                    <button
-                                        onClick={onDownloadQRCode}
+                                    <a
+                                        href={profileData?.qrCode}
+                                        target="_blank"
+                                        download
                                         className="w-full mt-4 bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
                                     >
                                         <span>📥</span>
                                         Download QR
-                                    </button>
+                                    </a>
                                 </div>
                             ) : (
                                 <p className="text-gray-500 text-center">

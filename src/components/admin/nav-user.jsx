@@ -82,7 +82,7 @@ export function NavUser({ user }) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <Link to="Profile">Profile</Link>
+                  Profile
                 </div>
               </div>
             </DropdownMenuLabel>

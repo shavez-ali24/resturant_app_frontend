@@ -11,7 +11,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import Menu from "./components/admin/Menu/Menu.jsx";
 import { Provider } from "react-redux";
 import { store } from "./redux/store";
-import OrdersList from "./components/admin/order/OrdersList.jsx";
+// import OrdersList from "./components/admin/order/OrdersList.jsx";
 import Filter from "./components/Client/Filter";
 import LoginPage from "./components/admin/LoginPage";
 import PrivateRoute from "./components/admin/PrivateRoute";
@@ -59,12 +59,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         >
           <Route index element={<Admin />} />
           <Route path="menu" element={<Menu />} />
-          
+
           {/* <Route path="orderlist" element={<OrdersList />} /> */}
           <Route path="completedorder" element={<CompletedOrders />} />
           <Route path="orders" element={<Orders />} />
           <Route path="cancelledorder" element={<CancelledOrders />} />
-         
+
           <Route path="profile" element={<Adminprofile />} />
           <Route path="sales" element={<ComingSoon />} />
           <Route path="revenue" element={<Revenue />} />

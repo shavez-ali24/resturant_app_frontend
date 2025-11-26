@@ -24,6 +24,7 @@ const AddItemModal = ({
   restaurantCategories,
   loadingCategories,
   errorCategories,
+  onError
 }) => {
   const [addFormData, setAddFormData] = useState(defaultAddFormState);
   const [addFile, setAddFile] = useState(null);
@@ -94,16 +95,16 @@ const AddItemModal = ({
 
     const sizeKB = file.size / 1024;
     if (sizeKB > MAX_IMAGE_KB) {
-      setAddFileError(
-        `File size too large: ${sizeKB.toFixed(2)} KB. Max: ${MAX_IMAGE_KB}KB`
-      );
+      setAddFileError(`File size too large: ${sizeKB.toFixed(2)} KB. Max: ${MAX_IMAGE_KB}KB`);
+      onError(`File size too large: ${sizeKB.toFixed(2)} KB. Max: ${MAX_IMAGE_KB}KB`);
+
       e.target.value = "";
       return;
     }
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setAddFileError(
-        "Invalid image file type (JPEG, PNG, GIF, WEBP, AVIF allowed)"
-      );
+      setAddFileError("Invalid image file type (JPEG, PNG, GIF, WEBP, AVIF allowed)");
+      onError("Invalid image file type (JPEG, PNG, GIF, WEBP, AVIF allowed)");
+
       e.target.value = "";
       return;
     }
@@ -135,7 +136,7 @@ const AddItemModal = ({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 bg-black/50 mt-10 backdrop-blur-sm flex items-center justify-center z-40 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-md h-full pt-20 backdrop-blur-sm flex items-center justify-center z-40 p-2"
           onClick={onClose}
         >
           <motion.div
@@ -143,7 +144,7 @@ const AddItemModal = ({
             className="bg-gradient-to-br from-gray-50 to-gray-100 p-1 rounded-2xl shadow-lg w-full max-w-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="max-h-[90vh] overflow-y-auto rounded-[14px] bg-white">
+            <div className="max-h-[85vh] overflow-y-auto rounded-[14px] bg-white">
               <motion.form onSubmit={handleSubmit} className="p-6 sm:p-8">
                 <div className="flex items-center gap-3 mb-6 border-b pb-4">
                   <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0">

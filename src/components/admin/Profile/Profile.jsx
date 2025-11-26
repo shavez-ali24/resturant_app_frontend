@@ -7,23 +7,33 @@ import ProfileDetails from "./components/ProfileDetails"; // <-- Your component
 import { UpdateProfileModal } from "./components/UpdateProfileModal"; // <-- Your component
 import { LoadingSpinner } from "./components/ui/LoadingSpinner"; // <-- Your UI
 import { ErrorMessage } from "./Components/Ui/ErrorMessage";
-
+import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
 const Profile = () => {
-    // --- State ---
     const [token] = useState(() => localStorage.getItem("token") || "");
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [triggerRefetch, setTriggerRefetch] = useState(0);
 
-    // --- Logic ---
     const { profileData, loading, error } = useProfileData(token, triggerRefetch);
+
+
+
+    const {
+        data: restaurant,
+        isLoading: dataLoading,
+        isError: getProfileError
+    } = useGetRestaurantProfileQuery();
+
+    // console.log(r)
+    // console.log(getProfileError, dataLoading)
+
+    console.log(useGetRestaurantProfileQuery())
+
+
+
 
     const handleUpdateSuccess = () => {
         setIsUpdateModalOpen(false);
         setTriggerRefetch((prev) => prev + 1);
-    };
-
-    const downloadQRCode = () => {
-        // ... (copy your download QR code logic here)
     };
 
     // --- Render ---
@@ -37,17 +47,16 @@ const Profile = () => {
 
     return (
         <>
-            <div className="py-12 px-4 sm:px-6 lg:px-8 min-h-screen">
-                <div className="mx-auto max-w-7xl">
+            <div>
+                <div className="mx-auto p-10">
                     <ProfileHeader
-                        restaurantName={profileData.restaurantName}
-                        loading={loading && triggerRefetch > 0}
-                        error={error && triggerRefetch > 0 ? error : null}
+                        restaurantName={restaurant?.restaurant.restaurantName}
+                        loading={dataLoading}
+                        error = {getProfileError ? "Failed to load name" : null}
                         onUpdateClick={() => setIsUpdateModalOpen(true)}
                     />
                     <ProfileDetails
-                        profileData={profileData}
-                        onDownloadQRCode={downloadQRCode}
+                        profileData={restaurant?.restaurant}
                     />
                 </div>
             </div>
@@ -64,6 +73,6 @@ const Profile = () => {
             </AnimatePresence>
         </>
     );
-}; 
+};
 
 export default Profile;

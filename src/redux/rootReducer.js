@@ -1,7 +1,7 @@
 import { combineReducers } from "@reduxjs/toolkit";
 import superAdminReducer from "./superAdminRedux/superAdminSlice";
 import { superAdminApi } from "./superAdminRedux/superAdminAPI";
-
+import billReducer from "./adminRedux/billSlice";
 import clientReducer from "./clientRedux/clientSlice";
 import { clientApi } from "./clientRedux/clientAPI";
 
@@ -17,6 +17,8 @@ const rootReducer = combineReducers({
 
   admin: adminReducer, // ✅ Add admin reducer
   [adminApi.reducerPath]: adminApi.reducer, // ✅ Add admin API
+
+  bill: billReducer,
 });
 
 export default rootReducer;

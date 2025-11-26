@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 
 import React, { useCallback, useEffect, useState, useMemo } from "react";
-
 import { motion, AnimatePresence } from "framer-motion";
 import OrdersTable from "./OrdersTable";
 import EditOrderModal from "./EditOrderModal";
@@ -9,6 +8,16 @@ import DeleteModal from "./DeleteModal";
 import ItemsModal from "./ItemsModal";
 import config from "../../../config";
 import Heading from "../ui/Heading";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar1, CalendarCheck, CalendarFold, CalendarRange, List } from "lucide-react";
+
 
 const CancelledOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -175,7 +184,7 @@ const CancelledOrders = () => {
       });
   }, [orders, dateFilter]);
   return (
-    <div className="min-h-screen  px-4 py-6 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 relative">
       <AnimatePresence>
         {notification.show && (
           <motion.div
@@ -272,26 +281,76 @@ const CancelledOrders = () => {
       </AnimatePresence>
 
       <div>
-        {/* ✅ 4. Update the UI for the filter */}
-        <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* ✅ 3. Update the UI for filters */}
+        <div className="mb-4 flex flex-col px-2 sm:flex-row justify-between gap-4">
           <Heading title={"Cancelled Orders"} />
-
-          {/* Date Filter Dropdown */}
-          <select
-            id="dateFilter"
+          <Select
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-2 py-2 sm:px-3 border rounded-lg text-xs sm:text-sm font-medium bg-white hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 min-w-20 sm:min-w-32"
+            onValueChange={(val) => setDateFilter(val)}
           >
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="all">All Time</option>
-          </select>
+            <SelectTrigger className="h-9 w-[160px] rounded-lg border px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-gray-300 transition-all hover:bg-gray-50">
+              <span className="mx-auto">
+                <SelectValue placeholder="Filter" />
+              </span>
+            </SelectTrigger>
+
+            <SelectContent className="bg-white border border-gray-200 shadow-xl rounded-xl p-1 min-w-[140px]">
+              <SelectGroup>
+                {/* Today */}
+                <SelectItem
+                  value="today"
+                  className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck size={16} /> Today
+                  </div>
+                </SelectItem>
+
+                {/* Yesterday */}
+                <SelectItem
+                  value="yesterday"
+                  className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <CalendarFold size={16} /> Yesterday
+                  </div>
+                </SelectItem>
+
+                {/* Week */}
+                <SelectItem
+                  value="week"
+                  className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <CalendarRange size={16} /> This Week
+                  </div>
+                </SelectItem>
+
+                {/* Month */}
+                <SelectItem
+                  value="month"
+                  className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar1 size={16} /> This Month
+                  </div>
+                </SelectItem>
+
+                {/* All Time */}
+                <SelectItem
+                  value="all"
+                  className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <List size={16} /> All Time
+                  </div>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <OrdersTable
-          // ✅ 5. Pass the new filtered list
+          // ✅ 4. Pass the new filtered list
           orders={filteredCancelledOrders}
           loading={loading}
           error={error}
@@ -302,6 +361,7 @@ const CancelledOrders = () => {
           tableType={tableType}
         />
       </div>
+
 
       {/* ... (Your Modals: ItemsModal, EditOrderModal, DeleteModal) ... */}
       {selectedItems && (

@@ -1,4 +1,4 @@
- 
+
 import React, { useState, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -228,6 +228,8 @@ const Menu = () => {
         restaurantCategories={restaurantCategories}
         loadingCategories={loadingCategories}
         errorCategories={categoryError ? "Failed to load categories" : null}
+        onError={(msg) => showNotification(msg, "error")} // 👈 NEW LINE
+
       />
 
       {/* ✅ Edit modal */}
@@ -247,17 +249,17 @@ const Menu = () => {
       <Heading title="Menu Management" />
 
       {/* ✅ Filter + Add button */}
-      <div className="my-6 flex justify-between items-center">
+      <div className="my-6 flex justify-between items-center bg-white rounded-2xl  p-4 md:p-6 ">
         <MenuFilter
           value={filters}
           onFilterChange={handleFilterChange}
           categories={restaurantCategories}
         />
         <Button
-          className="py-3 text-lg bg-orange-500 text-white"
+          className="flex w-fit h-15 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-orange-500 px-4 py-3 text-base font-semibold text-white shadow-sm transition-all"
           onClick={() => setIsAddModalOpen(true)}
         >
-          Add <CirclePlus size={22} className="ml-2" />
+          Add<CirclePlus size={22} className="ml-1" />
         </Button>
       </div>
 
