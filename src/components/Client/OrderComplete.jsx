@@ -6,21 +6,17 @@ export default function OrderComplete({
   buttonText,
   onClick,
   disabled,
+  className,
 }) {
   return (
-    <div>
-      <div className="w-full p-2">
-        <div className="flex items-center justify-between">
-      
-          <Button
-            className="bg-primary text-white runded-full"
-            onClick={onClick}
-            disabled={disabled}
-          >
-            {buttonText}
-          </Button>
-        </div>
-      </div>
+    <div className="w-full">
+      <Button
+        className={className || "w-full bg-primary text-white rounded-full"}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {buttonText}
+      </Button>
     </div>
   );
 }

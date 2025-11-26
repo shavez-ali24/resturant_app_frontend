@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Clock, MapPin, Phone, Search, UtensilsCrossed } from "lucide-react";
+import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight } from "lucide-react";
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,6 @@ import { useGetRestaurantQuery, useCreateOrderMutation } from "../../redux/clien
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import OrderComplete from "@/components/Client/OrderComplete";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import Copywright from "@/components/Client/Copywright";
 import OrderFormModal from "./OrderFormModal";
 
 export default function Header({
@@ -31,6 +24,7 @@ export default function Header({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const { toast } = useToast();
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
@@ -356,104 +350,169 @@ export default function Header({
       <div className="relative z-50">
         {/* 🌟 Bottom Order Summary */}
         {totalAmount > 0 && (
-          <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md rounded-t-3xl border-t border-gray-200 shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
-            <Accordion type="single" collapsible>
-              <AccordionItem value="item-1">
-                <AccordionTrigger
-                  className="group text-center py-2 px-4 font-semibold text-gray-800 text-[16px] tracking-wide transition-all duration-300 select-none no-underline hover:no-underline focus:no-underline focus:outline-none"
-                  style={{ textDecoration: "none" }}
-                >
-                  <span>View Your Order ({cartCount})</span>
-                </AccordionTrigger>
+          <>
+            {/* Collapsed View */}
+            {!isAccordionOpen && (
+              <div className="fixed bottom-2 left-2 right-2 bg-gray-900/95 backdrop-blur-md rounded-3xl border-t border-gray-700 shadow-[0_-8px_30px_rgba(0,0,0,0.3)]">
+                <div className="flex items-center justify-between p-2">
+                  {/* Overlapping Images on Left */}
+                  <div className="flex items-center gap-2" style={{ height: '48px' }}>
+                    <div className="flex items-center">
+                      {Object.entries(cartItems).slice(0, 4).map(([id, item], index) => {
+                        const totalItems = Math.min(Object.entries(cartItems).length, 4);
+                        return (
+                          <div
+                            key={id}
+                            className="relative"
+                            style={{
+                              marginLeft: index === 0 ? '0' : '-36px', // 90% overlap: 10% visible = 4px (40px * 0.1 = 4px, so offset by 36px)
+                              zIndex: totalItems - index, // Later images appear on top
+                              position: 'relative',
+                            }}
+                          >
+                            <img
+                              src={item.image?.url || item.image}
+                              alt={item.name}
+                              className="w-12 h-12 rounded-full object-cover border border-white shadow-md"
+                            />
+                            {/* Quantity Badge */}
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
+                              {item.quantity}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {cartCount > 4 && (
+                        <div
+                          className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary border border-white shadow-md relative"
+                          style={{
+                            marginLeft: '-36px',
+                            zIndex: 0,
+                          }}
+                        >
+                          +{cartCount - 4}
+                        </div>
+                      )}
+                    </div>
+                    {/* Total Items Count */}
+                    <div className="flex items-center gap-1 text-sm font-semibold text-white">
+                      <span>{cartCount}</span>
+                      <span className="text-sm text-gray-300">items</span>
+                    </div>
+                  </div>
 
-                <AccordionContent>
-                  <div className="flex flex-col justify-between gap-4 max-h-[40vh] overflow-y-auto pb-4 scrollbar-none">
-                    {cartCount === 0 ? (
-                      <p className="text-gray-500 text-center text-sm py-6">
+                  {/* View Cart Button on Right */}
+                  <button
+                    onClick={() => setIsAccordionOpen(true)}
+                    className="text-base flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
+                  >
+                    View Cart
+                    <ArrowRight className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Full Screen Accordion View */}
+            {isAccordionOpen && (
+              <div className="fixed inset-0 bg-white z-[100] flex flex-col">
+                {/* Header with Close Button */}
+                <div className="flex items-center justify-between p-2 border-b bg-white sticky top-0 z-10">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Your Order ({cartCount})
+                  </h2>
+                  <button
+                    onClick={() => setIsAccordionOpen(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close"
+                  >
+                    <X className="w-6 h-6 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Cart Items List */}
+                <div className="flex-1 overflow-y-auto p-4 pb-24">
+                  {cartCount === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <p className="text-gray-500 text-center text-lg py-6">
                         Your cart is empty 🛒
                       </p>
-                    ) : (
-                      <ul className="space-y-3">
-                        {Object.entries(cartItems).map(([id, item]) => (
-                          <li
-                            key={id}
-                            className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100 hover:bg-gray-100 transition-all"
-                          >
-                            {/* Item details */}
-                            <div className="flex flex-col">
-                              <p className="font-medium text-gray-800 text-[14px] leading-tight">
-                                {item.name}
-                              </p>
-                              {item.variantLabel && (
-                                <span className="text-xs text-gray-500">
-                                  {item.variantLabel}
-                                </span>
-                              )}
-                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                {/* Quantity Controls */}
-                                <button
-                                  className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-[13px] font-bold transition"
-                                  onClick={() => dispatch(removeFromCart(id))}
-                                >
-                                  −
-                                </button>
-                                <span className="w-5 text-center font-medium text-gray-700">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-[13px] font-bold transition"
-                                  onClick={() =>
-                                    dispatch(incrementQuantity(id))
-                                  }
-                                >
-                                  +
-                                </button>
+                    </div>
+                  ) : (
+                    <ul className="space-y-4">
+                      {Object.entries(cartItems).map(([id, item]) => (
+                        <li
+                          key={id}
+                          className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
+                        >
+                          {/* Round Image */}
+                          <img
+                            src={item.image?.url || item.image}
+                            alt={item.name}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
+                          />
 
-                                <span className="ml-2 text-gray-600">
-                                  × ₹{item.price}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Item total */}
-                            <p className="font-semibold text-gray-800 text-[14px]">
-                              ₹{(item.price * item.quantity).toFixed(2)}
+                          {/* Item details */}
+                          <div className="flex-1 flex flex-col">
+                            <p className="font-medium text-gray-800 text-[15px] leading-tight">
+                              {item.name}
                             </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+                            {item.variantLabel && (
+                              <span className="text-xs text-gray-500 mt-1">
+                                {item.variantLabel}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-3 text-sm text-gray-600 mt-2">
+                              {/* Quantity Controls */}
+                              <button
+                                className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                onClick={() => dispatch(removeFromCart(id))}
+                              >
+                                −
+                              </button>
+                              <span className="w-6 text-center font-medium text-gray-700">
+                                {item.quantity}
+                              </span>
+                              <button
+                                className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                onClick={() =>
+                                  dispatch(incrementQuantity(id))
+                                }
+                              >
+                                +
+                              </button>
 
-            {/*  Order Summary Footer */}
-            <div className="px-5 py-1 border-t bg-gradient-to-t from-white to-gray-50 shadow-lg flex items-center justify-between sticky bottom-0">
-              {/* Total Amount Section */}
-              <div className="flex flex-col">
-                <p className="text-xs uppercase tracking-wide text-gray-500 font-medium">
-                  Total Amount
-                </p>
-                <h3 className="text-xl font-bold text-gray-900">
-                  ₹{totalAmount.toFixed(2)}
-                </h3>
+                              <span className="ml-auto text-gray-600 font-medium">
+                                ₹{item.price} × {item.quantity} = ₹{(item.price * item.quantity).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Order Now Button - Fixed at Bottom */}
+                <div className="px-6 py-4 border-t bg-white sticky bottom-0">
+                  <OrderComplete
+                    amount={totalAmount.toFixed(2)}
+                    buttonText="Order Now"
+                    disabled={cartCount === 0}
+                    onClick={() => {
+                      setShowModal(true);
+                      setIsAccordionOpen(false);
+                    }}
+                    className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
+                      cartCount === 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-primary hover:bg-primary/90 hover:shadow-lg text-white"
+                    }`}
+                  />
+                </div>
               </div>
-
-              {/* Order Now Button */}
-              <OrderComplete
-                amount={totalAmount.toFixed(2)}
-                buttonText="Order Now"
-                disabled={cartCount === 0}
-                onClick={() => setShowModal(true)}
-                className={`px-7 py-3 text-sm font-semibold transition-all duration-300 ${
-                  cartCount === 0
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-primary hover:bg-primary/90 hover:shadow-lg text-white"
-                }`}
-              />
-            </div>
-          </div>
+            )}
+          </>
         )}
 
         {/* Header */}
@@ -510,7 +569,7 @@ export default function Header({
 
           {/* Search Bar Dropdown */}
           {isSearchOpen && (
-            <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+            <div className="absolute top-full left-0 right-0 bg-white shadow-lg z-50">
               <div className="p-4">
                 <div className="relative flex items-center">
                   <Search className="absolute left-3 text-gray-400" size={20} />
@@ -554,7 +613,7 @@ export default function Header({
           }`}
         >
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b bg-orange-50">
+          <div className="flex justify-between items-center p-4 border-b">
             <h2 className="text-lg font-semibold text-gray-800">Your Orders</h2>
             <button
               onClick={() => setIsCartOpen(false)}
@@ -685,11 +744,6 @@ export default function Header({
                 ))
               )}
             </div>
-          </div>
-
-          {/* Footer - Fixed at bottom */}
-          <div className=" bg-white">
-            <Copywright />
           </div>
         </div>
 
