@@ -1,4 +1,3 @@
-// src/components/superAdmin/UpdateAdminModal.jsx
 "use client"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -60,6 +59,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
       // Add subscription date if provided
       if (formData.subscriptionDate) payload.subscriptionDate = formData.subscriptionDate
 
+      // <-- This call now matches the API above
       await updateUser({ userId: admin._id, ...payload }).unwrap();
 
       showMessage('Admin updated successfully!')
@@ -69,7 +69,9 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
       }, 1000)
 
     } catch (error) {
-      showMessage(error.data?.message || 'Failed to update admin', 'error')
+      // error might be a fetchBaseQuery error or thrown message
+      const errMsg = error?.data?.message || error?.message || 'Failed to update admin'
+      showMessage(errMsg, 'error')
     }
   }
 
