@@ -13,53 +13,60 @@ export default function Category({
   );
 
   return (
-    <div className="flex flex-col pl-2">
-      {/* <div className="flex items-center gap-2">
-        <div className="bg-gray-100 p-2 rounded-xl shadow-sm">
-          <Layers className="text-gray-700" size={20} strokeWidth={2.2} />
+    <div className="flex flex-col px-2 bg-gradient-to-r from-white/70 to-white/40 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-1">
+        <div className="bg-primary/10 p-1.5 rounded-lg shadow-sm">
+          <Layers className="text-primary" size={18} strokeWidth={2.4} />
         </div>
-        <h2 className="text-xl font-semibold text-gray-800 tracking-wide">
+        <h2 className="text-sm sm:text-base font-semibold text-gray-800 tracking-wide">
           {title}
         </h2>
-      </div> */}
+      </div>
 
-      <div className="overflow-x-scroll scroll-hidden py-2 mr-2">
-        <div className="flex items-center gap-2 font-light">
-          {/* ✅ All Button - Fixed height */}
-          <div
+      {/* Categories scroller */}
+      <div className="overflow-x-auto scroll-hidden">
+        <div className="inline-flex items-center gap-2 py-2 pr-2">
+          {/* All pill */}
+          <button
+            type="button"
             onClick={() => onCategoryClick?.(null)}
-            className={`flex items-center justify-center border h-14 w-14 p-4 shadow-md rounded-full cursor-pointer hover:shadow-lg transition flex-shrink-0 ${
+            className={`inline-flex items-center justify-center h-10 px-4 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 ${
               activeCategory === null
-                ? "bg-primary text-white"
-                : "bg-white text-black"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
             }`}
           >
-            <span className="text-sm font-medium">All</span>
-          </div>
+            All
+          </button>
 
-          {/* ✅ Category Buttons - Fixed height and consistent layout */}
-          {uniqueCategories.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => onCategoryClick?.(item.category)}
-              className={`flex items-center border px-3 py-2 shadow-md rounded-3xl cursor-pointer hover:shadow-lg transition flex-shrink-0 h-14  ${
-                activeCategory === item.category
-                  ? "bg-primary text-white"
-                  : "bg-white text-black"
-              }`}
-            >
-              <div className="w-10 h-10 overflow-hidden rounded-full mr-3 flex-shrink-0 ">
-                <img
-                  className="w-full h-full object-cover object-center"
-                  src={item?.image?.url}
-                  alt={item?.category}
-                />
-              </div>
-              <span className="text-sm font-medium whitespace-nowrap">
-                {item?.category}
-              </span>
-            </div>
-          ))}
+          {/* Category chips */}
+          {uniqueCategories.map((item, index) => {
+            const isActive = activeCategory === item.category;
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => onCategoryClick?.(item.category)}
+                className={`inline-flex items-center h-10 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 ${
+                  isActive
+                    ? "bg-primary text-white border-primary scale-[1.02]"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {item?.image?.url && (
+                  <div className="w-8 h-8 overflow-hidden rounded-full mr-2 flex-shrink-0 bg-gray-100">
+                    <img
+                      className="w-full h-full object-cover object-center"
+                      src={item.image.url}
+                      alt={item?.category}
+                    />
+                  </div>
+                )}
+                <span className="whitespace-nowrap">{item?.category}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

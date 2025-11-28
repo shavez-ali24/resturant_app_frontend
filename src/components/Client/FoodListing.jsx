@@ -83,6 +83,13 @@ export default function FoodListing({ menu, onQuantityChange }) {
     setDescModal({ open: false, item: null });
   };
 
+  const descriptionText =
+    descModal.open && descModal.item?.description
+      ? descModal.item.description
+      : "";
+  const isLongDescription =
+    descriptionText.split(/\s+/).filter(Boolean).length > 60;
+
   return (
     <div className="bg-white flex flex-col pb-12 px-2 sm:px-3 pt-6">
       {Object.keys(groupedMenu).map((category) => {
@@ -96,15 +103,15 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
         const containerClass =
           layoutMode === "multi"
-            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3"
+            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3 py-4"
             : `grid gap-4 ${
-                layoutMode === "single" ? "grid-cols-1" : "grid-cols-2"
+                layoutMode === "single" ? "grid-cols-1" : "grid-cols-2 py-4"
               }`;
 
         return (
-          <div key={category} id={`category-${category}`} className="mb-10">
+          <div key={category} id={`category-${category}`} className="">
             {/* ✅ Category Header */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2">
               <Dot className="text-primary" size={14} strokeWidth={24} />
               <h2 className="text-base font-semibold text-gray-800 tracking-wide">
                 {category}
@@ -153,8 +160,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                       layoutMode === "multi"
                         ? "flex-shrink-0 w-[160px] sm:w-[180px] md:w-[200px]"
                         : "w-full"
-                    } ${isMenuOpen ? "z-10" : "z-auto"}`}
-                    style={{ position: "relative" }}
+                    } ${isMenuOpen ? "z-10" : ""}`}
                   >
                     {/* ✅ Image Section */}
                     <div
@@ -203,7 +209,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
                       {/* Description with "more" link + Price Dropdown */}
                       {(item.description || "").length > 0 && (
-                        <div className="flex items-center justify-between gap-1 flex-shrink-0 h-4">
+                        <div className="flex items-center justify-between gap-1 flex-shrink-0 h-4 py-3">
                           {/* Price Section (moved here) */}
                           <div className="flex-1 min-w-0">
                             {item.pricingType === "variant" &&
@@ -231,7 +237,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
                                 {isMenuOpen && (
                                   <div
-                                    className="absolute left-0 top-full mt-2 min-w-[180px] sm:min-w-[200px] max-w-[250px] rounded-2xl border border-orange-100 bg-white shadow-2xl overflow-hidden z-[200]"
+                                    className="absolute -left-2 bottom-0 w-[150px] rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden z-10"
                                     onClick={(event) =>
                                       event.stopPropagation()
                                     }
@@ -258,7 +264,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                             }}
                                             className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
                                               isActive
-                                                ? "bg-orange-50 text-orange-700 font-semibold"
+                                                ? "bg-gray-100 text-orange-700 font-semibold"
                                                 : "text-gray-700 hover:bg-orange-50"
                                             }`}
                                           >
@@ -440,9 +446,17 @@ export default function FoodListing({ menu, onQuantityChange }) {
                 <h3 className="text-2xl font-bold text-gray-900 leading-snug">
                   {descModal.item.name}
                 </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {descModal.item.description}
-                </p>
+                <div
+                  className={
+                    isLongDescription
+                      ? "max-h-40 overflow-y-auto scroll-hidden pr-1"
+                      : ""
+                  }
+                >
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {descModal.item.description}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">

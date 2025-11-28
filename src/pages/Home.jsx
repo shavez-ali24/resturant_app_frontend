@@ -119,14 +119,26 @@ export default function Home() {
         />
 
         <Category
-          title="Food Categories"
+          title="Choose Your Favourite Food"
           categories={menu}
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
         />
         <Filter filters={filters} onChange={handleFilterChange} />
       </div>
-      <FoodListing menu={filteredMenu} onQuantityChange={setTotal} />
+
+      {filteredMenu.length === 0 && (search || "").trim() ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-gray-500">
+          <p className="text-base sm:text-lg font-semibold text-gray-700 mb-1">
+            No items found
+          </p>
+          <p className="text-xs sm:text-sm max-w-xs">
+            Try adjusting your search or filters to find the food you’re craving.
+          </p>
+        </div>
+      ) : (
+        <FoodListing menu={filteredMenu} onQuantityChange={setTotal} />
+      )}
     </>
   );
 }
