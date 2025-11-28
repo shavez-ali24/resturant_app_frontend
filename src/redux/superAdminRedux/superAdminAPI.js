@@ -40,8 +40,7 @@ export const superAdminApi = createApi({
       }),
     }),
 
-    // ✅ New Endpoints
-     getAdmins: builder.query({
+    getAdmins: builder.query({
       query: () => ({
         url: "/auth/admins",
         method: "GET",
@@ -49,12 +48,12 @@ export const superAdminApi = createApi({
       providesTags: ["Admins"],
     }),
 
-    // 🔵 Update admin by ID
-   updateUser: builder.mutation({
-      query: ({ userId, updateData }) => ({
+    // ✅ Flexible updateUser: accept { userId, ...rest } and send rest as body
+    updateUser: builder.mutation({
+      query: ({ userId, ...rest }) => ({
         url: `/auth/${userId}`,
         method: "PUT",
-        body: updateData,
+        body: rest,
       }),
       invalidatesTags: ["Admins"],
     }),
