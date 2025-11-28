@@ -50,6 +50,10 @@ export default function Header({
     0
   );
 
+  const cartEntries = Object.entries(cartItems);
+  const visibleCartItems = cartEntries.slice(0, 4);
+  const extraCartCount = Math.max(0, cartCount - visibleCartItems.length);
+
   const [activeOrders, setActiveOrders] = useState([]);
   const expiryTimersRef = useRef({});
   const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -356,41 +360,28 @@ export default function Header({
               <div className="fixed bottom-2 left-2 right-2 bg-gray-900/95 backdrop-blur-md rounded-3xl border-t border-gray-700 shadow-[0_-8px_30px_rgba(0,0,0,0.3)]">
                 <div className="flex items-center justify-between p-2">
                   {/* Overlapping Images on Left */}
-                  <div className="flex items-center gap-2" style={{ height: '48px' }}>
-                    <div className="flex items-center">
-                      {Object.entries(cartItems).slice(0, 4).map(([id, item], index) => {
-                        const totalItems = Math.min(Object.entries(cartItems).length, 4);
-                        return (
-                          <div
-                            key={id}
-                            className="relative"
-                            style={{
-                              marginLeft: index === 0 ? '0' : '-36px', // 90% overlap: 10% visible = 4px (40px * 0.1 = 4px, so offset by 36px)
-                              zIndex: totalItems - index, // Later images appear on top
-                              position: 'relative',
-                            }}
-                          >
-                            <img
-                              src={item.image?.url || item.image}
-                              alt={item.name}
-                              className="w-12 h-12 rounded-full object-cover border border-white shadow-md"
-                            />
-                            {/* Quantity Badge */}
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
-                              {item.quantity}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {cartCount > 4 && (
+                  <div className="flex items-center gap-2" style={{ height: "48px" }}>
+                    <div className="flex -space-x-7 pl-1">
+                      {visibleCartItems.map(([id, item]) => (
                         <div
-                          className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary border border-white shadow-md relative"
-                          style={{
-                            marginLeft: '-36px',
-                            zIndex: 0,
-                          }}
+                          key={id}
+                          className="relative w-12 h-12 rounded-full border border-white shadow-md bg-gray-100 overflow-hidden flex-shrink-0"
                         >
-                          +{cartCount - 4}
+                          <img
+                            src={item.image?.url || item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Quantity Badge */}
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm">
+                            {item.quantity}
+                          </div>
+                        </div>
+                      ))}
+
+                      {extraCartCount > 0 && (
+                        <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary border border-white shadow-md flex-shrink-0">
+                          +{extraCartCount}
                         </div>
                       )}
                     </div>
@@ -571,26 +562,33 @@ export default function Header({
           {isSearchOpen && (
             <div className="absolute top-full left-0 right-0 bg-white shadow-lg z-50">
               <div className="p-4">
-                <div className="relative flex items-center">
-                  <Search className="absolute left-3 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search for food items..."
-                    value={search || ""}
-                    onChange={(e) => onSearch(e.target.value)}
-                    className="w-full rounded-3xl pl-11 pr-12 py-3 bg-gray-50 border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary"
-                    autoFocus
-                  />
-                  {/* Close search dropdown button */}
+                <div className="flex items-center gap-3">
+                  {/* Pill search input */}
+                  <div className="relative flex-1">
+                    <Search
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search for food items..."
+                      value={search || ""}
+                      onChange={(e) => onSearch(e.target.value)}
+                      className="w-full rounded-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:shadow-md"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Round action / close button */}
                   <button
                     onClick={() => {
                       onSearch("");
                       setIsSearchOpen(false);
                     }}
-                    className="absolute right-3 text-gray-500 hover:text-red-500 transition-colors"
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white shadow-md hover:shadow-lg hover:bg-primary/90 active:scale-95 transition-all duration-150 flex-shrink-0"
                     title="Close search"
                   >
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
               </div>
