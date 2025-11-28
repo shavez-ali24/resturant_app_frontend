@@ -361,7 +361,7 @@ export default function Header({
                 <div className="flex items-center justify-between p-2">
                   {/* Overlapping Images on Left */}
                   <div className="flex items-center gap-2" style={{ height: "48px" }}>
-                    <div className="flex -space-x-3 pl-1">
+                    <div className="flex -space-x-7 pl-1">
                       {visibleCartItems.map(([id, item]) => (
                         <div
                           key={id}
