@@ -379,11 +379,11 @@ export default function Header({
                         </div>
                       ))}
 
-                      {extraCartCount > 0 && (
+                      {/* {extraCartCount > 0 && (
                         <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary border border-white shadow-md flex-shrink-0">
                           +{extraCartCount}
                         </div>
-                      )}
+                      )} */}
                     </div>
                     {/* Total Items Count */}
                     <div className="flex items-center gap-1 text-sm font-semibold text-white">
@@ -622,7 +622,7 @@ export default function Header({
           </div>
 
           {/* Orders List */}
-          <div className="flex-1 overflow-y-auto h-[calc(100%-140px)]">
+          <div className="flex-1 overflow-y-auto h-[calc(100%-80px)]">
             <div className="p-4 space-y-4">
               {activeOrders.length === 0 ? (
                 <div className="text-center py-8">

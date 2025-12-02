@@ -91,7 +91,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
     descriptionText.split(/\s+/).filter(Boolean).length > 60;
 
   return (
-    <div className="bg-white flex flex-col pb-12 px-2 sm:px-3 pt-6">
+    <div className="bg-white flex flex-col pb-20 px-2 sm:px-3 pt-6">
       {Object.keys(groupedMenu).map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
@@ -103,9 +103,9 @@ export default function FoodListing({ menu, onQuantityChange }) {
 
         const containerClass =
           layoutMode === "multi"
-            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3 py-4"
+            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3 py-3"
             : `grid gap-4 ${
-                layoutMode === "single" ? "grid-cols-1" : "grid-cols-2 py-4"
+                layoutMode === "single" ? "grid-cols-1 py-3" : "grid-cols-2 py-3"
               }`;
 
         return (
@@ -449,7 +449,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                 <div
                   className={
                     isLongDescription
-                      ? "max-h-40 overflow-y-auto scroll-hidden pr-1"
+                      ? "max-h-40 overflow-y-auto pr-1"
                       : ""
                   }
                 >
