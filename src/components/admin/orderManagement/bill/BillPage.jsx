@@ -142,7 +142,7 @@ const BillPage = ({ order, restaurantDetails, onClose }) => {
                 <strong>Phone:</strong> {order.customerPhone || "N/A"}
               </p>
               <p>
-                <strong>Date:</strong>{" "}
+                <strong>Time:</strong>{" "}
 
               {new Date(order.createdAt).toLocaleTimeString([], {
   hour12: true
