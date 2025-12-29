@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from "../../../ui/button"
-import Heading from '../../ui/Heading'
-import { LoadingSpinner } from './ui/LoadingSpinner'
+import Heading from '../../common/Heading'
+import { LoadingSpinner } from './commanProfile/LoadingSpinner'
 
 export default function ProfileHeader({ restaurantName, error, onUpdateClick }) {
     return (

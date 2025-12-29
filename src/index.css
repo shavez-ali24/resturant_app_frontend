@@ -85,13 +85,13 @@
   }
 }
 .scroll-hidden {
-  overflow-x: auto; /* or overflow: auto for both axes */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  overflow-x: auto;
+  scrollbar-width: none; 
+  -ms-overflow-style: none;  
 }
 
 .scroll-hidden::-webkit-scrollbar {
-  display: none; /* WebKit (Chrome, Safari, Edge) */
+  display: none;
 }
 
 

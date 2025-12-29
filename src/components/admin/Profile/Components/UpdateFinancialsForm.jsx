@@ -1,12 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React from 'react'
-import { FormCard } from './ui/FormCard'
-import { FormField } from './ui/FormField'
+import { FormCard } from './commanProfile/FormCard'
+import { FormField } from './commanProfile/FormField'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange }) {
     return (
-        <FormCard title="Financials" icon="💳" customIndex={2}>
+        <FormCard title="Financials"  customIndex={2}>
             <div className="space-y-4 rounded-xl border border-gray-200 p-4 bg-gray-50">
                 <div className="flex items-center justify-between">
                     <label
