@@ -13,23 +13,24 @@ import { Provider } from "react-redux";
 import { store } from "./redux/store";
 // import OrdersList from "./components/admin/order/OrdersList.jsx";
 import Filter from "./components/Client/Filter";
-import LoginPage from "./components/admin/LoginPage";
-import PrivateRoute from "./components/admin/PrivateRoute";
-import Orders from "./components/admin/order/Orders";
-import CompletedOrders from "./components/admin/order/CompletedOrders";
-import CancelledOrders from "./components/admin/order/CancelledOrders";
+import LoginPage from "@/components/admin/adminLayout/LoginPage";
+import PrivateRoute from "./components/admin/adminLayout/PrivateRoute";
+import Orders from "./components/admin/orderManagement/pendingOrders/PendingOrders";
+import CompletedOrders from "./components/admin/orderManagement/completeOrder/CompletedOrders";
+import CancelledOrders from "./components/admin/orderManagement/cancelOrder/CancelledOrders";
 import Adminprofile from "./components/admin/Profile/Profile";
-import Revenue from "./components/admin/observability/Revenue";
+import Revenue from "./components/admin/observability/revenue/Revenue";
 import ComingSoon from "./components/admin/common/ComingSoon";
 import ErrorPage from "./components/admin/common/ErrorPage";
-import AppTitle from "../AppTitle";
 import CreateUserPage from "./components/superAdmin/Pages/CreateUserPage";
 import SuperLoginPage from "./components/superAdmin/Pages/SuperLoginPage";
 import UserListPage from "./components/superAdmin/Pages/UserListPage";
 import AdminsList from "./components/superAdmin/details/User_List/AdminsList";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import SuperAdminProfile from "./components/superAdmin/Pages/SuperAdminProfile";
-
+import Sales from "./components/admin/observability/sales/Sales";
+// import AppTitle from "./AppTitle";
+import DynamicFavicon from "./DynamicFavicon";
 const SuperAdminPrivateRoute = ({ children }) => {
   return children;
 };
@@ -37,7 +38,9 @@ const SuperAdminPrivateRoute = ({ children }) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <BrowserRouter>
-      <AppTitle />
+      {/* <AppTitle /> */}
+      <DynamicFavicon />
+
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<MainLayout />}>
@@ -57,16 +60,16 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             </PrivateRoute>
           }
         >
+          
           <Route index element={<Admin />} />
           <Route path="menu" element={<Menu />} />
-
           {/* <Route path="orderlist" element={<OrdersList />} /> */}
           <Route path="completedorder" element={<CompletedOrders />} />
           <Route path="orders" element={<Orders />} />
           <Route path="cancelledorder" element={<CancelledOrders />} />
 
           <Route path="profile" element={<Adminprofile />} />
-          <Route path="sales" element={<ComingSoon />} />
+          <Route path="sales" element={<Sales />} />
           <Route path="revenue" element={<Revenue />} />
         </Route>
 

@@ -1,10 +1,10 @@
 import React from 'react'
-import { FormCard } from './ui/FormCard';
+import { FormCard } from './commanProfile/FormCard';
 
 
 export default function UpdateBrandingForm({ handleFileChange, file, fileError }) {
     return (
-        <FormCard title="Branding" icon="🖼️" customIndex={3}>
+        <FormCard title="Branding"  customIndex={3}>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Restaurant Logo
@@ -19,7 +19,7 @@ export default function UpdateBrandingForm({ handleFileChange, file, fileError }
                     />
                     <label htmlFor="logo-upload" className="cursor-pointer">
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <span className="text-3xl">📁</span>
+                            {/* <span className="text-3xl">📁</span> */}
                             <div>
                                 <p className="text-gray-700 font-medium">
                                     {file ? file.name : "Click to upload logo"}

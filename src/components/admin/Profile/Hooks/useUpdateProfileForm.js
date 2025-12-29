@@ -1,7 +1,10 @@
 import { useState, useCallback } from "react";
-import config from "../../../../config";
+import { useUpdateRestaurantProfileMutation } from "@/redux/adminRedux/adminAPI";
 
-export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
+export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClose) => { // Added onClose parameter
+    // Redux Mutation
+    const [updateRestaurantProfile, { isLoading: isSubmitting }] = useUpdateRestaurantProfileMutation();
+
     const [formData, setFormData] = useState({
         tableNumbers: initialData.tableNumbers || "",
         phoneNumber: initialData.phoneNumber || "",
@@ -22,7 +25,6 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
     const [file, setFile] = useState(null);
     const [fileError, setFileError] = useState("");
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState({
         show: false,
         message: "",
@@ -44,11 +46,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
     };
 
     const closeNotification = () => {
-        const notificationType = notification.type;
         setNotification({ show: false, message: "", type: "" });
-        if (notificationType === "success") {
-            onUpdateSuccess();
-        }
     };
 
     const handleChange = (e) => {
@@ -136,37 +134,10 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
         setFile(selectedFile);
     };
 
-    // --- Category Handlers ---
-
-    // const handleCategoryKeyDown = (e) => {
-    //     if (e.key === "Enter" || e.key === " ") {
-    //         e.preventDefault();
-    //         const value = currentCategoryInput.trim();
-    //         if (!value) return;
-
-    //         const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
-
-    //         if (!categories.includes(capitalizedValue)) {
-    //             setCategories((prev) => [...prev, capitalizedValue]);
-
-    //             if (!categorySuggestions.includes(capitalizedValue)) {
-    //                 const updatedSuggestions = [...categorySuggestions, capitalizedValue];
-    //                 setCategorySuggestions(updatedSuggestions);
-    //                 localStorage.setItem(
-    //                     "restaurantCategories",
-    //                     JSON.stringify(updatedSuggestions)
-    //                 );
-    //             }
-    //         }
-    //         setCurrentCategoryInput("");
-    //     }
-    // };
+    // Category Handlers
     const handleCategoryKeyDown = (e) => {
-        // Only check for "Enter"
         if (e.key === "Enter") {
             e.preventDefault();
-
-            // Trim whitespace AND any trailing hyphens
             const value = currentCategoryInput.trim().replace(/-+$/, "");
 
             if (!value) return;
@@ -188,18 +159,20 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
             setCurrentCategoryInput("");
         }
     };
+
     const handleRemoveCategory = useCallback((categoryToRemove) => {
         setCategories((prev) => prev.filter((cat) => cat !== categoryToRemove));
     }, []);
 
-    // --- Form Submission ---
-
+    // --- Form Submission with Redux ---
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         if (!token) {
             showNotification("No token found. Please login first", "error");
             return;
         }
+        
         if (fileError) {
             showNotification(fileError, "error");
             return;
@@ -212,29 +185,19 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
         }
 
         try {
-            setIsSubmitting(true);
             const formDataToUpload = new FormData();
 
-            // ✅ UPDATED: Append all form data fields EXCEPT orderModes
+            // Append all form data fields EXCEPT orderModes
             Object.keys(formData).forEach((key) => {
                 if (key !== "orderModes") {
                     formDataToUpload.append(key, formData[key]);
                 }
             });
 
-            // ✅ UPDATED: Append orderModes as separate fields
-            formDataToUpload.append(
-                "orderModes[eathere]",
-                formData.orderModes.eathere
-            );
-            formDataToUpload.append(
-                "orderModes[takeaway]",
-                formData.orderModes.takeaway
-            );
-            formDataToUpload.append(
-                "orderModes[delivery]",
-                formData.orderModes.delivery
-            );
+            // Append orderModes as separate fields
+            formDataToUpload.append("orderModes[eathere]", formData.orderModes.eathere);
+            formDataToUpload.append("orderModes[takeaway]", formData.orderModes.takeaway);
+            formDataToUpload.append("orderModes[delivery]", formData.orderModes.delivery);
 
             if (file) {
                 formDataToUpload.append("file", file);
@@ -244,39 +207,56 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess) => {
             categories.forEach((category) => {
                 formDataToUpload.append("categories", category);
             });
+            
             if (categories.length === 0) {
                 formDataToUpload.append("categories", ""); // To clear array on backend
             }
 
-            const res = await fetch(`${config.BASE_URL}/api/restaurant/`, {
-                method: "PUT",
-                headers: { Authorization: `Bearer ${token}` },
-                body: formDataToUpload,
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.message || "Failed to update");
-
-            showNotification("Restaurant updated successfully!", "success");
-            // onUpdateSuccess() will be called from closeNotification
+            // Use Redux mutation
+            const result = await updateRestaurantProfile(formDataToUpload).unwrap();
+            
+            if (result) {
+                // CLOSE MODAL FIRST
+                if (onClose) {
+                    onClose();
+                }
+                
+                // THEN TRIGGER SUCCESS CALLBACK (this will show notification in Profile)
+                if (onUpdateSuccess) {
+                    onUpdateSuccess();
+                }
+            }
+            
         } catch (err) {
             console.error("Update error:", err);
-            showNotification(err.message, "error");
-        } finally {
-            setIsSubmitting(false);
+            const errorMessage = err?.data?.message || err?.message || "Failed to update restaurant";
+            showNotification(errorMessage, "error");
         }
     };
 
-    // ✅ NEW: Calculate active modes count for disabling toggles
-    const activeModesCount = Object.values(formData.orderModes).filter(Boolean)
-        .length;
+    // ✅ Calculate active modes count for disabling toggles
+    const activeModesCount = Object.values(formData.orderModes).filter(Boolean).length;
     const atLeastOneModeActive = activeModesCount > 0;
 
     return {
-        formData, categories, currentCategoryInput, setCurrentCategoryInput,
-        file, fileError, isSubmitting, notification, categorySuggestions,
-        activeModesCount, atLeastOneModeActive, handleChange, handleGstToggle,
-        handleOrderModeToggle, handleFileChange, handleCategoryKeyDown,
-        handleRemoveCategory, handleSubmit, closeNotification,
+        formData, 
+        categories, 
+        currentCategoryInput, 
+        setCurrentCategoryInput,
+        file, 
+        fileError, 
+        isSubmitting, // Now from Redux
+        notification, 
+        categorySuggestions,
+        activeModesCount, 
+        atLeastOneModeActive, 
+        handleChange, 
+        handleGstToggle,
+        handleOrderModeToggle, 
+        handleFileChange, 
+        handleCategoryKeyDown,
+        handleRemoveCategory, 
+        handleSubmit, 
+        closeNotification,
     };
-}
+};

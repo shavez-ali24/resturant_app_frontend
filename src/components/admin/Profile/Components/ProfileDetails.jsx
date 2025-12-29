@@ -1,6 +1,6 @@
-import { ProfileField } from './Ui/ProfileField';
-import { CategoryChips } from './Ui/CategoryChips';
-import { OrderModeStatus } from './Ui/OrderModeStatus';
+import { ProfileField } from './commanProfile/ProfileField';
+import { CategoryChips } from './commanProfile/CategoryChips';
+import { OrderModeStatus } from './commanProfile/OrderModeStatus';
 import { Image, Landmark, QrCode, Tag, User, Utensils } from 'lucide-react';
 
 export default function ProfileDetails({ profileData }) {
@@ -11,30 +11,30 @@ export default function ProfileDetails({ profileData }) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                     {/* Card 1: Admin Account */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 <User />
                                 Admin Account
                             </h3>
                         </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 ">
                             <ProfileField
-                                label="Full Name"
+                                label="Restaurant Name"
                                 value={profileData?.name}
-                                icon="👤"
+                                // icon="👤"
                             />
                             <ProfileField
                                 label="Email Address"
                                 value={emailOfAdmin}
-                                icon="📧"
+                                // icon="📧"
                             />
                         </div>
                     </div>
 
                     {/* Card 2: Restaurant Details */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 <Utensils />
                                 Restaurant Details
@@ -46,24 +46,24 @@ export default function ProfileDetails({ profileData }) {
                                     className="w-64"
                                     label="Full Address"
                                     value={profileData?.address}
-                                    icon="📍"
+                                    // icon="📍"
                                 />
                             </div>
                             <ProfileField
                                 label="Contact Phone"
                                 value={profileData?.phoneNumber}
-                                icon="📞"
+                                // icon="📞"
                             />
                             <ProfileField
                                 label="Total Tables"
                                 value={profileData?.tableNumbers}
-                                icon="🪑"
+                                // icon="🪑"
                             />
                             <div className="md:col-span-2">
                                 <ProfileField
                                     label="Client Domain"
                                     value={profileData?.domain}
-                                    icon="🌐"
+                                    // icon="🌐"
                                 />
                             </div>
 
@@ -75,17 +75,17 @@ export default function ProfileDetails({ profileData }) {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <OrderModeStatus
                                         mode="Eat Here"
-                                        Note icon="🍴"
+                                        // Note icon="🍴"
                                         isEnabled={profileData?.orderModes.eathere}
                                     />
                                     <OrderModeStatus
                                         mode="Takeaway"
-                                        icon="🛍️"
+                                        // icon="🛍️"
                                         isEnabled={profileData?.orderModes.takeaway}
                                     />
                                     <OrderModeStatus
                                         mode="Delivery"
-                                        icon="🛵"
+                                        // icon="🛵"
                                         isEnabled={profileData?.orderModes.delivery}
                                     />
                                 </div>
@@ -95,8 +95,8 @@ export default function ProfileDetails({ profileData }) {
                     </div>
 
                     {/* Card 3: Financial Settings */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 <Landmark />
                                 Financial Settings
@@ -106,7 +106,7 @@ export default function ProfileDetails({ profileData }) {
                             <ProfileField
                                 label="GST Status"
                                 value={profileData?.gstEnabled ? "Enabled" : "Disabled"}
-                                icon="🧾"
+                                // icon="🧾"
                             />
                             <ProfileField label="GST Rate"
                                 value={`${profileData?.gstRate}%`}
@@ -116,7 +116,7 @@ export default function ProfileDetails({ profileData }) {
                                 <ProfileField
                                     label="GST Number"
                                     value={profileData?.gstNumber}
-                                    icon="🔢"
+                                    // icon="🔢"
                                 />
                             </div>
                         </div>
@@ -126,8 +126,8 @@ export default function ProfileDetails({ profileData }) {
                 {/* --- RIGHT COLUMN (1/3 width) --- */}
                 <div className="lg:col-span-1 space-y-8">
                     {/* Card 1: Logo */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 {/* <Image /> */}
                                 <Image />
@@ -139,7 +139,7 @@ export default function ProfileDetails({ profileData }) {
                                 <img
                                     src={profileData?.logo?.url}
                                     alt="Restaurant Logo"
-                                    className="w-48 h-48 object-cover rounded-xl border p-1 bg-gray-50"
+                                    className="w-48 h-48 object-cover rounded-xl border p-1 bg-orange-50"
                                 />
                             ) : (
                                 <div className="w-48 h-48 bg-gray-100 rounded-xl border border-dashed flex items-center justify-center">
@@ -150,8 +150,8 @@ export default function ProfileDetails({ profileData }) {
                     </div>
 
                     {/* Card 2: Categories */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 <Tag />
                                 Categories
@@ -163,8 +163,8 @@ export default function ProfileDetails({ profileData }) {
                     </div>
 
                     {/* Card 3: QR Code */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
+                        <div className="p-6 border-b border-orange-500">
                             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                                 <QrCode />
                                 Tap N' Order QR
@@ -174,11 +174,11 @@ export default function ProfileDetails({ profileData }) {
                         <div className="p-6">
                             {profileData?.qrCode ? (
                                 <div className="text-center">
-                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 inline-block">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-orange-500 inline-block ">
                                         <img
                                             src={profileData?.qrCode}
                                             alt="QR Code"
-                                            className="w-48 h-48 object-contain"
+                                            className="w-48 h-48 object-contain "
                                         />
                                     </div>
                                     <a
@@ -187,7 +187,7 @@ export default function ProfileDetails({ profileData }) {
                                         download
                                         className="w-full mt-4 bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
                                     >
-                                        <span>📥</span>
+                                        {/* <span>📥</span> */}
                                         Download QR
                                     </a>
                                 </div>

@@ -26,7 +26,7 @@ export default function UpdateFormActions({ onClose, isSubmitting, fileError }) 
             >
                 <Button
                     type="button"
-                    className="py-2.5 px-6 h-full rounded-xl text-base font-semibold" // CHANGED: Smaller padding/text
+                    className="py-2.5 px-6 h-full rounded-xl text-base font-semibold bg-orange-100 hover:bg-orange-200" // CHANGED: Smaller padding/text
                     variant="outline"
                     onClick={onClose}
                 >
@@ -45,7 +45,7 @@ export default function UpdateFormActions({ onClose, isSubmitting, fileError }) 
                         </>
                     ) : (
                         <>
-                            <span>💾</span>
+                            {/* <span>💾</span> */}
                             Update
                         </>
                     )}

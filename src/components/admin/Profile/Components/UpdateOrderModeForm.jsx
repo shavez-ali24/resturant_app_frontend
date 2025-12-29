@@ -1,5 +1,5 @@
 import React from 'react'
-import { FormCard } from './ui/FormCard';
+import { FormCard } from './commanProfile/FormCard';
 
 export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, handleOrderModeToggle, activeModesCount }) {
     return (
@@ -21,7 +21,7 @@ export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, ha
                             htmlFor="eathere-toggle" 
                             className="text-gray-700 font-semibold"
                         >
-                            🍴 Eat Here
+                             Eat Here
                         </label>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -43,7 +43,7 @@ export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, ha
                             htmlFor="takeaway-toggle" // ✅ UPDATED: Unique ID
                             className="text-gray-700 font-semibold"
                         >
-                            🛍️ Take Away
+                             Take Away
                         </label>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -65,7 +65,7 @@ export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, ha
                             htmlFor="delivery-toggle" // ✅ UPDATED: Unique ID
                             className="text-gray-700 font-semibold"
                         >
-                            🛵 Delivery
+                             Delivery
                         </label>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input

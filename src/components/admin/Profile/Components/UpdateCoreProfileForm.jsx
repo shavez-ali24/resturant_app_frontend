@@ -1,9 +1,9 @@
 import React from 'react';
-import { FormCard } from './ui/FormCard';
-import { FormField } from './ui/FormField';
+import { FormCard } from './commanProfile/FormCard';
+import { FormField } from './commanProfile/FormField';
 
 const UpdateCoreProfileForm = ({ formData, handleChange }) => (
-    <FormCard title="Core Profile" icon="✏️" customIndex={1}>
+    <FormCard title="Core Profile" customIndex={1}>
         <FormField
             label="Address"
             name="address"
