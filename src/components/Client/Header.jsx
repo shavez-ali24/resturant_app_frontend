@@ -453,7 +453,7 @@ export default function Header({
                                 {item.variantLabel}
                               </span>
                             )}
-                            <div className="flex items-center gap-3 text-sm text-gray-600 mt-2">
+                            <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
                               {/* Quantity Controls */}
                               <button
                                 className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
