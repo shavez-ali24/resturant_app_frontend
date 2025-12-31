@@ -21,6 +21,7 @@ export default function Header({
   siteName = "Default Name",
   search,
   onSearch,
+  isRestaurantOpen = true,
 }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -270,6 +271,11 @@ export default function Header({
 
   const handleOrderSubmit = async () => {
     try {
+      if (!isRestaurantOpen) {
+        showErrorMessage("Orders are currently closed. Please try again later.");
+        return;
+      }
+
       if (!isFormValid()) {
         let errorMessage = "Please fill all required fields correctly.";
         if (!customerName) errorMessage = "Please enter your name.";
@@ -493,20 +499,29 @@ export default function Header({
 
                 {/* Order Now Button - Fixed at Bottom */}
                 <div className="px-6 py-4 border-t bg-white sticky bottom-0">
-                  <OrderComplete
-                    amount={totalAmount.toFixed(2)}
-                    buttonText="Order Now"
-                    disabled={cartCount === 0}
+                  {!isRestaurantOpen ? (
+                    <div className="w-full py-3 px-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-center text-sm font-semibold text-red-700">
+                        Orders are currently closed
+                      </p>
+                    </div>
+                  ) : (
+                    <OrderComplete
+                      amount={totalAmount.toFixed(2)}
+                      buttonText="Order Now"
+                      disabled={cartCount === 0}
                     onClick={() => {
+                      if (!isRestaurantOpen) return;
                       setShowModal(true);
                       setIsAccordionOpen(false);
                     }}
-                    className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
-                      cartCount === 0
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-primary hover:bg-primary/90 hover:shadow-lg text-white"
-                    }`}
-                  />
+                      className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
+                        cartCount === 0
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-primary hover:bg-primary/90 hover:shadow-lg text-white"
+                      }`}
+                    />
+                  )}
                 </div>
               </div>
             )}
