@@ -85,7 +85,7 @@ const OrdersTable = ({
               <th className="text-center p-3 border">Order Type</th>
               <th className="text-center p-3 border">Items</th>
               {tableType === "pending" && (
-      <th className="text-center p-3 border">Custom</th>
+      <th className="text-center p-3 border">Note</th>
     )}
 
               {tableType === "pending" && (
@@ -201,7 +201,7 @@ order.items.some(
     className="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition text-sm font-medium flex items-center gap-2"
   >
     <Eye size={16} />
-    View Customizations
+    Note
   </button>
 ) : tableType === "pending" ? (
   <span className="text-sm text-gray-400 italic">No customizations</span>
