@@ -28,11 +28,19 @@ export const clientApi = createApi({
       }),
       invalidatesTags: ['Order'],
     }),
+    getOrdersByFingerprint: builder.query({
+      query: ({ fingerPrint, page = 1 }) => ({
+        url: '/api/order/fingerprint',
+        params: { fingerPrint, page },
+      }),
+      providesTags: ['Order'],
+    }),
   }),
 });
 
 export const { 
   useGetRestaurantQuery, 
   useGetMenuQuery, 
-  useCreateOrderMutation 
+  useCreateOrderMutation,
+  useGetOrdersByFingerprintQuery
 } = clientApi;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Clock } from "lucide-react";
 import {
   useGetRestaurantQuery,
   useGetMenuQuery,
@@ -11,6 +12,7 @@ import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
 import RestaurantClosed from "@/components/Client/RestaurantClosed";
+import fingerprintService from "@/service/fingerprintService";
 
 export default function Home() {
   const {
@@ -33,6 +35,11 @@ export default function Home() {
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
   const error = menuError || restaurantError;
+
+  // Get fingerprint on component mount
+  useEffect(() => {
+    fingerprintService.getFingerprint();
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -70,19 +77,6 @@ export default function Home() {
     );
   }
 
-  if (!isRestaurantOpen) {
-    return (
-      <RestaurantClosed
-        logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
-        siteName={
-          restaurant?.restaurantName ||
-          restaurantData?.restaurant?.restaurantName
-        }
-        reopenAt={restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt}
-      />
-    );
-  }
-
   // Apply filters (search + veg/non-veg + category)
   const filteredMenu = menu.filter((item) => {
     const matchesSearch =
@@ -107,7 +101,22 @@ export default function Home() {
 
   return (
     <>
-      <div className="sticky top-0 bg-white z-20">
+      {/* Orders Closed Banner */}
+      {!isRestaurantOpen && (
+        <div className="sticky top-0 z-30 bg-red-600 text-white px-4 py-3 shadow-lg h-14 flex items-center">
+          <div className="flex items-center justify-center gap-2 w-full">
+            <Clock className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm sm:text-base font-semibold text-center">
+              Orders are currently closed
+              {restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt
+                ? ` - Reopening at ${restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt}`
+                : " - We'll be back soon"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className={`sticky bg-white z-20 ${!isRestaurantOpen ? 'top-14' : 'top-0'}`}>
         <Header
           logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
           siteName={
@@ -116,6 +125,7 @@ export default function Home() {
           }
           search={search}
           onSearch={setSearch}
+          isRestaurantOpen={isRestaurantOpen}
         />
 
         <Category
@@ -133,11 +143,11 @@ export default function Home() {
             No items found
           </p>
           <p className="text-xs sm:text-sm max-w-xs">
-            Try adjusting your search or filters to find the food you’re craving.
+            Try adjusting your search or filters to find the food you're craving.
           </p>
         </div>
       ) : (
-        <FoodListing menu={filteredMenu} onQuantityChange={setTotal} />
+        <FoodListing menu={filteredMenu} onQuantityChange={setTotal} isRestaurantOpen={isRestaurantOpen} />
       )}
     </>
   );

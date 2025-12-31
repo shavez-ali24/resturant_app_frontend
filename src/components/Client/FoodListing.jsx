@@ -13,7 +13,7 @@ const groupByCategory = (items) => {
   }, {});
 };
 
-export default function FoodListing({ menu, onQuantityChange }) {
+export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen = true }) {
   const groupedMenu = groupByCategory(menu || []);
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client.cart.items || {});
@@ -146,9 +146,9 @@ export default function FoodListing({ menu, onQuantityChange }) {
                     ? variantPrice ?? item.price
                     : item.price;
                 const canAdd =
-                  item.pricingType !== "variant" ||
-                  (selectedVariant && variantPrice !== undefined);
-                const isUnavailable = !item.available;
+                  (item.pricingType !== "variant" ||
+                  (selectedVariant && variantPrice !== undefined)) && isRestaurantOpen;
+                const isUnavailable = !item.available || !isRestaurantOpen;
                 // Description preview length set to 40 characters
 
                 return (
@@ -195,7 +195,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                       </div>
                       {isUnavailable && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-semibold">
-                          Not Available
+                          {!item.available ? "Not Available" : "Orders Closed"}
                         </div>
                       )}
                     </div>
@@ -302,7 +302,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                       {/* Price and Add Button Row */}
                       <div className="flex flex-col justify-between mt-auto">
                         {/* Add/Quantity Controls */}
-                        {!isUnavailable && (
+                        {!item.available ? null : (
                           <div className="flex items-center justify-between gap-1 flex-shrink-0">
                             {/* Selected price shown next to Add button */}
                             <span className="text-lg sm:text-sm font-semibold text-gray-800 mr-1">
@@ -318,7 +318,8 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                     onClick={() =>
                                       dispatch(removeFromCart(cartKey))
                                     }
-                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400"
+                                    disabled={!isRestaurantOpen}
+                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     -
                                   </Button>
@@ -348,7 +349,8 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                         })
                                       )
                                     }
-                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                    disabled={!isRestaurantOpen}
+                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     +
                                   </Button>
@@ -358,7 +360,7 @@ export default function FoodListing({ menu, onQuantityChange }) {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  if (!canAdd) return;
+                                  if (!canAdd || !isRestaurantOpen) return;
                                   dispatch(
                                     addToCart({
                                       id: cartKey,
@@ -379,13 +381,18 @@ export default function FoodListing({ menu, onQuantityChange }) {
                                     })
                                   );
                                 }}
-                                className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center"
-                                disabled={!canAdd}
+                                className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!canAdd || !isRestaurantOpen}
                               >
                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             )}
                           </div>
+                        )}
+                        {!isRestaurantOpen && item.available && (
+                          <p className="text-xs text-red-600 font-medium mt-1">
+                            Orders closed
+                          </p>
                         )}
                       </div>
                     </div>

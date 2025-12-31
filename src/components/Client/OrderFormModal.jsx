@@ -8,8 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Navigation, Utensils, Truck, Home, ArrowLeft } from "lucide-react";
+import { MapPin, Navigation, Utensils, Truck, Home, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getCurrentAddress } from "@/service/deliveryService";
 
 export default function OrderFormModal({
   showModal,
@@ -33,6 +34,7 @@ export default function OrderFormModal({
   resetForm
 }) {
   const [selectedOrderType, setSelectedOrderType] = useState(orderType);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const orderModes = restaurantData?.restaurant?.orderModes;
 
   const orderTypeOptions = useMemo(() => {
@@ -91,27 +93,23 @@ export default function OrderFormModal({
     }
   };
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
+    setIsGettingLocation(true);
     setUseCurrentLocation(true);
     setAddress("Getting your location...");
     
-    // Simulate geolocation API call
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          // In a real app, you would reverse geocode these coordinates
-          setTimeout(() => {
-            setAddress(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          }, 1000);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setAddress("Unable to get location. Please enter manually.");
-        }
-      );
-    } else {
-      setAddress("Geolocation not supported. Please enter address.");
+    try {
+      const address = await getCurrentAddress();
+      setAddress(address);
+      setUseCurrentLocation(true);
+    } catch (error) {
+      console.error("Error getting location:", error);
+      setAddress("");
+      setUseCurrentLocation(false);
+      // Show error message to user
+      alert(error.message || "Unable to get your location. Please enter address manually.");
+    } finally {
+      setIsGettingLocation(false);
     }
   };
 
@@ -296,18 +294,52 @@ export default function OrderFormModal({
                 {/* Delivery Address - Only for Delivery */}
                 {orderType === "Delivery" && (
                   <div className="animate-fade-in space-y-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Delivery Address *
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Delivery Address *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleUseCurrentLocation}
+                        disabled={isGettingLocation}
+                        className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGettingLocation ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Getting location...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Navigation className="w-4 h-4" />
+                            <span>Use Current Location</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         placeholder="Enter your delivery address"
                         value={address}
-                        onChange={(e) => setAddress(e.target.value)}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          if (e.target.value) {
+                            setUseCurrentLocation(false);
+                          }
+                        }}
                         className="flex-1 border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-white"
                       />
                     </div>
+                    {useCurrentLocation && address && (
+                      <div className="flex items-start gap-2 text-xs text-green-700 bg-green-50 p-2.5 rounded-lg border border-green-200">
+                        <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <span className="font-medium">Location detected from your device</span>
+                          <p className="text-green-600 mt-1">You can edit the address above if it's not accurate.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
