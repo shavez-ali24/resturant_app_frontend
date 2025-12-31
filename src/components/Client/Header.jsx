@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import OrderComplete from "@/components/Client/OrderComplete";
 import OrderFormModal from "./OrderFormModal";
+import fingerprintService from "@/service/fingerprintService";
 
 export default function Header({
   logo,
@@ -287,12 +288,16 @@ export default function Header({
         ...(item.variantLabel && { variantLabel: item.variantLabel }),
       }));
 
+      // Get fingerprint
+      const fingerPrint = await fingerprintService.getFingerprint();
+
       const orderData = {
         customerName: customerName.trim(),
         customerPhone,
         items: orderItems,
         totalAmount,
         orderType,
+        fingerPrint,
       };
 
       if (orderType === "Eat Here") {

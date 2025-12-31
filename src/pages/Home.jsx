@@ -11,6 +11,7 @@ import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
 import RestaurantClosed from "@/components/Client/RestaurantClosed";
+import fingerprintService from "@/service/fingerprintService";
 
 export default function Home() {
   const {
@@ -33,6 +34,11 @@ export default function Home() {
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
   const error = menuError || restaurantError;
+
+  // Get fingerprint on component mount
+  useEffect(() => {
+    fingerprintService.getFingerprint();
+  }, []);
 
   useEffect(() => {
     let timer;
