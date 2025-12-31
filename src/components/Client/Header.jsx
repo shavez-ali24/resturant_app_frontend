@@ -9,7 +9,7 @@ import {
   incrementQuantity,
   clearCart,
 } from "../../redux/clientRedux/clientSlice";
-import { useGetRestaurantQuery, useCreateOrderMutation } from "../../redux/clientRedux/clientAPI";
+import { useGetRestaurantQuery, useCreateOrderMutation, useGetOrdersByFingerprintQuery } from "../../redux/clientRedux/clientAPI";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import OrderComplete from "@/components/Client/OrderComplete";
@@ -55,9 +55,10 @@ export default function Header({
   const visibleCartItems = cartEntries.slice(0, 4);
   const extraCartCount = Math.max(0, cartCount - visibleCartItems.length);
 
-  const [activeOrders, setActiveOrders] = useState([]);
-  const expiryTimersRef = useRef({});
-  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const [fingerPrint, setFingerPrint] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allOrders, setAllOrders] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
 
   // Close search when clicking outside or pressing Escape
   useEffect(() => {
@@ -84,46 +85,50 @@ export default function Header({
     };
   }, [isSearchOpen]);
 
-  const scheduleExpiry = (orderId, remainingMs) => {
-    if (expiryTimersRef.current[orderId]) {
-      clearTimeout(expiryTimersRef.current[orderId]);
-    }
-    expiryTimersRef.current[orderId] = setTimeout(() => {
-      setActiveOrders((prev) => {
-        const updated = prev.filter((o) => o.id !== orderId);
-        sessionStorage.setItem("activeOrders", JSON.stringify(updated));
-        return updated;
-      });
-      toast({
-        title: "Order expired",
-        description: `Order ${orderId} expired after 1 hour.`,
-      });
-    }, Math.max(0, remainingMs));
-  };
-
+  // Get fingerprint on component mount
   useEffect(() => {
-    const saved = sessionStorage.getItem("activeOrders");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const validOrders = [];
-        parsed.forEach((order) => {
-          const age = Date.now() - order.createdAt;
-          if (age < ONE_HOUR_MS) {
-            validOrders.push(order);
-            scheduleExpiry(order.id, ONE_HOUR_MS - age);
-          }
-        });
-        setActiveOrders(validOrders);
-        sessionStorage.setItem("activeOrders", JSON.stringify(validOrders));
-      } catch {
-        sessionStorage.removeItem("activeOrders");
-      }
-    }
-    return () => {
-      Object.values(expiryTimersRef.current).forEach(clearTimeout);
+    const getFingerprint = async () => {
+      const fp = await fingerprintService.getFingerprint();
+      setFingerPrint(fp);
     };
+    getFingerprint();
   }, []);
+
+  // Fetch orders by fingerprint with pagination
+  const { data: ordersData, isLoading: ordersLoading, refetch } = useGetOrdersByFingerprintQuery(
+    { fingerPrint, page: currentPage },
+    { skip: !fingerPrint }
+  );
+
+  // Update orders when new data is fetched
+  useEffect(() => {
+    if (ordersData) {
+      const orders = Array.isArray(ordersData) ? ordersData : ordersData?.orders || ordersData?.data || [];
+      if (currentPage === 1) {
+        setAllOrders(orders);
+      } else {
+        setAllOrders((prev) => [...prev, ...orders]);
+      }
+      // Check if there are more pages - if orders array is empty, no more pages
+      // You can also check for hasMore property if API provides it
+      setHasMore(orders.length > 0 && (ordersData?.hasMore !== false));
+    }
+  }, [ordersData, currentPage]);
+
+  // Reset to page 1 when fingerprint changes
+  useEffect(() => {
+    if (fingerPrint) {
+      setCurrentPage(1);
+      setAllOrders([]);
+      setHasMore(true);
+    }
+  }, [fingerPrint]);
+
+  const handleLoadMore = () => {
+    if (hasMore && !ordersLoading) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
 
   const showSuccessMessage = (orderId) => {
     const messageDiv = document.createElement("div");
@@ -309,20 +314,17 @@ export default function Header({
 
       const response = await createOrder(orderData).unwrap();
       
-      const completeOrderData = {
-        id: response?.orderId || `ORD${Date.now()}`,
-        ...orderData,
-        createdAt: Date.now(),
-      };
+      showSuccessMessage(response?.orderId || response?.order?._id || `ORD${Date.now()}`);
 
-      setActiveOrders((prev) => {
-        const updated = [...prev, completeOrderData];
-        sessionStorage.setItem("activeOrders", JSON.stringify(updated));
-        return updated;
-      });
-      scheduleExpiry(completeOrderData.id, ONE_HOUR_MS);
-
-      showSuccessMessage(completeOrderData.id);
+      // Refetch orders to get the latest data from API
+      if (fingerPrint) {
+        setCurrentPage(1);
+        setAllOrders([]);
+        // Small delay to ensure order is saved on backend
+        setTimeout(() => {
+          refetch();
+        }, 500);
+      }
 
       setShowModal(false);
       setIsCartOpen(false);
@@ -555,9 +557,9 @@ export default function Header({
             {/* Cart Icon */}
             <button onClick={() => setIsCartOpen(true)} className="relative">
               <UtensilsCrossed className="w-6 h-6 text-gray-700 hover:text-black" />
-              {activeOrders.length > 0 && (
+              {allOrders.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {activeOrders.length}
+                  {allOrders.length}
                 </span>
               )}
             </button>
@@ -629,15 +631,20 @@ export default function Header({
           {/* Orders List */}
           <div className="flex-1 overflow-y-auto h-[calc(100%-80px)]">
             <div className="p-4 space-y-4">
-              {activeOrders.length === 0 ? (
+              {ordersLoading && currentPage === 1 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading orders...</p>
+                </div>
+              ) : allOrders.length === 0 ? (
                 <div className="text-center py-8">
                   <FiShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No active orders yet</p>
+                  <p className="text-gray-500">No orders yet</p>
                 </div>
               ) : (
-                activeOrders.map((order) => (
+                <>
+                  {allOrders.map((order) => (
                   <div
-                    key={order.id}
+                    key={order._id || order.id || order.orderId}
                     className="border border-orange-200 rounded-lg p-3 bg-white shadow-sm"
                   >
                     {/* Order Header with Labels */}
@@ -744,7 +751,20 @@ export default function Header({
                       </span>
                     </div>
                   </div>
-                ))
+                  ))}
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <div className="flex justify-center pt-4">
+                      <button
+                        onClick={handleLoadMore}
+                        disabled={ordersLoading}
+                        className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {ordersLoading ? "Loading..." : "Load More"}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
