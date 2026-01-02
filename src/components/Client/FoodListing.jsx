@@ -1,8 +1,8 @@
 "use client";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import { addToCart, removeFromCart } from "../../redux/clientRedux/clientSlice";
-import { Dot, ChevronsUpDown, Plus } from "lucide-react";
+import { addToCart, removeFromCart, updateCartItem } from "../../redux/clientRedux/clientSlice";
+import { Dot, ChevronsUpDown, Plus, Edit3, X } from "lucide-react";
 import { Button } from "../ui/button";
 
 const groupByCategory = (items) => {
@@ -20,6 +20,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
   const [descModal, setDescModal] = useState({ open: false, item: null });
   const [selectedVariants, setSelectedVariants] = useState({});
   const [openVariantMenu, setOpenVariantMenu] = useState(null);
+  const [customizationModal, setCustomizationModal] = useState({ open: false, cartKey: null, customization: "" });
 
   useEffect(() => {
     if (!menu) return;
@@ -83,6 +84,29 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
     setDescModal({ open: false, item: null });
   };
 
+  const openCustomization = (cartKey) => {
+    const currentCustomization = cartItems[cartKey]?.customization || "";
+    setCustomizationModal({ open: true, cartKey, customization: currentCustomization });
+  };
+
+  const closeCustomization = () => {
+    setCustomizationModal({ open: false, cartKey: null, customization: "" });
+  };
+
+  const handleCustomizationSave = () => {
+    if (!customizationModal.cartKey) return;
+    // Update the cart item with customization
+    dispatch(
+      updateCartItem({
+        id: customizationModal.cartKey,
+        updates: {
+          customization: customizationModal.customization.trim(),
+        },
+      })
+    );
+    closeCustomization();
+  };
+
   const descriptionText =
     descModal.open && descModal.item?.description
       ? descModal.item.description
@@ -91,7 +115,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
     descriptionText.split(/\s+/).filter(Boolean).length > 60;
 
   return (
-    <div className="bg-white flex flex-col pb-20 px-2 sm:px-3 pt-6">
+    <div className="bg-white flex flex-col pb-20 px-2 sm:px-3 pt-2">
       {Object.keys(groupedMenu).map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
@@ -111,7 +135,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
         return (
           <div key={category} id={`category-${category}`} className="">
             {/* ✅ Category Header */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pt-2">
               <Dot className="text-primary" size={14} strokeWidth={24} />
               <h2 className="text-base font-semibold text-gray-800 tracking-wide">
                 {category}
@@ -154,7 +178,8 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                 return (
                   <div
                     key={item._id}
-                    className={`relative bg-white rounded-2xl border border-gray-100 shadow-md ${
+                    onClick={() => openDescription(item)}
+                    className={`relative bg-white rounded-2xl border border-gray-100 shadow-md cursor-pointer transition-transform hover:scale-[1.02] ${
                       isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                     } ${
                       layoutMode === "multi"
@@ -290,12 +315,20 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                             )}
                           </div>
 
-                          <button
-                            onClick={() => openDescription(item)}
-                            className="text-xs text-gray-500 hover:text-primary text-left w-fit"
-                          >
-                            View details
-                          </button>
+                          {quantity > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCustomization(cartKey);
+                              }}
+                              className="text-xs text-gray-500 hover:text-primary text-left w-fit flex items-center gap-1"
+                              title="Add customization"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              <span>Customize</span>
+                            </button>
+                          )}
                         </div>
                       )}
 
@@ -309,84 +342,91 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                               ₹{Number(displayPrice ?? item.price ?? 0)}
                             </span>
 
-                            {quantity > 0 ? (
-                              <>
-                                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      dispatch(removeFromCart(cartKey))
-                                    }
-                                    disabled={!isRestaurantOpen}
-                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    -
-                                  </Button>
-                                  <span className="text-xs sm:text-sm font-medium min-w-[16px] sm:min-w-[20px] text-center">
-                                    {quantity}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    onClick={() =>
-                                      dispatch(
-                                        addToCart({
-                                          id: cartKey,
-                                          item: {
-                                            ...item,
+                            <div className="flex items-center gap-1">
+                              {quantity > 0 ? (
+                                <>
+                                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        dispatch(removeFromCart(cartKey));
+                                      }}
+                                      disabled={!isRestaurantOpen}
+                                      className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="text-xs sm:text-sm font-medium min-w-[16px] sm:min-w-[20px] text-center">
+                                      {quantity}
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        dispatch(
+                                          addToCart({
+                                            id: cartKey,
+                                            item: {
+                                              ...item,
+                                              price: displayPrice,
+                                              variantKey: selectedVariant,
+                                              variantLabel:
+                                                selectedVariant &&
+                                                variantPrice != null &&
+                                                variantPrice !== undefined
+                                                  ? formatVariantLabel(
+                                                      selectedVariant
+                                                    )
+                                                  : null,
+                                              customization: cartItems[cartKey]?.customization || "",
+                                            },
                                             price: displayPrice,
-                                            variantKey: selectedVariant,
-                                            variantLabel:
-                                              selectedVariant &&
-                                              variantPrice != null &&
-                                              variantPrice !== undefined
-                                                ? formatVariantLabel(
-                                                    selectedVariant
-                                                  )
-                                                : null,
-                                          },
+                                          })
+                                        );
+                                      }}
+                                      disabled={!isRestaurantOpen}
+                                      className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!canAdd || !isRestaurantOpen) return;
+                                    dispatch(
+                                      addToCart({
+                                        id: cartKey,
+                                        item: {
+                                          ...item,
                                           price: displayPrice,
-                                        })
-                                      )
-                                    }
-                                    disabled={!isRestaurantOpen}
-                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    +
-                                  </Button>
-                                </div>
-                              </>
-                            ) : (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  if (!canAdd || !isRestaurantOpen) return;
-                                  dispatch(
-                                    addToCart({
-                                      id: cartKey,
-                                      item: {
-                                        ...item,
+                                          variantKey: selectedVariant,
+                                          variantLabel:
+                                            selectedVariant &&
+                                            variantPrice != null &&
+                                            variantPrice !== undefined
+                                              ? formatVariantLabel(
+                                                  selectedVariant
+                                                )
+                                              : null,
+                                          customization: "",
+                                        },
                                         price: displayPrice,
-                                        variantKey: selectedVariant,
-                                        variantLabel:
-                                          selectedVariant &&
-                                          variantPrice != null &&
-                                          variantPrice !== undefined
-                                            ? formatVariantLabel(
-                                                selectedVariant
-                                              )
-                                            : null,
-                                      },
-                                      price: displayPrice,
-                                    })
-                                  );
-                                }}
-                                className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={!canAdd || !isRestaurantOpen}
-                              >
-                                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            )}
+                                      })
+                                    );
+                                  }}
+                                  className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={!canAdd || !isRestaurantOpen}
+                                >
+                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         )}
                         {!isRestaurantOpen && item.available && (
@@ -518,6 +558,78 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                   }}
                 >
                   Got it
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customization Modal */}
+      {customizationModal.open && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-8"
+          onClick={closeCustomization}
+        >
+          <div
+            className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-orange-100 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeCustomization}
+              className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
+              aria-label="Close customization"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="p-6 space-y-4">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-bold text-gray-900">
+                  Add Customization
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Add special instructions or notes for this item
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Customization Note
+                </label>
+                <textarea
+                  value={customizationModal.customization}
+                  onChange={(e) =>
+                    setCustomizationModal({
+                      ...customizationModal,
+                      customization: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., No onions, Extra spicy, Less salt..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm"
+                  rows={4}
+                  maxLength={200}
+                />
+                <p className="text-xs text-gray-500 text-right">
+                  {customizationModal.customization.length}/200
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={closeCustomization}
+                  className="rounded-full px-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="rounded-full px-6 bg-primary text-white hover:bg-primary/90"
+                  onClick={handleCustomizationSave}
+                >
+                  Save
                 </Button>
               </div>
             </div>

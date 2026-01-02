@@ -116,6 +116,43 @@ export default function Header({
     }
   }, [ordersData, currentPage]);
 
+  // Pre-fill form with latest order data when modal opens
+  useEffect(() => {
+    if (showModal && allOrders.length > 0) {
+      // Get the most recent order (first one in the array, assuming they're sorted by date)
+      const latestOrder = allOrders[0];
+      
+      // Pre-fill customer name and phone from latest order
+      if (latestOrder.customerName) {
+        setCustomerName(latestOrder.customerName);
+      }
+      if (latestOrder.customerPhone) {
+        setCustomerPhone(latestOrder.customerPhone);
+      }
+      
+      // Pre-fill order type and related fields
+      if (latestOrder.orderType) {
+        setOrderType(latestOrder.orderType);
+        
+        // Pre-fill order type specific fields
+        if (latestOrder.orderType === "Eat Here" && latestOrder.tableId) {
+          setTableId(latestOrder.tableId);
+        } else {
+          setTableId("");
+        }
+        
+        if (latestOrder.orderType === "Delivery" && latestOrder.address) {
+          setAddress(latestOrder.address);
+        } else {
+          setAddress("");
+          setUseCurrentLocation(false);
+        }
+      }
+    }
+    // Only run when modal opens, not when orders change while modal is open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal]);
+
   // Reset to page 1 when fingerprint changes
   useEffect(() => {
     if (fingerPrint) {
@@ -297,6 +334,7 @@ export default function Header({
         price: item.price,
         ...(item.variantKey && { variant: item.variantKey }),
         ...(item.variantLabel && { variantLabel: item.variantLabel }),
+        customization: item.customization || "",
       }));
 
       // Get fingerprint

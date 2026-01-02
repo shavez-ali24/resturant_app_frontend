@@ -41,11 +41,16 @@ const clientSlice = createSlice({
 
       if (state.cart.items[id]) {
         state.cart.items[id].quantity += 1;
+        // Update customization if provided
+        if (item.customization !== undefined) {
+          state.cart.items[id].customization = item.customization;
+        }
       } else {
         state.cart.items[id] = {
           ...item,
           price: resolvedPrice,
           quantity: 1,
+          customization: item.customization || "",
         };
       }
 
@@ -93,6 +98,16 @@ const clientSlice = createSlice({
       }
     },
 
+    updateCartItem: (state, action) => {
+      const { id, updates } = action.payload;
+      if (state.cart.items[id]) {
+        state.cart.items[id] = {
+          ...state.cart.items[id],
+          ...updates,
+        };
+      }
+    },
+
     clearCart: (state) => {
       state.cart = {
         items: {},
@@ -112,6 +127,7 @@ export const {
   addToCart,
   removeFromCart,
   incrementQuantity,
+  updateCartItem,
   clearCart,
 } = clientSlice.actions;
 
