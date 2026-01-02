@@ -20,7 +20,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
   const [descModal, setDescModal] = useState({ open: false, item: null });
   const [selectedVariants, setSelectedVariants] = useState({});
   const [openVariantMenu, setOpenVariantMenu] = useState(null);
-  const [customizationModal, setCustomizationModal] = useState({ open: false, cartKey: null, customization: "" });
+  const [customizationModal, setCustomizationModal] = useState({ open: false, cartKey: null, customizations: "" });
 
   useEffect(() => {
     if (!menu) return;
@@ -85,22 +85,22 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
   };
 
   const openCustomization = (cartKey) => {
-    const currentCustomization = cartItems[cartKey]?.customization || "";
-    setCustomizationModal({ open: true, cartKey, customization: currentCustomization });
+    const currentCustomization = cartItems[cartKey]?.customizations || "";
+    setCustomizationModal({ open: true, cartKey, customizations: currentCustomization });
   };
 
   const closeCustomization = () => {
-    setCustomizationModal({ open: false, cartKey: null, customization: "" });
+    setCustomizationModal({ open: false, cartKey: null, customizations: "" });
   };
 
   const handleCustomizationSave = () => {
     if (!customizationModal.cartKey) return;
-    // Update the cart item with customization
+    // Update the cart item with customizations
     dispatch(
       updateCartItem({
         id: customizationModal.cartKey,
         updates: {
-          customization: customizationModal.customization.trim(),
+          customizations: customizationModal.customizations.trim(),
         },
       })
     );
@@ -323,7 +323,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                                 openCustomization(cartKey);
                               }}
                               className="text-xs text-gray-500 hover:text-primary text-left w-fit flex items-center gap-1"
-                              title="Add customization"
+                              title="Add customizations"
                             >
                               <Edit3 className="h-3 w-3" />
                               <span>Customize</span>
@@ -380,7 +380,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                                                       selectedVariant
                                                     )
                                                   : null,
-                                              customization: cartItems[cartKey]?.customization || "",
+                                              customizations: cartItems[cartKey]?.customizations || "",
                                             },
                                             price: displayPrice,
                                           })
@@ -414,7 +414,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                                                   selectedVariant
                                                 )
                                               : null,
-                                          customization: "",
+                                          customizations: "",
                                         },
                                         price: displayPrice,
                                       })
@@ -578,7 +578,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
             <button
               onClick={closeCustomization}
               className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
-              aria-label="Close customization"
+              aria-label="Close customizations"
             >
               <X className="h-5 w-5" />
             </button>
@@ -598,11 +598,11 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                   Customization Note
                 </label>
                 <textarea
-                  value={customizationModal.customization}
+                  value={customizationModal.customizations}
                   onChange={(e) =>
                     setCustomizationModal({
                       ...customizationModal,
-                      customization: e.target.value,
+                      customizations: e.target.value,
                     })
                   }
                   placeholder="e.g., No onions, Extra spicy, Less salt..."
@@ -611,7 +611,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                   maxLength={200}
                 />
                 <p className="text-xs text-gray-500 text-right">
-                  {customizationModal.customization.length}/200
+                  {customizationModal.customizations.length}/200
                 </p>
               </div>
 

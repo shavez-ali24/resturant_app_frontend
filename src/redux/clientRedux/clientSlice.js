@@ -40,17 +40,26 @@ const clientSlice = createSlice({
       const resolvedPrice = price ?? item?.price ?? 0;
 
       if (state.cart.items[id]) {
+        // Item already exists - increment quantity
         state.cart.items[id].quantity += 1;
-        // Update customization if provided
-        if (item.customization !== undefined) {
-          state.cart.items[id].customization = item.customization;
+        // Preserve existing customizations - only update if a non-empty customizations is explicitly provided
+        // This prevents overwriting customizations when incrementing quantity
+        if (item.customizations !== undefined) {
+          const newCustomization = typeof item.customizations === 'string' 
+            ? item.customizations.trim() 
+            : item.customizations;
+          if (newCustomization !== "") {
+            state.cart.items[id].customizations = newCustomization;
+          }
         }
+        // If no customizations provided or empty string, keep the existing customizations
       } else {
+        // New item - add to cart
         state.cart.items[id] = {
           ...item,
           price: resolvedPrice,
           quantity: 1,
-          customization: item.customization || "",
+          customizations: item.customizations || "",
         };
       }
 

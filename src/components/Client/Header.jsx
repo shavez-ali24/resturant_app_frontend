@@ -116,7 +116,7 @@ export default function Header({
     }
   }, [ordersData, currentPage]);
 
-  // Pre-fill form with latest order data when modal opens
+  // Pre-fill form with latest order data when modal opens (but NOT orderType - user must select it first)
   useEffect(() => {
     if (showModal && allOrders.length > 0) {
       // Get the most recent order (first one in the array, assuming they're sorted by date)
@@ -130,24 +130,11 @@ export default function Header({
         setCustomerPhone(latestOrder.customerPhone);
       }
       
-      // Pre-fill order type and related fields
-      if (latestOrder.orderType) {
-        setOrderType(latestOrder.orderType);
-        
-        // Pre-fill order type specific fields
-        if (latestOrder.orderType === "Eat Here" && latestOrder.tableId) {
-          setTableId(latestOrder.tableId);
-        } else {
-          setTableId("");
-        }
-        
-        if (latestOrder.orderType === "Delivery" && latestOrder.address) {
-          setAddress(latestOrder.address);
-        } else {
-          setAddress("");
-          setUseCurrentLocation(false);
-        }
-      }
+      // Always reset order type to empty so user must select it first
+      setOrderType("");
+      setTableId("");
+      setAddress("");
+      setUseCurrentLocation(false);
     }
     // Only run when modal opens, not when orders change while modal is open
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,7 +321,7 @@ export default function Header({
         price: item.price,
         ...(item.variantKey && { variant: item.variantKey }),
         ...(item.variantLabel && { variantLabel: item.variantLabel }),
-        customization: item.customization || "",
+        customizations: item.customizations || "",
       }));
 
       // Get fingerprint
@@ -424,9 +411,9 @@ export default function Header({
                             className="w-full h-full object-cover"
                           />
                           {/* Quantity Badge */}
-                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm">
+                          {/* <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm">
                             {item.quantity}
-                          </div>
+                          </div> */}
                         </div>
                       ))}
 
@@ -550,6 +537,11 @@ export default function Header({
                       disabled={cartCount === 0}
                     onClick={() => {
                       if (!isRestaurantOpen) return;
+                      // Reset order type to ensure user sees order type selection first
+                      setOrderType("");
+                      setTableId("");
+                      setAddress("");
+                      setUseCurrentLocation(false);
                       setShowModal(true);
                       setIsAccordionOpen(false);
                     }}
