@@ -105,10 +105,24 @@ export default function Header({
   useEffect(() => {
     if (ordersData) {
       const orders = Array.isArray(ordersData) ? ordersData : ordersData?.orders || ordersData?.data || [];
+      
       if (currentPage === 1) {
-        setAllOrders(orders);
+        // For page 1, replace all orders (deduplicate by order ID)
+        const uniqueOrders = orders.filter((order, index, self) => 
+          index === self.findIndex((o) => 
+            (o._id || o.id || o.orderId) === (order._id || order.id || order.orderId)
+          )
+        );
+        setAllOrders(uniqueOrders);
       } else {
-        setAllOrders((prev) => [...prev, ...orders]);
+        // For subsequent pages, append new orders (deduplicate)
+        setAllOrders((prev) => {
+          const existingIds = new Set(prev.map(o => o._id || o.id || o.orderId));
+          const newOrders = orders.filter(order => 
+            !existingIds.has(order._id || order.id || order.orderId)
+          );
+          return [...prev, ...newOrders];
+        });
       }
       // Check if there are more pages - if orders array is empty, no more pages
       // You can also check for hasMore property if API provides it
@@ -347,11 +361,14 @@ export default function Header({
       
       showSuccessMessage(response?.orderId || response?.order?._id || `ORD${Date.now()}`);
 
-      // Refetch orders to get the latest data from API
+      // Reset pagination state before refetching
+      setCurrentPage(1);
+      setAllOrders([]);
+      setHasMore(true);
+      
+      // Refetch orders after a small delay to ensure backend has saved the order
+      // Deduplication logic in useEffect will prevent duplicate orders
       if (fingerPrint) {
-        setCurrentPage(1);
-        setAllOrders([]);
-        // Small delay to ensure order is saved on backend
         setTimeout(() => {
           refetch();
         }, 500);
