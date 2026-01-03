@@ -1,9 +1,9 @@
-import Listitem from "@/components/admin/Menu/Menu";
+import Sales from "@/components/admin/observability/sales/Sales";
 
 export default function Admin() {
   return (
     <>
-      <Listitem />
+      <Sales />
     </>
   );
 }
