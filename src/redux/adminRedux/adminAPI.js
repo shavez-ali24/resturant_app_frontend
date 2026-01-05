@@ -61,95 +61,95 @@ export const adminApi = createApi({
     }),
 
     // ORDER MANAGEMENT ----------------------------------------------- done 
-// ✅ getOrders API - FIXED VERSION
-getOrders: builder.query({
-  query: ({ status = "pending", range = "all", page = 1, limit = 10 }) => ({
-    url: "/order",
-    params: { status, range, page, limit },
-  }),
+    // ✅ getOrders API - FIXED VERSION
+    getOrders: builder.query({
+      query: ({ status = "pending", range = "all", page = 1, limit = 10 }) => ({
+        url: "/order",
+        params: { status, range, page, limit },
+      }),
 
-  transformResponse: (response) => {
-    // Case 1: Response is array
-    if (Array.isArray(response)) {
-      return {
-        orders: response,
-        totalOrders: response.length,
-        totalPages: Math.ceil(response.length / 10),
-        currentPage: 1,
-      };
-    }
+      transformResponse: (response) => {
+        // Case 1: Response is array
+        if (Array.isArray(response)) {
+          return {
+            orders: response,
+            totalOrders: response.length,
+            totalPages: Math.ceil(response.length / 10),
+            currentPage: 1,
+          };
+        }
 
-    // Case 2: Response is object
-    if (response && typeof response === "object") {
-      if (Array.isArray(response.orders)) {
-        return {
-          orders: response.orders,
-          totalOrders: response.totalOrders || response.orders.length,
-          totalPages:
-            response.totalPages ||
-            Math.ceil(response.orders.length / 10),
-          currentPage: response.currentPage || 1,
-        };
-      }
+        // Case 2: Response is object
+        if (response && typeof response === "object") {
+          if (Array.isArray(response.orders)) {
+            return {
+              orders: response.orders,
+              totalOrders: response.totalOrders || response.orders.length,
+              totalPages:
+                response.totalPages ||
+                Math.ceil(response.orders.length / 10),
+              currentPage: response.currentPage || 1,
+            };
+          }
 
-      if (Array.isArray(response.data)) {
-        return {
-          orders: response.data,
-          totalOrders: response.total || response.data.length,
-          totalPages:
-            response.pages || Math.ceil(response.data.length / 10),
-          currentPage: response.page || 1,
-        };
-      }
+          if (Array.isArray(response.data)) {
+            return {
+              orders: response.data,
+              totalOrders: response.total || response.data.length,
+              totalPages:
+                response.pages || Math.ceil(response.data.length / 10),
+              currentPage: response.page || 1,
+            };
+          }
 
-      const ordersArray = Object.values(response).filter(
-        (item) => item && typeof item === "object" && item._id
-      );
+          const ordersArray = Object.values(response).filter(
+            (item) => item && typeof item === "object" && item._id
+          );
 
-      if (ordersArray.length > 0) {
-        return {
-          orders: ordersArray,
-          totalOrders: ordersArray.length,
-          totalPages: Math.ceil(ordersArray.length / 10),
-          currentPage: 1,
-        };
-      }
-    }
+          if (ordersArray.length > 0) {
+            return {
+              orders: ordersArray,
+              totalOrders: ordersArray.length,
+              totalPages: Math.ceil(ordersArray.length / 10),
+              currentPage: 1,
+            };
+          }
+        }
 
-    return { orders: [], totalOrders: 0, totalPages: 0, currentPage: 1 };
-  },
+        return { orders: [], totalOrders: 0, totalPages: 0, currentPage: 1 };
+      },
 
-  // ✅ FIXED: Match the format of updateOrder
-  providesTags: (result) => {
-    // If no result, return LIST tag
-    if (!result?.orders || result.orders.length === 0) {
-      return [{ type: "Order", id: "LIST" }];
-    }
-    
-    // Return LIST tag + individual order tags
-    return [
-      { type: "Order", id: "LIST" },
-      ...result.orders.map((order) => ({ 
-        type: "Order", 
-        id: order._id 
-      }))
-    ];
-  },
-}),
+      // ✅ FIXED: Match the format of updateOrder
+      providesTags: (result) => {
+        // If no result, return LIST tag
+        if (!result?.orders || result.orders.length === 0) {
+          return [{ type: "Order", id: "LIST" }];
+        }
+        
+        // Return LIST tag + individual order tags
+        return [
+          { type: "Order", id: "LIST" },
+          ...result.orders.map((order) => ({ 
+            type: "Order", 
+            id: order._id 
+          }))
+        ];
+      },
+    }),
 
-// ✅ updateOrder API - ALREADY CORRECT
-updateOrder: builder.mutation({
-  query: ({ orderId, updatedData }) => ({
-    url: `/order/${orderId}`,
-    method: "PUT",
-    body: updatedData,
-  }),
-  // This is correct - it matches the format we use in getOrders
-  invalidatesTags: (result, error, { orderId }) => [
-    { type: "Order", id: orderId },
-    { type: "Order", id: "LIST" },
-  ],
-}),
+    // ✅ updateOrder API - ALREADY CORRECT
+    updateOrder: builder.mutation({
+      query: ({ orderId, updatedData }) => ({
+        url: `/order/${orderId}`,
+        method: "PUT",
+        body: updatedData,
+      }),
+      // This is correct - it matches the format we use in getOrders
+      invalidatesTags: (result, error, { orderId }) => [
+        { type: "Order", id: orderId },
+        { type: "Order", id: "LIST" },
+      ],
+    }),
 
     // done 
     deleteOrder: builder.mutation({
@@ -210,23 +210,6 @@ updateOrder: builder.mutation({
       invalidatesTags: ["Menu"],
     }),
 
-    // PROFILE ---------------------------------------------------------
-    // getProfile: builder.query({
-    //   query: () => "/profile",
-    //   providesTags: ["Profile"],
-    // }),
-
-    // PUBLIC RESTAURANT -----------------------------------------------
-    // getPublicRestaurant: builder.query({
-    //   query: () => "/restaurant/public",
-    // }),
-
-    // getRestaurantUI: builder.query({
-    //   query: () => "/restaurant/public",
-    //   transformResponse: (response) => response?.restaurant || response,
-    //   providesTags: ["Restaurant"],
-    // }),
-
     // done 
     getTopSellingProducts: builder.query({
       query: ({ range = "7d", from, to }) => {
@@ -238,7 +221,8 @@ updateOrder: builder.mutation({
       },
       providesTags: ["TopSelling"],
     }),
-// done 
+
+    // done 
     getTopSellingCategories: builder.query({
       query: ({ range = "7d", from, to }) => {
         const params = new URLSearchParams();
@@ -265,8 +249,7 @@ export const {
   useUpdateMenuItemMutation,
   useDeleteMenuItemMutation,
   useToggleRestaurantMutation,
-  // useGetPublicRestaurantQuery,
-  // useGetRestaurantUIQuery,
   useGetTopSellingProductsQuery,
   useGetTopSellingCategoriesQuery,
+  // ✅ getTables query REMOVED - using restaurant profile only
 } = adminApi;
