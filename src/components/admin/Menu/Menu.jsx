@@ -126,7 +126,7 @@ const Menu = () => {
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+    <div className=" bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40">
       {/* View Modal */}
       <MenuItemViewModal
         item={viewingItem}
@@ -269,7 +269,7 @@ const Menu = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <Pagination className="mb-12 mt-4  cursor-pointer justify-center">
+              <Pagination className=" mt-4  cursor-pointer justify-center">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious

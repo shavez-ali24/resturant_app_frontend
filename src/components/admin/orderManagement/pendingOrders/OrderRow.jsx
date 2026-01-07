@@ -2,7 +2,7 @@ import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { House, Pointer, SquarePen, Trash, Truck, Utensils, Eye, FileText, Ban } from "lucide-react";
+import { House, Pointer, SquarePen, Trash, Truck, Utensils, Eye, Ban , Home } from "lucide-react";
 
 const OrderRow = ({
   order,
@@ -22,6 +22,42 @@ const OrderRow = ({
   // Count how many items have customizations
   const customizationCount = order.items ? 
     order.items.filter(item => item.customizations && item.customizations.trim() !== "").length : 0;
+
+  // Order Type Badge Helper (same styling as EditOrderModal but only display)
+  const getOrderTypeDisplay = (type) => {
+    switch(type?.toLowerCase()) {
+      case "eat here":
+        return {
+          bg: "bg-green-100",
+          text: "text-green-700",
+          ring: "ring-green-200",
+          icon: <Utensils size={16} />
+        };
+      case "take away":
+        return {
+          bg: "bg-blue-100",
+          text: "text-blue-700",
+          ring: "ring-blue-200",
+          icon: <Home size={16} />
+        };
+      case "delivery":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-700",
+          ring: "ring-orange-200",
+          icon: <Truck size={16} />
+        };
+      default:
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-700",
+          ring: "ring-gray-200",
+          icon: <Utensils size={16} />
+        };
+    }
+  };
+
+  const orderTypeStyle = getOrderTypeDisplay(order.orderType);
 
   return (
     <tr className="hover:bg-orange-50 border transition">
@@ -44,21 +80,17 @@ const OrderRow = ({
       {/* Phone */}
       <td className="text-center border text-gray-700">{order.customerPhone}</td>
 
-      {/* Order Type */}
+      {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
       <td className="flex items-center justify-center py-2.5">
-        {order.orderType === "Eat Here" ? (
-          <span className="inline-flex items-center justify-center h-9 w-40 px-2 rounded-lg text-white font-semibold gap-2 bg-green-600">
-            <Utensils size={16} /> Eat Here {order.tableId ? `: ${order.tableId}` : ""}
-          </span>
-        ) : order.orderType === "Take Away" ? (
-          <span className="inline-flex items-center justify-center h-9 w-40 px-2 rounded-lg text-white font-semibold gap-2 bg-blue-600">
-            <House size={16} /> Take Away
-          </span>
-        ) : (
-          <span className="inline-flex items-center justify-center h-9 w-40 px-2 rounded-lg text-white font-semibold gap-2 bg-orange-500">
-            <Truck size={16} /> Delivery
-          </span>
-        )}
+        <div className={`inline-flex items-center justify-center h-9 px-3 rounded-lg font-medium shadow-sm ring-1 ring-black/5 transition-all ${orderTypeStyle.bg} ${orderTypeStyle.text} ${orderTypeStyle.ring}`}>
+          <div className="flex items-center gap-2">
+            {orderTypeStyle.icon}
+            <span>{order.orderType || "Select Type"}</span>
+            {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
+              <span className="ml-1">: {order.tableId}</span>
+            )}
+          </div>
+        </div>
       </td>
 
       {/* View Items / Bill */}

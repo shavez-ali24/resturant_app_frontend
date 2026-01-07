@@ -32,7 +32,7 @@ import {
   useGetMenuQuery,
   useGetRestaurantProfileQuery,
   useUpdateOrderMutation,
-  useDeleteOrderMutation,
+  useDeleteOrderMutation
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
@@ -66,16 +66,79 @@ const Orders = () => {
   });
 
   const { data: menuItems = [] } = useGetMenuQuery();
-  const { data: restaurantProfile } = useGetRestaurantProfileQuery();
+  
+  // ✅ Restaurant profile se tables extract karenge
+  const { 
+    data: restaurantData,
+    isLoading: restaurantLoading,
+    error: restaurantError,
+    refetch: refetchRestaurant
+  } = useGetRestaurantProfileQuery();
+  
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
+
+  // ✅ FIXED: Extract tables from restaurant profile
+  // Aapke API response ke format ke hisab se adjust karna
+  const extractTablesFromRestaurant = () => {
+    if (!restaurantData) return [];
+    
+    const restaurant = restaurantData.restaurant || restaurantData;
+    
+    // Format 1: Direct tables array in restaurant
+    if (Array.isArray(restaurant.tables)) {
+      return restaurant.tables;
+    }
+    
+    // Format 2: Tables as separate field
+    if (restaurant.tables && Array.isArray(restaurant.tables)) {
+      return restaurant.tables;
+    }
+    
+    // Format 3: tableNumbers se generate karna
+    if (restaurant.tableNumbers && typeof restaurant.tableNumbers === 'number') {
+      const tables = [];
+      for (let i = 1; i <= restaurant.tableNumbers; i++) {
+        tables.push({
+          _id: `T${i}`,
+          tableNumber: i,
+          name: `T${i}`,
+          // capacity: 4
+        });
+      }
+      return tables;
+    }
+    
+    // Format 4: Agar koi aur field mein hai
+    // Aapke API response ko check karke add karein
+    console.log("Restaurant Object for debugging:", restaurant);
+    
+    return [];
+  };
+
+  const tables = extractTablesFromRestaurant();
 
   // --- Extract data from API response ---
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalOrders = ordersResponse?.totalOrders || 0;
   const totalPages = ordersResponse?.totalPages || 1;
-  const loading = ordersLoading;
+  const loading = ordersLoading || restaurantLoading;
   const error = ordersError ? ordersErrorObj : null;
+
+  // Debug logs
+  useEffect(() => {
+    if (restaurantData) {
+      console.log("Full Restaurant API Response:", restaurantData);
+      console.log("Restaurant Object:", restaurantData.restaurant || restaurantData);
+      console.log("Tables extracted:", tables);
+      console.log("Table count:", tables.length);
+      
+      // Aapke API response ke structure ko check karein
+      const restaurant = restaurantData.restaurant || restaurantData;
+      console.log("Available keys in restaurant:", Object.keys(restaurant));
+      console.log("tableNumbers field:", restaurant.tableNumbers);
+    }
+  }, [restaurantData, tables]);
 
   // Update lastUpdated timestamp
   useEffect(() => {
@@ -94,20 +157,32 @@ const Orders = () => {
   const handleManualRefresh = useCallback(async () => {
     try {
       await refetchOrders();
-      notify("Orders refreshed", "success");
+      await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
+      notify("Orders & Restaurant data refreshed", "success");
     } catch (err) {
-      notify("Failed to refresh orders", "error");
+      notify("Failed to refresh", "error");
     }
-  }, [refetchOrders, notify]);
+  }, [refetchOrders, refetchRestaurant, notify]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
     try {
-      await updateOrderApi({ orderId, updatedData }).unwrap();
+      // ✅ FIX: Ensure orderId is a string
+      const orderIdString = String(orderId);
+      
+      console.log("Updating order:", { orderIdString, updatedData });
+      
+      // ✅ FIX: Call API with correct parameters
+      await updateOrderApi({ 
+        orderId: orderIdString, 
+        updatedData 
+      }).unwrap();
+      
       notify("Order updated successfully!", "success");
       refetchOrders();
       setEditingOrder(null);
     } catch (err) {
+      console.error("Update order error:", err);
       const msg = err?.data?.message || "Failed to update order";
       notify(msg, "error");
     }
@@ -150,6 +225,7 @@ const Orders = () => {
 
       const id = setInterval(() => {
         refetchOrders();
+        refetchRestaurant(); // ✅ Restaurant data bhi refresh karein
       }, minutes * 60 * 1000);
 
       autoRefIntervalId.current = id;
@@ -157,7 +233,7 @@ const Orders = () => {
       localStorage.setItem("autoRefresh", `${minutes}`);
       notify(`Auto-refresh set to every ${minutes} min`, "success");
     },
-    [refetchOrders, notify]
+    [refetchOrders, refetchRestaurant, notify]
   );
 
   useEffect(() => {
@@ -228,7 +304,7 @@ const Orders = () => {
   return (
     <div className="min-h-screen py-6 sm:px-4 lg:px-4 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
       {/* Header */}
-      <div className="flex flex-row items-center justify-between p-3 sm:p-4 mb-6 gap-3">
+      <div className="flex flex-row items-center justify-between p-3 sm:p-4 mb-4 gap-3">
         <Heading title="Pending Orders" />
 
         <div className="flex items-center gap-4">
@@ -283,7 +359,7 @@ const Orders = () => {
 
       {/* Server-side Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center my-6">
+        <div className="flex justify-center mt-6">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -351,7 +427,7 @@ const Orders = () => {
       {orderForBillModal && (
         <ItemsModal
           order={orderForBillModal}
-          restaurantDetails={restaurantProfile}
+          restaurantDetails={restaurantData}
           onClose={() => setOrderForBillModal(null)}
         />
       )}
@@ -363,6 +439,7 @@ const Orders = () => {
           setEditingOrder={setEditingOrder}
           updateOrder={updateOrder}
           menuItems={menuItems}
+          tables={tables} // ✅ Passing tables from restaurant profile
         />
       )}
 
