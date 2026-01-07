@@ -588,22 +588,6 @@ export default function Header({
           </Link>
 
           <div className="flex items-center space-x-3">
-            {/* Show typed search text as a small pill */}
-            {(search || "").trim() && (
-              <>
-                {/* Restore Clear button next to query */}
-                <button
-                  onClick={() => onSearch("")}
-                  className="flex items-center relative px-3 py-1 rounded-full border border-primary bg-primary/10 hover:bg-red-100 text-primary text-sm shadow-sm transition-colors"
-                  title="Clear search"
-                >
-                  {search}
-                  <div className="bg-red-500 w-5 h-5 absolute -top-2 -right-2 text-white rounded-full flex justify-center items-center">
-                    <X className="w-4 h-4" />
-                  </div>
-                </button>
-              </>
-            )}
             {/* Search Icon */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -746,6 +730,26 @@ export default function Header({
                             {order.orderType}
                           </span>
                         </div>
+                        {order.status && (
+                          <div className="flex items-center gap-1 justify-end mb-1">
+                            <span className="text-xs font-medium text-gray-500">
+                              Status:
+                            </span>
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
+                                order.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : order.status === "completed"
+                                  ? "bg-green-100 text-green-700"
+                                  : order.status === "cancelled"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {order.status}
+                            </span>
+                          </div>
+                        )}
                         {order.tableId && (
                           <div className="flex items-center gap-1 justify-end">
                             <span className="text-xs font-medium text-gray-500 mt-3">

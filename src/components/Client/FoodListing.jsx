@@ -1,7 +1,11 @@
 "use client";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import { addToCart, removeFromCart, updateCartItem } from "../../redux/clientRedux/clientSlice";
+import {
+  addToCart,
+  removeFromCart,
+  updateCartItem,
+} from "../../redux/clientRedux/clientSlice";
 import { Dot, ChevronsUpDown, Plus, Edit3, X } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -13,14 +17,22 @@ const groupByCategory = (items) => {
   }, {});
 };
 
-export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen = true }) {
+export default function FoodListing({
+  menu,
+  onQuantityChange,
+  isRestaurantOpen = true,
+}) {
   const groupedMenu = groupByCategory(menu || []);
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client.cart.items || {});
   const [descModal, setDescModal] = useState({ open: false, item: null });
   const [selectedVariants, setSelectedVariants] = useState({});
   const [openVariantMenu, setOpenVariantMenu] = useState(null);
-  const [customizationModal, setCustomizationModal] = useState({ open: false, cartKey: null, customizations: "" });
+  const [customizationModal, setCustomizationModal] = useState({
+    open: false,
+    cartKey: null,
+    customizations: "",
+  });
 
   useEffect(() => {
     if (!menu) return;
@@ -86,7 +98,11 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
 
   const openCustomization = (cartKey) => {
     const currentCustomization = cartItems[cartKey]?.customizations || "";
-    setCustomizationModal({ open: true, cartKey, customizations: currentCustomization });
+    setCustomizationModal({
+      open: true,
+      cartKey,
+      customizations: currentCustomization,
+    });
   };
 
   const closeCustomization = () => {
@@ -129,7 +145,9 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
           layoutMode === "multi"
             ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3 py-3"
             : `grid gap-4 ${
-                layoutMode === "single" ? "grid-cols-1 py-3" : "grid-cols-2 py-3"
+                layoutMode === "single"
+                  ? "grid-cols-1 py-3"
+                  : "grid-cols-2 py-3"
               }`;
 
         return (
@@ -171,15 +189,15 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                     : item.price;
                 const canAdd =
                   (item.pricingType !== "variant" ||
-                  (selectedVariant && variantPrice !== undefined)) && isRestaurantOpen;
+                    (selectedVariant && variantPrice !== undefined)) &&
+                  isRestaurantOpen;
                 const isUnavailable = !item.available || !isRestaurantOpen;
                 // Description preview length set to 40 characters
 
                 return (
                   <div
                     key={item._id}
-                    onClick={() => openDescription(item)}
-                    className={`relative bg-white rounded-2xl border border-gray-100 shadow-md cursor-pointer transition-transform hover:scale-[1.02] ${
+                    className={`relative bg-white rounded-2xl border border-gray-100 shadow-md transition-transform hover:scale-[1.02] ${
                       isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                     } ${
                       layoutMode === "multi"
@@ -189,7 +207,8 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                   >
                     {/* ✅ Image Section */}
                     <div
-                      className={`relative w-full overflow-hidden rounded-t-2xl ${
+                      onClick={() => openDescription(item)}
+                      className={`relative w-full overflow-hidden rounded-t-2xl cursor-pointer ${
                         layoutMode === "single"
                           ? "h-40 sm:h-52"
                           : layoutMode === "double"
@@ -226,214 +245,217 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                     </div>
 
                     {/* ✅ Details Section */}
-                    <div className="p-2 flex flex-col gap-1">
+                    <div className="p-2 flex flex-col gap-1 justify-between">
                       {/* Item Name */}
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-tight line-clamp-2">
+                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 leading-tight line-clamp-2 h-7">
                         {item.name}
                       </h3>
-
-                      {/* Description with "more" link + Price Dropdown */}
-                      {(item.description || "").length > 0 && (
-                        <div className="flex items-center justify-between gap-1 flex-shrink-0 h-4 py-3">
-                          {/* Price Section (moved here) */}
-                          <div className="flex-1 min-w-0">
-                            {item.pricingType === "variant" &&
-                            Object.keys(variantRates).length > 0 ? (
-                              <div className="relative z-10">
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setOpenVariantMenu((prev) =>
-                                      prev === item._id ? null : item._id
-                                    );
-                                  }}
-                                  className="text-primary text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1"
-                                >
-                                  <span className="truncate">
-                                    {selectedVariant &&
-                                    variantPrice != null &&
-                                    variantPrice !== undefined
-                                      ? formatVariantLabel(selectedVariant)
-                                      : "Select size"}
-                                  </span>
-                                  <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
-                                </button>
-
-                                {isMenuOpen && (
-                                  <div
-                                    className="absolute -left-2 bottom-0 w-[150px] rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden z-10"
-                                    onClick={(event) =>
-                                      event.stopPropagation()
-                                    }
+                      <div className="flex flex-col gap-1 h-full justify-end">
+                        {/* Description with "more" link + Price Dropdown */}
+                        {(item.description || "").length > 0 && (
+                          <div className="flex items-center justify-between gap-1 flex-shrink-0 h-4 py-3">
+                            {/* Price Section (moved here) */}
+                            <div className="flex-1 min-w-0">
+                              {item.pricingType === "variant" &&
+                              Object.keys(variantRates).length > 0 ? (
+                                <div className="relative z-10">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setOpenVariantMenu((prev) =>
+                                        prev === item._id ? null : item._id
+                                      );
+                                    }}
+                                    className="text-primary text-xs sm:text-sm font-semibold hover:underline flex items-center gap-1"
                                   >
-                                    {Object.entries(variantRates)
-                                      .filter(
-                                        ([key, price]) =>
-                                          price != null && price !== undefined
-                                      )
-                                      .map(([key, price]) => {
-                                        const isActive =
-                                          selectedVariant === key;
-                                        return (
-                                          <button
-                                            key={key}
-                                            type="button"
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              setSelectedVariants((prev) => ({
-                                                ...prev,
-                                                [item._id]: key,
-                                              }));
-                                              setOpenVariantMenu(null);
-                                            }}
-                                            className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
-                                              isActive
-                                                ? "bg-gray-100 text-orange-700 font-semibold"
-                                                : "text-gray-700 hover:bg-orange-50"
-                                            }`}
-                                          >
-                                            <span>
-                                              {formatVariantLabel(key)}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                              ₹{price}
-                                            </span>
-                                          </button>
-                                        );
-                                      })}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-primary text-xs sm:text-sm font-semibold">
-                                ₹
-                                {Number(
-                                  displayPrice ?? item.price ?? 0
-                                ).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-
-                          {quantity > 0 && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openCustomization(cartKey);
-                              }}
-                              className="text-xs text-gray-500 hover:text-primary text-left w-fit flex items-center gap-1"
-                              title="Add customizations"
-                            >
-                              <Edit3 className="h-3 w-3" />
-                              <span>Customize</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Price and Add Button Row */}
-                      <div className="flex flex-col justify-between mt-auto">
-                        {/* Add/Quantity Controls */}
-                        {!item.available ? null : (
-                          <div className="flex items-center justify-between gap-1 flex-shrink-0">
-                            {/* Selected price shown next to Add button */}
-                            <span className="text-lg sm:text-sm font-semibold text-gray-800 mr-1">
-                              ₹{Number(displayPrice ?? item.price ?? 0)}
-                            </span>
-
-                            <div className="flex items-center gap-1">
-                              {quantity > 0 ? (
-                                <>
-                                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        dispatch(removeFromCart(cartKey));
-                                      }}
-                                      disabled={!isRestaurantOpen}
-                                      className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      -
-                                    </Button>
-                                    <span className="text-xs sm:text-sm font-medium min-w-[16px] sm:min-w-[20px] text-center">
-                                      {quantity}
+                                    <span className="truncate">
+                                      {selectedVariant &&
+                                      variantPrice != null &&
+                                      variantPrice !== undefined
+                                        ? formatVariantLabel(selectedVariant)
+                                        : "Select size"}
                                     </span>
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        dispatch(
-                                          addToCart({
-                                            id: cartKey,
-                                            item: {
-                                              ...item,
-                                              price: displayPrice,
-                                              variantKey: selectedVariant,
-                                              variantLabel:
-                                                selectedVariant &&
-                                                variantPrice != null &&
-                                                variantPrice !== undefined
-                                                  ? formatVariantLabel(
-                                                      selectedVariant
-                                                    )
-                                                  : null,
-                                              customizations: cartItems[cartKey]?.customizations || "",
-                                            },
-                                            price: displayPrice,
-                                          })
-                                        );
-                                      }}
-                                      disabled={!isRestaurantOpen}
-                                      className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
+                                  </button>
+
+                                  {isMenuOpen && (
+                                    <div
+                                      className="absolute -left-2 bottom-0 w-[150px] rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden z-10"
+                                      onClick={(event) =>
+                                        event.stopPropagation()
+                                      }
                                     >
-                                      +
-                                    </Button>
-                                  </div>
-                                </>
+                                      {Object.entries(variantRates)
+                                        .filter(
+                                          ([key, price]) =>
+                                            price != null && price !== undefined
+                                        )
+                                        .map(([key, price]) => {
+                                          const isActive =
+                                            selectedVariant === key;
+                                          return (
+                                            <button
+                                              key={key}
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                setSelectedVariants((prev) => ({
+                                                  ...prev,
+                                                  [item._id]: key,
+                                                }));
+                                                setOpenVariantMenu(null);
+                                              }}
+                                              className={`w-full px-4 py-2 text-left flex items-center justify-between text-sm transition ${
+                                                isActive
+                                                  ? "bg-gray-100 text-orange-700 font-semibold"
+                                                  : "text-gray-700 hover:bg-orange-50"
+                                              }`}
+                                            >
+                                              <span>
+                                                {formatVariantLabel(key)}
+                                              </span>
+                                              <span className="text-xs text-gray-500">
+                                                ₹{price}
+                                              </span>
+                                            </button>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!canAdd || !isRestaurantOpen) return;
-                                    dispatch(
-                                      addToCart({
-                                        id: cartKey,
-                                        item: {
-                                          ...item,
-                                          price: displayPrice,
-                                          variantKey: selectedVariant,
-                                          variantLabel:
-                                            selectedVariant &&
-                                            variantPrice != null &&
-                                            variantPrice !== undefined
-                                              ? formatVariantLabel(
-                                                  selectedVariant
-                                                )
-                                              : null,
-                                          customizations: "",
-                                        },
-                                        price: displayPrice,
-                                      })
-                                    );
-                                  }}
-                                  className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={!canAdd || !isRestaurantOpen}
-                                >
-                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
+                                <span className="text-primary text-xs sm:text-sm font-semibold">
+                                  ₹
+                                  {Number(
+                                    displayPrice ?? item.price ?? 0
+                                  ).toFixed(2)}
+                                </span>
                               )}
                             </div>
+
+                            {quantity > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCustomization(cartKey);
+                                }}
+                                className="text-xs text-gray-500 hover:text-primary text-left w-fit flex items-center gap-1"
+                                title="Add customizations"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                                <span>Customize</span>
+                              </button>
+                            )}
                           </div>
                         )}
-                        {!isRestaurantOpen && item.available && (
-                          <p className="text-xs text-red-600 font-medium mt-1">
-                            Orders closed
-                          </p>
-                        )}
+
+                        {/* Price and Add Button Row */}
+                        <div className="flex flex-col justify-between mt-auto">
+                          {/* Add/Quantity Controls */}
+                          {!item.available ? null : (
+                            <div className="flex items-center justify-between gap-1 flex-shrink-0">
+                              {/* Selected price shown next to Add button */}
+                              <span className="text-lg sm:text-sm font-semibold text-gray-800 mr-1">
+                                ₹{Number(displayPrice ?? item.price ?? 0)}
+                              </span>
+
+                              <div className="flex items-center gap-1">
+                                {quantity > 0 ? (
+                                  <>
+                                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          dispatch(removeFromCart(cartKey));
+                                        }}
+                                        disabled={!isRestaurantOpen}
+                                        className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="text-xs sm:text-sm font-medium min-w-[16px] sm:min-w-[20px] text-center">
+                                        {quantity}
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          dispatch(
+                                            addToCart({
+                                              id: cartKey,
+                                              item: {
+                                                ...item,
+                                                price: displayPrice,
+                                                variantKey: selectedVariant,
+                                                variantLabel:
+                                                  selectedVariant &&
+                                                  variantPrice != null &&
+                                                  variantPrice !== undefined
+                                                    ? formatVariantLabel(
+                                                        selectedVariant
+                                                      )
+                                                    : null,
+                                                customizations:
+                                                  cartItems[cartKey]
+                                                    ?.customizations || "",
+                                              },
+                                              price: displayPrice,
+                                            })
+                                          );
+                                        }}
+                                        disabled={!isRestaurantOpen}
+                                        className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 text-sm sm:text-base font-bold bg-primary text-white hover:bg-primary/90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        +
+                                      </Button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!canAdd || !isRestaurantOpen) return;
+                                      dispatch(
+                                        addToCart({
+                                          id: cartKey,
+                                          item: {
+                                            ...item,
+                                            price: displayPrice,
+                                            variantKey: selectedVariant,
+                                            variantLabel:
+                                              selectedVariant &&
+                                              variantPrice != null &&
+                                              variantPrice !== undefined
+                                                ? formatVariantLabel(
+                                                    selectedVariant
+                                                  )
+                                                : null,
+                                            customizations: "",
+                                          },
+                                          price: displayPrice,
+                                        })
+                                      );
+                                    }}
+                                    className="rounded-lg h-7 w-7 sm:h-8 sm:w-8 p-0 bg-primary hover:bg-primary/90 text-white shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!canAdd || !isRestaurantOpen}
+                                  >
+                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {!isRestaurantOpen && item.available && (
+                            <p className="text-xs text-red-600 font-medium mt-1">
+                              Orders closed
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -495,9 +517,7 @@ export default function FoodListing({ menu, onQuantityChange, isRestaurantOpen =
                 </h3>
                 <div
                   className={
-                    isLongDescription
-                      ? "max-h-40 overflow-y-auto pr-1"
-                      : ""
+                    isLongDescription ? "max-h-40 overflow-y-auto pr-1" : ""
                   }
                 >
                   <p className="text-gray-600 text-sm leading-relaxed">

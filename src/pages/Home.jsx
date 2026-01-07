@@ -55,7 +55,7 @@ export default function Home() {
 
   if (showLoader)
     return (
-      <div className="flex justify-center items-center max-h-screen min-h-screen bg-white">
+      <div className="flex justify-center items-center max-h-screen min-h-screen">
         <img src={loader} alt="Loading..." className="h-60" />
       </div>
     );
