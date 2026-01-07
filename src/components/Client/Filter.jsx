@@ -26,7 +26,7 @@ export default function Filter({ filters, onChange }) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="w-full flex items-center py-2 justify-end bg-gradient-to-r from-white/70 to-white/40 backdrop-blur-xl border-gray-200 px-2 pt-2"
+      className="w-full flex items-center py-2 justify-end backdrop-blur-xl border-gray-200 px-2 pt-2"
     >
       {/* Veg / Non-Veg Toggle */}
       <div className="flex items-center text-gray-800 text-xs sm:text-sm md:text-base">

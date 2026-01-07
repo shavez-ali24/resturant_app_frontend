@@ -13,7 +13,7 @@ export default function Category({
   );
 
   return (
-    <div className="flex flex-col px-2 bg-gradient-to-r from-white/70 to-white/40 backdrop-blur-md">
+    <div className="flex flex-col px-2">
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
         <div className="bg-primary/10 p-1.5 rounded-lg shadow-sm">
