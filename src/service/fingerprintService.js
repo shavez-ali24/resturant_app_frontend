@@ -9,7 +9,7 @@ class FingerprintService {
     // 1️⃣ Check localStorage first (MOST IMPORTANT)
     const storedId = localStorage.getItem(FINGERPRINT_KEY);
     if (storedId) {
-      console.log('Fingerprint (from localStorage):', storedId);
+      // console.log('Fingerprint (from localStorage):', storedId);
       return storedId;
     }
 

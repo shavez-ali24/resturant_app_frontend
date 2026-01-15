@@ -33,6 +33,8 @@ export default function OrderFormModal({
   logo,
   resetForm
 }) {
+  if (!showModal) return null;
+
   const [selectedOrderType, setSelectedOrderType] = useState(orderType);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const orderModes = restaurantData?.restaurant?.orderModes;
@@ -64,6 +66,7 @@ export default function OrderFormModal({
         modeKey: "delivery",
       },
     ];
+
 
     if (!orderModes || typeof orderModes !== "object") {
       return baseOptions;
@@ -130,7 +133,6 @@ export default function OrderFormModal({
     }
   };
 
-  if (!showModal) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
