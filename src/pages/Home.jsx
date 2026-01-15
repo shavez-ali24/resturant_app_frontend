@@ -31,6 +31,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [total, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
 
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
@@ -61,11 +63,16 @@ export default function Home() {
     );
 
   const restaurant = restaurantData?.restaurant || restaurantData || {};
-  const menu = Array.isArray(menuData)
-    ? menuData
-    : Array.isArray(menuData?.menu)
-    ? menuData.menu
-    : [];
+  // const menu = Array.isArray(menuData)
+  //   ? menuData
+  //   : Array.isArray(menuData?.menu)
+  //   ? menuData.menu
+  //   : [];
+  const menu =
+  menuData?.menu ||
+  menuData?.data?.menu ||
+  (Array.isArray(menuData) ? menuData : []);
+
   const isRestaurantOpen =
     restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
 
@@ -78,18 +85,35 @@ export default function Home() {
   }
 
   // Apply filters (search + veg/non-veg + category)
+  // const filteredMenu = menu.filter((item) => {
+  //   const matchesSearch =
+  //     item.name.toLowerCase().includes(search.toLowerCase()) ||
+  //     item.description.toLowerCase().includes(search.toLowerCase());
+  //   if (!matchesSearch) return false;
+
+  //   if (filters.veg && !filters.nonVeg && item.type !== "veg") return false;
+  //   if (filters.nonVeg && !filters.veg && item.type !== "non-veg") return false;
+  //   if (activeCategory && item.category !== activeCategory) return false;
+
+  //   return true;
+  // });
   const filteredMenu = menu.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.description.toLowerCase().includes(search.toLowerCase());
-    if (!matchesSearch) return false;
+  const itemName = item?.name?.toLowerCase() || "";
+  const itemDesc = item?.description?.toLowerCase() || "";
+  const searchText = search?.toLowerCase() || "";
 
-    if (filters.veg && !filters.nonVeg && item.type !== "veg") return false;
-    if (filters.nonVeg && !filters.veg && item.type !== "non-veg") return false;
-    if (activeCategory && item.category !== activeCategory) return false;
+  const matchesSearch =
+    itemName.includes(searchText) || itemDesc.includes(searchText);
 
-    return true;
-  });
+  if (!matchesSearch) return false;
+
+  if (filters.veg && !filters.nonVeg && item.type !== "veg") return false;
+  if (filters.nonVeg && !filters.veg && item.type !== "non-veg") return false;
+  if (activeCategory && item.category !== activeCategory) return false;
+
+  return true;
+});
+
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -102,7 +126,7 @@ export default function Home() {
   return (
     <>
       {/* Orders Closed Banner */}
-      {!isRestaurantOpen && (
+      {!isRestaurantOpen && !isSidebarOpen && (
         <div className="sticky top-0 z-30 bg-red-600 text-white px-4 py-3 shadow-lg h-14 flex items-center">
           <div className="flex items-center justify-center gap-2 w-full">
             <Clock className="h-5 w-5 flex-shrink-0" />
@@ -117,16 +141,19 @@ export default function Home() {
       )}
 
       <div className={`sticky bg-white z-20 ${!isRestaurantOpen ? 'top-14' : 'top-0'}`}>
-        <Header
-          logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
-          siteName={
-            restaurant?.restaurantName ||
-            restaurantData?.restaurant?.restaurantName
-          }
-          search={search}
-          onSearch={setSearch}
-          isRestaurantOpen={isRestaurantOpen}
-        />
+     <Header
+  logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
+  siteName={
+    restaurant?.restaurantName ||
+    restaurantData?.restaurant?.restaurantName
+  }
+  search={search}
+  onSearch={setSearch}
+  isRestaurantOpen={isRestaurantOpen}
+  onSidebarToggle={setIsSidebarOpen}
+/>
+
+
 
         <Category
           title="Choose Your Favourite Food"

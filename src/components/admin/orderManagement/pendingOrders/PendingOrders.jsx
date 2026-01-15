@@ -111,7 +111,7 @@ const Orders = () => {
     
     // Format 4: Agar koi aur field mein hai
     // Aapke API response ko check karke add karein
-    console.log("Restaurant Object for debugging:", restaurant);
+    // console.log("Restaurant Object for debugging:", restaurant);
     
     return [];
   };
@@ -128,15 +128,15 @@ const Orders = () => {
   // Debug logs
   useEffect(() => {
     if (restaurantData) {
-      console.log("Full Restaurant API Response:", restaurantData);
-      console.log("Restaurant Object:", restaurantData.restaurant || restaurantData);
-      console.log("Tables extracted:", tables);
-      console.log("Table count:", tables.length);
+      // console.log("Full Restaurant API Response:", restaurantData);
+      // console.log("Restaurant Object:", restaurantData.restaurant || restaurantData);
+      // console.log("Tables extracted:", tables);
+      // console.log("Table count:", tables.length);
       
       // Aapke API response ke structure ko check karein
       const restaurant = restaurantData.restaurant || restaurantData;
-      console.log("Available keys in restaurant:", Object.keys(restaurant));
-      console.log("tableNumbers field:", restaurant.tableNumbers);
+      // console.log("Available keys in restaurant:", Object.keys(restaurant));
+      // console.log("tableNumbers field:", restaurant.tableNumbers);
     }
   }, [restaurantData, tables]);
 
@@ -170,7 +170,7 @@ const Orders = () => {
       // ✅ FIX: Ensure orderId is a string
       const orderIdString = String(orderId);
       
-      console.log("Updating order:", { orderIdString, updatedData });
+      // console.log("Updating order:", { orderIdString, updatedData });
       
       // ✅ FIX: Call API with correct parameters
       await updateOrderApi({ 

@@ -22,6 +22,7 @@ export default function Header({
   search,
   onSearch,
   isRestaurantOpen = true,
+  onSidebarToggle
 }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -375,7 +376,9 @@ export default function Header({
       }
 
       setShowModal(false);
+      // setIsCartOpen(false);
       setIsCartOpen(false);
+      onSidebarToggle?.(false);
       setOrderType("");
       setAddress("");
       setUseCurrentLocation(false);
@@ -402,6 +405,8 @@ export default function Header({
     setCustomerPhone("");
     setTableId("");
   };
+  const safeOnSearch = typeof onSearch === "function" ? onSearch : () => {};
+
 
   return (
     <>
@@ -449,7 +454,7 @@ export default function Header({
 
                   {/* View Cart Button on Right */}
                   <button
-                    onClick={() => setIsAccordionOpen(true)}
+                    onClick={() => {setIsAccordionOpen(true);onSidebarToggle?.(true);}}
                     className="text-base flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
                   >
                     View Cart
@@ -468,7 +473,7 @@ export default function Header({
                     Your Order ({cartCount})
                   </h2>
                   <button
-                    onClick={() => setIsAccordionOpen(false)}
+                    onClick={() => {setIsAccordionOpen(false); onSidebarToggle?.(false);}}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     aria-label="Close"
                   >
@@ -561,6 +566,7 @@ export default function Header({
                       setUseCurrentLocation(false);
                       setShowModal(true);
                       setIsAccordionOpen(false);
+                      onSidebarToggle?.(false);
                     }}
                       className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
                         cartCount === 0
@@ -601,7 +607,7 @@ export default function Header({
             </button>
 
             {/* Cart Icon */}
-            <button onClick={() => setIsCartOpen(true)} className="relative">
+            <button onClick={() => {setIsCartOpen(true);onSidebarToggle?.(true);}} className="relative">
               <UtensilsCrossed className="w-6 h-6 text-gray-700 hover:text-black" />
               {allOrders.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
@@ -626,7 +632,7 @@ export default function Header({
                       type="text"
                       placeholder="Search for food items..."
                       value={search || ""}
-                      onChange={(e) => onSearch(e.target.value)}
+                      onChange={(e) => safeOnSearch(e.target.value)}
                       className="w-full rounded-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:shadow-md"
                       autoFocus
                     />
@@ -653,7 +659,7 @@ export default function Header({
         {isCartOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40"
-            onClick={() => setIsCartOpen(false)}
+            onClick={() => {  setIsCartOpen(false);onSidebarToggle?.(false);}}
           ></div>
         )}
 
@@ -667,7 +673,7 @@ export default function Header({
           <div className="flex justify-between items-center p-4 border-b">
             <h2 className="text-lg font-semibold text-gray-800">Your Orders</h2>
             <button
-              onClick={() => setIsCartOpen(false)}
+              onClick={() => {setIsCartOpen(false);onSidebarToggle?.(false)}}
               className="p-1 hover:bg-gray-100 rounded transition-colors"
             >
               <X className="w-5 h-5 text-gray-600" />
@@ -838,6 +844,7 @@ export default function Header({
 
         {/* Order Form Modal */}
         <OrderFormModal
+          // showModal={showModal}
           showModal={showModal}
           setShowModal={setShowModal}
           customerName={customerName}
