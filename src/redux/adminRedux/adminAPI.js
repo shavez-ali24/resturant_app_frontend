@@ -311,6 +311,23 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
+
+    updateStaff: builder.mutation({
+      query: ({ staffId, updatedData }) => ({
+        url: `/auth/${staffId}`,
+        method: "PUT",
+        body: updatedData,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+
+    deleteStaff: builder.mutation({
+      query: (staffId) => ({
+        url: `/auth/${staffId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Staff"],
+    }),
   }),
 });
 
@@ -331,4 +348,6 @@ export const {
   useGetTopSellingCategoriesQuery,
   useGetStaffQuery,
   useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 } = adminApi;

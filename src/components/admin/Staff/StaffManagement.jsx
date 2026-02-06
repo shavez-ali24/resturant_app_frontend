@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import {
   useGetStaffQuery,
   useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 } from "@/redux/adminRedux/adminAPI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,17 +18,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Search, Eye, EyeOff, X } from "lucide-react";
+import {
+  Plus,
+  Users,
+  Search,
+  Eye,
+  EyeOff,
+  X,
+  Pencil,
+  Trash2,
+  Check,
+  X as XIcon,
+} from "lucide-react";
 import NotificationModal from "../common/NotificationModal";
 import Heading from "../common/Heading";
 
 const StaffManagement = () => {
-  const { data: staffData, isLoading } = useGetStaffQuery();
+  const { data: staffData, isLoading, refetch } = useGetStaffQuery();
   const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
+  const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
+  const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
 
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -49,34 +68,107 @@ const StaffManagement = () => {
 
   const handleAddNew = () => {
     setFormData({ name: "", email: "", password: "" });
+    setIsEditing(false);
+    setSelectedStaff(null);
     setShowModal(true);
+  };
+
+  const handleEdit = (staff) => {
+    setSelectedStaff(staff);
+    setFormData({
+      name: staff.name || "",
+      email: staff.email || "",
+      password: "",
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleDeleteClick = (staff) => {
+    setStaffToDelete(staff);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!staffToDelete) return;
+
+    try {
+      await deleteStaff(staffToDelete._id).unwrap();
+      refetch();
+      setNotification({
+        show: true,
+        type: "success",
+        message: "Staff deleted successfully!",
+      });
+      setShowDeleteModal(false);
+      setStaffToDelete(null);
+    } catch (error) {
+      console.error("Staff deletion error:", error);
+      setNotification({
+        show: true,
+        type: "error",
+        message: error?.data?.message || error?.message || "Something went wrong",
+      });
+    }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setIsEditing(false);
+    setSelectedStaff(null);
+    setFormData({ name: "", email: "", password: "" });
   };
 
   const handleSubmit = async () => {
     // Validate form
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email) {
       setNotification({
         show: true,
         type: "error",
-        message: "Please fill all fields",
+        message: "Please fill all required fields",
       });
       return;
     }
-    
-    try {
-      await createStaff(formData).unwrap();
+
+    if (!isEditing && !formData.password) {
       setNotification({
         show: true,
-        type: "success",
-        message: "Staff created successfully!",
+        type: "error",
+        message: "Password is required for new staff",
       });
+      return;
+    }
+
+    try {
+      if (isEditing && selectedStaff) {
+        // Update existing staff
+        const updateData = {
+          name: formData.name,
+          email: formData.email,
+        };
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        await updateStaff({ staffId: selectedStaff._id, updatedData: updateData }).unwrap();
+        refetch();
+        setNotification({
+          show: true,
+          type: "success",
+          message: "Staff updated successfully!",
+        });
+      } else {
+        // Create new staff
+        await createStaff(formData).unwrap();
+        refetch();
+        setNotification({
+          show: true,
+          type: "success",
+          message: "Staff created successfully!",
+        });
+      }
       handleCloseModal();
     } catch (error) {
-      console.error("Staff creation error:", error);
+      console.error("Staff operation error:", error);
       setNotification({
         show: true,
         type: "error",
@@ -87,12 +179,14 @@ const StaffManagement = () => {
 
   const staff = Array.isArray(staffData) ? staffData : [];
   
-  // Filter staff by search term
-  const filteredStaff = staff.filter(
-    (member) =>
-      member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter out soft-deleted staff and by search term
+  const filteredStaff = staff
+    .filter((member) => !member?.isDeleted)
+    .filter(
+      (member) =>
+        member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 min-h-screen">
@@ -102,6 +196,44 @@ const StaffManagement = () => {
           notification={notification}
           onClose={closeNotification}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setShowDeleteModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="text-red-600" size={32} />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Delete Staff</h3>
+              <p className="text-gray-500 mb-6">
+                Are you sure you want to delete <span className="font-medium text-gray-700">{staffToDelete?.name}</span>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="border-gray-300 hover:bg-gray-100 flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="bg-red-500 text-white hover:bg-red-600 disabled:bg-red-300 flex-1"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal */}
@@ -127,9 +259,13 @@ const StaffManagement = () => {
             <div className="p-6 pb-4">
               <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Plus className="text-orange-600" size={20} />
+                  {isEditing ? (
+                    <Pencil className="text-orange-600" size={20} />
+                  ) : (
+                    <Plus className="text-orange-600" size={20} />
+                  )}
                 </div>
-                Add New Staff
+                {isEditing ? "Edit Staff" : "Add New Staff"}
               </h2>
             </div>
             
@@ -164,7 +300,7 @@ const StaffManagement = () => {
               </div>
               <div className="space-y-2 relative">
                 <Label htmlFor="password" className="text-gray-700 font-medium">
-                  Password
+                  {isEditing ? "New Password (leave blank to keep current)" : "Password"}
                 </Label>
                 <div className="relative">
                   <Input
@@ -173,7 +309,7 @@ const StaffManagement = () => {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Enter password"
+                    placeholder={isEditing ? "Enter new password" : "Enter password"}
                     className="rounded-lg border-orange-200 focus:ring-orange-500 focus:border-orange-500 pr-10"
                   />
                   <button
@@ -198,10 +334,16 @@ const StaffManagement = () => {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isCreating}
+                disabled={isCreating || isUpdating}
                 className="bg-orange-500 text-white hover:bg-orange-600 disabled:bg-orange-300 flex-1"
               >
-                {isCreating ? "Creating..." : "Create Staff"}
+                {isCreating || isUpdating
+                  ? isEditing
+                    ? "Updating..."
+                    : "Creating..."
+                  : isEditing
+                  ? "Update Staff"
+                  : "Create Staff"}
               </Button>
             </div>
           </div>
@@ -244,12 +386,13 @@ const StaffManagement = () => {
               <TableHead className="text-orange-700 font-semibold">Email</TableHead>
               <TableHead className="text-orange-700 font-semibold">Role</TableHead>
               <TableHead className="text-orange-700 font-semibold">Created At</TableHead>
+              <TableHead className="text-orange-700 font-semibold text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12">
+                <TableCell colSpan={5} className="text-center py-12">
                   <div className="flex items-center justify-center gap-2 text-gray-500">
                     <Users className="animate-pulse" />
                     Loading staff...
@@ -258,7 +401,7 @@ const StaffManagement = () => {
               </TableRow>
             ) : filteredStaff.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12">
+                <TableCell colSpan={5} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2 text-gray-500">
                     <Users size={40} className="text-orange-200" />
                     <p>
@@ -301,6 +444,26 @@ const StaffManagement = () => {
                         year: "numeric",
                       })}
                     </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(member)}
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-100"
+                      >
+                        <Pencil size={18} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(member)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                      >
+                        <Trash2 size={18} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
