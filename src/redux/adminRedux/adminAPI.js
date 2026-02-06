@@ -1,6 +1,33 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "../../config";
 
+const normalizeMenuItem = (it) => {
+  if (!it || typeof it !== "object") return it;
+  const copy = { ...it };
+
+  // Handle main discount - only set to null if it's truly invalid
+  if (copy.discount) {
+    if (copy.discount.active === false || copy.discount.value === 0 || copy.discount.value === null || copy.discount.value === "") {
+      copy.discount = null;
+    }
+  }
+
+  // Handle variant rates - only set to null if discount is truly invalid
+  if (copy.variantRates) {
+    const vr = { ...copy.variantRates };
+    ["quarter", "half", "full"].forEach((k) => {
+      if (vr[k] && vr[k].discount) {
+        if (vr[k].discount.active === false || vr[k].discount.value === 0 || vr[k].discount.value === null || vr[k].discount.value === "") {
+          vr[k] = { ...vr[k], discount: null };
+        }
+      }
+    });
+    copy.variantRates = vr;
+  }
+
+  return copy;
+};
+
 export const adminApi = createApi({
   reducerPath: "adminApi",
   baseQuery: fetchBaseQuery({
@@ -21,6 +48,7 @@ export const adminApi = createApi({
     "Menu",
     "Profile",
     "TopSelling",
+    "Staff",
   ],
 
   endpoints: (builder) => ({
@@ -37,8 +65,24 @@ export const adminApi = createApi({
     // RESTAURANT PROFILE ---------------------------------------------- done
     getRestaurantProfile: builder.query({
       query: () => "/restaurant/admin",
+      transformResponse: (response) => {
+        // Handle { success: true, data: ... } format
+        if (response?.data) {
+          return { restaurant: response.data };
+        }
+        // Handle { restaurant: ... } format
+        if (response?.restaurant) {
+          return response;
+        }
+        // Handle raw restaurant object
+        if (response && response._id) {
+          return { restaurant: response };
+        }
+        return { restaurant: null };
+      },
       providesTags: ["Restaurant"],
     }),
+    
 
     // done 
     updateRestaurantProfile: builder.mutation({
@@ -176,8 +220,10 @@ export const adminApi = createApi({
     // MENU ------------------------------------------------------------ done
     getMenu: builder.query({
       query: () => "/menu",
-      transformResponse: (response) =>
-        Array.isArray(response) ? response : response?.menu ?? [],
+      transformResponse: (response) => {
+        const arr = Array.isArray(response) ? response : response?.menu ?? [];
+        return Array.isArray(arr) ? arr.map(normalizeMenuItem) : [];
+      },
       providesTags: ["Menu"],
     }),
 
@@ -188,6 +234,7 @@ export const adminApi = createApi({
         method: "POST",
         body: formData,
       }),
+      transformResponse: (response) => normalizeMenuItem(response?.item || response),
       invalidatesTags: ["Menu"],
     }),
 
@@ -198,6 +245,7 @@ export const adminApi = createApi({
         method: "PUT",
         body: updatedData,
       }),
+      transformResponse: (response) => normalizeMenuItem(response?.item || response),
       invalidatesTags: ["Menu"],
     }),
 
@@ -233,6 +281,36 @@ export const adminApi = createApi({
       },
       providesTags: ["TopSelling"],
     }),
+
+    // STAFF MANAGEMENT
+    getStaff: builder.query({
+      query: () => "/auth/staff/mine",
+      transformResponse: (response) => {
+        // Handle { staff: [...] } format
+        if (response?.staff && Array.isArray(response.staff)) {
+          return response.staff;
+        }
+        // Handle { data: [...] } format
+        if (response?.data && Array.isArray(response.data)) {
+          return response.data;
+        }
+        // Handle array directly
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return [];
+      },
+      providesTags: ["Staff"],
+    }),
+
+    createStaff: builder.mutation({
+      query: (staffData) => ({
+        url: "/auth/register/staff",
+        method: "POST",
+        body: { ...staffData, role: "staff" },
+      }),
+      invalidatesTags: ["Staff"],
+    }),
   }),
 });
 
@@ -251,5 +329,6 @@ export const {
   useToggleRestaurantMutation,
   useGetTopSellingProductsQuery,
   useGetTopSellingCategoriesQuery,
-  // ✅ getTables query REMOVED - using restaurant profile only
+  useGetStaffQuery,
+  useCreateStaffMutation,
 } = adminApi;

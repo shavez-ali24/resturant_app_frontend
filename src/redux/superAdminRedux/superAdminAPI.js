@@ -28,6 +28,9 @@ export const superAdminApi = createApi({
         }
         localStorage.setItem("token", response.token);
         localStorage.setItem("user", JSON.stringify(response.user));
+        localStorage.setItem("userRole", response.user.role);
+        localStorage.setItem("userName", response.user.name);
+        localStorage.setItem("userEmail", response.user.email);
         return response;
       },
     }),
@@ -45,6 +48,19 @@ export const superAdminApi = createApi({
         url: "/auth/admins",
         method: "GET",
       }),
+      transformResponse: (response) => {
+        // Handle both array and object responses
+        if (Array.isArray(response)) {
+          return { admins: response };
+        }
+        if (response && Array.isArray(response.admins)) {
+          return response;
+        }
+        if (response && Array.isArray(response.data)) {
+          return { admins: response.data };
+        }
+        return { admins: [] };
+      },
       providesTags: ["Admins"],
     }),
 

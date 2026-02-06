@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { IndianRupee } from "lucide-react";
 
 export default function OrderComplete({
-  // amount,
+  amount,
   buttonText,
   onClick,
   disabled,

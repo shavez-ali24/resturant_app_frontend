@@ -29,6 +29,7 @@ import AdminsList from "./components/superAdmin/details/User_List/AdminsList";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import SuperAdminProfile from "./components/superAdmin/Pages/SuperAdminProfile";
 import Sales from "./components/admin/observability/sales/Sales";
+import StaffManagement from "./components/admin/Staff/StaffManagement";
 // import AppTitle from "./AppTitle";
 import DynamicFavicon from "./DynamicFavicon";
 const SuperAdminPrivateRoute = ({ children }) => {
@@ -71,6 +72,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="profile" element={<Adminprofile />} />
           <Route path="sales" element={<Sales />} />
           <Route path="revenue" element={<Revenue />} />
+          <Route path="staff" element={<StaffManagement />} />
+          <Route path="comingsoon" element={<ComingSoon />} />
         </Route>
 
         {/* Super Admin Login (Public) */}

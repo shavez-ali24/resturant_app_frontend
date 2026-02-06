@@ -3,15 +3,16 @@ import { MoonStar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const swingKeyframes = `
-@keyframes swing {
-  0% { transform: rotate(3deg); }
-  50% { transform: rotate(-3deg); }
-  100% { transform: rotate(3deg); }
-}
-@keyframes ropeBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(2px); }
-}`;
+  @keyframes swing {
+    0% { transform: rotate(3deg); }
+    50% { transform: rotate(-3deg); }
+    100% { transform: rotate(3deg); }
+  }
+  @keyframes ropeBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(2px); }
+  }
+`;
 
 export default function RestaurantClosed({
   logo,
@@ -66,7 +67,7 @@ export default function RestaurantClosed({
 
           <div className="space-y-3">
             <p className="text-sm uppercase tracking-[0.4em] text-primary/70">
-              We&apos;re taking a short break
+              We're taking a short break
             </p>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
               {siteName} is currently closed
@@ -86,7 +87,7 @@ export default function RestaurantClosed({
             ) : (
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium text-sm">
                 <Clock className="h-4 w-4" />
-                We&apos;ll be back soon
+                We'll be back soon
               </div>
             )}
 
@@ -100,7 +101,7 @@ export default function RestaurantClosed({
           </div>
 
           <p className="text-xs text-gray-400 mt-6">
-            We appreciate your patience and can&apos;t wait to serve you soon.
+            We appreciate your patience and can't wait to serve you soon.
           </p>
         </div>
       </div>

@@ -17,6 +17,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             delivery: initialData.orderModes?.delivery ?? true,
         },
         gstRate: initialData.gstRate || 0,
+        deliveryCharges: initialData.deliveryCharges || 0,
         publicId: initialData.logo?.public_id || "",
     });
 
@@ -62,6 +63,8 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             processedValue = value
                 .replace(/[^0-9.]/g, "")
                 .replace(/(\..*?)\..*/g, "$1");
+        } else if (name === "deliveryCharges") {
+            processedValue = value.replace(/[^0-9]/g, "");
         }
 
         setFormData((prev) => ({ ...prev, [name]: processedValue }));

@@ -8,6 +8,16 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
     return (
         <FormCard title="Financials"  customIndex={2}>
             <div className="space-y-4 rounded-xl border border-gray-200 p-4 bg-gray-50">
+                {/* Delivery Charges */}
+                <FormField
+                    label="Delivery Charges (₹)"
+                    name="deliveryCharges"
+                    type="text"
+                    value={formData.deliveryCharges || 0}
+                    onChange={handleChange}
+                    placeholder="e.g. 50"
+                />
+
                 <div className="flex items-center justify-between">
                     <label
                         htmlFor="gst-toggle"

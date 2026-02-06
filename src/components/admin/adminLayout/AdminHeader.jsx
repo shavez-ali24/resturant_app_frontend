@@ -8,43 +8,97 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import BillModal from "../orderManagement/bill/BillModal";
 import { useDispatch } from "react-redux";
 import { setRestaurantDetails } from "@/redux/adminRedux/billSlice";
-import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
+import { 
+  useGetRestaurantProfileQuery, 
+  useGetMenuQuery,
+  useUpdateOrderMutation
+} from "@/redux/adminRedux/adminAPI";
 
 export default function AdminHeader() {
   const dispatch = useDispatch();
-  const { data, error, isLoading } = useGetRestaurantProfileQuery();
+  
+  // Fetch restaurant profile (includes tables)
+  const { 
+    data: restaurantData,
+    error: restaurantError, 
+    isLoading: restaurantLoading 
+  } = useGetRestaurantProfileQuery();
+  
+  // Fetch menu items
+  const { data: menuItems } = useGetMenuQuery();
+  
+  // Update order mutation
+  const [updateOrder] = useUpdateOrderMutation();
 
   useEffect(() => {
-    if (data?.restaurant) {
-      dispatch(setRestaurantDetails(data.restaurant));
+    if (restaurantData?.restaurant) {
+      dispatch(setRestaurantDetails(restaurantData.restaurant));
     }
-  }, [data]);
+  }, [restaurantData, dispatch]);
+
+  // Extract tables from restaurant profile
+  const extractTablesFromRestaurant = () => {
+    if (!restaurantData) return [];
+    
+    const restaurant = restaurantData.restaurant || restaurantData;
+    
+    // Format 1: Direct tables array in restaurant
+    if (Array.isArray(restaurant.tables)) {
+      return restaurant.tables;
+    }
+    
+    // Format 2: Tables as separate field
+    if (restaurant.tables && Array.isArray(restaurant.tables)) {
+      return restaurant.tables;
+    }
+    
+    // Format 3: tableNumbers se generate karna
+    if (restaurant.tableNumbers && typeof restaurant.tableNumbers === 'number') {
+      const tables = [];
+      for (let i = 1; i <= restaurant.tableNumbers; i++) {
+        tables.push({
+          _id: `table-${i}`,
+          tableNumber: i,
+          capacity: restaurant.tableCapacity || 4
+        });
+      }
+      return tables;
+    }
+    
+    return [];
+  };
+
+  const tables = extractTablesFromRestaurant();
 
   return (
     <div className="h-screen overflow-hidden">
-  <SidebarProvider className="flex flex-col h-full">
-    <SiteHeader />
+      <SidebarProvider className="flex flex-col h-full">
+        <SiteHeader />
 
-    <div className="flex flex-1 overflow-hidden">
-      <AppSidebar />
+        <div className="flex flex-1 overflow-hidden">
+          <AppSidebar />
 
-      <SidebarInset className="flex flex-1 overflow-hidden">
-        {/* 👇 ONLY THIS PART SCROLLS */}
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          {isLoading && <p className="p-4">Loading restaurant...</p>}
-          {error && (
-            <p className="p-4 text-red-500">
-              Failed to load restaurant
-            </p>
-          )}
+          <SidebarInset className="flex flex-1 overflow-hidden">
+            {/* 👇 ONLY THIS PART SCROLLS */}
+            <div className="flex flex-1 flex-col overflow-y-auto">
+              {restaurantLoading && <p className="p-4">Loading restaurant...</p>}
+              {restaurantError && (
+                <p className="p-4 text-red-500">
+                  Failed to load restaurant
+                </p>
+              )}
 
-          <Outlet />
-          <BillModal />
+              <Outlet />
+              <BillModal 
+                menuItems={menuItems || []}
+                tables={tables}
+                updateOrder={updateOrder}
+              />
+            </div>
+          </SidebarInset>
         </div>
-      </SidebarInset>
+      </SidebarProvider>
     </div>
-  </SidebarProvider>
-</div>
 
   );
 }

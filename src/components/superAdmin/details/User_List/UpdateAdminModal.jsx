@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, User, Mail, Globe, Building, Calendar, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader2, User, Mail, Globe, Building, Calendar, Eye, EyeOff, CheckCircle, XCircle, Shield } from "lucide-react"
 import { useUpdateUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
 
 export default function UpdateAdminModal({ open, admin, onClose }) {
@@ -12,7 +13,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [formData, setFormData] = useState({
-    name: "", email: "", domain: "", restaurantName: "", password: "", subscriptionDate: ""
+    name: "", email: "", domain: "", restaurantName: "", password: "", subscriptionDate: "", role: ""
   })
 
   useEffect(() => {
@@ -27,7 +28,8 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
         domain: admin.domain || "",
         restaurantName: admin.restaurantName || "", 
         password: "",
-        subscriptionDate: subscriptionDate
+        subscriptionDate: subscriptionDate,
+        role: admin.role || ""
       })
       setMessage({ type: '', text: '' })
     }
@@ -50,7 +52,8 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
         name: formData.name, 
         email: formData.email, 
         domain: formData.domain, 
-        restaurantName: formData.restaurantName 
+        restaurantName: formData.restaurantName,
+        role: formData.role
       }
       
       // Add password if provided
@@ -154,6 +157,26 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
                 disabled={isLoading} 
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select 
+              value={formData.role} 
+              onValueChange={(value) => handleChange("role", value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="superadmin">Superadmin</SelectItem>
+                <SelectItem value="user">User</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

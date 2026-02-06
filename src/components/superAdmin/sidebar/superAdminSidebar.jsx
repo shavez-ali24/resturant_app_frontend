@@ -78,7 +78,7 @@ export function SuperAdminSidebar({ ...props }) {
       ].slice(0, 5) // Keep only last 5 items
     }));
 
-    console.log(`Navigation tracked: ${itemTitle} -> ${itemUrl}`);
+    // console.log(`Navigation tracked: ${itemTitle} -> ${itemUrl}`);
   };
 
   
@@ -99,7 +99,7 @@ export function SuperAdminSidebar({ ...props }) {
       if (event.altKey && event.key >= '1' && event.key <= '9') {
         event.preventDefault();
         // Map number keys to navigation items
-        console.log(`Keyboard navigation attempt: Alt+${event.key}`);
+        // console.log(`Keyboard navigation attempt: Alt+${event.key}`);
       }
     };
 

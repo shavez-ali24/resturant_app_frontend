@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Navigation, Utensils, Truck, Home, ArrowLeft, Loader2 } from "lucide-react";
+import { MapPin, Navigation, Utensils, Truck, Home, ArrowLeft, Loader2, ShoppingBag, IndianRupee } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCurrentAddress } from "@/service/deliveryService";
 
@@ -31,13 +31,21 @@ export default function OrderFormModal({
   handleOrderSubmit,
   restaurantData,
   logo,
-  resetForm
+  resetForm,
+  cartItems = {},
+  totalAmount = 0
 }) {
   if (!showModal) return null;
 
   const [selectedOrderType, setSelectedOrderType] = useState(orderType);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const orderModes = restaurantData?.restaurant?.orderModes;
+
+  // ✅ Get delivery charges from restaurant data (only for display)
+  const deliveryCharges = Number(restaurantData?.restaurant?.deliveryCharges || 0);
+
+  // Get cart items array
+  const cartItemsArray = Object.values(cartItems);
 
   const orderTypeOptions = useMemo(() => {
     const baseOptions = [
@@ -66,7 +74,6 @@ export default function OrderFormModal({
         modeKey: "delivery",
       },
     ];
-
 
     if (!orderModes || typeof orderModes !== "object") {
       return baseOptions;
@@ -133,12 +140,11 @@ export default function OrderFormModal({
     }
   };
 
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200">
         {/* Header */}
-        <div className="sticky top-0 bg-white rounded-t-2xl border-b px-4 p-3">
+        <div className="sticky top-0 bg-gray-50 rounded-t-2xl border-b px-4 p-3">
           <div className="flex items-center justify-between">
             <div className="flex justify-between items-center gap-4">
               {/* Home Button - Only show when no order type is selected */}
@@ -183,8 +189,8 @@ export default function OrderFormModal({
                     onClick={() => handleOrderTypeSelect(option.value)}
                     className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
                       selectedOrderType === option.value
-                        ? "border-primary bg-primary bg-opacity-5 shadow-lg"
-                        : "border-gray-200 bg-white hover:border-gray-300 shadow-md"
+                        ? "border-primary bg-primary bg-opacity-10 shadow-lg"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300 shadow-md"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -194,6 +200,13 @@ export default function OrderFormModal({
                       <div className="text-left flex-1">
                         <div className="font-semibold text-gray-800">{option.label}</div>
                         <div className="text-sm text-gray-600">{option.description}</div>
+                        {/* Delivery charges info only for Delivery option */}
+                        {option.value === "Delivery" && deliveryCharges > 0 && (
+                          <div className="mt-1 flex items-center gap-1 text-xs text-orange-600 font-medium">
+                            <IndianRupee className="w-3 h-3" />
+                            <span>Delivery charges: ₹{deliveryCharges}</span>
+                          </div>
+                        )}
                       </div>
                       <div
                         className={`w-3 h-3 rounded-full border-2 ${
@@ -204,13 +217,16 @@ export default function OrderFormModal({
                   </button>
                 ))
               ) : (
-                <p className="text-sm text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4">
+                <p className="text-sm text-gray-500 bg-gray-100 border border-dashed border-gray-200 rounded-xl p-4">
                   Ordering is currently unavailable. Please check back soon.
                 </p>
               )}
             </div>
           ) : (
             <>
+              {/* Order Summary Section - Show cart total */}
+             
+
               {/* Customer Name */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -224,7 +240,7 @@ export default function OrderFormModal({
                     if (e.target.value.length <= 15)
                       setCustomerName(e.target.value);
                   }}
-                  className="w-full border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-white"
+                  className="w-full border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-gray-50"
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Max 15 characters ({15 - customerName.length} left)
@@ -244,7 +260,7 @@ export default function OrderFormModal({
                     const value = e.target.value.replace(/\D/g, "");
                     if (value.length <= 10) setCustomerPhone(value);
                   }}
-                  className="w-full border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-white"
+                  className="w-full border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-gray-50"
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   10-digit phone number required
@@ -262,7 +278,7 @@ export default function OrderFormModal({
                     <Select value={tableId} onValueChange={setTableId}>
                       <SelectTrigger
                         className="w-full border-2 border-primary rounded-xl p-4 
-                        text-gray-800 font-medium bg-white 
+                        text-gray-800 font-medium bg-gray-50 
                         focus:ring-4 focus:ring-primary focus:border-primary 
                         hover:border-primary transition-all duration-200 shadow-lg h-12"
                       >
@@ -330,7 +346,7 @@ export default function OrderFormModal({
                             setUseCurrentLocation(false);
                           }
                         }}
-                        className="flex-1 border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-white"
+                        className="flex-1 border border-gray-300 rounded-xl p-4 outline-none shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-gray-50"
                       />
                     </div>
                     {useCurrentLocation && address && (

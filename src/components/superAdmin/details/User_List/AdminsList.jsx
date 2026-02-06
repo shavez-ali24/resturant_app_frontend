@@ -47,6 +47,12 @@ export default function AdminsList() {
     </div>
   )
 
+  if (error) return (
+    <div className="flex justify-center items-center h-64 text-red-500">
+      <p>Error loading admins: {error?.message || error?.status || "Unknown error"}</p>
+    </div>
+  )
+
   return (
     <>
       <UpdateAdminModal 
@@ -72,6 +78,7 @@ export default function AdminsList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Admin</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Domain</TableHead>
                   <TableHead>Restaurant</TableHead>
@@ -91,6 +98,11 @@ export default function AdminsList() {
                             <div className="font-medium text-gray-900">{admin.name}</div>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {admin.role}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-gray-600">

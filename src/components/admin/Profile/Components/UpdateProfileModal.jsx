@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUpdateProfileForm } from '../Hooks/useUpdateProfileForm';
-import { modalOverlayVariant, modalContentVariant } from '../Lib/motionVariants';
+import { modalOverlayVariant, modalContentVariant, chipVariant } from '../Lib/motionVariants';
 import UpdateCoreProfileForm from './UpdateCoreProfileForm';
 import UpdateCategoriesForm from './UpdateCategoriesForm';
 import UpdateOrderModeForm from './UpdateOrderModeForm';
@@ -93,6 +93,7 @@ export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSucces
                                 handleCategoryKeyDown={handleCategoryKeyDown}
                                 handleRemoveCategory={handleRemoveCategory}
                                 categorySuggestions={categorySuggestions}
+                                chipVariant={chipVariant}
                             />
 
                             <UpdateOrderModeForm

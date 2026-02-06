@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  
   TableIcon, 
   BarChartIcon, 
   IndianRupee, 
@@ -16,7 +15,8 @@ import {
   Clock,
   RefreshCw,
   CalendarDays,
- 
+  Receipt,
+  Percent,
 } from "lucide-react"
 import { useGetAnalyticsQuery } from "@/redux/adminRedux/adminAPI"
 import Heading from "../../common/Heading"
@@ -213,6 +213,16 @@ export default function RevenueAnalytics() {
   const totalRevenue = analyticsData?.totalRevenue || 0
   const totalOrders = analyticsData?.totalOrders || 0
   const rawChartData = analyticsData?.chartData || []
+  
+  // Debug: Log the analytics data to check structure
+  // console.log("📊 Analytics Data:", analyticsData)
+  // console.log("📈 Total Revenue:", totalRevenue)
+  // console.log("📦 Total Orders:", totalOrders)
+  // console.log("📊 Chart Data Sample:", rawChartData.slice(0, 3))
+  
+  // Check if we have detailed order data for discount verification
+  const hasDetailedData = analyticsData?.detailedOrders || analyticsData?.orderBreakdown
+  // console.log("🔍 Has Detailed Data:", hasDetailedData)
   
   // Process data based on range
   let processedChartData = rawChartData
@@ -448,6 +458,13 @@ export default function RevenueAnalytics() {
                     <TableIcon className="w-4 h-4 mr-2" />
                     Table
                   </TabsTrigger>
+                  {/* <TabsTrigger 
+                    value="breakdown" 
+                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
+                  >
+                    <Receipt className="w-4 h-4 mr-2" />
+                    Breakdown
+                  </TabsTrigger> */}
                 </TabsList>
               </div>
             </div>
@@ -680,6 +697,87 @@ export default function RevenueAnalytics() {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            {/* Breakdown Tab */}
+            <TabsContent value="breakdown" className="mt-0">
+              {isLoading ? (
+                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-orange-50/50 to-amber-50/30 rounded-xl border-2 border-dashed border-orange-300">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
+                  <p className="text-gray-600 font-medium">Loading breakdown data...</p>
+                  <p className="text-gray-500 text-sm mt-1">Please wait</p>
+                </div>
+              ) : error ? (
+                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-dashed border-red-300 p-6">
+                  <div className="text-4xl mb-4">⚠️</div>
+                  <p className="text-gray-800 font-bold text-lg mb-2">Failed to Load Breakdown</p>
+                  <p className="text-gray-600 text-center mb-6">
+                    {error.message || "Unable to fetch revenue breakdown."}
+                  </p>
+                  <button
+                    onClick={() => refetch()}
+                    className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-medium transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 inline mr-2" />
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-green-50 to-white">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-xl">
+                            <IndianRupee className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
+                            <p className="text-xl font-bold text-gray-800">
+                              {formatCurrency(totalRevenue)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl">
+                            <Percent className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-600 mb-1">Total Discounts</p>
+                            <p className="text-xl font-bold text-gray-800">
+                              {formatCurrency(analyticsData?.totalDiscounts || 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-purple-50 to-white">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl">
+                            <ShoppingBag className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-600 mb-1">Net Revenue</p>
+                            <p className="text-xl font-bold text-gray-800">
+                              {formatCurrency((analyticsData?.totalRevenue || 0) - (analyticsData?.totalDiscounts || 0))}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div> */}
+
+                 
+                </div>
+              )}
             </TabsContent>
           </CardContent>
         </Card>

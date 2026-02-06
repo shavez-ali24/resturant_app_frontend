@@ -65,7 +65,7 @@ export function SiteHeader() {
     }));
     
     // Log toggle activity for analytics
-    console.log(`Sidebar toggled to: ${!sidebarState.isOpen} at ${new Date(now).toISOString()}`);
+    // console.log(`Sidebar toggled to: ${!sidebarState.isOpen} at ${new Date(now).toISOString()}`);
     
     toggleSidebar();
   };
@@ -101,7 +101,7 @@ export function SiteHeader() {
 
   const trackInteraction = (action) => {
     setInteractionCount(prev => prev + 1);
-    console.log(`Header interaction: ${action}, Total interactions: ${interactionCount + 1}`);
+    // console.log(`Header interaction: ${action}, Total interactions: ${interactionCount + 1}`);
   };
 
   return (

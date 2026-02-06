@@ -1,12 +1,11 @@
-// Menu.jsx (Updated with View Modal)
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CirclePlus } from "lucide-react";
 import Heading from "../common/Heading";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
 import MenuItemCard from "./ComponentsMenu/MenuItemCard";
-import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal"; // Import new component
+import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
 import AddItemModal from "./ComponentsMenu/AddItemModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
@@ -32,6 +31,8 @@ import {
 
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery();
+  // Simply pass items as they come from backend
+  const normalizedItems = useMemo(() => items || [], [items]);
   const { data: restaurantData } = useGetRestaurantProfileQuery();
 
   const restaurantCategories = useMemo(() => {
@@ -54,7 +55,7 @@ const Menu = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [viewingItem, setViewingItem] = useState(null); // New state for view modal
+  const [viewingItem, setViewingItem] = useState(null);
 
   const [notification, setNotification] = useState({
     show: false,
@@ -64,38 +65,31 @@ const Menu = () => {
 
   const showNotification = useCallback((message, type = "success") => {
     setNotification({ show: true, message, type });
-    setTimeout(
-      () => setNotification((prev) => ({ ...prev, show: false })),
-      3000
-    );
+    setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
   }, []);
+
   const closeNotification = () => {
     setNotification({ show: false, type: "", message: "" });
   };
 
+  useEffect(() => setCurrentPage(1), [filters]);
+
   const filteredItems = useMemo(() => {
     const searchLower = filters.search.toLowerCase();
-
-    return items.filter((item) => {
-      const matchSearch =
-        !searchLower ||
-        item?.name?.toLowerCase().includes(searchLower) ||
-        item?.category?.toLowerCase().includes(searchLower);
-
-      const matchCategory =
-        filters.category === "all" || item.category === filters.category;
-
-      const matchType = filters.type === "all" || item.type === filters.type;
-
-      const matchAvail =
-        filters.available === "all" ||
-        String(item.available) === filters.available;
-
-      return matchSearch && matchCategory && matchType && matchAvail;
+    return normalizedItems.filter((item) => {
+      return (
+        (!searchLower ||
+          item?.name?.toLowerCase().includes(searchLower) ||
+          item?.category?.toLowerCase().includes(searchLower)) &&
+        (filters.category === "all" ||
+          item.category?.toLowerCase() === filters.category.toLowerCase()) &&
+        (filters.type === "all" || item.type === filters.type) &&
+        (filters.available === "all" ||
+          String(!!item.available) === filters.available)
+      );
     });
   }, [items, filters]);
 
-  /* Pagination */
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,120 +101,187 @@ const Menu = () => {
 
   const getPageNumbers = () => {
     const pages = [];
-    if (currentPage > 3) {
-      pages.push(1);
-      pages.push("ellipsis-1");
-    }
+    if (currentPage > 3) pages.push(1, "ellipsis-1");
     const start = Math.max(1, currentPage - 1);
     const end = Math.min(totalPages, currentPage + 1);
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    if (currentPage < totalPages - 2) {
-      pages.push("ellipsis-2");
-      pages.push(totalPages);
-    }
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push("ellipsis-2", totalPages);
     return pages;
   };
 
   const pageNumbers = getPageNumbers();
 
-  return (
-    <div className=" bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40">
-      {/* View Modal */}
-      <MenuItemViewModal
-        item={viewingItem}
-        isOpen={!!viewingItem}
-        onClose={() => setViewingItem(null)}
-      />
+// ✅ Fully fixed prepareFormData with robust discount handling
+const prepareFormData = (formData, file) => {
+  const fd = new FormData();
 
-      {/* Notification Modal */}
+  fd.append("name", formData.name || "");
+  fd.append("description", formData.description || "");
+  fd.append("pricingType", formData.pricingType || "single");
+  fd.append("type", formData.type || "veg");
+  fd.append("category", formData.category || "");
+  fd.append("available", formData.available ? "true" : "false");
+
+  // Helper: sanitize discount - preserve actual value and active state
+  const sanitizeDiscount = (discount) => {
+    // console.log("🔥 sanitizeDiscount input:", discount);
+    
+    if (!discount) return { type: "flat", value: 0, active: false };
+    
+    // Parse the value as integer
+    const rawValue = discount.value;
+    let val = 0;
+    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+      val = parseInt(rawValue.toString().trim(), 10);
+      if (isNaN(val)) val = 0;
+    }
+    
+    // Check active - handle both boolean and string representations
+    const isActive = discount.active === true || discount.active === "true";
+    
+    const result = {
+      type: discount.type || "flat",
+      value: val,
+      active: isActive,
+    };
+    
+    // console.log("🔥 sanitizeDiscount result:", result);
+    return result;
+  };
+
+  // SINGLE PRICING
+  if (formData.pricingType === "single") {
+    fd.append("price", (formData.price ?? "0").toString());
+
+    const discount = sanitizeDiscount(formData.discount);
+    fd.append("discount[type]", discount.type);
+    fd.append("discount[value]", discount.value.toString());
+    fd.append("discount[active]", discount.active.toString());
+
+    // console.log("[prepareFormData] single discount ->", discount);
+  }
+
+  // VARIANT PRICING
+  if (formData.pricingType === "variant") {
+    Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
+      if (val?.price !== undefined) {
+        fd.append(`variantRates[${key}][price]`, val.price.toString());
+
+        const discount = sanitizeDiscount(val.discount);
+        fd.append(`variantRates[${key}][discount][type]`, discount.type);
+        fd.append(`variantRates[${key}][discount][value]`, discount.value.toString());
+        fd.append(`variantRates[${key}][discount][active]`, discount.active.toString());
+
+        // console.log(`[prepareFormData] variant ${key} discount ->`, discount);
+      }
+    });
+  }
+
+  // COMBO PRICING
+  if (formData.pricingType === "combo") {
+    fd.append("comboPrice", (formData.comboPrice ?? "0").toString());
+    
+    const discount = sanitizeDiscount(formData.discount);
+    fd.append("discount[type]", discount.type);
+    fd.append("discount[value]", discount.value.toString());
+    fd.append("discount[active]", discount.active.toString());
+    
+    (formData.comboItems || []).forEach((item, index) => {
+      fd.append(`comboItems[${index}][menuItemId]`, item.menuItemId);
+      fd.append(`comboItems[${index}][variant]`, item.variant || "");
+      fd.append(`comboItems[${index}][quantity]`, (item.quantity ?? 1).toString());
+    });
+  }
+
+  // FILE
+  if (file) fd.append("file", file);
+
+  // Debug: log all entries
+  // console.log("[prepareFormData] FormData entries:");
+  Array.from(fd.entries()).forEach(([key, value]) => {
+    // console.log(`  ${key}: ${value}`);
+  });
+
+  return fd;
+};
+
+
+  const handleAddItem = async (formData, file) => {
+    try {
+      const fd = prepareFormData(formData, file);
+      await createMenuItem(fd).unwrap();
+      showNotification("Item added successfully");
+      setIsAddModalOpen(false);
+      refetch();
+    } catch (error) {
+      showNotification(error?.data?.error || "Failed to add item", "error");
+    }
+  };
+
+  const handleUpdateItem = async (formData, file) => {
+    try {
+      const fd = prepareFormData(formData, file);
+      await updateMenuItem({ itemId: formData._id, updatedData: fd }).unwrap();
+      showNotification("Item updated successfully");
+      setEditingItem(null);
+      refetch();
+    } catch (error) {
+      showNotification(error?.data?.error || "Failed to update item", "error");
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    try {
+      await deleteMenuItem(deleteConfirm.id).unwrap();
+      showNotification("Item deleted successfully");
+      setDeleteConfirm(null);
+      refetch();
+    } catch {
+      showNotification("Failed to delete item", "error");
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 bg-fixed">
+      <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
+
       {notification.show && (
-        <NotificationModal
-          notification={notification}
-          onClose={closeNotification}
-        />
+        <NotificationModal notification={notification} onClose={closeNotification} />
       )}
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={!!deleteConfirm}
         itemName={deleteConfirm?.name}
         onClose={() => setDeleteConfirm(null)}
-        onConfirm={async () => {
-          await deleteMenuItem(deleteConfirm.id).unwrap();
-          showNotification("Item deleted", "success");
-          setDeleteConfirm(null);
-          refetch();
-        }}
+        onConfirm={handleDeleteItem}
       />
 
-      {/* Add Item Modal */}
       <AddItemModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSubmit={async (formData, file) => {
-          const fd = new FormData();
-          Object.entries(formData).forEach(([k, v]) => {
-            if (v === "" || v === null) return;
-            if (k === "variantRates") {
-              Object.entries(v).forEach(([rateKey, rateValue]) => {
-                fd.append(`variantRates[${rateKey}]`, rateValue);
-              });
-            } else {
-              fd.append(k, v);
-            }
-          });
-          if (file) fd.append("file", file);
-          await createMenuItem(fd).unwrap();
-          showNotification("Item added", "success");
-          setIsAddModalOpen(false);
-          refetch();
-        }}
+        onSubmit={handleAddItem}
         restaurantCategories={restaurantCategories}
+        menuItems={normalizedItems}
       />
 
-      {/* Edit Item Modal */}
       <AnimatePresence>
-        {editingItem && (
+          {editingItem && (
           <EditItemModal
             isOpen={!!editingItem}
             item={editingItem}
             onClose={() => setEditingItem(null)}
             restaurantCategories={restaurantCategories}
-            onSubmit={async (formData, file) => {
-              const fd = new FormData();
-              Object.entries(formData).forEach(([key, value]) => {
-                if (value === "" || value === null) return;
-                if (key === "variantRates") {
-                  Object.entries(value).forEach(([rateKey, rateValue]) => {
-                    if (rateValue) {
-                      fd.append(`variantRates[${rateKey}]`, rateValue);
-                    }
-                  });
-                } else if (key !== "image") {
-                  fd.append(key, value);
-                }
-              });
-              if (file) fd.append("file", file);
-              await updateMenuItem({
-                itemId: formData._id,
-                updatedData: fd,
-              }).unwrap();
-              showNotification("Item updated", "success");
-              setEditingItem(null);
-              refetch();
-            }}
+              menuItems={normalizedItems.filter(item => item._id !== editingItem._id)}
+            onSubmit={handleUpdateItem}
           />
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <Heading title="Menu Management" />
           <Button
-            className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition-colors"
+            className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600"
             onClick={() => setIsAddModalOpen(true)}
           >
             <CirclePlus size={18} className="mr-2" />
@@ -241,43 +302,26 @@ const Menu = () => {
         </h2>
 
         {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading menu items...</p>
-          </div>
-        ) : currentItems.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl shadow">
-            {/* <div className="text-gray-400 mb-4">🍽️</div> */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No items found</h3>
-            <p className="text-gray-500">Try adjusting your filters or add a new item</p>
-          </div>
+          <div className="text-center py-12">Loading menu items...</div>
         ) : (
           <>
-    <div className="grid  gap-4 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-2">
-  {currentItems.map((item) => (
-    <MenuItemCard
-      key={item._id}
-      item={item}
-      onEdit={() => setEditingItem(item)}
-      onDelete={() =>
-        setDeleteConfirm({ id: item._id, name: item.name })
-      }
-      onView={() => setViewingItem(item)}
-    />
-  ))}
-</div>
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-2">
+              {currentItems.map((item) => (
+                <MenuItemCard
+                  key={item._id}
+                  item={item}
+                  onEdit={() => setEditingItem(item)}
+                  onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
+                  onView={() => setViewingItem(item)}
+                />
+              ))}
+            </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <Pagination className=" mt-4  cursor-pointer justify-center">
+              <Pagination className="mt-4 cursor-pointer justify-center">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() =>
-                        currentPage > 1 && setCurrentPage(currentPage - 1)
-                      }
-                      className={currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""}
-                    />
+                    <PaginationPrevious onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} />
                   </PaginationItem>
 
                   {pageNumbers.map((page, idx) => (
@@ -285,11 +329,7 @@ const Menu = () => {
                       {typeof page === "string" ? (
                         <PaginationEllipsis />
                       ) : (
-                        <PaginationLink
-                          isActive={currentPage === page}
-                          onClick={() => setCurrentPage(page)}
-                          className="hover:bg-orange-50"
-                        >
+                        <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)}>
                           {page}
                         </PaginationLink>
                       )}
@@ -297,12 +337,7 @@ const Menu = () => {
                   ))}
 
                   <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        currentPage < totalPages && setCurrentPage(currentPage + 1)
-                      }
-                      className={currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""}
-                    />
+                    <PaginationNext onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -315,3 +350,4 @@ const Menu = () => {
 };
 
 export default Menu;
+

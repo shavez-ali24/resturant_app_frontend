@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useSelector, useDispatch } from "react-redux";
 import {
   removeFromCart,
-  incrementQuantity,
+  addToCart,
   clearCart,
 } from "../../redux/clientRedux/clientSlice";
 import { useGetRestaurantQuery, useCreateOrderMutation, useGetOrdersByFingerprintQuery } from "../../redux/clientRedux/clientAPI";
@@ -41,17 +41,25 @@ export default function Header({
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
   const dispatch = useDispatch();
-  const cartItems = useSelector((state) => state.client.cart.items || {});
+  const cartItems = useSelector((state) => state.client?.cart?.items || {});
 
-  const cartCount = Object.values(cartItems).reduce(
-    (acc, item) => acc + item.quantity,
+  const cartCount = Object.values(cartItems || {}).reduce(
+    (acc, item) => acc + (item?.quantity || 0),
     0
   );
 
-  const totalAmount = Object.values(cartItems).reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  // ✅ बैकएंड से आए कैलकुलेशन डेटा
+  const [calculatedDetails, setCalculatedDetails] = useState({
+    subtotal: 0,
+    gstAmount: 0,
+    deliveryCharges: 0,
+    totalAmount: 0,
+    items: [],
+    loading: false
+  });
+
+  // ✅ Individual item prices store करने के लिए
+  const [itemPrices, setItemPrices] = useState({});
 
   const cartEntries = Object.entries(cartItems);
   const visibleCartItems = cartEntries.slice(0, 4);
@@ -61,6 +69,238 @@ export default function Header({
   const [currentPage, setCurrentPage] = useState(1);
   const [allOrders, setAllOrders] = useState([]);
   const [hasMore, setHasMore] = useState(true);
+
+  // Function: Latest order से current cart के लिए estimate बनाएं
+  const estimateFromLatestOrder = (latestOrder, currentCartItems) => {
+    try {
+      const latestOrderItems = latestOrder?.items || [];
+      if (!latestOrderItems || latestOrderItems.length === 0) {
+        setCalculatedDetails({
+          subtotal: 0,
+          gstAmount: 0,
+          deliveryCharges: 0,
+          totalAmount: 0,
+          items: latestOrderItems,
+          loading: false
+        });
+        setItemPrices({});
+        return;
+      }
+
+      // Current cart के items की total price calculate करें
+      const currentCartArray = Object.values(currentCartItems || {});
+      if (!currentCartArray || currentCartArray.length === 0) {
+        setCalculatedDetails({
+          subtotal: 0,
+          gstAmount: 0,
+          deliveryCharges: 0,
+          totalAmount: 0,
+          items: [],
+          loading: false
+        });
+        return;
+      }
+
+      let estimatedSubtotal = 0;
+      const newItemPrices = {};
+
+      currentCartArray.forEach(cartItem => {
+        if (!cartItem) return;
+        const quantity = cartItem.quantity || 1;
+        const itemKey = `${cartItem.name}_${cartItem.variantLabel || ''}`;
+        
+        // 🔴 पहला: Exact match ढूंढें (name + variant + combo check)
+        let matchingOrderItem = null;
+        let itemPrice = 0;
+        
+        // COMBO ITEM की special handling
+        if (cartItem.isCombo || cartItem.pricingType === "combo") {
+          // कॉम्बो के लिए latest order में combo item ढूंढें
+          matchingOrderItem = latestOrderItems.find(orderItem => {
+            // कॉम्बो items की comparison
+            if (orderItem.comboItems && cartItem.comboItems) {
+              // Same number of combo items?
+              return orderItem.name === cartItem.name;
+            }
+            return orderItem.name === cartItem.name;
+          });
+          
+          if (matchingOrderItem) {
+            itemPrice = matchingOrderItem.discountedPrice || matchingOrderItem.price || 0;
+          } else {
+            // कॉम्बो नहीं मिला तो comboPrice use करें
+            itemPrice = cartItem.comboPrice || 0;
+          }
+        } else {
+          // REGULAR/SINGLE/VARIANT ITEM
+          matchingOrderItem = latestOrderItems.find(orderItem => {
+            const nameMatches = orderItem.name === cartItem.name;
+            
+            // Variant matching
+            const variantMatches = (!cartItem.variantLabel && !orderItem.variant) || 
+                                  (cartItem.variantLabel && orderItem.variant && 
+                                   cartItem.variantLabel.toLowerCase().includes(orderItem.variant.toLowerCase()));
+            
+            return nameMatches && variantMatches;
+          });
+
+          if (matchingOrderItem) {
+            itemPrice = matchingOrderItem.discountedPrice || matchingOrderItem.price || 0;
+          } else {
+            // Exact match नहीं मिला तो same name का item ढूंढें
+            const sameNameItem = latestOrderItems.find(orderItem => orderItem.name === cartItem.name);
+            if (sameNameItem) {
+              itemPrice = sameNameItem.discountedPrice || sameNameItem.price || 0;
+            } else {
+              // Latest order में भी नहीं मिला तो cart item की price use करें
+              itemPrice = cartItem.price || cartItem.comboPrice || 0;
+            }
+          }
+        }
+
+        // Store item price for display
+        newItemPrices[itemKey] = itemPrice;
+
+        if (itemPrice > 0) {
+          estimatedSubtotal += itemPrice * quantity;
+        }
+      });
+
+      // Store item prices for display
+      setItemPrices(newItemPrices);
+
+      // GST calculation
+      const gstRate = Number(latestOrder?.gstRate) || 0;
+      const estimatedGstAmount = latestOrder?.gstEnabled ? (estimatedSubtotal * gstRate) / 100 : 0;
+      
+      // Delivery charges
+      const deliveryCharges = orderType === "Delivery" ? (Number(latestOrder?.deliveryCharges) || 0) : 0;
+      
+      const estimatedTotalAmount = estimatedSubtotal + estimatedGstAmount + deliveryCharges;
+
+      setCalculatedDetails({
+        subtotal: Number(estimatedSubtotal.toFixed(2)),
+        gstAmount: Number(estimatedGstAmount.toFixed(2)),
+        deliveryCharges: Number(deliveryCharges.toFixed(2)),
+        totalAmount: Number(estimatedTotalAmount.toFixed(2)),
+        items: latestOrderItems,
+        loading: false
+      });
+
+    } catch (error) {
+      console.error("Estimation error:", error);
+      setCalculatedDetails(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Get item price for display - with combo support
+  const getDisplayPrice = (itemName, variantLabel, isCombo = false, cartItem = null) => {
+    const itemKey = `${itemName}_${variantLabel || ''}`;
+    
+    // First check itemPrices (from latest order estimation)
+    if (itemPrices[itemKey]) {
+      return Number(itemPrices[itemKey]) || 0;
+    }
+    
+    // If not in itemPrices, check cart item's own price
+    if (cartItem) {
+      // Handle combo items
+      if (isCombo || cartItem.pricingType === "combo") {
+        return Number(cartItem.comboPrice) || 0;
+      }
+      // Handle variant items
+      if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
+        return Number(cartItem.variantRates[cartItem.variantKey].price) || 0;
+      }
+      // Handle single items
+      return Number(cartItem.price) || 0;
+    }
+    
+    return 0;
+  };
+
+  // ✅ CRITICAL FIX: Calculate price directly from cart items
+  const calculateCartTotal = () => {
+    if (!cartItems || Object.keys(cartItems).length === 0 || cartCount === 0) {
+      return {
+        subtotal: 0,
+        gstAmount: 0,
+        deliveryCharges: 0,
+        totalAmount: 0
+      };
+    }
+
+    let subtotal = 0;
+    const cartItemsArray = Object.values(cartItems || {});
+
+    cartItemsArray.forEach(cartItem => {
+      if (!cartItem) return;
+      const quantity = cartItem.quantity || 1;
+      let itemPrice = 0;
+
+      // Handle combo items
+      if (cartItem.pricingType === "combo" || cartItem.isCombo) {
+        itemPrice = Number(cartItem.comboPrice) || 0;
+      }
+      // Handle variant items
+      else if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
+        const variantData = cartItem.variantRates[cartItem.variantKey];
+        itemPrice = Number(variantData?.price) || 0;
+      }
+      // Handle single items
+      else {
+        itemPrice = Number(cartItem.price) || 0;
+      }
+
+      subtotal += itemPrice * quantity;
+    });
+
+    // Get restaurant data for GST and delivery charges
+    const restaurant = restaurantData?.restaurant || {};
+    const gstRate = Number(restaurant.gstRate) || 0;
+    const gstAmount = restaurant.gstEnabled ? (subtotal * gstRate) / 100 : 0;
+    
+    const deliveryCharges = orderType === "Delivery" ? (Number(restaurant.deliveryCharges) || 0) : 0;
+    const totalAmount = subtotal + gstAmount + deliveryCharges;
+
+    return {
+      subtotal: Number(subtotal.toFixed(2)),
+      gstAmount: Number(gstAmount.toFixed(2)),
+      deliveryCharges: Number(deliveryCharges.toFixed(2)),
+      totalAmount: Number(totalAmount.toFixed(2))
+    };
+  };
+
+  // ✅ Latest order से calculation details उठाएं और estimate बनाएं
+  useEffect(() => {
+    if (allOrders.length > 0 && cartCount > 0) {
+      const latestOrder = allOrders[0];
+      
+      if (latestOrder.items && latestOrder.totalAmount) {
+        // Latest order के items और current cart items के बीच compare करके estimate बनाएं
+        estimateFromLatestOrder(latestOrder, cartItems);
+      }
+    } else if (cartCount > 0) {
+      // If no latest order, calculate directly from cart
+      const cartTotal = calculateCartTotal();
+      setCalculatedDetails({
+        ...cartTotal,
+        items: [],
+        loading: false
+      });
+    } else if (cartCount === 0) {
+      // Cart empty है तो सब कुछ 0 कर दो
+      setCalculatedDetails({
+        subtotal: 0,
+        gstAmount: 0,
+        deliveryCharges: 0,
+        totalAmount: 0,
+        items: [],
+        loading: false
+      });
+      setItemPrices({});
+    }
+  }, [allOrders, cartItems, cartCount, orderType, restaurantData]);
 
   // Close search when clicking outside or pressing Escape
   useEffect(() => {
@@ -105,7 +345,19 @@ export default function Header({
   // Update orders when new data is fetched
   useEffect(() => {
     if (ordersData) {
-      const orders = Array.isArray(ordersData) ? ordersData : ordersData?.orders || ordersData?.data || [];
+      // Handle different API response structures
+      let orders = [];
+      
+      if (Array.isArray(ordersData)) {
+        orders = ordersData;
+      } else if (ordersData?.orders && Array.isArray(ordersData.orders)) {
+        orders = ordersData.orders;
+      } else if (ordersData?.data && Array.isArray(ordersData.data)) {
+        orders = ordersData.data;
+      } else if (ordersData?.order && typeof ordersData.order === 'object') {
+        // Single order response - wrap in array
+        orders = [ordersData.order];
+      }
       
       if (currentPage === 1) {
         // For page 1, replace all orders (deduplicate by order ID)
@@ -125,19 +377,16 @@ export default function Header({
           return [...prev, ...newOrders];
         });
       }
-      // Check if there are more pages - if orders array is empty, no more pages
-      // You can also check for hasMore property if API provides it
+      // Check if there are more pages
       setHasMore(orders.length > 0 && (ordersData?.hasMore !== false));
     }
   }, [ordersData, currentPage]);
 
-  // Pre-fill form with latest order data when modal opens (but NOT orderType - user must select it first)
+  // Pre-fill form with latest order data when modal opens
   useEffect(() => {
     if (showModal && allOrders.length > 0) {
-      // Get the most recent order (first one in the array, assuming they're sorted by date)
       const latestOrder = allOrders[0];
       
-      // Pre-fill customer name and phone from latest order
       if (latestOrder.customerName) {
         setCustomerName(latestOrder.customerName);
       }
@@ -145,14 +394,11 @@ export default function Header({
         setCustomerPhone(latestOrder.customerPhone);
       }
       
-      // Always reset order type to empty so user must select it first
       setOrderType("");
       setTableId("");
       setAddress("");
       setUseCurrentLocation(false);
     }
-    // Only run when modal opens, not when orders change while modal is open
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal]);
 
   // Reset to page 1 when fingerprint changes
@@ -310,6 +556,8 @@ export default function Header({
 
   const handleOrderSubmit = async () => {
     try {
+      // console.log("=== START handleOrderSubmit ===");
+      
       if (!isRestaurantOpen) {
         showErrorMessage("Orders are currently closed. Please try again later.");
         return;
@@ -329,46 +577,112 @@ export default function Header({
         return;
       }
 
-      const orderItems = Object.values(cartItems).map((item) => ({
-        menuItemId: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        ...(item.variantKey && { variant: item.variantKey }),
-        ...(item.variantLabel && { variantLabel: item.variantLabel }),
-        customizations: item.customizations || "",
-      }));
+      // console.log("CART ITEMS FOR ORDER:", cartItems);
+      
+      // ✅ बैकएंड के लिए सही डेटा तैयार करें
+      const orderItems = Object.values(cartItems).map((cartItem) => {
+        // console.log("Creating order item for:", cartItem.name);
+        
+        // 🔴 CRITICAL FIX: Price calculation for all item types
+        let price = 0;
+        let discountedPrice = 0;
+        
+        if (cartItem.isCombo) {
+          // Combo items
+          price = cartItem.comboPrice || 0;
+          discountedPrice = cartItem.comboPrice || 0;
+        } else if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
+          // Variant items
+          const variantData = cartItem.variantRates[cartItem.variantKey];
+          price = variantData.price || 0;
+          
+          // Calculate discounted price
+          if (variantData.discount && variantData.discount.active) {
+            if (variantData.discount.type === "percentage") {
+              discountedPrice = price - (price * variantData.discount.value / 100);
+            } else if (variantData.discount.type === "flat") {
+              discountedPrice = price - variantData.discount.value;
+            } else {
+              discountedPrice = price;
+            }
+          } else {
+            discountedPrice = price;
+          }
+        } else {
+          // Single items
+          price = cartItem.price || 0;
+          
+          // Calculate discounted price
+          if (cartItem.discount && cartItem.discount.active) {
+            if (cartItem.discount.type === "percentage") {
+              discountedPrice = price - (price * cartItem.discount.value / 100);
+            } else if (cartItem.discount.type === "flat") {
+              discountedPrice = price - cartItem.discount.value;
+            } else {
+              discountedPrice = price;
+            }
+          } else {
+            discountedPrice = price;
+          }
+        }
 
-      // Get fingerprint
+        const orderItem = {
+          menuItemId: cartItem._id,
+          name: cartItem.name,
+          quantity: cartItem.quantity || 1,
+          customizations: cartItem.customizations || "",
+          // 🔴 TEMPORARY: Backend के validation के लिए price भेजें
+          price: price,
+          discountedPrice: discountedPrice,
+          discountApplied: cartItem.discount || null
+        };
+
+        // वेरिएंट भेजें अगर है
+        if (cartItem.variantKey) {
+          orderItem.variant = cartItem.variantKey;
+        }
+
+        // Combo items के details भी भेजें (यदि है)
+        if (cartItem.isCombo && cartItem.comboItems) {
+          orderItem.comboItems = cartItem.comboItems;
+        }
+
+        // console.log("Order item with prices:", orderItem);
+        return orderItem;
+      });
+
       const fingerPrint = await fingerprintService.getFingerprint();
 
+      // ✅ बैकएंड को डेटा भेजें (बैकएंड कैलकुलेशन करेगा)
       const orderData = {
+        fingerPrint,
         customerName: customerName.trim(),
         customerPhone,
         items: orderItems,
-        totalAmount,
         orderType,
-        fingerPrint,
       };
 
-      if (orderType === "Eat Here") {
+      // Optional fields
+      if (orderType === "Eat Here" && tableId) {
         orderData.tableId = tableId;
       }
-      if (orderType === "Delivery") {
+      
+      if (orderType === "Delivery" && address) {
         orderData.address = address.trim();
       }
 
+      // console.log("FINAL DATA TO BACKEND:", JSON.stringify(orderData, null, 2));
+
+      // Send to backend
       const response = await createOrder(orderData).unwrap();
       
       showSuccessMessage(response?.orderId || response?.order?._id || `ORD${Date.now()}`);
 
-      // Reset pagination state before refetching
+      // Reset everything
       setCurrentPage(1);
       setAllOrders([]);
       setHasMore(true);
       
-      // Refetch orders after a small delay to ensure backend has saved the order
-      // Deduplication logic in useEffect will prevent duplicate orders
       if (fingerPrint) {
         setTimeout(() => {
           refetch();
@@ -376,7 +690,6 @@ export default function Header({
       }
 
       setShowModal(false);
-      // setIsCartOpen(false);
       setIsCartOpen(false);
       onSidebarToggle?.(false);
       setOrderType("");
@@ -390,8 +703,18 @@ export default function Header({
         dispatch(clearCart());
       }, 300);
     } catch (error) {
-      console.error("Error placing order:", error);
-      const errorMessage = error?.data?.message || error?.message || "Failed to place order. Please try again.";
+      console.error("=== ORDER ERROR ===");
+      console.error("Full error:", error);
+      console.error("Error data:", error.data);
+      console.error("Error status:", error.status);
+      
+      let errorMessage = error.data?.message || "Failed to place order. Please try again.";
+      
+      // More detailed error messages
+      if (error.data?.error) {
+        errorMessage += ` - ${error.data.error}`;
+      }
+      
       showErrorMessage(errorMessage);
     }
   };
@@ -405,15 +728,15 @@ export default function Header({
     setCustomerPhone("");
     setTableId("");
   };
+  
   const safeOnSearch = typeof onSearch === "function" ? onSearch : () => {};
-
 
   return (
     <>
       <Toaster />
       <div className="relative z-50">
         {/* 🌟 Bottom Order Summary */}
-        {totalAmount > 0 && (
+        {cartCount > 0 && (
           <>
             {/* Collapsed View */}
             {!isAccordionOpen && (
@@ -432,18 +755,8 @@ export default function Header({
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
-                          {/* Quantity Badge */}
-                          {/* <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white shadow-sm">
-                            {item.quantity}
-                          </div> */}
                         </div>
                       ))}
-
-                      {/* {extraCartCount > 0 && (
-                        <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary border border-white shadow-md flex-shrink-0">
-                          +{extraCartCount}
-                        </div>
-                      )} */}
                     </div>
                     {/* Total Items Count */}
                     <div className="flex items-center gap-1 text-sm font-semibold text-white">
@@ -481,7 +794,6 @@ export default function Header({
                   </button>
                 </div>
 
-                {/* Cart Items List */}
                 <div className="flex-1 overflow-y-auto p-4 pb-24">
                   {cartCount === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
@@ -490,61 +802,126 @@ export default function Header({
                       </p>
                     </div>
                   ) : (
+                    <>
                     <ul className="space-y-4">
-                      {Object.entries(cartItems).map(([id, item]) => (
-                        <li
-                          key={id}
-                          className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
-                        >
-                          {/* Round Image */}
-                          <img
-                            src={item.image?.url || item.image}
-                            alt={item.name}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
-                          />
+                      {Object.entries(cartItems || {}).map(([id, item]) => {
+                        if (!item) return null;
+                        const itemPrice = getDisplayPrice(item.name, item.variantLabel, item.isCombo || item.pricingType === "combo", item);
+                        const itemTotal = itemPrice * (item.quantity || 1);
+                        
+                        return (
+                          <li
+                            key={id}
+                            className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
+                          >
+                            <img
+                              src={item.image?.url || item.image}
+                              alt={item.name}
+                              className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
+                            />
 
-                          {/* Item details */}
-                          <div className="flex-1 flex flex-col">
-                            <p className="font-medium text-gray-800 text-[15px] leading-tight">
-                              {item.name}
-                            </p>
-                            {item.variantLabel && (
-                              <span className="text-xs text-gray-500 mt-1">
-                                {item.variantLabel}
-                              </span>
-                            )}
-                            <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
-                              {/* Quantity Controls */}
-                              <button
-                                className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
-                                onClick={() => dispatch(removeFromCart(id))}
-                              >
-                                −
-                              </button>
-                              <span className="w-6 text-center font-medium text-gray-700">
-                                {item.quantity}
-                              </span>
-                              <button
-                                className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
-                                onClick={() =>
-                                  dispatch(incrementQuantity(id))
-                                }
-                              >
-                                +
-                              </button>
+                            <div className="flex-1 flex flex-col">
+                              <p className="font-medium text-gray-800 text-[15px] leading-tight">
+                                {item.name}
+                              </p>
+                              {item.variantLabel && (
+                                <span className="text-xs text-gray-500 mt-1">
+                                  {item.variantLabel}
+                                </span>
+                              )}
+                              {item.isCombo && (
+                                <span className="text-xs text-orange-600 font-medium mt-1">
+                                  Combo
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
+                                <button
+                                  className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                  onClick={() => dispatch(removeFromCart(id))}
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center font-medium text-gray-700">
+                                  {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2).replace('.00', '').replace('.25', '¼').replace('.50', '½').replace('.75', '¾')}
+                                </span>
+                                <button
+                                  className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                  onClick={() => dispatch(addToCart({ id, item: item, price: getDisplayPrice(item.name, item.variantLabel, item.isCombo, item) }))}
+                                >
+                                  +
+                                </button>
 
-                              <span className="ml-auto text-gray-600 font-medium">
-                                ₹{item.price} × {item.quantity} = ₹{(item.price * item.quantity).toFixed(2)}
-                              </span>
+                                <span className="ml-auto text-gray-600 font-medium flex flex-col items-end">
+                                  {/* ✅ Item price और total दिखाएं */}
+                                  {itemPrice > 0 ? (
+                                    <>
+                                      <span className="text-sm">₹{itemPrice.toFixed(2)} × {item.quantity}</span>
+                                      <span className="text-base font-semibold text-gray-800">
+                                        = ₹{itemTotal.toFixed(2)}
+                                      </span>
+                                    </>
+                                  ) : item.isCombo ? (
+                                    <>
+                                      <span className="text-sm">Combo: ₹{(item.comboPrice || 0).toFixed(2)} × {item.quantity}</span>
+                                      <span className="text-base font-semibold text-gray-800">
+                                        = ₹{((item.comboPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm text-gray-500">Price calculating...</span>
+                                  )}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
+                    
+                    <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
+                      {/* Always show calculated totals */}
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Subtotal</span>
+                          <span className="font-medium text-gray-800">
+                            ₹{calculatedDetails.subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {orderType === "Delivery" && calculatedDetails.deliveryCharges > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Delivery Charges</span>
+                            <span className="font-medium text-orange-600">
+                              ₹{calculatedDetails.deliveryCharges.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {calculatedDetails.gstAmount > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">GST</span>
+                            <span className="font-medium text-gray-800">
+                              ₹{calculatedDetails.gstAmount.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="border-t pt-2 flex justify-between items-center">
+                          <span className="text-base font-bold text-gray-800">Total Amount</span>
+                          <span className="text-lg font-bold text-primary">
+                            ₹{calculatedDetails.totalAmount.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          {allOrders.length > 0 ? "Amount estimated from previous order" : "Amount calculated from cart items"}
+                        </p>
+                      </>
+                    </div>
+                    </>
                   )}
                 </div>
 
-                {/* Order Now Button - Fixed at Bottom */}
                 <div className="px-6 py-4 border-t bg-white sticky bottom-0">
                   {!isRestaurantOpen ? (
                     <div className="w-full py-3 px-4 bg-red-50 border border-red-200 rounded-lg">
@@ -554,20 +931,18 @@ export default function Header({
                     </div>
                   ) : (
                     <OrderComplete
-                      amount={totalAmount.toFixed(2)}
                       buttonText="Order Now"
                       disabled={cartCount === 0}
-                    onClick={() => {
-                      if (!isRestaurantOpen) return;
-                      // Reset order type to ensure user sees order type selection first
-                      setOrderType("");
-                      setTableId("");
-                      setAddress("");
-                      setUseCurrentLocation(false);
-                      setShowModal(true);
-                      setIsAccordionOpen(false);
-                      onSidebarToggle?.(false);
-                    }}
+                      onClick={() => {
+                        if (!isRestaurantOpen) return;
+                        setOrderType("");
+                        setTableId("");
+                        setAddress("");
+                        setUseCurrentLocation(false);
+                        setShowModal(true);
+                        setIsAccordionOpen(false);
+                        onSidebarToggle?.(false);
+                      }}
                       className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
                         cartCount === 0
                           ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -610,7 +985,7 @@ export default function Header({
             <button onClick={() => {setIsCartOpen(true);onSidebarToggle?.(true);}} className="relative">
               <UtensilsCrossed className="w-6 h-6 text-gray-700 hover:text-black" />
               {allOrders.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
                   {allOrders.length}
                 </span>
               )}
@@ -694,7 +1069,7 @@ export default function Header({
                 </div>
               ) : (
                 <>
-                  {allOrders.map((order) => (
+                  {allOrders.slice(0, 1).map((order) => (
                   <div
                     key={order._id || order.id || order.orderId}
                     className="border border-orange-200 rounded-lg p-3 bg-white shadow-sm"
@@ -798,44 +1173,56 @@ export default function Header({
                           >
                             <span className="text-gray-700">
                               {item.name}
-                              {item.variantLabel && (
+                              {item.variant && (
                                 <span className="ml-1 text-xs text-gray-500">
-                                  ({item.variantLabel})
+                                  ({item.variant})
                                 </span>
                               )}{" "}
                               × {item.quantity}
                             </span>
                             <span className="font-medium text-gray-800">
-                              ₹{(item.price * item.quantity).toFixed(2)}
+                              ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Order Total with Label */}
-                    <div className="border-t pt-2 flex justify-between items-center">
+                    {/* GST (if enabled) */}
+                    {order.gstAmount !== undefined && (
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-600">
+                          GST {order.gstRate ? `(${order.gstRate}%)` : ""}:
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{Number(order.gstAmount).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Delivery Charges (if delivery order) */}
+                    {order.orderType === "Delivery" && typeof order.deliveryCharges === "number" && (
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-600">
+                          Delivery Charges:
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{Number(order.deliveryCharges).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Total Amount */}
+                    <div className="border-t pt-2 flex justify-between items-center mt-2">
                       <span className="font-semibold text-gray-800">
                         Total Amount:
                       </span>
                       <span className="text-lg font-bold text-primary">
-                        ₹{order.totalAmount.toFixed(2)}
+                        ₹{order.totalAmount?.toFixed(2) || "0.00"}
                       </span>
                     </div>
                   </div>
                   ))}
-                  {/* Load More Button */}
-                  {hasMore && (
-                    <div className="flex justify-center pt-4">
-                      <button
-                        onClick={handleLoadMore}
-                        disabled={ordersLoading}
-                        className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {ordersLoading ? "Loading..." : "Load More"}
-                      </button>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -844,7 +1231,6 @@ export default function Header({
 
         {/* Order Form Modal */}
         <OrderFormModal
-          // showModal={showModal}
           showModal={showModal}
           setShowModal={setShowModal}
           customerName={customerName}
@@ -862,8 +1248,10 @@ export default function Header({
           loading={isOrderLoading}
           handleOrderSubmit={handleOrderSubmit}
           restaurantData={restaurantData?.restaurant ? restaurantData : { restaurant: restaurantData }}
+          cartItems={cartItems}
           logo={logo}
           resetForm={resetForm}
+          calculatedDetails={calculatedDetails}
         />
       </div>
     </>

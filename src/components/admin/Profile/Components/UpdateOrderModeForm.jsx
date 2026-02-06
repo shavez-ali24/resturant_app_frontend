@@ -1,5 +1,6 @@
 import React from 'react'
 import { FormCard } from './commanProfile/FormCard';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
 export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, handleOrderModeToggle, activeModesCount }) {
     return (

@@ -12,10 +12,8 @@ import { ClipboardCheck, Hourglass, X } from "lucide-react";
 
 const StatusDropdown = ({ order, updateOrder }) => {
   const handleStatusChange = (value) => {
+    // Only send status change, don't send items (items validation fails for existing orders)
     updateOrder(order._id, {
-      tableId: order.tableId,
-      items: order.items,
-      totalAmount: order.totalAmount,
       status: value,
     });
   };

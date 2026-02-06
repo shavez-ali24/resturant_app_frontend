@@ -20,6 +20,10 @@ const Profile = () => {
     message: ""
   });
 
+  // Get user role
+  const userRole = localStorage.getItem("userRole") || "";
+  const isAdmin = userRole === "admin";
+
   // -----------------------------
   // 🔥 DATA DIRECTLY FROM REDUX (RTK QUERY)
   // -----------------------------
@@ -70,10 +74,12 @@ const Profile = () => {
   // LOADING & ERROR UI (UI same)
   // -----------------------------
   if (loading) return <LoadingSpinner />;
-  if (error)
-    return <ErrorMessage error={"Failed to load restaurant profile"} />;
+  if (error) {
+    const errorMessage = error?.data?.message || error?.message || "Failed to load restaurant profile";
+    return <ErrorMessage error={errorMessage} />;
+  }
 
-  const resData = restaurant?.restaurant; // shortcut
+  const resData = restaurant?.data || restaurant?.restaurant; // Handle both response formats
 
   return (
     <>
@@ -94,6 +100,9 @@ const Profile = () => {
             loading={loading}
             error={error ? "Failed to load name" : null}
             onUpdateClick={() => setIsUpdateModalOpen(true)}
+            showStaffButton={isAdmin}
+            restaurantName={resData?.name}
+            showUpdateButton={isAdmin}
           />
 
           <ProfileDetails profileData={resData} />
@@ -101,18 +110,16 @@ const Profile = () => {
       </div>
 
       {/* ----------------------------- */}
-      {/* UPDATE MODAL */}
+      {/* UPDATE MODAL (Admin Only) */}
       {/* ----------------------------- */}
-      <AnimatePresence>
-        {isUpdateModalOpen && (
-          <UpdateProfileModal
-            initialData={resData}
-            token={token}
-            onClose={() => setIsUpdateModalOpen(false)}
-            onUpdateSuccess={handleUpdateSuccess}
-          />
-        )}
-      </AnimatePresence>
+      {isUpdateModalOpen && isAdmin && (
+        <UpdateProfileModal
+          initialData={resData}
+          token={token}
+          onClose={() => setIsUpdateModalOpen(false)}
+          onUpdateSuccess={handleUpdateSuccess}
+        />
+      )}
     </>
   );
 };

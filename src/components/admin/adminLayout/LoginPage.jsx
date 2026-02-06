@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLoginMutation } from "@/redux/adminRedux/adminAPI";
 import gif from "@/assets/loginImg.jpeg"
+import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -26,10 +28,11 @@ const LoginPage = () => {
 
       // Store in localStorage
       localStorage.setItem("token", res.token);
-      localStorage.setItem("userName", res.name || "Admin");
-      localStorage.setItem("userEmail", res.email || email);
-      localStorage.setItem("restaurantName", res.restaurantName || "");
-      localStorage.setItem("qrCode", res.qrCode || "");
+      localStorage.setItem("userName", res.user?.name || res.name || "Admin");
+      localStorage.setItem("userEmail", res.user?.email || res.email || email);
+      localStorage.setItem("userRole", res.user?.role || "admin");
+      localStorage.setItem("restaurantName", res.user?.restaurantName || res.restaurantName || "");
+      localStorage.setItem("qrCode", res.user?.qrCode || res.qrCode || "");
       localStorage.setItem("userPassword", password);
 
       navigate("/admin", { replace: true });
@@ -92,14 +95,23 @@ const LoginPage = () => {
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Password
                 </label>
-                <Input
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="focus:ring-2 focus:ring-orange-500"
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="focus:ring-2 focus:ring-orange-500 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               {error && <p className="text-red-500 text-sm">{error}</p>}

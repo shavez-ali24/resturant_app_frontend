@@ -44,6 +44,7 @@ const OrdersTable = ({
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizations, setSelectedCustomizations] = useState(null);
+  const userRole = localStorage.getItem("userRole") || "";
 
   // Function to handle customizations button click
   const handleCustomizationsClick = (customizations) => {
@@ -242,26 +243,30 @@ const OrdersTable = ({
 
             {tableType === "pending" && (
               <>
+                {/* Status dropdown for mobile view */}
                 <div className="flex items-center gap-2 mt-2">
                   <span className="font-medium">Status:</span>
                   <StatusDropdown order={order} updateOrder={updateOrder} />
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <button
-                    onClick={() => setEditingOrder(order)}
-                    className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                  >
-                    Edit
-                  </button>
+                {/* Edit and Delete buttons - only for admin */}
+                {userRole !== "staff" && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <button
+                      onClick={() => setEditingOrder(order)}
+                      className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                    >
+                      Edit
+                    </button>
 
-                  <button
-                    onClick={() => setShowConfirmDelete(order)}
-                    className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition"
-                  >
-                    Delete
-                  </button>
-                </div>
+                    <button
+                      onClick={() => setShowConfirmDelete(order)}
+                      className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>

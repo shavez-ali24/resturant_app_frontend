@@ -11,7 +11,6 @@ import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
-import RestaurantClosed from "@/components/Client/RestaurantClosed";
 import fingerprintService from "@/service/fingerprintService";
 
 export default function Home() {
@@ -27,7 +26,7 @@ export default function Home() {
   } = useGetRestaurantQuery();
 
   const [showLoader, setShowLoader] = useState(true);
-  const [filters, setFilters] = useState({ veg: false, nonVeg: false });
+  const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
   const [total, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -63,15 +62,10 @@ export default function Home() {
     );
 
   const restaurant = restaurantData?.restaurant || restaurantData || {};
-  // const menu = Array.isArray(menuData)
-  //   ? menuData
-  //   : Array.isArray(menuData?.menu)
-  //   ? menuData.menu
-  //   : [];
   const menu =
-  menuData?.menu ||
-  menuData?.data?.menu ||
-  (Array.isArray(menuData) ? menuData : []);
+    menuData?.menu ||
+    menuData?.data?.menu ||
+    (Array.isArray(menuData) ? menuData : []);
 
   const isRestaurantOpen =
     restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
@@ -84,35 +78,24 @@ export default function Home() {
     );
   }
 
-  // Apply filters (search + veg/non-veg + category)
-  // const filteredMenu = menu.filter((item) => {
-  //   const matchesSearch =
-  //     item.name.toLowerCase().includes(search.toLowerCase()) ||
-  //     item.description.toLowerCase().includes(search.toLowerCase());
-  //   if (!matchesSearch) return false;
-
-  //   if (filters.veg && !filters.nonVeg && item.type !== "veg") return false;
-  //   if (filters.nonVeg && !filters.veg && item.type !== "non-veg") return false;
-  //   if (activeCategory && item.category !== activeCategory) return false;
-
-  //   return true;
-  // });
   const filteredMenu = menu.filter((item) => {
-  const itemName = item?.name?.toLowerCase() || "";
-  const itemDesc = item?.description?.toLowerCase() || "";
-  const searchText = search?.toLowerCase() || "";
+    const itemName = item?.name?.toLowerCase() || "";
+    const itemDesc = item?.description?.toLowerCase() || "";
+    const searchText = search?.toLowerCase() || "";
 
-  const matchesSearch =
-    itemName.includes(searchText) || itemDesc.includes(searchText);
+    const matchesSearch =
+      itemName.includes(searchText) || itemDesc.includes(searchText);
 
-  if (!matchesSearch) return false;
+    if (!matchesSearch) return false;
 
-  if (filters.veg && !filters.nonVeg && item.type !== "veg") return false;
-  if (filters.nonVeg && !filters.veg && item.type !== "non-veg") return false;
-  if (activeCategory && item.category !== activeCategory) return false;
+    if (filters.veg && !filters.nonVeg && !filters.mixed && item.type !== "veg") return false;
+    if (filters.nonVeg && !filters.veg && !filters.mixed && item.type !== "non-veg") return false;
+    if (filters.mixed && item.type !== "mixed") return false;
+    if (filters.combo && item.pricingType !== "combo") return false;
+    if (activeCategory && item.category !== activeCategory) return false;
 
-  return true;
-});
+    return true;
+  });
 
 
   const handleFilterChange = (key, value) => {
@@ -141,19 +124,17 @@ export default function Home() {
       )}
 
       <div className={`sticky bg-white z-20 ${!isRestaurantOpen ? 'top-14' : 'top-0'}`}>
-     <Header
-  logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
-  siteName={
-    restaurant?.restaurantName ||
-    restaurantData?.restaurant?.restaurantName
-  }
-  search={search}
-  onSearch={setSearch}
-  isRestaurantOpen={isRestaurantOpen}
-  onSidebarToggle={setIsSidebarOpen}
-/>
-
-
+        <Header
+          logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
+          siteName={
+            restaurant?.restaurantName ||
+            restaurantData?.restaurant?.restaurantName
+          }
+          search={search}
+          onSearch={setSearch}
+          isRestaurantOpen={isRestaurantOpen}
+          onSidebarToggle={setIsSidebarOpen}
+        />
 
         <Category
           title="Choose Your Favourite Food"

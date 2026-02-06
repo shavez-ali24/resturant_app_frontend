@@ -207,7 +207,7 @@ export const getCurrentAddress = async () => {
     const { latitude, longitude, accuracy } = location;
     
     // Log accuracy for debugging (can be removed in production)
-    console.log(`Location accuracy: ${accuracy} meters`);
+    // console.log(`Location accuracy: ${accuracy} meters`);
     
     // Step 2: Reverse geocode to get address
     const address = await reverseGeocode(latitude, longitude);
@@ -227,7 +227,7 @@ export const getCurrentAddress = async () => {
     
     // If accuracy is poor (>100m) and address doesn't contain street info, try again
     if (accuracy > 100 && !hasStreetInfo) {
-      console.log("Low accuracy or missing street info detected, attempting to get better location...");
+      // console.log("Low accuracy or missing street info detected, attempting to get better location...");
       // Wait a bit and try once more
       await new Promise(resolve => setTimeout(resolve, 1000));
       const retryLocation = await getCurrentLocation();

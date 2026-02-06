@@ -112,7 +112,7 @@ export default function NotificationBell() {
   };
 
   const handleViewBill = (order) => {
-    // console.log("📋 Viewing bill for order:", order._id);
+   
     dispatch(showBill(order));
     setIsDropdownOpen(false);
   };

@@ -14,6 +14,8 @@ const OrderRow = ({
   onCustomizationsClick,
 }) => {
   const dispatch = useDispatch();
+  const userRole = localStorage.getItem("userRole") || "";
+  const isStaff = userRole === "staff";
 
   // Check if any item in the order has customizations
   const hasCustomizations = order.items && 
@@ -135,11 +137,13 @@ const OrderRow = ({
       {tableType === "pending" && (
         <>
           <td className="border">
+            {/* Status dropdown - shown for both admin and staff */}
             <div className="flex justify-center items-center w-full">
               <StatusDropdown order={order} updateOrder={updateOrder} />
             </div>
           </td>
 
+          {/* Edit and Delete buttons - shown for both admin and staff */}
           <td className="text-center border">
             <button
               onClick={() => setEditingOrder(order)}
