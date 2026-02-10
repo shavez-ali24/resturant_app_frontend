@@ -34,6 +34,10 @@ const Menu = () => {
   // Simply pass items as they come from backend
   const normalizedItems = useMemo(() => items || [], [items]);
   const { data: restaurantData } = useGetRestaurantProfileQuery();
+  
+  // Get user role
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
 
   const restaurantCategories = useMemo(() => {
     return restaurantData?.restaurant?.categories?.length > 0
@@ -280,13 +284,15 @@ const prepareFormData = (formData, file) => {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <Heading title="Menu Management" />
-          <Button
-            className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <CirclePlus size={18} className="mr-2" />
-            Add Item
-          </Button>
+          {isAdmin && (
+            <Button
+              className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <CirclePlus size={18} className="mr-2" />
+              Add Item
+            </Button>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow p-4 mb-8">
@@ -313,6 +319,7 @@ const prepareFormData = (formData, file) => {
                   onEdit={() => setEditingItem(item)}
                   onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
                   onView={() => setViewingItem(item)}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>

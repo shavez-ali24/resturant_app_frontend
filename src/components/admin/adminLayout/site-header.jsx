@@ -17,6 +17,10 @@ export function SiteHeader() {
   const { data: profileData, isLoading: profileLoading } =
     useGetRestaurantProfileQuery();
 
+  // Get current user role from localStorage
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+
     
 
   const [toggleRestaurant, { isLoading: toggleLoading }] =
@@ -139,43 +143,46 @@ export function SiteHeader() {
 
           {/* Right Side - Controls */}
           <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 mt-2 md:mt-0 ">
-            {/* Status Toggle Card */}
-            <div className="flex items-center gap-2 md:gap-4 bg-white/90 backdrop-blur-sm rounded-xl px-2 md:px-4 py-1 md:py-2 shadow-sm border border-orange-500">
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-gray-500">Restaurant</span>
-                <span className={`text-sm font-semibold ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                  {isOpen === true ? 'OPEN' : isOpen === false ? 'CLOSED' : '...'}
-                </span>
-              </div>
+            {/* Status Toggle Card - Only for Admin */}
+            {isAdmin && (
+              <>
+                <div className="flex items-center gap-2 md:gap-4 bg-white/90 backdrop-blur-sm rounded-xl px-2 md:px-4 py-1 md:py-2 shadow-sm border border-orange-500">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-gray-500">Restaurant</span>
+                    <span className={`text-sm font-semibold ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                      {isOpen === true ? 'OPEN' : isOpen === false ? 'CLOSED' : '...'}
+                    </span>
+                  </div>
 
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  id="status-toggle"
-                  className="sr-only"
-                  checked={isOpen === true}
-                  disabled={loading || toggleLoading}
-                  onChange={handleToggleClick}
-                />
-                <label
-                  htmlFor="status-toggle"
-                  className={`relative inline-flex items-center h-6 w-11 cursor-pointer rounded-full transition-all duration-300 ${
-                    loading || toggleLoading ? 'opacity-50 cursor-not-allowed' : ''
-                  } ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}
-                >
-                  <span
-                    className={`inline-block w-5 h-5 transform bg-white rounded-full transition-all duration-300 shadow-md ${
-                      isOpen ? 'translate-x-6' : 'translate-x-0.5'
-                    }`}
-                  />
-                </label>
-                {(loading || toggleLoading) && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                )}
-              </div>
-            </div>
-
-            <Separator orientation="vertical" className="h-8 bg-orange-200/50 hidden md:block" />
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="status-toggle"
+                      className="sr-only"
+                      checked={isOpen === true}
+                      disabled={loading || toggleLoading}
+                      onChange={handleToggleClick}
+                    />
+                    <label
+                      htmlFor="status-toggle"
+                      className={`relative inline-flex items-center h-6 w-11 cursor-pointer rounded-full transition-all duration-300 ${
+                        loading || toggleLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      } ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}
+                    >
+                      <span
+                        className={`inline-block w-5 h-5 transform bg-white rounded-full transition-all duration-300 shadow-md ${
+                          isOpen ? 'translate-x-6' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </label>
+                    {(loading || toggleLoading) && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                  </div>
+                </div>
+                <Separator orientation="vertical" className="h-8 bg-orange-200/50 hidden md:block" />
+              </>
+            )}
 
             {/* Notifications */}
             <NotificationBell />

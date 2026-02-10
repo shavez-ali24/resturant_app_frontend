@@ -73,6 +73,43 @@ export const superAdminApi = createApi({
       }),
       invalidatesTags: ["Admins"],
     }),
+
+    // Delete user (soft delete)
+    deleteUser: builder.mutation({
+      query: (userId) => ({
+        url: `/auth/${userId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Admins"],
+    }),
+
+    // Get all staff (superadmin only)
+    getStaff: builder.query({
+      query: () => ({
+        url: "/auth/staff",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        if (Array.isArray(response)) {
+          return { staff: response };
+        }
+        if (response && Array.isArray(response.staff)) {
+          return response;
+        }
+        return { staff: [] };
+      },
+      providesTags: ["Staff"],
+    }),
+
+    // Register new admin (superadmin only)
+    registerAdmin: builder.mutation({
+      query: (adminData) => ({
+        url: "/auth/register/admin",
+        method: "POST",
+        body: adminData,
+      }),
+      invalidatesTags: ["Admins"],
+    }),
   }),
 });
 
@@ -81,4 +118,7 @@ export const {
   useRegisterUserMutation,
   useGetAdminsQuery,
   useUpdateUserMutation,
+  useDeleteUserMutation,
+  useGetStaffQuery,
+  useRegisterAdminMutation,
 } = superAdminApi;

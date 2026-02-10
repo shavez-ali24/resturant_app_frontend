@@ -9,7 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-const MenuItemCard = ({ item = {}, onEdit, onDelete, onView }) => {
+const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -170,53 +170,55 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView }) => {
         {/* Top Right */}
         <div className="absolute top-3 right-3 flex items-start gap-2">
           {/* Category Badge */}
-          <div className="px-2 py-1 bg-black/70 rounded-md flex items-center gap-1">
-            <Tag size={10} className="text-white" />
-            <span className="text-xs text-white truncate max-w-[80px]">
+          <div className="px-2 py-1 bg-orange-300/70 rounded-md flex items-center gap-1">
+            <Tag size={10} className="text-black" />
+            <span className="text-xs text-black truncate max-w-[80px]">
               {safeItem.category}
             </span>
           </div>
 
-          {/* Menu */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu((prev) => !prev);
-              }}
-              className="p-1.5 rounded-lg hover:bg-gray-100"
-            >
-              <MoreVertical size={18} />
-            </button>
-
-            {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border z-50"
+          {/* Menu - Only for Admin */}
+          {isAdmin && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu((prev) => !prev);
+                }}
+                className="p-1.5 rounded-lg hover:bg-gray-100"
               >
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onEdit();
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-3"
-                >
-                  <Edit size={16} /> Edit Item
-                </button>
+                <MoreVertical size={18} />
+              </button>
 
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onDelete();
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 border-t"
+              {showMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border z-50"
                 >
-                  <Trash2 size={16} /> Delete
-                </button>
-              </motion.div>
-            )}
-          </div>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onEdit();
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-3"
+                  >
+                    <Edit size={16} /> Edit Item
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete();
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 border-t"
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Info */}

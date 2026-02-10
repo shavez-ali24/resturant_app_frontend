@@ -20,7 +20,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
-import logo from "@/assets/tapNOrder.webp";
+import logo from "@/assets/tapNOrder.png";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }) {
@@ -118,7 +118,7 @@ export function AppSidebar({ ...props }) {
       {...props}
     >
       {/* Header */}
-      <SidebarHeader className=" px-4 py-3  bg-gradient-to-r from-orange-50 to-orange-100 ">
+      <SidebarHeader className=" px-14 py-3  bg-gradient-to-r from-orange-50 to-orange-100 ">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

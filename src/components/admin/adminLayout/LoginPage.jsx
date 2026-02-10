@@ -35,7 +35,13 @@ const LoginPage = () => {
       localStorage.setItem("qrCode", res.user?.qrCode || res.qrCode || "");
       localStorage.setItem("userPassword", password);
 
-      navigate("/admin", { replace: true });
+      // Redirect based on role - staff goes to orders, admin goes to dashboard
+      const userRole = res.user?.role || "admin";
+      if (userRole === "staff") {
+        navigate("/admin/orders", { replace: true });
+      } else {
+        navigate("/admin", { replace: true });
+      }
     } catch (err) {
       setError(err?.data?.message || "Login failed, please try again.");
     }

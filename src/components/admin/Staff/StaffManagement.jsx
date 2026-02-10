@@ -56,10 +56,13 @@ const StaffManagement = () => {
     type: "",
     message: "",
   });
+  const [formError, setFormError] = useState("");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (formError) setFormError("");
   };
 
   const closeNotification = () => {
@@ -68,6 +71,7 @@ const StaffManagement = () => {
 
   const handleAddNew = () => {
     setFormData({ name: "", email: "", password: "" });
+    setFormError("");
     setIsEditing(false);
     setSelectedStaff(null);
     setShowModal(true);
@@ -75,6 +79,7 @@ const StaffManagement = () => {
 
   const handleEdit = (staff) => {
     setSelectedStaff(staff);
+    setFormError("");
     setFormData({
       name: staff.name || "",
       email: staff.email || "",
@@ -117,25 +122,18 @@ const StaffManagement = () => {
     setIsEditing(false);
     setSelectedStaff(null);
     setFormData({ name: "", email: "", password: "" });
+    setFormError("");
   };
 
   const handleSubmit = async () => {
     // Validate form
     if (!formData.name || !formData.email) {
-      setNotification({
-        show: true,
-        type: "error",
-        message: "Please fill all required fields",
-      });
+      setFormError("Please fill all required fields");
       return;
     }
 
     if (!isEditing && !formData.password) {
-      setNotification({
-        show: true,
-        type: "error",
-        message: "Password is required for new staff",
-      });
+      setFormError("Password is required for new staff");
       return;
     }
 
@@ -169,24 +167,18 @@ const StaffManagement = () => {
       handleCloseModal();
     } catch (error) {
       console.error("Staff operation error:", error);
-      setNotification({
-        show: true,
-        type: "error",
-        message: error?.data?.message || error?.message || "Something went wrong",
-      });
+      setFormError(error?.data?.message || error?.message || "Something went wrong");
     }
   };
 
   const staff = Array.isArray(staffData) ? staffData : [];
   
-  // Filter out soft-deleted staff and by search term
-  const filteredStaff = staff
-    .filter((member) => !member?.isDeleted)
-    .filter(
-      (member) =>
-        member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  // Filter staff by search term
+  const filteredStaff = staff.filter(
+    (member) =>
+      member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 min-h-screen">
@@ -202,15 +194,15 @@ const StaffManagement = () => {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowDeleteModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6 ">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="text-red-600" size={32} />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Delete Staff</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 ">Delete Staff</h3>
               <p className="text-gray-500 mb-6">
                 Are you sure you want to delete <span className="font-medium text-gray-700">{staffToDelete?.name}</span>? 
                 This action cannot be undone.
@@ -241,7 +233,7 @@ const StaffManagement = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
           
@@ -257,8 +249,8 @@ const StaffManagement = () => {
             
             {/* Header */}
             <div className="p-6 pb-4">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2 ">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center ">
                   {isEditing ? (
                     <Pencil className="text-orange-600" size={20} />
                   ) : (
@@ -271,6 +263,12 @@ const StaffManagement = () => {
             
             {/* Form */}
             <div className="px-6 pb-6 space-y-4">
+              {/* Inline Error Message */}
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-gray-700 font-medium">
                   Name

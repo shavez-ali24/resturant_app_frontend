@@ -24,7 +24,7 @@ export const FormField = ({
       <input
         type={type}
         name={name}
-        value={value}
+       value={value === 0 ? "" : value ?? ""}
         onChange={onChange}
         min={min}
         placeholder={placeholder}

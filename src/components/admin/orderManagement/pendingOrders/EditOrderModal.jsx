@@ -39,16 +39,23 @@ const EditOrderModal = ({
     if (editingOrder) {
       const newLocalOrderData = {
         ...editingOrder,
-        items: editingOrder.items.map(item => ({
-          ...item,
-          menuItemId: item.menuItemId || item.menuItem?._id || item._id,
-          name: item.name || item.menuItem?.name || "",
-          price: item.price || item.menuItem?.price || 0,
-          quantity: item.quantity || 1,
-          variantName: item.variant || item.variantName || null,
-          variants: item.variants || item.menuItem?.variantRates || null,
-          customizations: item.customizations || ""
-        }))
+        items: editingOrder.items.map(item => {
+          // Look up the menu item from menuItems prop to get variantRates
+          const menuItem = menuItems.find(m => m._id === (item.menuItemId || item.menuItem?._id || item._id));
+          return {
+            ...item,
+            menuItemId: item.menuItemId || item.menuItem?._id || item._id,
+            name: item.name || item.menuItem?.name || menuItem?.name || "",
+            price: item.price || item.menuItem?.price || menuItem?.price || 0,
+            quantity: item.quantity || 1,
+            // Ensure variantName is set for variant items
+            variantName: item.variantName || item.variant || null,
+            variant: item.variant || item.variantName || null,
+            // Get variants from menuItems lookup
+            variants: item.variants || item.menuItem?.variantRates || menuItem?.variantRates || null,
+            customizations: item.customizations || ""
+          };
+        })
       };
       
       setLocalOrderData(newLocalOrderData);
@@ -115,14 +122,19 @@ const EditOrderModal = ({
     let newItem;
 
     if (selected.pricingType === "variant" && selected.variantRates) {
-      const firstVariant = Object.keys(selected.variantRates)[0];
+      // Get first variant key
+      const firstVariantKey = Object.keys(selected.variantRates)[0];
+      const firstVariantData = selected.variantRates[firstVariantKey];
+      // Handle both formats: { quarter: 100 } or { quarter: { price: 100, discount: {...} } }
+      const firstVariantPrice = typeof firstVariantData === 'object' ? firstVariantData.price : firstVariantData;
+      
       newItem = {
         menuItemId: selected._id,
         name: selected.name,
         quantity: 1,
-        variantName: firstVariant,
+        variantName: firstVariantKey,
         variants: selected.variantRates,
-        price: selected.variantRates[firstVariant],
+        price: firstVariantPrice,
         customizations: ""
       };
     } else {
@@ -163,7 +175,9 @@ const EditOrderModal = ({
     if (!item.variants || !item.variants[variant]) return;
 
     item.variantName = variant;
-    item.price = item.variants[variant];
+    // Handle both formats: { quarter: 100 } or { quarter: { price: 100, discount: {...} } }
+    const variantData = item.variants[variant];
+    item.price = typeof variantData === 'object' ? variantData.price : variantData;
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -340,12 +354,16 @@ const EditOrderModal = ({
       const payload = {
         status: localOrderData.status,
         orderType: localOrderData.orderType,
-        items: localOrderData.items.map(item => ({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          variant: item.variantName || null,
-          customizations: item.customizations || ""
-        }))
+        items: localOrderData.items.map(item => {
+          // For variant items, ensure variant is set
+          const variantValue = item.variantName || item.variant || null;
+          return {
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            variant: variantValue,
+            customizations: item.customizations || ""
+          };
+        })
       };
 
       // Add tableId for Eat Here
@@ -632,15 +650,19 @@ const EditOrderModal = ({
                         </SelectTrigger>
                         <SelectContent className="bg-orange-50 border-orange-300 shadow-lg rounded-lg">
                           <SelectGroup>
-                            {Object.entries(item.variants).map(([key, price]) => (
-                              <SelectItem 
-                                key={key} 
-                                value={key}
-                                className="hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
-                              >
-                                {key} — ₹{price}
-                              </SelectItem>
-                            ))}
+                            {Object.entries(item.variants).map(([key, variantData]) => {
+                              // Handle both formats: { quarter: 100 } or { quarter: { price: 100, discount: {...} } }
+                              const price = typeof variantData === 'object' ? variantData.price : variantData;
+                              return (
+                                <SelectItem 
+                                  key={key} 
+                                  value={key}
+                                  className="hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                                >
+                                  {key} — ₹{price}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectGroup>
                         </SelectContent>
                       </Select>

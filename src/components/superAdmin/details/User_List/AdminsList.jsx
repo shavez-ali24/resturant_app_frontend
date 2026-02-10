@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Edit, Loader2, User, Mail, Calendar, Building, Globe, Clock } from "lucide-react"
+import { Edit, Loader2, User, Mail, Calendar, Building, Globe, Clock, Trash2 } from "lucide-react"
 import UpdateAdminModal from "./UpdateAdminModal"
-import { useGetAdminsQuery } from "@/redux/superAdminRedux/superAdminAPI"
+import { DeleteConfirmModal } from "@/components/superAdmin/common/deleteConfirmModal"
+import { useGetAdminsQuery, useDeleteUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
 
 export default function AdminsList() {
   const { data: adminsData, isLoading, error } = useGetAdminsQuery();
+  const [deleteUser] = useDeleteUserMutation();
   const [updateModal, setUpdateModal] = useState({ open: false, admin: null })
+  const [deleteModal, setDeleteModal] = useState({ open: false, admin: null })
 
   const admins = adminsData?.admins || [];
 
@@ -59,6 +62,20 @@ export default function AdminsList() {
         open={updateModal.open}
         admin={updateModal.admin}
         onClose={() => setUpdateModal({ open: false, admin: null })}
+      />
+      
+      <DeleteConfirmModal
+        show={deleteModal.open}
+        onCancel={() => setDeleteModal({ open: false, admin: null })}
+        onConfirm={async () => {
+          try {
+            await deleteUser(deleteModal.admin._id).unwrap();
+            setDeleteModal({ open: false, admin: null });
+          } catch (error) {
+            console.error("Delete failed:", error);
+          }
+        }}
+        loading={false}
       />
       
       <Card>
@@ -138,10 +155,15 @@ export default function AdminsList() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => setUpdateModal({ open: true, admin })}>
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setUpdateModal({ open: true, admin })}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteModal({ open: true, admin })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -165,9 +187,14 @@ export default function AdminsList() {
                         </Badge>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setUpdateModal({ open: true, admin })}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setUpdateModal({ open: true, admin })}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteModal({ open: true, admin })}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-2 text-sm">

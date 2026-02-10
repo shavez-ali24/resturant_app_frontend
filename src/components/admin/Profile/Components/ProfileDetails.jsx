@@ -112,7 +112,7 @@ export default function ProfileDetails({ profileData }) {
                             </h3>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges || 0}`} icon="₹" />
+                            <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges ?? 0}`} icon="₹" />
                             <ProfileField label="GST Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
                             <ProfileField label="GST Rate" value={`${profileData?.gstRate}%`} icon="%" />
                             <div className="md:col-span-2">
