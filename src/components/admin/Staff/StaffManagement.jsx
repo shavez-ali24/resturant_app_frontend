@@ -428,7 +428,7 @@ const StaffManagement = () => {
                       className={`${
                         member.role === "admin"
                           ? "bg-orange-100 text-orange-700"
-                          : "bg-blue-100 text-blue-700"
+                          : "bg-orange-100 text-orange-700"
                       }`}
                     >
                       {member.role}

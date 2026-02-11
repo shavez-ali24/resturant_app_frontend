@@ -339,7 +339,7 @@ export default function FoodListing({
                     } ${
                       layoutMode === "multi"
                         ? "flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px]"
-                        : "w-full max-w-[200px] mx-auto"
+                        : "w-[140px] sm:w-[160px] md:w-[180px]"
                     } ${isMenuOpen ? "z-10" : ""}`}
                   >
                     {/* ✅ Image Section */}
