@@ -8,7 +8,7 @@ import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Form } from "@/components/ui/form"
 import { Loader2 } from "lucide-react"
-import { NotificationModal } from "../../common/notificationModal"
+import { useNotify } from "../../common/notificationModal"
 import { PersonalInfoSection } from "./Personal_info_section"
 import { RestaurantInfoSection } from "./Restaurant-info-section"
 import { RoleSection } from "./Role_section"
@@ -38,7 +38,8 @@ const registerSchema = z.object({
 
 export function RegisterUserForm() {
   const [register, { isLoading }] = useRegisterUserMutation();
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+  const notify = useNotify();
+  const [selectedRole, setSelectedRole] = useState("");
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -48,61 +49,27 @@ export function RegisterUserForm() {
       password: "",
       role: "",
       domain: "",
-      restaurantName: ""
-    }
-  })
+      restaurantName: "",
+    },
+  });
 
-  const selectedRole = form.watch("role")
-
-  const showNotification = (message, type = "success") => {
-    setNotification({ show: true, message, type })
-  }
-
-  const closeNotification = () => {
-    setNotification({ show: false, message: "", type: "" })
-  }
-
-  const onSubmit = async (values) => {
+  const onSubmit = async (data) => {
     try {
-      const data = await register(values).unwrap();
-
-      // Show appropriate success message based on role
-      let successMessage = "";
-      switch (values.role) {
-        case "admin":
-          successMessage = `Admin ${data.user.name} has been created with restaurant ${data.restaurant?.restaurantName}`;
-          break;
-        case "staff":
-          successMessage = `Staff ${data.user.name} has been registered successfully`;
-          break;
-        case "superadmin":
-          successMessage = `Superadmin ${data.user.name} has been created successfully`;
-          break;
-        case "user":
-          successMessage = `User ${data.user.name} has been created successfully`;
-          break;
-        default:
-          successMessage = `User ${data.user.name} has been created successfully`;
-      }
-
-      showNotification(successMessage, "success")
-      form.reset()
+      await register(data).unwrap();
+      notify("User created successfully!", "success");
+      form.reset();
+      setSelectedRole("");
     } catch (error) {
-      // Handle duplicate domain error
-      if (error.data?.message && error.data.message.includes('domain')) {
-        form.setError('domain', {
-          type: 'manual',
-          message: 'Domain already exists. Please choose a different one.'
-        })
-      }
-      showNotification(error.data?.message || 'Registration failed', "error")
+      notify(error?.data?.message || error?.message || "Registration failed", "error");
     }
-  }
+  };
+
+  const handleRoleChange = (value) => {
+    form.setValue("role", value);
+    setSelectedRole(value);
+  };
 
   return (
-    <>
-      <NotificationModal notification={notification} onClose={closeNotification} />
-      
       <div className="w-full max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Register New User</h2>
@@ -112,7 +79,7 @@ export function RegisterUserForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <PersonalInfoSection form={form} />
-            <RoleSection form={form} />
+            <RoleSection form={form} onRoleChange={handleRoleChange} />
             
             {/* Show restaurant fields only when admin role is selected */}
             {selectedRole === "admin" && (
@@ -139,6 +106,5 @@ export function RegisterUserForm() {
           </form>
         </Form>
       </div>
-    </>
   )
 }

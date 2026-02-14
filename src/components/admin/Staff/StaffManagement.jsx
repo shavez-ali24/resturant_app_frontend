@@ -30,14 +30,15 @@ import {
   Check,
   X as XIcon,
 } from "lucide-react";
-import NotificationModal from "../common/NotificationModal";
 import Heading from "../common/Heading";
+import { useNotify } from "../common/NotificationModal";
 
 const StaffManagement = () => {
   const { data: staffData, isLoading, refetch } = useGetStaffQuery();
   const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
   const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
   const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
+  const notify = useNotify();
 
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -51,11 +52,6 @@ const StaffManagement = () => {
     email: "",
     password: "",
   });
-  const [notification, setNotification] = useState({
-    show: false,
-    type: "",
-    message: "",
-  });
   const [formError, setFormError] = useState("");
 
   const handleInputChange = (e) => {
@@ -63,10 +59,6 @@ const StaffManagement = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user types
     if (formError) setFormError("");
-  };
-
-  const closeNotification = () => {
-    setNotification({ show: false, type: "", message: "" });
   };
 
   const handleAddNew = () => {
@@ -100,20 +92,12 @@ const StaffManagement = () => {
     try {
       await deleteStaff(staffToDelete._id).unwrap();
       refetch();
-      setNotification({
-        show: true,
-        type: "success",
-        message: "Staff deleted successfully!",
-      });
+      notify("Staff deleted successfully!", "success");
       setShowDeleteModal(false);
       setStaffToDelete(null);
     } catch (error) {
       console.error("Staff deletion error:", error);
-      setNotification({
-        show: true,
-        type: "error",
-        message: error?.data?.message || error?.message || "Something went wrong",
-      });
+      notify(error?.data?.message || error?.message || "Something went wrong", "error");
     }
   };
 
@@ -149,20 +133,12 @@ const StaffManagement = () => {
         }
         await updateStaff({ staffId: selectedStaff._id, updatedData: updateData }).unwrap();
         refetch();
-        setNotification({
-          show: true,
-          type: "success",
-          message: "Staff updated successfully!",
-        });
+        notify("Staff updated successfully!", "success");
       } else {
         // Create new staff
         await createStaff(formData).unwrap();
         refetch();
-        setNotification({
-          show: true,
-          type: "success",
-          message: "Staff created successfully!",
-        });
+        notify("Staff created successfully!", "success");
       }
       handleCloseModal();
     } catch (error) {
@@ -182,52 +158,6 @@ const StaffManagement = () => {
 
   return (
     <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 min-h-screen">
-      {/* Notification Modal */}
-      {notification.show && (
-        <NotificationModal
-          notification={notification}
-          onClose={closeNotification}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowDeleteModal(false)}
-          />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6 ">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 className="text-red-600" size={32} />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2 ">Delete Staff</h3>
-              <p className="text-gray-500 mb-6">
-                Are you sure you want to delete <span className="font-medium text-gray-700">{staffToDelete?.name}</span>? 
-                This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteModal(false)}
-                  className="border-gray-300 hover:bg-gray-100 flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleConfirmDelete}
-                  disabled={isDeleting}
-                  className="bg-red-500 text-white hover:bg-red-600 disabled:bg-red-300 flex-1"
-                >
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -343,6 +273,44 @@ const StaffManagement = () => {
                   ? "Update Staff"
                   : "Create Staff"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDeleteModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6 ">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="text-red-600" size={32} />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 ">Delete Staff</h3>
+              <p className="text-gray-500 mb-6">
+                Are you sure you want to delete <span className="font-medium text-gray-700">{staffToDelete?.name}</span>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="border-gray-300 hover:bg-gray-100 flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="bg-red-500 text-white hover:bg-red-600 disabled:bg-red-300 flex-1"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

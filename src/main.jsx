@@ -32,73 +32,76 @@ import Sales from "./components/admin/observability/sales/Sales";
 import StaffManagement from "./components/admin/Staff/StaffManagement";
 // import AppTitle from "./AppTitle";
 import DynamicFavicon from "./DynamicFavicon";
+import { NotificationProvider } from "./components/admin/common/NotificationModal";
+
 const SuperAdminPrivateRoute = ({ children }) => {
   return children;
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
-    <BrowserRouter>
-      {/* <AppTitle /> */}
-      <DynamicFavicon />
+    <NotificationProvider>
+      <BrowserRouter>
+        <DynamicFavicon />
 
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Home />} />
-          <Route path="filter" element={<Filter />} />
-        </Route>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Home />} />
+            <Route path="filter" element={<Filter />} />
+          </Route>
 
-        {/* Admin Login (Public) */}
-        <Route path="login" element={<LoginPage />} />
+          {/* Admin Login (Public) */}
+          <Route path="login" element={<LoginPage />} />
 
-        {/* Admin Protected Routes */}
-        <Route
-          path="admin"
-          element={
-            <PrivateRoute>
-              <AdminLayout />
-            </PrivateRoute>
-          }
-        >
-          
-          <Route index element={<Admin />} />
-          <Route path="menu" element={<Menu />} />
-          {/* <Route path="orderlist" element={<OrdersList />} /> */}
-          <Route path="completedorder" element={<CompletedOrders />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="cancelledorder" element={<CancelledOrders />} />
+          {/* Admin Protected Routes */}
+          <Route
+            path="admin"
+            element={
+              <PrivateRoute>
+                <AdminLayout />
+              </PrivateRoute>
+            }
+          >
+            
+            <Route index element={<Admin />} />
+            <Route path="menu" element={<Menu />} />
+            {/* <Route path="orderlist" element={<OrdersList />} /> */}
+            <Route path="completedorder" element={<CompletedOrders />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="cancelledorder" element={<CancelledOrders />} />
 
-          <Route path="profile" element={<Adminprofile />} />
-          <Route path="sales" element={<Sales />} />
-          <Route path="revenue" element={<Revenue />} />
-          <Route path="staff" element={<StaffManagement />} />
-          <Route path="comingsoon" element={<ComingSoon />} />
-        </Route>
+            <Route path="profile" element={<Adminprofile />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="revenue" element={<Revenue />} />
+            <Route path="staff" element={<StaffManagement />} />
+            <Route path="comingsoon" element={<ComingSoon />} />
+          </Route>
 
-        {/* Super Admin Login (Public) */}
-        <Route path="super-login" element={<SuperLoginPage />} />
+          {/* Super Admin Login (Public) */}
+          <Route path="super-login" element={<SuperLoginPage />} />
 
-        {/* Super Admin Protected Routes */}
-        <Route
-          path="super-admin"
-          element={
-            <SuperAdminPrivateRoute>
-              <SuperAdminLayout />
-            </SuperAdminPrivateRoute>
-          }
-        >
-          <Route index element={<CreateUserPage />} />
-          <Route path="create-user" element={<CreateUserPage />} />
-          <Route path="user-list" element={<UserListPage />} />
-          <Route path="admins" element={<AdminsList />} />
-          <Route path="profile" element={<SuperAdminProfile />} />
+          {/* Super Admin Protected Routes */}
+          <Route
+            path="super-admin"
+            element={
+              <SuperAdminPrivateRoute>
+                <SuperAdminLayout />
+              </SuperAdminPrivateRoute>
+            }
+          >
+            <Route index element={<CreateUserPage />} />
+            <Route path="create-user" element={<CreateUserPage />} />
+            <Route path="user-list" element={<UserListPage />} />
+            <Route path="admins" element={<AdminsList />} />
+            <Route path="profile" element={<SuperAdminProfile />} />
 
-        </Route>
+          </Route>
 
-        {/* 404 Error */}
-        <Route path="*" element={<ErrorPage />} />
-      </Routes>
-    </BrowserRouter>
+          {/* 404 Error */}
+            <Route path="*" element={<ErrorPage />} />
+        </Routes>
+      </BrowserRouter>
+    </NotificationProvider>
   </Provider>
 );

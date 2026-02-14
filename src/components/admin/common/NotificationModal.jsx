@@ -1,10 +1,51 @@
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   CheckCircleIcon,
   XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
+// Create Context
+const NotificationContext = createContext();
+
+// Provider Component
+export const NotificationProvider = ({ children }) => {
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const notify = (message, type = "success") => {
+    setNotification({ show: true, message, type });
+  };
+
+  const closeNotification = () => {
+    setNotification((prev) => ({ ...prev, show: false }));
+  };
+
+  return (
+    <NotificationContext.Provider value={{ notify, closeNotification }}>
+      {children}
+      <NotificationModal
+        notification={notification}
+        onClose={closeNotification}
+      />
+    </NotificationContext.Provider>
+  );
+};
+
+// Hook to use notification
+export const useNotify = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    // Return a no-op function if used outside provider
+    return (message, type) => console.warn("useNotify used outside NotificationProvider");
+  }
+  return context.notify;
+};
+
+// Modal Component
 const NotificationModal = ({ notification, onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
   

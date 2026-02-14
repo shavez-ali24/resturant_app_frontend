@@ -432,7 +432,7 @@ export default function Header({
           
           <h3 class="text-xl font-bold text-gray-800 mb-2">Order Confirmed!</h3>
           <p class="text-gray-600 mb-1">Thank you for your order</p>
-          <p class="text-sm text-gray-500 mb-4">Order ID: ${orderId}</p>
+          
           
           <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
             <div class="flex items-center justify-center gap-2 text-orange-700">

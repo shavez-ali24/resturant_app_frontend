@@ -9,7 +9,7 @@ import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
 import AddItemModal from "./ComponentsMenu/AddItemModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
-import NotificationModal from "../common/NotificationModal";
+import { useNotify } from "../common/NotificationModal";
 
 import {
   Pagination,
@@ -61,20 +61,11 @@ const Menu = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
 
-  const [notification, setNotification] = useState({
-    show: false,
-    message: "",
-    type: "",
-  });
+  const notify = useNotify();
 
   const showNotification = useCallback((message, type = "success") => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
-  }, []);
-
-  const closeNotification = () => {
-    setNotification({ show: false, type: "", message: "" });
-  };
+    notify(message, type);
+  }, [notify]);
 
   useEffect(() => setCurrentPage(1), [filters]);
 
@@ -214,11 +205,11 @@ const prepareFormData = (formData, file) => {
     try {
       const fd = prepareFormData(formData, file);
       await createMenuItem(fd).unwrap();
-      showNotification("Item added successfully");
+      notify("Item added successfully", "success");
       setIsAddModalOpen(false);
       refetch();
     } catch (error) {
-      showNotification(error?.data?.error || "Failed to add item", "error");
+      notify(error?.data?.error || "Failed to add item", "error");
     }
   };
 
@@ -226,32 +217,28 @@ const prepareFormData = (formData, file) => {
     try {
       const fd = prepareFormData(formData, file);
       await updateMenuItem({ itemId: formData._id, updatedData: fd }).unwrap();
-      showNotification("Item updated successfully");
+      notify("Item updated successfully", "success");
       setEditingItem(null);
       refetch();
     } catch (error) {
-      showNotification(error?.data?.error || "Failed to update item", "error");
+      notify(error?.data?.error || "Failed to update item", "error");
     }
   };
 
   const handleDeleteItem = async () => {
     try {
       await deleteMenuItem(deleteConfirm.id).unwrap();
-      showNotification("Item deleted successfully");
+      notify("Item deleted successfully", "success");
       setDeleteConfirm(null);
       refetch();
     } catch {
-      showNotification("Failed to delete item", "error");
+      notify("Failed to delete item", "error");
     }
   };
 
   return (
     <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 bg-fixed">
       <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
-
-      {notification.show && (
-        <NotificationModal notification={notification} onClose={closeNotification} />
-      )}
 
       <DeleteConfirmModal
         isOpen={!!deleteConfirm}
