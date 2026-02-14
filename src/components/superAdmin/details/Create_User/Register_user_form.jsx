@@ -1,7 +1,6 @@
 // src/components/superAdmin/RegisterUserForm.jsx
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -39,7 +38,6 @@ const registerSchema = z.object({
 export function RegisterUserForm() {
   const [register, { isLoading }] = useRegisterUserMutation();
   const notify = useNotify();
-  const [selectedRole, setSelectedRole] = useState("");
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -53,12 +51,23 @@ export function RegisterUserForm() {
     },
   });
 
+  // Watch role field to show/hide restaurant fields
+  const watchedRole = form.watch("role");
+
   const onSubmit = async (data) => {
     try {
-      await register(data).unwrap();
+      // Clean up data based on role - remove unnecessary fields
+      const cleanedData = { ...data };
+      
+      // For non-admin roles, remove domain and restaurantName
+      if (data.role !== "admin") {
+        delete cleanedData.domain;
+        delete cleanedData.restaurantName;
+      }
+      
+      await register(cleanedData).unwrap();
       notify("User created successfully!", "success");
       form.reset();
-      setSelectedRole("");
     } catch (error) {
       notify(error?.data?.message || error?.message || "Registration failed", "error");
     }
@@ -66,7 +75,6 @@ export function RegisterUserForm() {
 
   const handleRoleChange = (value) => {
     form.setValue("role", value);
-    setSelectedRole(value);
   };
 
   return (
@@ -82,7 +90,7 @@ export function RegisterUserForm() {
             <RoleSection form={form} onRoleChange={handleRoleChange} />
             
             {/* Show restaurant fields only when admin role is selected */}
-            {selectedRole === "admin" && (
+            {watchedRole === "admin" && (
               <RestaurantInfoSection form={form} />
             )}
 
@@ -96,10 +104,10 @@ export function RegisterUserForm() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating {selectedRole || "User"}...
+                    Creating {watchedRole || "User"}...
                   </>
                 ) : (
-                  `Register ${selectedRole || "User"}`
+                  `Register ${watchedRole || "User"}`
                 )}
               </Button>
             </div>

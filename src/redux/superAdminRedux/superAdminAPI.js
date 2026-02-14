@@ -36,11 +36,20 @@ export const superAdminApi = createApi({
     }),
 
     registerUser: builder.mutation({
-      query: (userData) => ({
-        url: "/auth/register",
-        method: "POST",
-        body: userData,
-      }),
+      query: (userData) => {
+        // Use role-specific endpoint for admin and staff
+        let url = "/auth/register";
+        if (userData.role === "admin") {
+          url = "/auth/register/admin";
+        } else if (userData.role === "staff") {
+          url = "/auth/register/staff";
+        }
+        return {
+          url,
+          method: "POST",
+          body: userData,
+        };
+      },
     }),
 
     getAdmins: builder.query({
