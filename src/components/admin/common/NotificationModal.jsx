@@ -1,104 +1,121 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+/* eslint-disable no-unused-vars */
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircleIcon,
   XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
-// Create Context
 const NotificationContext = createContext();
+export const useNotification = () => useContext(NotificationContext);
 
-// Provider Component
+const MAX_NOTIFICATIONS = 3;
+
 export const NotificationProvider = ({ children }) => {
-  const [notification, setNotification] = useState({
-    show: false,
-    message: "",
-    type: "success",
-  });
+  const [notifications, setNotifications] = useState([]);
 
-  const notify = (message, type = "success") => {
-    setNotification({ show: true, message, type });
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
   };
 
-  const closeNotification = () => {
-    setNotification((prev) => ({ ...prev, show: false }));
-  };
+  const notify = useCallback((message, type = "success") => {
+    const id = Date.now();
+
+    setNotifications((prev) => {
+      const updated = [...prev, { id, message, type }];
+      return updated.slice(-MAX_NOTIFICATIONS); // Keep last 3 notifications
+    });
+
+    // Auto remove after 3 seconds
+    setTimeout(() => removeNotification(id), 3000);
+  }, []);
 
   return (
-    <NotificationContext.Provider value={{ notify, closeNotification }}>
+    <NotificationContext.Provider value={{ notify }}>
       {children}
-      <NotificationModal
-        notification={notification}
-        onClose={closeNotification}
-      />
+
+      {/* Notification Container */}
+      <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 w-80">
+        <AnimatePresence>
+          {notifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onClose={() => removeNotification(notification.id)}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
     </NotificationContext.Provider>
   );
 };
 
-// Hook to use notification
+const NotificationItem = ({ notification, onClose }) => {
+  const { message, type } = notification;
+  const isSuccess = type === "success";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 50, scale: 0.95 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 50, scale: 0.9 }}
+      className={`rounded-xl overflow-hidden shadow-2xl relative ${isSuccess 
+        ? 'bg-gradient-to-r from-emerald-500 to-green-500' 
+        : 'bg-gradient-to-r from-rose-500 to-pink-500'}`}
+    >
+      {/* Animated progress bar */}
+      <motion.div
+        initial={{ width: "100%" }}
+        animate={{ width: "0%" }}
+        transition={{ duration: 3, ease: "linear" }}
+        className={`h-0.5 ${isSuccess ? 'bg-emerald-300' : 'bg-rose-300'}`}
+      />
+      
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div className={`flex-shrink-0 p-2 rounded-lg ${isSuccess ? 'bg-emerald-400/20' : 'bg-rose-400/20'}`}>
+            {isSuccess ? (
+              <CheckCircleIcon className="w-5 h-5 text-white" />
+            ) : (
+              <XCircleIcon className="w-5 h-5 text-white" />
+            )}
+          </div>
+          
+          {/* Message */}
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium text-sm leading-tight">
+              {message}
+            </p>
+          </div>
+          
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 text-white/70 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      
+      {/* Corner accents */}
+      <div className="absolute top-2 left-2 w-2 h-2 border border-white/30 rounded-full" />
+      <div className="absolute top-2 right-2 w-2 h-2 border border-white/30 rounded-full" />
+      <div className="absolute bottom-2 left-2 w-2 h-2 border border-white/30 rounded-full" />
+      <div className="absolute bottom-2 right-2 w-2 h-2 border border-white/30 rounded-full" />
+    </motion.div>
+  );
+};
+
+// Hook for using notifications
 export const useNotify = () => {
   const context = useContext(NotificationContext);
   if (!context) {
-    // Return a no-op function if used outside provider
-    return (message, type) => console.warn("useNotify used outside NotificationProvider");
+    throw new Error("useNotify must be used within NotificationProvider");
   }
   return context.notify;
 };
 
-// Modal Component
-const NotificationModal = ({ notification, onClose }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  const { show = false, message = "", type = "" } = notification || {};
-
-  useEffect(() => {
-    if (show) {
-      setIsVisible(true);
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        setTimeout(onClose, 300);
-      }, 5000);
-      return () => clearTimeout(timer);
-    } else {
-      setIsVisible(false);
-    }
-  }, [show, onClose]);
-
-  if (!isVisible) return null;
-
-  const isSuccess = type === "success";
-
-  return (
-    <div className="fixed top-6 right-6 z-50 max-w-xs w-full">
-      <div className={`rounded-xl shadow-2xl overflow-hidden ${isSuccess ? "bg-emerald-500" : "bg-rose-500"}`}>
-        <div className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              {isSuccess ? (
-                <CheckCircleIcon className="w-5 h-5 text-white" />
-              ) : (
-                <XCircleIcon className="w-5 h-5 text-white" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-medium text-sm">
-                {message}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setIsVisible(false);
-                onClose();
-              }}
-              className="flex-shrink-0 text-white/70 hover:text-white"
-            >
-              <XMarkIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default NotificationModal;
+export default NotificationProvider;
