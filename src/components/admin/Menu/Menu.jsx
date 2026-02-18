@@ -237,7 +237,7 @@ const prepareFormData = (formData, file) => {
   };
 
   return (
-    <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 bg-fixed">
+    <div className="bg-white-50 py-6 px-4 relative  ">
       <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
 
       <DeleteConfirmModal

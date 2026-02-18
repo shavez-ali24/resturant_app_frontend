@@ -338,7 +338,7 @@ const StaffManagement = () => {
             placeholder="Search staff by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-0 focus:ring-0 focus:outline-none"
+            className=" border-orange-200 focus:border-orange-200 rounded-lg"
           />
         </div>
       </div>

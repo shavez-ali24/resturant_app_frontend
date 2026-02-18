@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLoginMutation } from "@/redux/adminRedux/adminAPI";
-import gif from "@/assets/loginImg.jpeg"
+import gif from "@/assets/loginImg.png"
 import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
@@ -55,12 +55,12 @@ const LoginPage = () => {
         <img
           src={gif}
           alt="Login Background"
-          className="h-full w-full object-cover"
+          className="h-screen w-full object-cover"
         />
       </div>
 
       {/* RIGHT SIDE LOGIN FORM */}
-      <div className="flex w-full md:w-1/2 items-center justify-center p-6 bg-orange-50 relative">
+      <div className="flex w-full md:w-1/2 items-center justify-center p-6 bg-white relative">
         <div className="absolute inset-0 md:hidden">
           <img
             src={gif}
@@ -70,7 +70,7 @@ const LoginPage = () => {
           <div className="absolute inset-0 bg-black/50" />
         </div>
 
-        <Card className="relative z-10 w-full max-w-md shadow-2xl bg-white/90 backdrop-blur">
+        <Card className="relative z-10 w-full max-w-md shadow-2xl bg-white/90 backdrop-blur ">
           <CardHeader>
             <CardTitle className="text-center text-3xl font-bold text-gray-800">
               Welcome Back
@@ -125,7 +125,7 @@ const LoginPage = () => {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-md"
+                className="w-full mt-2 bg-gradient-to-r from-[#ab292b] to-[#ef8e23] hover:bg-orange-700 text-white rounded-lg shadow-md"
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
@@ -133,6 +133,7 @@ const LoginPage = () => {
             </form>
           </CardContent>
         </Card>
+      
       </div>
     </div>
   );

@@ -130,7 +130,7 @@ const ProfessionalComingSoon = () => {
               <div className="absolute 
 top-3/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 text-center ">
                 <div className="text-white font-black text-2xl tracking-wider animate-pulse bg-gradient-to-r from-orange-600 to-amber-700 bg-clip-text text-transparent ">
-                  TAP N ORDER
+                  TAP N BITE
                 </div>
               </div>
               

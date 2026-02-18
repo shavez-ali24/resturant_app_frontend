@@ -140,6 +140,7 @@ function FilterControls({
 }) {
   return (
     <>
+    
       <div className="relative flex-grow md:min-w-[250px] border border-orange-500 rounded-xl bg-white shadow-sm">
         <label htmlFor="search" className="sr-only">Search</label>
         <input

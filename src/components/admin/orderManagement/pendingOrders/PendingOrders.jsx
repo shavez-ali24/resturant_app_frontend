@@ -302,7 +302,7 @@ const Orders = () => {
   };
 
   return (
-    <div className="min-h-screen py-6 sm:px-4 lg:px-4 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+    <div className="min-h-screen  sm:px-4 lg:px-4 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
       {/* Header */}
       <div className="flex flex-row items-center justify-between p-3 sm:p-4 mb-4 gap-3">
         <Heading title="Pending Orders" />

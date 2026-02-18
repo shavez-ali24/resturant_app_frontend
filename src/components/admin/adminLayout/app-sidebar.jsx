@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/tapNOrder.png";
+// import logo from "@/assets/loader.gif";
+
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }) {
