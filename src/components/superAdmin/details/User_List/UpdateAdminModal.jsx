@@ -116,7 +116,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
             <Label htmlFor="name">Full Name</Label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="name" value={formData.name} onChange={(e) => handleChange("name", e.target.value)} className="pl-10" required disabled={isLoading} />
+              <Input id="name" value={formData.name} onChange={(e) => handleChange("name", e.target.value)} className="pl-10"  disabled={isLoading} />
             </div>
           </div>
 
@@ -124,7 +124,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
             <Label htmlFor="email">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="email" type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} className="pl-10" required disabled={isLoading} />
+              <Input id="email" type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} className="pl-10"  disabled={isLoading} />
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
             <Label htmlFor="domain">Domain</Label>
             <div className="relative">
               <Globe className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="domain" value={formData.domain} onChange={(e) => handleChange("domain", e.target.value)} className="pl-10" required disabled={isLoading} />
+              <Input id="domain" value={formData.domain} onChange={(e) => handleChange("domain", e.target.value)} className="pl-10"  disabled={isLoading} />
             </div>
           </div>
 
@@ -140,7 +140,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
             <Label htmlFor="restaurantName">Restaurant Name</Label>
             <div className="relative">
               <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input id="restaurantName" value={formData.restaurantName} onChange={(e) => handleChange("restaurantName", e.target.value)} className="pl-10" required disabled={isLoading} />
+              <Input id="restaurantName" value={formData.restaurantName} onChange={(e) => handleChange("restaurantName", e.target.value)} className="pl-10"  disabled={isLoading} />
             </div>
           </div>
 
