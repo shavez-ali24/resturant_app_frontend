@@ -74,25 +74,24 @@ const OrdersTable = ({
       )}
 
       {/* Desktop / Tablet */}
-      <div className="hidden md:block">
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gradient-to-r from-orange-300 to-orange-500 text-gray-800 uppercase tracking-wide text-xs">
             <tr>
-              <th className="text-center border p-2">Date</th>
-              <th className="text-center border p-2">Time</th>
-              <th className="text-center p-3 border">Order ID</th>
-              <th className="text-center p-3 border">Customer</th>
-              <th className="text-center p-3 border">Phone</th>
-              <th className="text-center p-3 border">Order Type</th>
-              <th className="text-center p-3 border">Items</th>
+              <th className="text-center border p-2 text-sm font-semibold">Date</th>
+              <th className="text-center border p-2 text-sm font-semibold">Time</th>
+              <th className="text-center p-2 border text-sm font-semibold">Customer</th>
+              <th className="text-center p-2 border text-sm font-semibold">Phone</th>
+              <th className="text-center p-2 border text-sm font-semibold">Order Type</th>
+              <th className="text-center p-2 border text-sm font-semibold">Items</th>
               {tableType === "pending" && (
-      <th className="text-center p-3 border">Note</th>
+      <th className="text-center p-2 border text-sm font-semibold">Note</th>
     )}
 
               {tableType === "pending" && (
                 <>
-                  <th className="text-center p-3 border">Status</th>
-                  <th className="text-center p-3 border">Actions</th>
+                  <th className="text-center p-2 border text-sm font-semibold">Status</th>
+                  <th className="text-center p-2 border text-sm font-semibold">Actions</th>
                 </>
               )}
             </tr>
@@ -144,7 +143,7 @@ const OrdersTable = ({
       {/* Mobile View */}
      
 {/* Mobile View */}
-<div className="block md:hidden p-4">
+<div className="block md:hidden px-2 sm:px-3">
   {loading ? (
     <p className="text-center py-6 text-gray-500">Loading...</p>
   ) : error ? (
@@ -152,7 +151,7 @@ const OrdersTable = ({
   ) : orders.length === 0 ? (
     <p className="text-center py-6 text-gray-400 italic">No orders yet</p>
   ) : (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {orders.map((order) => {
         // Order Type styling helper for mobile
         const getOrderTypeStyle = (type) => {
@@ -171,23 +170,23 @@ const OrdersTable = ({
         const getOrderTypeIcon = (type) => {
           switch(type?.toLowerCase()) {
             case "eat here":
-              return <Utensils size={16} />;
+              return <Utensils size={14} />;
             case "take away":
-              return <House size={16} />;
+              return <House size={14} />;
             case "delivery":
-              return <Truck size={16} />;
+              return <Truck size={14} />;
             default:
-              return <Utensils size={16} />;
+              return <Utensils size={14} />;
           }
         };
 
         return (
           <div
             key={order._id}
-            className="bg-white rounded-xl shadow-md border border-gray-200 p-4 space-y-4"
+            className="bg-white rounded-xl shadow-md border border-gray-200 p-3 space-y-2"
           >
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-gray-900">
+              <h3 className="font-bold text-gray-900 text-base">
                 Order #{order._id.slice(-6)}
               </h3>
               <span className="text-sm text-gray-500">
@@ -195,23 +194,26 @@ const OrdersTable = ({
               </span>
             </div>
 
-            <p className="text-gray-700">
-              <span className="font-medium">Customer:</span> {order.customerName}
-            </p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="font-medium text-gray-600">Customer:</span>
+                <span className="text-gray-800 ml-1">{order.customerName}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-600">Phone:</span>
+                <span className="text-gray-800 ml-1">{order.customerPhone}</span>
+              </div>
+            </div>
 
-            <p className="text-gray-700">
-              <span className="font-medium">Phone:</span> {order.customerPhone}
-            </p>
-
-            {/* Order Type in Mobile - Updated to match OrderRow styling */}
-            <div className="flex flex-col gap-1">
-              <span className="font-medium text-gray-700">Order Type:</span>
-              <div className={`inline-flex items-center px-3 py-2 rounded-lg font-medium shadow-sm ring-1 ring-black/5 ${getOrderTypeStyle(order.orderType)}`}>
-                <div className="flex items-center gap-2">
+            {/* Order Type in Mobile - Same size for all */}
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-600 text-sm">Type:</span>
+              <div className={`inline-flex items-center justify-center h-9 px-3 rounded-xl font-semibold text-sm ring-1 ring-black/5 ${getOrderTypeStyle(order.orderType)}`}>
+                <div className="flex items-center gap-1.5">
                   {getOrderTypeIcon(order.orderType)}
                   <span>{order.orderType}</span>
                   {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
-                    <span className="ml-1">:{order.tableId}</span>
+                    <span className="ml-0.5">: {order.tableId}</span>
                   )}
                 </div>
               </div>
@@ -225,7 +227,7 @@ const OrdersTable = ({
             ) ? (
               <button
                 onClick={() => (onCustomizationsClick || handleCustomizationsClick)(order)}
-                className="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition text-sm font-medium flex items-center gap-2"
               >
                 <Eye size={16} />
                 Note
@@ -234,34 +236,35 @@ const OrdersTable = ({
               <span className="text-sm text-gray-400 italic">No Note</span>
             ) : null}
 
+            {/* View Items Button - Same size as Note button */}
             <button
               onClick={() => dispatch(showBill(order))}
-              className="rounded-lg bg-orange-100 border border-orange-300 hover:bg-orange-200 transition font-medium flex items-center justify-center gap-1 py-2 w-40"
+              className="rounded-xl bg-orange-100 border border-orange-300 hover:bg-orange-200 transition text-sm font-medium flex items-center justify-center gap-1 py-2 px-4"
             >
-              View Items <Pointer size={16} />
+              View Items & Bill
             </button>
 
             {tableType === "pending" && (
               <>
                 {/* Status dropdown for mobile view */}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="font-medium">Status:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">Status:</span>
                   <StatusDropdown order={order} updateOrder={updateOrder} />
                 </div>
 
                 {/* Edit and Delete buttons - only for admin */}
                 {userRole !== "staff" && (
-                  <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setEditingOrder(order)}
-                      className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                      className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition text-sm"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => setShowConfirmDelete(order)}
-                      className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition"
+                      className="px-4 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 transition text-sm"
                     >
                       Delete
                     </button>

@@ -64,32 +64,32 @@ const OrderRow = ({
   return (
     <tr className="hover:bg-orange-50 border transition">
       {/* Date Column */}
-      <td className="text-center border text-gray-700">
+      <td className="text-center border text-sm text-gray-700 px-1">
         {order.formattedDate || "N/A"}
       </td>
 
       {/* Time Column */}
-      <td className="text-center border text-gray-700">
+      <td className="text-center border text-sm text-gray-700 px-1">
         {order.formattedTime || "N/A"}
       </td>
 
       {/* Order ID */}
-      <td className="text-center border font-medium text-gray-800">{orderNum}</td>
+      {/* <td className="text-center border font-medium text-gray-800">{orderNum}</td> */}
 
       {/* Customer */}
-      <td className="text-center border text-gray-700">{order.customerName}</td>
+      <td className="text-center border text-sm text-gray-700 px-1">{order.customerName}</td>
 
       {/* Phone */}
-      <td className="text-center border text-gray-700">{order.customerPhone}</td>
+      <td className="text-center border text-sm text-gray-700 px-1">{order.customerPhone}</td>
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
-      <td className="flex items-center justify-center py-2.5">
-        <div className={`inline-flex items-center justify-center h-9 px-3 rounded-lg font-medium shadow-sm ring-1 ring-black/5 transition-all ${orderTypeStyle.bg} ${orderTypeStyle.text} ${orderTypeStyle.ring}`}>
-          <div className="flex items-center gap-2">
+      <td className="text-center border py-2 px-1">
+        <div className={`inline-flex items-center justify-center h-9 px-3 rounded-xl font-semibold text-sm ring-1 ring-black/5 w-full ${orderTypeStyle.bg} ${orderTypeStyle.text} ${orderTypeStyle.ring}`}>
+          <div className="flex items-center gap-1.5">
             {orderTypeStyle.icon}
-            <span>{order.orderType || "Select Type"}</span>
+            <span>{order.orderType || "Type"}</span>
             {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
-              <span className="ml-1">: {order.tableId}</span>
+              <span className="ml-0.5">: {order.tableId}</span>
             )}
           </div>
         </div>
@@ -99,7 +99,7 @@ const OrderRow = ({
       <td className="text-center border py-2">
         <button
           onClick={() => dispatch(showBill(order))}
-          className="px-4 py-2 rounded-lg bg-orange-100 border border-orange-300 hover:bg-orange-200 transition"
+          className="px-4 py-1.5 rounded-xl bg-orange-100 border border-orange-300 hover:bg-orange-200 transition text-sm font-medium"
         >
           <span className="flex justify-center items-center gap-1">
             View Items & Bill
@@ -113,19 +113,20 @@ const OrderRow = ({
           {hasCustomizations ? (
             <button
               onClick={() => onCustomizationsClick(order)}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600 transition font-medium flex items-center justify-center gap-2 shadow-sm hover:shadow-md mx-auto group relative"
+              className="px-3 py-1.5 rounded-md bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600 transition text-xs font-medium flex items-center justify-center gap-1 shadow-sm mx-auto"
               title={`${customizationCount} item(s) have customizations`}
             >
-              <Eye size={16} />
+              <Eye size={14} />
+              Note
               {customizationCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold ml-1">
                   {customizationCount}
                 </span>
               )}
             </button>
           ) : (
-            <span className="text-gray-400 italic text-sm" title="No customizations">
-              <Ban size={18} className="mx-auto opacity-50 text-orange-700" />
+            <span className="text-gray-400 italic text-xs" title="No customizations">
+              <Ban size={16} className="mx-auto opacity-50 text-orange-700" />
             </span>
           )}
         </td>
@@ -144,22 +145,24 @@ const OrderRow = ({
           </td>
 
           {/* Edit and Delete buttons - shown for both admin and staff */}
-          <td className="text-center border">
-            <button
-              onClick={() => setEditingOrder(order)}
-              className="px-3 py-2 text-blue-700 hover:bg-blue-100"
-              title="Edit order"
-            >
-              <SquarePen size={20} />
-            </button>
+          <td className="text-center border py-2">
+            <div className="flex items-center justify-center gap-1">
+              <button
+                onClick={() => setEditingOrder(order)}
+                className="p-1.5 text-blue-700 hover:bg-blue-100 rounded"
+                title="Edit order"
+              >
+                <SquarePen size={16} />
+              </button>
 
-            <button
-              onClick={() => setShowConfirmDelete(order)}
-              className="px-3 py-2 text-red-700 hover:bg-red-100"
-              title="Delete order"
-            >
-              <Trash size={20} />
-            </button>
+              <button
+                onClick={() => setShowConfirmDelete(order)}
+                className="p-1.5 text-red-700 hover:bg-red-100 rounded"
+                title="Delete order"
+              >
+                <Trash size={16} />
+              </button>
+            </div>
           </td>
         </>
       )}

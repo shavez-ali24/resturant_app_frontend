@@ -68,12 +68,12 @@ const CancelledOrders = () => {
   })();
 
   return (
-    <div className="min-h-screen px-4 py-6 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
-      <div className="mb-4 flex justify-between items-center">
+    <div className="h-screen overflow-hidden flex flex-col sm:px-2 lg:px-2 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+      <div className="flex-shrink-0 flex flex-row items-center justify-between p-2 mb-2 gap-2">
         <Heading title="Cancelled Orders" />
 
         <Select value={dateRange} onValueChange={handleDateRangeChange}>
-          <SelectTrigger className="h-9 w-[160px] rounded-lg bg-orange-100 border-orange-600 px-3 text-xs font-bold text-orange-700 uppercase shadow-sm">
+          <SelectTrigger className="h-8 w-[140px] rounded-lg bg-orange-100 border-orange-600 px-2 text-xs font-bold text-orange-700 uppercase shadow-sm">
             <SelectValue placeholder="Time Range" />
           </SelectTrigger>
           <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[160px]">
@@ -90,15 +90,17 @@ const CancelledOrders = () => {
         </Select>
       </div>
 
-      <OrdersTable
-        orders={orders}
-        loading={isLoading}
-        error={isError}
-        tableType="cancelled"
-      />
+      <div className="flex-1 overflow-auto mt-2 mx-4 rounded-xl">
+        <OrdersTable
+          orders={orders}
+          loading={isLoading}
+          error={isError}
+          tableType="cancelled"
+        />
+      </div>
 
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-center cursor-pointer">
+        <div className="flex-shrink-0 flex justify-center py-2">
           <Pagination>
             <PaginationContent>
 

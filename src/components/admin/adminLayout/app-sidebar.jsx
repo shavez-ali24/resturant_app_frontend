@@ -62,7 +62,7 @@ export function AppSidebar({ ...props }) {
             icon: SquareMenu,
             isActive: true,
             roles: ["admin", "staff"],
-            items: [{ title: "Menu Items", url: "/admin/menu" }],
+            items: [{ title: "Menu", url: "/admin/menu" }],
           },
         ]
       : []),

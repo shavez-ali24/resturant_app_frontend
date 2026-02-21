@@ -68,12 +68,12 @@ const CompletedOrders = () => {
   })();
 
   return (
-    <div className="min-h-screen px-4 py-6 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
-      <div className="mb-4 flex justify-between items-center">
+    <div className="h-screen overflow-hidden flex flex-col sm:px-2 lg:px-2 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+      <div className="flex-shrink-0 flex flex-row items-center justify-between p-2 mb-2 gap-2">
         <Heading title="Completed Orders" />
 
         <Select value={dateRange} onValueChange={handleDateRangeChange}>
-          <SelectTrigger className="h-9 w-[160px] rounded-lg border-orange-600 bg-orange-100 px-3 text-xs font-bold uppercase shadow-sm text-orange-700">
+          <SelectTrigger className="h-8 w-[140px] rounded-lg border-orange-600 bg-orange-100 px-2 text-xs font-bold uppercase shadow-sm text-orange-700">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1">
@@ -90,10 +90,12 @@ const CompletedOrders = () => {
         </Select>
       </div>
 
-      <OrdersTable orders={orders} loading={isLoading} error={isError} tableType="completed" />
+      <div className="flex-1 overflow-auto mt-2 mx-4 rounded-xl">
+        <OrdersTable orders={orders} loading={isLoading} error={isError} tableType="completed" />
+      </div>
 
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-center cursor-pointer">
+        <div className="flex-shrink-0 flex justify-center py-2">
           <Pagination>
             <PaginationContent>
 

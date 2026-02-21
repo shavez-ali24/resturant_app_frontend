@@ -302,18 +302,18 @@ const Orders = () => {
   };
 
   return (
-    <div className="min-h-screen  sm:px-4 lg:px-4 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+    <div className="h-screen overflow-hidden flex flex-col sm:px-2 lg:px-2 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
       {/* Header */}
-      <div className="flex flex-row items-center justify-between p-3 sm:p-4 mb-4 gap-3">
+      <div className="flex-shrink-0 flex flex-row items-center justify-between p-2 mb-2 gap-2">
         <Heading title="Pending Orders" />
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleManualRefresh}
-            className="p-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition flex items-center gap-2"
+            className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition flex items-center gap-1.5 text-sm"
           >
-            <SlRefresh />
-            <span className="hidden sm:inline text-sm">Refresh</span>
+            <SlRefresh size={16} />
+            <span className="hidden sm:inline text-xs">Refresh</span>
           </button>
 
           {/* Auto Refresh */}
@@ -328,16 +328,16 @@ const Orders = () => {
               }
             }}
           >
-            <SelectTrigger className="h-9 w-[140px] rounded-lg border-orange-600 bg-orange-100 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-gray-300 text-orange-700">
+            <SelectTrigger className="h-8 w-[120px] rounded-lg border-orange-600 bg-orange-100 px-2 text-xs font-bold uppercase shadow-sm ring-1 ring-gray-300 text-orange-700">
               <SelectValue placeholder="Auto Refresh" />
             </SelectTrigger>
 
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px] cursor-pointer ">
+            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[120px] cursor-pointer ">
               <SelectGroup>
-                <SelectItem value="OFF" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Off</SelectItem>
-                <SelectItem value="1" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 1 min</SelectItem>
-                <SelectItem value="2" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 2 min</SelectItem>
-                <SelectItem value="5" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 5 min</SelectItem>
+                <SelectItem value="OFF" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Off</SelectItem>
+                <SelectItem value="1" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 1 min</SelectItem>
+                <SelectItem value="2" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 2 min</SelectItem>
+                <SelectItem value="5" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 5 min</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -345,7 +345,8 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <OrdersTable
+      <div className="flex-1 overflow-auto mt-4 mx-4 rounded-xl">
+        <OrdersTable
         orders={orders}
         loading={loading}
         error={error}
@@ -356,12 +357,13 @@ const Orders = () => {
         tableType="pending"
         onCustomizationsClick={handleCustomizationsClick}
       />
+      </div>
 
       {/* Server-side Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
+        <div className="flex-shrink-0 flex justify-center py-2">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="gap-1">
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
@@ -377,7 +379,7 @@ const Orders = () => {
                 if (pageNum === 'ellipsis-left' || pageNum === 'ellipsis-right') {
                   return (
                     <PaginationItem key={`ellipsis-${index}`}>
-                      <span className="px-3 py-2">...</span>
+                      <span className="px-2 py-1">...</span>
                     </PaginationItem>
                   );
                 }
