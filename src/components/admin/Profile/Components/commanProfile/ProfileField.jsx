@@ -1,19 +1,11 @@
 import React from "react";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion";
 
 export const ProfileField = ({ label, value, icon }) => (
-    <div className="bg-orange-50 rounded-xl border border-orange-500 p-5 hover:shadow-sm transition-shadow">
-        <div className="flex items-center gap-3 mb-3">
-            {/* <span className="text-lg">{icon}</span> */}
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                {label}
-            </label>
+    <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
+        <div className="flex items-center gap-2 mb-1">
+            {icon && <span className="text-orange-600">{icon}</span>}
+            <label className="text-xs font-medium text-orange-600 uppercase tracking-wide">{label}</label>
         </div>
-        <div className="flex items-center justify-between">
-            <p className="text-lg font-semibold text-gray-900 break-all">
-                {value || "Not Available"}
-            </p>
-        </div>
+        <p className="text-sm font-semibold text-gray-900">{value || "N/A"}</p>
     </div>
 );

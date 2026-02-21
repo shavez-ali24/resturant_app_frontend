@@ -1,20 +1,15 @@
 import React from "react";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion";
 
 export const CategoryChips = ({ categories }) => (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pb-2 scrollbar-thin">
         {categories?.length > 0 ? (
             categories.map((category) => (
-                <span
-                    key={category}
-                    className="bg-orange-100 text-orange-800 border-2 border-orange-500 text-sm font-medium px-3 py-1.5 rounded-full"
-                >
+                <span key={category} className="bg-orange-200 text-orange-800 text-sm font-medium px-3 py-1.5 rounded-full border border-orange-300">
                     {category}
                 </span>
             ))
         ) : (
-            <p className="text-gray-500">No categories listed.</p>
+            <p className="text-gray-400 text-sm">No categories listed</p>
         )}
     </div>
 );

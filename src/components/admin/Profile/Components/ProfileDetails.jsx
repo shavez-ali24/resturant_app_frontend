@@ -1,7 +1,7 @@
 import { ProfileField } from './commanProfile/ProfileField';
 import { CategoryChips } from './commanProfile/CategoryChips';
 import { OrderModeStatus } from './commanProfile/OrderModeStatus';
-import { Image, Landmark, QrCode, Tag, User, Utensils } from 'lucide-react';
+import { Image, QrCode, Tag, Mail, Phone, MapPin, Globe, Hash, Building } from 'lucide-react';
 
 export default function ProfileDetails({ profileData }) {
     const userRole = localStorage.getItem("userRole") || "";
@@ -9,194 +9,133 @@ export default function ProfileDetails({ profileData }) {
     const emailOfAdmin = localStorage.getItem("userEmail") || "";
     const userName = localStorage.getItem("userName") || "";
 
-    // ✅ QR FIX — works for both raw base64 & prefixed base64
     const getFinalQR = () => {
         const rawQR = profileData?.qrCode || "";
         const cleanedQR = rawQR.replace(/\s/g, "");
-        return cleanedQR.startsWith("data:image")
-            ? cleanedQR
-            : `data:image/png;base64,${cleanedQR}`;
+        return cleanedQR.startsWith("data:image") ? cleanedQR : `data:image/png;base64,${cleanedQR}`;
     };
 
-    // If staff, show simplified view
+    const handleQRDownload = () => {
+        const qrUrl = getFinalQR();
+        const link = document.createElement('a');
+        link.href = qrUrl;
+        link.download = 'restaurant-qr.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (isStaff) {
         return (
-            <div className="max-w-4xl mx-auto space-y-8">
-                {/* Card 1: Staff Account */}
-                <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                    <div className="p-6 border-b border-orange-500">
-                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                            <User />
-                            Staff Account
-                        </h3>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <ProfileField label="Name" value={userName} />
-                        <ProfileField label="Email Address" value={emailOfAdmin} />
-                        <ProfileField label="Role" value="Staff" />
-                    </div>
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 bg-orange-50">
+                    <h2 className="text-lg font-semibold text-orange-700">Staff Information</h2>
                 </div>
-
-                {/* Card 2: Restaurant Info */}
-                <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                    <div className="p-6 border-b border-orange-500">
-                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                            <Utensils />
-                            Restaurant Info
-                        </h3>
-                    </div>
-                    <div className="p-6">
-                        <ProfileField label="Restaurant Name" value={profileData?.name} />
-                    </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <ProfileField icon={<Image className="w-4 h-4" />} label="Name" value={userName} />
+                    <ProfileField icon={<Mail className="w-4 h-4" />} label="Email" value={emailOfAdmin} />
+                    <ProfileField icon={<Tag className="w-4 h-4" />} label="Role" value="Staff" />
+                    <ProfileField icon={<Image className="w-4 h-4" />} label="Restaurant" value={profileData?.name} />
                 </div>
             </div>
         );
     }
 
     return (
-        <div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    
-                    {/* Card 1: Admin Account */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <User />
-                                Admin Account
-                            </h3>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <ProfileField label="Restaurant Name" value={profileData?.name} />
-                            <ProfileField label="Email Address" value={emailOfAdmin} />
-                        </div>
+        <div className="space-y-4">
+            {/* Contact & Basic Info Card */}
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 bg-orange-50">
+                    <h2 className="text-lg font-semibold text-orange-700">Restaurant Information</h2>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <ProfileField icon={<Tag className="w-4 h-4" />} label="Restaurant Name" value={profileData?.name} />
+                    <ProfileField icon={<Mail className="w-4 h-4" />} label="Email Address" value={emailOfAdmin} />
+                    <ProfileField icon={<Phone className="w-4 h-4" />} label="Phone Number" value={profileData?.phoneNumber} />
+                    <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />
+                    <div className="sm:col-span-2">
+                        <ProfileField icon={<MapPin className="w-4 h-4" />} label="Full Address" value={profileData?.address} />
                     </div>
+                    <ProfileField icon={<Globe className="w-4 h-4" />} label="Client Domain" value={profileData?.domain} />
+                </div>
+            </div>
 
-                    {/* Card 2: Restaurant Details */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <Utensils />
-                                Restaurant Details
-                            </h3>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2">
-                                <ProfileField label="Full Address" value={profileData?.address} />
-                            </div>
-                            <ProfileField label="Contact Phone" value={profileData?.phoneNumber} />
-                            <ProfileField label="Total Tables" value={profileData?.tableNumbers} />
-                            <div className="md:col-span-2">
-                                <ProfileField label="Client Domain" value={profileData?.domain} />
-                            </div>
-
-                            <div className="md:col-span-2 space-y-4">
-                                <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                                    Active Order Modes
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <OrderModeStatus mode="Eat Here" isEnabled={profileData?.orderModes?.eathere} />
-                                    <OrderModeStatus mode="Takeaway" isEnabled={profileData?.orderModes?.takeaway} />
-                                    <OrderModeStatus mode="Delivery" isEnabled={profileData?.orderModes?.delivery} />
-                                </div>
-                            </div>
-                        </div>
+            {/* Financial & Order Modes Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Financial Card */}
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-orange-50">
+                        <h2 className="text-lg font-semibold text-orange-700">Financial Settings</h2>
                     </div>
-
-                    {/* Card 3: Financial Settings */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <Landmark />
-                                Financial Settings
-                            </h3>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges ?? 0}`} icon="₹" />
-                            <ProfileField label="GST Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
-                            <ProfileField label="GST Rate" value={`${profileData?.gstRate}%`} icon="%" />
-                            <div className="md:col-span-2">
-                                <ProfileField label="GST Number" value={profileData?.gstNumber} />
-                            </div>
-                        </div>
+                    <div className="p-4 grid grid-cols-2 gap-4">
+                        <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges ?? 0}`} />
+                        <ProfileField icon={<Building className="w-4 h-4" />} label="GST Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
+                        <ProfileField icon={<Building className="w-4 h-4" />} label="GST Rate" value={`${profileData?.gstRate}%`} />
+                        <ProfileField icon={<Building className="w-4 h-4" />} label="GST Number" value={profileData?.gstNumber} />
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN */}
-                <div className="lg:col-span-1 space-y-8">
-                    
-                    {/* Logo */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <Image />
-                                Restaurant Logo
-                            </h3>
-                        </div>
-                        <div className="p-6 flex justify-center items-center">
-                            {profileData?.logo ? (
-                                <img
-                                    src={profileData?.logo?.url}
-                                    alt="Restaurant Logo"
-                                    className="w-48 h-48 object-cover rounded-xl border p-1 bg-orange-50"
-                                />
-                            ) : (
-                                <div className="w-48 h-48 bg-gray-100 rounded-xl border border-dashed flex items-center justify-center">
-                                    <p className="text-gray-500">No logo uploaded</p>
-                                </div>
-                            )}
-                        </div>
+                {/* Order Modes Card */}
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-orange-50">
+                        <h2 className="text-lg font-semibold text-orange-700">Order Modes</h2>
                     </div>
-
-                    {/* Categories */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <Tag />
-                                Categories
-                            </h3>
-                        </div>
-                        <div className="p-6">
-                            <CategoryChips categories={profileData?.categories} />
-                        </div>
+                    <div className="p-4 space-y-3">
+                        <OrderModeStatus label="Eat Here" isEnabled={profileData?.orderModes?.eathere} />
+                        <OrderModeStatus label="Takeaway" isEnabled={profileData?.orderModes?.takeaway} />
+                        <OrderModeStatus label="Delivery" isEnabled={profileData?.orderModes?.delivery} />
                     </div>
+                </div>
+            </div>
 
-                    {/* QR Code */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-orange-500">
-                        <div className="p-6 border-b border-orange-500">
-                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                <QrCode />
-                                Tap N' Order QR
-                            </h3>
-                        </div>
-
-                        <div className="p-6">
-                            {profileData?.qrCode ? (
-                                <div className="text-center">
-                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-orange-500 inline-block ">
-                                        <img
-                                            src={getFinalQR()}
-                                            alt="QR Code"
-                                            className="w-48 h-48 object-contain"
-                                        />
-                                    </div>
-
-                                    <a
-                                        href={getFinalQR()}
-                                        download="restaurant-qr.png"
-                                        className="w-full mt-4 bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        Download QR
-                                    </a>
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 text-center">
-                                    QR Code not generated.
-                                </p>
-                            )}
-                        </div>
+            {/* Logo, QR & Categories Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                {/* Logo Card */}
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-gray-100 bg-orange-50">
+                        <h2 className="text-lg font-semibold text-orange-700">Restaurant Logo</h2>
                     </div>
+                    <div className="p-4 flex-1 flex items-center justify-center">
+                        {profileData?.logo ? (
+                            <img src={profileData?.logo?.url} alt="Logo" className="w-32 h-32 sm:w-40 sm:h-40 object-contain rounded-lg shadow-sm" />
+                        ) : (
+                            <div className="w-20 h-20 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                <Image className="w-8 h-8 text-gray-400" />
+                            </div>
+                        )}
+                    </div>
+                </div>
 
+                {/* QR Card */}
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-gray-100 bg-orange-50">
+                        <h2 className="text-lg font-semibold text-orange-700">Tap N' Order QR</h2>
+                    </div>
+                    <div className="p-4 flex-1 flex items-center justify-center">
+                        {profileData?.qrCode ? (
+                            <div className="text-center">
+                                <img src={getFinalQR()} alt="QR Code" className="w-40 h-40 object-contain mx-auto mb-3" />
+                                <button onClick={handleQRDownload} className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                                    Download QR
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center py-8">
+                                <QrCode className="w-16 h-16 text-gray-300 mb-2" />
+                                <p className="text-gray-400 text-sm">QR Not Generated</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Categories Card */}
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden lg:col-span-2">
+                    <div className="p-4 border-b border-gray-100 bg-orange-50">
+                        <h2 className="text-lg font-semibold text-orange-700">Categories</h2>
+                    </div>
+                    <div className="p-4">
+                        <CategoryChips categories={profileData?.categories} />
+                    </div>
                 </div>
             </div>
         </div>
