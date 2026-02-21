@@ -17,8 +17,8 @@ export const FormCard = ({ title, icon, children, customIndex }) => (
         animate="visible"
         custom={customIndex}
     >
-        <div className="p-6 md:p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+        <div className="p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
                 <span className="text-orange-500">{icon}</span>
                 {title}
             </h3>

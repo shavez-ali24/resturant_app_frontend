@@ -5,7 +5,7 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, handleOrderModeToggle, activeModesCount }) {
     return (
         <div>
-            <FormCard title="Order Mode" icon="📋" customIndex={2}>
+            <FormCard title="Order Mode"  customIndex={2}>
                 <div className="space-y-4">
                     {/* ✅ NEW: Error message if no mode is active */}
                     {!atLeastOneModeActive && (

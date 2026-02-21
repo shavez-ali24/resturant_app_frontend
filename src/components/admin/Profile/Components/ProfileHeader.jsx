@@ -9,7 +9,7 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
     const isAdmin = userRole === "admin";
     
     return (
-        <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100">
             <div className="h-auto min-h-14 bg-orange-300 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg overflow-hidden border-2 border-white shadow-sm bg-white flex-shrink-0">

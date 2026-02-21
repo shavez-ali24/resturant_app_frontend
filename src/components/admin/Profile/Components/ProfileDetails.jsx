@@ -129,7 +129,7 @@ export default function ProfileDetails({ profileData }) {
                 </div>
 
                 {/* Categories Card */}
-                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden lg:col-span-2">
+                <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 lg:col-span-2">
                     <div className="p-4 border-b border-gray-100 bg-orange-50">
                         <h2 className="text-lg font-semibold text-orange-700">Categories</h2>
                     </div>

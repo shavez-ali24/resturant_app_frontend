@@ -655,7 +655,7 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <div className="text-4xl mb-3">📋</div>
+                              {/* <div className="text-4xl mb-3">📋</div> */}
                               <p className="text-gray-700 font-bold mb-2">No Data Available</p>
                               <p className="text-gray-600">
                                 {timeRange === "custom" && fromDate && toDate

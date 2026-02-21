@@ -3,7 +3,7 @@ import { FormCard } from './commanProfile/FormCard';
 import { FormField } from './commanProfile/FormField';
 
 const UpdateCoreProfileForm = ({ formData, handleChange }) => (
-    <FormCard title="Core Profile" customIndex={1}>
+    <FormCard customIndex={1}>
         <FormField
             label="Address"
             name="address"
@@ -18,7 +18,7 @@ const UpdateCoreProfileForm = ({ formData, handleChange }) => (
                 type="tel"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                placeholder="e.g. 9876543210"
+                placeholder="e.g. 00000000000"
             />
             <FormField
                 label="Total Tables"

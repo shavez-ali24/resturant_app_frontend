@@ -4,7 +4,7 @@ import { FormCard } from './commanProfile/FormCard';
 
 export default function UpdateBrandingForm({ handleFileChange, file, fileError }) {
     return (
-        <FormCard title="Branding"  customIndex={3}>
+        <FormCard   customIndex={3}>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Restaurant Logo
