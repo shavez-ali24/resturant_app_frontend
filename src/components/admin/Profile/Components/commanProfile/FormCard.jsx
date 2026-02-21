@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export const FormCard = ({ title, icon, children, customIndex }) => (
     <motion.div
-        className="bg-white rounded-xl"
+        className="bg-white rounded-xl border border-orange-100 shadow-sm"
         variants={{
             hidden: { opacity: 0, y: 20 },
             visible: (i) => ({

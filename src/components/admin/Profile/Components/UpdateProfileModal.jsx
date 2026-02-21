@@ -41,25 +41,25 @@ export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSucces
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center"
+                className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-2 sm:p-4"
                 onClick={onClose}
             >
                 {/* Main Form Modal */}
                 <motion.div
                     variants={modalContentVariant}
-                    className="relative mt-10 bg-gray-50 rounded-xl shadow-2xl w-full max-w-3xl mx-auto max-h-[80vh] overflow-y-auto"
+                    className="relative bg-white rounded-2xl shadow-2xl border border-orange-100 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="w-full p-4 md:p-8 space-y-6">
+                    <div className="w-full p-3 md:p-5 space-y-4 overflow-y-auto">
                         {/* Modal Header */}
-                        <div className="flex justify-between items-center pb-4 border-b border-gray-300">
-                            <h2 className="text-2xl font-bold text-gray-800">
+                        <div className="flex justify-between items-center pb-4 border-b border-orange-200">
+                            <h2 className="text-1xl sm:text-2xl font-bold text-orange-700">
                                 Update Restaurant Profile
                             </h2>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-200"
+                                className="text-orange-400 hover:text-orange-700 transition-colors p-1 rounded-full hover:bg-orange-100"
                                 aria-label="Close modal"
                             >
                                 <svg 

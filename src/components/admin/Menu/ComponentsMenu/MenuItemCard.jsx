@@ -151,10 +151,10 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
-      className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row w-full border border-orange-200 overflow-hidden"
+      className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row w-full h-auto sm:h-40 border border-orange-200 overflow-hidden"
     >
       {/* Image */}
-      <div className="relative w-full sm:w-28 h-40 sm:h-28 overflow-hidden bg-gray-100 flex-shrink-0">
+      <div className="relative w-full sm:w-40 h-40 sm:h-40 overflow-hidden bg-gray-100 flex-shrink-0">
         <img
           src={
             safeItem.image?.url ||
@@ -166,13 +166,13 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4 flex flex-col min-w-0 relative">
+      <div className="flex-1 px-3 py-2 md:px-4 md:py-2 flex flex-col min-w-0 relative justify-between overflow-hidden">
         {/* Top Right */}
-        <div className="absolute top-3 right-3 flex items-start gap-2">
+        <div className="absolute top-2 right-2 md:top-3 md:right-3 flex items-start gap-1.5 md:gap-2">
           {/* Category Badge */}
-          <div className="px-2 py-1 bg-orange-300/70 rounded-md flex items-center gap-1">
+          <div className="px-1.5 py-0.5 md:px-2 md:py-1 bg-orange-300/70 rounded-md flex items-center gap-1">
             <Tag size={10} className="text-black" />
-            <span className="text-xs text-black truncate max-w-[80px]">
+            <span className="text-[10px] md:text-xs text-black truncate max-w-[60px] md:max-w-[80px]">
               {safeItem.category}
             </span>
           </div>
@@ -185,25 +185,25 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                   e.stopPropagation();
                   setShowMenu((prev) => !prev);
                 }}
-                className="p-1.5 rounded-lg hover:bg-gray-100"
+                className="p-1 md:p-1.5 rounded-lg hover:bg-gray-100"
               >
-                <MoreVertical size={18} />
+                <MoreVertical size={16} md:size={18} />
               </button>
 
               {showMenu && (
                 <motion.div
                   initial={{ opacity: 0, y: 5, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border z-50"
+                  className="absolute right-0 top-full mt-1 w-32 md:w-40 bg-white rounded-lg shadow-xl border z-50"
                 >
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       onEdit();
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm hover:bg-orange-50 flex items-center gap-3"
+                    className="w-full px-3 py-2 md:px-4 md:py-2.5 text-left text-xs md:text-sm hover:bg-orange-50 flex items-center gap-2 md:gap-3"
                   >
-                    <Edit size={16} /> Edit Item
+                    <Edit size={14} md:size={16} /> Edit Item
                   </button>
 
                   <button
@@ -211,9 +211,9 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                       setShowMenu(false);
                       onDelete();
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 border-t"
+                    className="w-full px-3 py-2 md:px-4 md:py-2.5 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 md:gap-3 border-t"
                   >
-                    <Trash2 size={16} /> Delete
+                    <Trash2 size={14} md:size={16} /> Delete
                   </button>
                 </motion.div>
               )}
@@ -222,10 +222,10 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
         </div>
 
         {/* Info */}
-        <div className="pr-24">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="pr-20 md:pr-24">
+          <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
             <div
-              className={`w-5 h-5 flex items-center justify-center border ${
+              className={`w-4 h-4 md:w-5 md:h-5 flex items-center justify-center border ${
                 safeItem.type === "veg"
                   ? "bg-green-100 border-green-600"
                   : safeItem.type === "non-veg"
@@ -234,38 +234,38 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
               }`}
             >
               <div
-                className={`w-2 h-2 rounded-full ${
+                className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
                   safeItem.type === "veg" ? "bg-green-600" : safeItem.type === "non-veg" ? "bg-red-600" : "bg-yellow-600"
                 }`}
               />
             </div>
 
-            <h3 className="text-base font-bold truncate">{safeItem.name}</h3>
+            <h3 className="text-sm md:text-base font-bold truncate">{safeItem.name}</h3>
           </div>
 
           {/* Discount Badge for Single Items */}
           {isSinglePricing && safeItem.discount?.active && (
-            <div className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-medium mb-2">
+            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 md:px-2 md:py-1 bg-orange-100 text-orange-700 rounded-md text-[10px] md:text-xs font-medium mb-1 md:mb-2">
               <span className="font-bold">
                 {safeItem.discount.type?.toLowerCase() === "percentage" 
                   ? `${safeItem.discount.value}% OFF` 
                   : `₹${safeItem.discount.value} OFF`}
               </span>
-              <span className="line-through text-gray-500 ml-1">
+              <span className="line-through text-gray-500 ml-0.5 md:ml-1 text-[9px] md:text-xs">
                 ₹{safeItem.price}
               </span>
             </div>
           )}
 
-          <div className="flex items-center gap-3 text-sm flex-wrap">
+          <div className="flex items-center gap-2 md:gap-3 text-[11px] md:text-sm flex-wrap">
             {safeItem.available ? (
               <div className="flex items-center gap-1 text-green-600 font-medium">
-                <CheckCircle size={14} />
+                <CheckCircle size={12} md:size={14} />
                 <span>Available</span>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-red-600 font-medium">
-                <XCircle size={14} />
+                <XCircle size={12} md:size={14} />
                 <span>Unavailable</span>
               </div>
             )}
@@ -273,35 +273,35 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             {/* Display Price based on Pricing Type */}
             {isSinglePricing && (
               <div className="flex items-center gap-1">
-                <span className="font-bold text-green-700">
+                <span className="font-bold text-green-700 text-xs md:text-sm">
                   ₹{getFinalPrice()}
                 </span>
               </div>
             )}
 
             {isVariantPricing && (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5 md:gap-1">
                 {getVariantDisplay().map((variant) => (
-                  <div key={variant.key} className="flex items-center gap-2">
-                    <span className="text-gray-700 font-medium min-w-[30px]">
+                  <div key={variant.key} className="flex items-center gap-1 md:gap-2">
+                    <span className="text-gray-700 font-medium min-w-[25px] md:min-w-[30px] text-[10px] md:text-xs">
                       {variant.label}:
                     </span>
                     {variant.hasDiscount ? (
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-green-700">
+                      <div className="flex items-center gap-0.5 md:gap-1">
+                        <span className="font-bold text-green-700 text-xs md:text-sm">
                           ₹{variant.price}
                         </span>
-                        <span className="line-through text-gray-400 text-xs">
+                        <span className="line-through text-gray-400 text-[9px] md:text-xs">
                           ₹{variant.originalPrice}
                         </span>
-                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                        <div className="inline-flex items-center gap-0.5 px-1 py-0.5 md:px-1.5 md:py-0.5 bg-orange-100 text-orange-700 rounded text-[9px] md:text-xs font-medium">
                           {variant.discountInfo.type === "percentage" 
                             ? `${variant.discountInfo.value}% OFF` 
                             : `₹${variant.discountInfo.value} OFF`}
                         </div>
                       </div>
                     ) : (
-                      <span className="font-bold text-green-700">
+                      <span className="font-bold text-green-700 text-xs md:text-sm">
                         ₹{variant.price}
                       </span>
                     )}
@@ -311,15 +311,15 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             )}
 
             {isComboPricing && (
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-blue-700">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="font-bold text-blue-700 text-xs md:text-sm">
                   ₹{safeItem.comboPrice}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-[10px] md:text-xs text-gray-500">
                   ({safeItem.comboItems?.length || 0} items)
                 </span>
                 {safeItem.discount?.active && (
-                  <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium ml-2">
+                  <div className="inline-flex items-center gap-0.5 px-1 py-0.5 md:px-2 md:py-1 bg-green-100 text-green-700 rounded-md text-[10px] md:text-xs font-medium ml-0.5 md:ml-2">
                     <span className="font-bold">
                       {safeItem.discount.type?.toLowerCase() === "percentage" 
                         ? `${safeItem.discount.value}% OFF` 
@@ -333,11 +333,11 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
         </div>
 
         {/* View Button - Bottom Right */}
-        <div className="flex items-center w-full mt-4">
+        <div className="flex items-center w-full mt-1 md:mt-1">
           <div className="flex-1" />
           <button
             onClick={onView}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium whitespace-nowrap"
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-xs md:text-sm font-medium whitespace-nowrap"
           >
             View
           </button>

@@ -72,7 +72,7 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
         <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[200px] origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div className="absolute z-50 mt-2 w-full min-w-[200px] origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none max-h-60 overflow-y-scroll">
           <div className="py-2">
             {options.map((option) => (
               <button

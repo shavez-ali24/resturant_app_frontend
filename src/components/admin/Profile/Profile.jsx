@@ -29,7 +29,7 @@ const Profile = () => {
   const resData = restaurant?.data || restaurant?.restaurant;
 
   return (
-    <div className="h-full bg-gray-50 p-3 md:p-6 pb-20">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-6 pb-20 overflow-x-hidden">
       <div className="max-w-6xl mx-auto space-y-4">
         <ProfileHeader
           onUpdateClick={() => setIsUpdateModalOpen(true)}

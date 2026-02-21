@@ -42,7 +42,7 @@ export default function ProfileDetails({ profileData }) {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-hidden">
             {/* Contact & Basic Info Card */}
             <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden">
                 <div className="p-4 border-b border-gray-100 bg-orange-50">
