@@ -115,20 +115,20 @@ const AddItemModal = ({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-[2px] sm:p-4"
           onClick={onClose}
         >
           <motion.div
             variants={addItemModalVariant}
-            className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-1 shadow-lg"
+            className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="max-h-[92dvh] overflow-y-auto rounded-[14px] bg-white sm:max-h-[88vh]">
-              <motion.form onSubmit={onSubmitHandler} className="p-4 sm:p-6">
+            <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
+              <motion.form onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
                 <ModalHeader onClose={onClose} />
                 {backendError && <ErrorDisplay error={backendError} />}
 
-                <div className="space-y-6 mt-6">
+                <div className="mt-5 space-y-5">
                   <FormInput
                     label="Product Name"
                     name="name"

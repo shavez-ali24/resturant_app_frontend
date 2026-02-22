@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
 import { SlRefresh } from "react-icons/sl";
 
@@ -44,7 +44,6 @@ const Orders = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(
     () => localStorage.getItem("autoRefresh") || "OFF"
   );
@@ -185,33 +184,15 @@ const Orders = () => {
   const tables = extractTablesFromRestaurant();
 
   // --- Extract data from API response ---
-  const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
-  const totalOrders = ordersResponse?.totalOrders || 0;
+  const orders = useMemo(
+    () => (Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : []),
+    [ordersResponse?.orders]
+  );
   const totalPages = ordersResponse?.totalPages || 1;
   const loading = ordersLoading || restaurantLoading;
   const error = (ordersError || restaurantError)
     ? getFriendlyOrderError(ordersErrorObj || restaurantError, "fetch")
     : null;
-
-  // Debug logs
-  useEffect(() => {
-    if (restaurantData) {
-      // console.log("Full Restaurant API Response:", restaurantData);
-      // console.log("Restaurant Object:", restaurantData.restaurant || restaurantData);
-      // console.log("Tables extracted:", tables);
-      // console.log("Table count:", tables.length);
-      
-      // Aapke API response ke structure ko check karein
-      const restaurant = restaurantData.restaurant || restaurantData;
-      // console.log("Available keys in restaurant:", Object.keys(restaurant));
-      // console.log("tableNumbers field:", restaurant.tableNumbers);
-    }
-  }, [restaurantData, tables]);
-
-  // Update lastUpdated timestamp
-  useEffect(() => {
-    if (ordersResponse.orders) setLastUpdated(new Date());
-  }, [ordersResponse]);
 
   // Update bill modal live
   useEffect(() => {
@@ -222,7 +203,7 @@ const Orders = () => {
   }, [orders, orderForBillModal]);
 
   // Manual Refresh
-  const handleManualRefresh = useCallback(async () => {
+  const handleManualRefresh = async () => {
     try {
       await refetchOrders();
       await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
@@ -230,7 +211,7 @@ const Orders = () => {
     } catch (err) {
       notify(getFriendlyOrderError(err, "refresh"), "error");
     }
-  }, [refetchOrders, refetchRestaurant, notify, getFriendlyOrderError]);
+  };
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -360,26 +341,19 @@ const Orders = () => {
     return pageNumbers;
   };
 
-  // Handle backdrop click for modals
-  const handleBackdropClick = (e, closeFunction) => {
-    if (e.target === e.currentTarget) {
-      closeFunction();
-    }
-  };
-
   return (
-    <div className="h-screen overflow-hidden flex flex-col sm:px-2 lg:px-2 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
-      <div className="flex-shrink-0 flex flex-row items-center justify-between p-2 mb-2 gap-2">
+      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
         <Heading title="Pending Orders" />
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleManualRefresh}
-            className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition flex items-center gap-1.5 text-sm"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
           >
             <SlRefresh size={16} />
-            <span className="hidden sm:inline text-xs">Refresh</span>
+            <span className="hidden text-xs sm:inline">Refresh</span>
           </button>
 
           {/* Auto Refresh */}
@@ -394,16 +368,16 @@ const Orders = () => {
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[120px] rounded-lg border-orange-600 bg-orange-100 px-2 text-xs font-bold uppercase shadow-sm ring-1 ring-gray-300 text-orange-700">
+            <SelectTrigger className="h-10 w-[130px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
               <SelectValue placeholder="Auto Refresh" />
             </SelectTrigger>
 
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[120px] cursor-pointer ">
+            <SelectContent className="min-w-[130px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
               <SelectGroup>
-                <SelectItem value="OFF" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Off</SelectItem>
-                <SelectItem value="1" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 1 min</SelectItem>
-                <SelectItem value="2" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 2 min</SelectItem>
-                <SelectItem value="5" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700 text-xs">Every 5 min</SelectItem>
+                <SelectItem value="OFF" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Off</SelectItem>
+                <SelectItem value="1" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 1 min</SelectItem>
+                <SelectItem value="2" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 2 min</SelectItem>
+                <SelectItem value="5" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 5 min</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -411,7 +385,7 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="flex-1 overflow-auto mt-2 sm:mt-4 mx-2 sm:mx-4 rounded-xl">
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:mt-4">
         <OrdersTable
         orders={orders}
         loading={loading}
@@ -427,9 +401,9 @@ const Orders = () => {
 
       {/* Server-side Pagination */}
       {totalPages > 1 && (
-        <div className="flex-shrink-0 flex justify-center py-2">
+        <div className="flex flex-shrink-0 justify-center py-2">
           <Pagination>
-            <PaginationContent className="gap-1">
+            <PaginationContent className="gap-1 rounded-xl border border-orange-200 bg-white/95 px-2 py-1 shadow-sm">
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
@@ -437,7 +411,9 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage > 1) handlePageChange(currentPage - 1);
                   }}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }`}
                 />
               </PaginationItem>
 
@@ -451,13 +427,18 @@ const Orders = () => {
                 }
 
                 return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      href="#"
-                      isActive={currentPage === pageNum}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(pageNum);
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === pageNum}
+                        className={`rounded-lg border border-orange-200 ${
+                          currentPage === pageNum
+                            ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
+                            : "bg-white text-gray-700 hover:bg-orange-50"
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(pageNum);
                       }}
                     >
                       {pageNum}
@@ -473,7 +454,9 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage < totalPages) handlePageChange(currentPage + 1);
                   }}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                    currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                  }`}
                 />
               </PaginationItem>
             </PaginationContent>

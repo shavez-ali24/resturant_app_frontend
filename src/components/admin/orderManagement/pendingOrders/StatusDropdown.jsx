@@ -21,7 +21,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
       <SelectTrigger
-        className={`h-10 md:h-8 w-full md:w-[130px] rounded-lg border-0 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-offset-1 ${getStatusBadge(
+        className={`h-10 md:h-9 w-full md:w-[130px] rounded-xl border-0 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 ${getStatusBadge(
           order.status
         )}`}
       >
@@ -30,12 +30,12 @@ const StatusDropdown = ({ order, updateOrder }) => {
         </span>
       </SelectTrigger>
 
-      <SelectContent className="bg-white border border-gray-200 shadow-xl rounded-xl p-1 min-w-[140px]">
+      <SelectContent className="min-w-[140px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
         <SelectGroup>
           {/* Item: Pending */}
           <SelectItem
             value="pending"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 focus:bg-yellow-50 focus:text-yellow-700 transition-colors"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
           >
             <div className="flex items-center gap-2">
               <span><Hourglass size={16} /></span> Pending
@@ -45,7 +45,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
           {/* Item: Completed */}
           <SelectItem
             value="completed"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-green-50 hover:text-green-700 focus:bg-green-50 focus:text-green-700 transition-colors"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
           >
             <div className="flex items-center gap-2">
               <span><ClipboardCheck size={16} /></span> Completed
@@ -55,7 +55,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
           {/* Item: Cancelled */}
           <SelectItem
             value="cancelled"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700 transition-colors"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
           >
             <div className="flex items-center gap-2">
               <span><X size={16} /></span> Cancelled

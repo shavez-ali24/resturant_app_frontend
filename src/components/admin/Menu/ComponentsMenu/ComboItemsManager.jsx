@@ -21,7 +21,6 @@ const ComboItemsManager = ({
   setComboItems,
   menuItems = [],
   errors = {},
-  setFormData,
   foodType = "mixed",
   isLoadingMenu = false,
   discount = null,
@@ -29,6 +28,7 @@ const ComboItemsManager = ({
 }) => {
   const [availableMenuItems, setAvailableMenuItems] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const MotionDiv = motion.div;
 
   // Filter menu items based on food type and availability
   useEffect(() => {
@@ -243,7 +243,7 @@ const ComboItemsManager = ({
             type="button"
             onClick={addComboItem}
             disabled={isLoadingMenu || getAvailableItemsCount() === 0}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             <PlusCircleIcon className="h-4 w-4" />
             {isLoadingMenu ? "Loading..." : "Add Item"}
@@ -253,7 +253,7 @@ const ComboItemsManager = ({
 
       {/* Loading State */}
       {isLoadingMenu && (
-        <div className="text-center py-8 border-2 border-dashed border-orange-200 rounded-lg bg-orange-50">
+        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
           <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
         </div>
@@ -261,7 +261,7 @@ const ComboItemsManager = ({
 
       {/* No Items Available */}
       {!isLoadingMenu && menuItems.length === 0 && (
-        <div className="text-center py-8 border-2 border-dashed border-orange-200 rounded-lg bg-orange-50">
+        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
           <p className="text-gray-500">No menu items found in database</p>
           <p className="text-sm text-gray-400 mt-1">
             Create some regular menu items first to add to combos
@@ -271,7 +271,7 @@ const ComboItemsManager = ({
 
       {/* No Available Items After Filter */}
       {!isLoadingMenu && menuItems.length > 0 && availableMenuItems.length === 0 && (
-        <div className="text-center py-8 border-2 border-dashed border-orange-200 rounded-lg bg-orange-50">
+        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
           <p className="text-gray-500">No available items for combo</p>
           <p className="text-sm text-gray-400 mt-1">
             All items are either combos, deleted, or unavailable
@@ -281,18 +281,18 @@ const ComboItemsManager = ({
 
       {/* Stats Bar */}
       {!isLoadingMenu && comboItems.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+        <div className="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
           <div className="flex justify-between items-center">
             <div>
-              <span className="text-sm font-medium text-orange-800">
+              <span className="text-sm font-semibold text-gray-800">
                 {comboItems.length} item{comboItems.length !== 1 ? 's' : ''} in combo
               </span>
-              <span className="text-sm text-orange-600 ml-4">
+              <span className="ml-4 text-sm text-gray-600">
                 Total value: ₹{calculateComboValue()}
               </span>
               {comboPrice && (
                 <>
-                  <span className="text-sm text-orange-600 ml-4">
+                  <span className="ml-4 text-sm text-gray-600">
                     Combo price: ₹{comboPrice}
                   </span>
                   {discount?.active && (
@@ -328,15 +328,15 @@ const ComboItemsManager = ({
             const itemTotal = calculateItemTotal(item);
             
             return (
-              <motion.div
+              <MotionDiv
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="border border-orange-200 rounded-lg overflow-hidden bg-white"
+                className="overflow-hidden rounded-xl border border-orange-200 bg-white shadow-sm"
               >
                 {/* Item Header */}
                 <div 
-                  className="p-4 cursor-pointer hover:bg-orange-50 transition-colors flex items-center justify-between"
+                  className="flex cursor-pointer items-center justify-between gap-2 bg-orange-50/60 p-4 transition-colors hover:bg-orange-50"
                   onClick={() => toggleExpand(index)}
                 >
                   <div className="flex items-center gap-3">
@@ -370,7 +370,7 @@ const ComboItemsManager = ({
                         e.stopPropagation();
                         removeComboItem(index);
                       }}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 hover:text-red-800"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -384,10 +384,10 @@ const ComboItemsManager = ({
 
                 {/* Expanded Form */}
                 {isExpanded && (
-                  <motion.div
+                  <MotionDiv
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
-                    className="p-4 border-t border-orange-100 bg-orange-50"
+                    className="border-t border-orange-100 bg-white p-4"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Menu Item Selection - FIXED */}
@@ -400,15 +400,17 @@ const ComboItemsManager = ({
                           onValueChange={(val) => val !== "none" && handleComboItemChange(index, "menuItemId", val)}
                         >
                           <SelectTrigger
-                            className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-orange-50 text-sm ${
-                              !item.menuItemId ? "border-red-500" : "border-orange-500"
+                            className={`h-11 w-full rounded-xl border px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+                              !item.menuItemId
+                                ? "border-red-500 bg-red-50"
+                                : "border-orange-200 bg-white hover:border-orange-300"
                             }`}
                           >
                             <SelectValue placeholder="Select an item" />
                           </SelectTrigger>
-                          <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 max-h-60 overflow-y-auto">
+                          <SelectContent className="max-h-60 overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
                             <SelectGroup>
-                              <SelectItem value="none" disabled className="text-gray-400">
+                              <SelectItem value="none" disabled className="cursor-not-allowed rounded-lg text-sm text-gray-400 data-[disabled]:opacity-70">
                                 Select an item
                               </SelectItem>
                               {availableMenuItems.map(menuItem => {
@@ -423,7 +425,7 @@ const ComboItemsManager = ({
                                     key={itemId} 
                                     value={itemId}
                                     disabled={alreadyAdded && item.menuItemId !== itemId}
-                                    className="data-[highlighted]:bg-orange-200 data-[disabled]:opacity-50"
+                                    className="cursor-pointer rounded-lg text-sm text-gray-700 data-[disabled]:opacity-50 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                                   >
                                     {itemName} 
                                     {menuItem.pricingType === "single" 
@@ -457,22 +459,24 @@ const ComboItemsManager = ({
                             onValueChange={(val) => val !== "none" && handleComboItemChange(index, "variant", val)}
                           >
                             <SelectTrigger
-                              className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-orange-50 text-sm ${
-                                !item.variant ? "border-red-500" : "border-orange-500"
+                              className={`h-11 w-full rounded-xl border px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+                                !item.variant
+                                  ? "border-red-500 bg-red-50"
+                                  : "border-orange-200 bg-white hover:border-orange-300"
                               }`}
                             >
                               <SelectValue placeholder="Select variant" />
                             </SelectTrigger>
-                            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px]">
+                            <SelectContent className="min-w-[140px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
                               <SelectGroup>
-                                <SelectItem value="none" disabled className="text-gray-400">
+                                <SelectItem value="none" disabled className="cursor-not-allowed rounded-lg text-sm text-gray-400 data-[disabled]:opacity-70">
                                   Select variant
                                 </SelectItem>
                                 {variants.map(variant => (
                                   <SelectItem 
                                     key={variant.value} 
                                     value={variant.value}
-                                    className="data-[highlighted]:bg-orange-200"
+                                    className="cursor-pointer rounded-lg text-sm text-gray-700 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                                   >
                                     {variant.label} (₹{getVariantPrice(item.menuItemId, variant.value)})
                                   </SelectItem>
@@ -499,7 +503,7 @@ const ComboItemsManager = ({
                             type="button"
                             onClick={() => handleQuantityChange(index, -1)}
                             disabled={(item.quantity || 1) <= 1}
-                            className="flex h-11 w-11 items-center justify-center rounded-l-lg border border-orange-300 bg-orange-50 text-orange-700 transition-all duration-200 hover:bg-orange-100 active:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-11 w-11 items-center justify-center rounded-l-xl border border-orange-200 bg-white text-orange-700 transition-all duration-200 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -512,7 +516,7 @@ const ComboItemsManager = ({
                               value={item.quantity || 1}
                               onChange={(e) => handleComboItemChange(index, "quantity", e.target.value)}
                               min="1"
-                              className="h-11 w-full border-y border-orange-300 bg-white p-2.5 text-center text-sm font-medium focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              className="h-11 w-full border-y border-orange-200 bg-white p-2.5 text-center text-sm font-medium outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                             />
                             <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
                               <span className="text-xs text-gray-400 ml-3">Qty</span>
@@ -522,7 +526,7 @@ const ComboItemsManager = ({
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(index, 1)}
-                            className="flex h-11 w-11 items-center justify-center rounded-r-lg border border-orange-300 bg-orange-50 text-orange-700 transition-all duration-200 hover:bg-orange-100 active:bg-orange-200"
+                            className="flex h-11 w-11 items-center justify-center rounded-r-xl border border-orange-200 bg-white text-orange-700 transition-all duration-200 hover:bg-orange-50"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -542,7 +546,7 @@ const ComboItemsManager = ({
 
                     {/* Selected Item Info */}
                     {menuItem && (
-                      <div className="mt-4 p-3 bg-white rounded-lg border border-orange-200">
+                      <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/40 p-3">
                         <div className="flex justify-between items-center">
                           <div>
                             <p className="font-medium">{menuItem.name}</p>
@@ -565,9 +569,9 @@ const ComboItemsManager = ({
                         </div>
                       </div>
                     )}
-                  </motion.div>
+                  </MotionDiv>
                 )}
-              </motion.div>
+              </MotionDiv>
             );
           })}
         </div>
@@ -575,7 +579,7 @@ const ComboItemsManager = ({
 
       {/* Validation Error */}
       {errors.comboItems && typeof errors.comboItems === 'string' && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
           <p className="text-sm text-red-600 flex items-center gap-2">
             <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1">{errors.comboItems}</span>

@@ -151,7 +151,7 @@ const DiscountSection = ({
   }, [safeDiscount.type]);
 
   return (
-    <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+    <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-4">
       <label className="flex items-center gap-2 mb-3 cursor-pointer">
         <input
           type="checkbox"
@@ -178,15 +178,15 @@ const DiscountSection = ({
               >
                 <SelectTrigger
                   className={`w-full border ${
-                    error || localErrors.type ? "border-red-500 bg-red-50" : "border-orange-500 bg-white"
-                  } rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all`}
+                    error || localErrors.type ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"
+                  } rounded-lg p-2 text-sm shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}
                 >
                   <SelectValue placeholder="Select type">
                     {safeDiscount.type === "flat" && "Flat (₹)"}
                     {safeDiscount.type === "percentage" && "Percentage (%)"}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px]">
+                <SelectContent className="min-w-[140px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
                   <SelectGroup>
                     <SelectItem 
                       value="flat" 
@@ -222,8 +222,8 @@ const DiscountSection = ({
                   value={safeDiscount.value}
                   onChange={handleValueChange}
                   className={`w-full border ${
-                    error || localErrors.value ? 'border-red-500 bg-red-50' : 'border-orange-500 bg-white'
-                  } rounded-lg p-2 text-sm pl-8 focus:ring-2 focus:ring-orange-500 outline-none transition-all`}
+                    error || localErrors.value ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'
+                  } rounded-lg p-2 pl-8 text-sm shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}
                   placeholder={safeDiscount.type === "percentage" ? "e.g. 10" : "e.g. 50"}
                   disabled={!safeDiscount.type}
                 />

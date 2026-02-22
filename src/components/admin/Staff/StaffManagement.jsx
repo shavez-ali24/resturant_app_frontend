@@ -157,30 +157,30 @@ const StaffManagement = () => {
   );
 
   return (
-    <div className="bg-gray-50 py-6 px-4 relative bg-gradient-to-r from-orange-50/30 to-orange-100/40 min-h-screen">
+    <div className="relative min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 sm:px-4 sm:py-4 md:px-6">
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/45 backdrop-blur-[2px]"
             onClick={handleCloseModal}
           />
           
           {/* Modal Content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10">
+          <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]">
             {/* Close button */}
             <button
               onClick={handleCloseModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
             >
               <X size={20} />
             </button>
             
             {/* Header */}
-            <div className="p-6 pb-4">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2 ">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center ">
+            <div className="rounded-t-2xl border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-6 pb-4">
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
                   {isEditing ? (
                     <Pencil className="text-orange-600" size={20} />
                   ) : (
@@ -209,7 +209,7 @@ const StaffManagement = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Enter staff name"
-                  className="rounded-lg border-orange-200 focus:ring-orange-500 focus:border-orange-500"
+                  className="h-11 rounded-xl border border-orange-200 bg-white text-sm shadow-sm outline-none transition-all hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                 />
               </div>
               <div className="space-y-2">
@@ -223,7 +223,7 @@ const StaffManagement = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Enter staff email"
-                  className="rounded-lg border-orange-200 focus:ring-orange-500 focus:border-orange-500"
+                  className="h-11 rounded-xl border border-orange-200 bg-white text-sm shadow-sm outline-none transition-all hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                 />
               </div>
               <div className="space-y-2 relative">
@@ -238,12 +238,12 @@ const StaffManagement = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder={isEditing ? "Enter new password" : "Enter password"}
-                    className="rounded-lg border-orange-200 focus:ring-orange-500 focus:border-orange-500 pr-10"
+                    className="h-11 rounded-xl border border-orange-200 bg-white pr-10 text-sm shadow-sm outline-none transition-all hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -252,18 +252,18 @@ const StaffManagement = () => {
             </div>
             
             {/* Footer */}
-            <div className="px-6 pb-6 flex gap-3">
+            <div className="flex gap-3 border-t border-orange-100 bg-gradient-to-r from-orange-50/70 to-white px-6 py-4">
               <Button
                 variant="outline"
                 onClick={handleCloseModal}
-                className="border-gray-300 hover:bg-gray-100 flex-1"
+                className="h-11 flex-1 rounded-xl border border-orange-200 bg-white text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={isCreating || isUpdating}
-                className="bg-orange-500 text-white hover:bg-orange-600 disabled:bg-orange-300 flex-1"
+                className="h-11 flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isCreating || isUpdating
                   ? isEditing
@@ -282,10 +282,10 @@ const StaffManagement = () => {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/45 backdrop-blur-[2px]"
             onClick={() => setShowDeleteModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 z-10 p-6 ">
+          <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-orange-100 bg-white/95 p-6 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="text-red-600" size={32} />
@@ -299,14 +299,14 @@ const StaffManagement = () => {
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteModal(false)}
-                  className="border-gray-300 hover:bg-gray-100 flex-1"
+                  className="h-11 flex-1 rounded-xl border border-orange-200 bg-white text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleConfirmDelete}
                   disabled={isDeleting}
-                  className="bg-red-500 text-white hover:bg-red-600 disabled:bg-red-300 flex-1"
+                  className="h-11 flex-1 rounded-xl bg-red-500 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isDeleting ? "Deleting..." : "Delete"}
                 </Button>
@@ -317,12 +317,12 @@ const StaffManagement = () => {
       )}
 
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="mx-auto mb-4 max-w-7xl">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-row sm:items-center sm:p-4">
           <Heading title="Staff Management" />
           <Button
             onClick={handleAddNew}
-            className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 flex items-center gap-2"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
           >
             <Plus size={18} />
             Add Staff
@@ -331,28 +331,28 @@ const StaffManagement = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
-          <Search className="text-orange-500" size={20} />
+      <div className="mx-auto mb-4 max-w-7xl">
+        <div className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
+          <Search className="text-gray-500" size={20} />
           <Input
             placeholder="Search staff by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className=" border-orange-200 focus:border-orange-200 rounded-lg"
+            className="h-11 rounded-xl border border-orange-200 bg-white text-sm shadow-sm outline-none transition-all hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
           />
         </div>
       </div>
 
       {/* Staff Table */}
-      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow overflow-hidden">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
         <Table>
           <TableHeader>
-            <TableRow className="bg-orange-50">
-              <TableHead className="text-orange-700 font-semibold">Name</TableHead>
-              <TableHead className="text-orange-700 font-semibold">Email</TableHead>
-              <TableHead className="text-orange-700 font-semibold">Role</TableHead>
-              <TableHead className="text-orange-700 font-semibold">Created At</TableHead>
-              <TableHead className="text-orange-700 font-semibold text-right">Actions</TableHead>
+            <TableRow className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-500 hover:to-orange-600">
+              <TableHead className="font-semibold text-white">Name</TableHead>
+              <TableHead className="font-semibold text-white">Email</TableHead>
+              <TableHead className="font-semibold text-white">Role</TableHead>
+              <TableHead className="font-semibold text-white">Created At</TableHead>
+              <TableHead className="text-right font-semibold text-white">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -380,10 +380,10 @@ const StaffManagement = () => {
               </TableRow>
             ) : (
               filteredStaff.map((member) => (
-                <TableRow key={member._id} className="hover:bg-orange-50/50">
+                <TableRow key={member._id} className="border-b border-orange-100 hover:bg-orange-50/60">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
                         <Users size={16} className="text-orange-600" />
                       </div>
                       {member.name}
@@ -417,7 +417,7 @@ const StaffManagement = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(member)}
-                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-100"
+                        className="rounded-lg text-orange-700 transition-colors hover:bg-orange-100 hover:text-orange-700"
                       >
                         <Pencil size={18} />
                       </Button>
@@ -439,11 +439,13 @@ const StaffManagement = () => {
       </div>
 
       {/* Total Count */}
-      <div className="max-w-7xl mx-auto mt-4">
-        <p className="text-gray-500 text-sm">
-          Total Staff Members:{" "}
-          <span className="text-orange-600 font-semibold">{filteredStaff.length}</span>
-        </p>
+      <div className="mx-auto mt-4 max-w-7xl">
+        <div className="flex items-center justify-between rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm">
+          <p className="text-sm font-medium text-gray-600">Total Staff Members</p>
+          <span className="inline-flex min-w-[44px] justify-center rounded-full bg-orange-100 px-3 py-1 text-sm font-extrabold text-orange-700">
+            {filteredStaff.length}
+          </span>
+        </div>
       </div>
     </div>
   );

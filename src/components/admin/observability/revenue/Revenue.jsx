@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -15,11 +14,13 @@ import {
   Clock,
   RefreshCw,
   CalendarDays,
+  AlertCircle,
   Receipt,
   Percent,
 } from "lucide-react"
 import { useGetAnalyticsQuery } from "@/redux/adminRedux/adminAPI"
 import Heading from "../../common/Heading"
+import { useNotify } from "../../common/NotificationModal"
 
 // --- Helpers ---
 const formatCurrency = (amount) =>
@@ -139,7 +140,9 @@ export default function RevenueAnalytics() {
   const [toDate, setToDate] = useState("")
   const [activeTab, setActiveTab] = useState("chart")
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const dropdownRef = useRef(null)
+  const notify = useNotify()
   
   // Get domain
   const domain = localStorage.getItem("userDomain") || "restaurant"
@@ -265,8 +268,41 @@ export default function RevenueAnalytics() {
     return timeRangeLabels[timeRange]
   }
 
+  const getRefreshErrorMessage = (err) =>
+    err?.data?.message || err?.error || err?.message || "Unable to refresh revenue analytics."
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      const result = await refetch()
+      if (result?.error) {
+        notify(getRefreshErrorMessage(result.error), "error")
+        return
+      }
+      notify("Revenue analytics refreshed successfully.", "success")
+    } catch (err) {
+      notify(getRefreshErrorMessage(err), "error")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const secondaryButtonClass =
+    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+  const primaryButtonClass =
+    "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+  const inputClass =
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+  const selectTriggerClass =
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px]"
+  const selectContentClass =
+    "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl"
+  const selectItemClass =
+    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/30 to-amber-50/20 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-row lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -276,17 +312,18 @@ export default function RevenueAnalytics() {
           
           <div className="flex gap-2">
             <button
-              onClick={() => refetch()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 border border-orange-300 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors font-medium"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
             </button>
           </div>
         </div>
 
         {/* Filters Bar */}
-        <div className="bg-white rounded-xl border border-orange-200 shadow-sm p-4 mb-6">
+        <div className="mb-6 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium text-gray-700">Time Range:</span>
@@ -298,17 +335,17 @@ export default function RevenueAnalytics() {
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-orange-100 border-orange-600 text-orange-700 ">
+                <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
-                <SelectContent className="bg-orange-50 border-orange-300">
-                  <SelectItem value="1d" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 24 Hours</SelectItem>
-                  <SelectItem value="7d" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 7 Days</SelectItem>
-                  <SelectItem value="15d" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 15 Days</SelectItem>
-                  <SelectItem value="30d" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 30 Days</SelectItem>
-                  <SelectItem value="6m" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 6 Months</SelectItem>
-                  <SelectItem value="1y" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Last 1 Year</SelectItem>
-                  <SelectItem value="all" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">All Time</SelectItem>
+                <SelectContent className={selectContentClass}>
+                  <SelectItem value="1d" className={selectItemClass}>Last 24 Hours</SelectItem>
+                  <SelectItem value="7d" className={selectItemClass}>Last 7 Days</SelectItem>
+                  <SelectItem value="15d" className={selectItemClass}>Last 15 Days</SelectItem>
+                  <SelectItem value="30d" className={selectItemClass}>Last 30 Days</SelectItem>
+                  <SelectItem value="6m" className={selectItemClass}>Last 6 Months</SelectItem>
+                  <SelectItem value="1y" className={selectItemClass}>Last 1 Year</SelectItem>
+                  <SelectItem value="all" className={selectItemClass}>All Time</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -316,17 +353,17 @@ export default function RevenueAnalytics() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-200 w-full sm:w-auto justify-center font-medium
+                  className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
                     ${showDatePicker
-                      ? 'bg-orange-100 text-orange-700 border-orange-300 shadow-inner' 
-                      : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 hover:border-orange-400'}`}
+                      ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
+                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300'}`}
                 >
                   <CalendarDays className="w-4 h-4" />
                   <span>Custom Range</span>
                 </button>
                 
                 {showDatePicker && (
-                  <div className="absolute right-0 top-12 z-50 w-full sm:w-80 bg-white rounded-xl border border-orange-300 shadow-xl p-4">
+                  <div className="absolute right-0 top-12 z-50 w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80">
                     <div className="space-y-4">
                       <h4 className="font-semibold text-gray-800 text-center border-b border-orange-100 pb-2">Select Date Range</h4>
                       
@@ -335,7 +372,7 @@ export default function RevenueAnalytics() {
                           <label className="text-sm font-medium text-gray-700">From Date</label>
                           <input 
                             type="date" 
-                            className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                            className={inputClass}
                             value={fromDate} 
                             onChange={e => setFromDate(e.target.value)} 
                           />
@@ -344,31 +381,31 @@ export default function RevenueAnalytics() {
                           <label className="text-sm font-medium text-gray-700">To Date</label>
                           <input 
                             type="date" 
-                            className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                            className={inputClass}
                             value={toDate} 
                             onChange={e => setToDate(e.target.value)} 
                           />
                         </div>
                       </div>
                       
-                      <div className="flex justify-between items-center pt-3 border-t border-orange-100">
+                      <div className="flex items-center justify-between border-t border-orange-100 pt-3">
                         <button 
                           onClick={handleResetDate}
-                          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="rounded-lg px-3 py-2 text-sm font-medium text-orange-700 transition-colors hover:bg-orange-50"
                         >
                           Reset
                         </button>
                         <div className="flex gap-2">
                           <button 
                             onClick={() => setShowDatePicker(false)} 
-                            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
                           >
                             Cancel
                           </button>
                           <button 
                             onClick={handleCustomApply} 
                             disabled={!fromDate || !toDate}
-                            className="px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Apply Dates
                           </button>
@@ -386,7 +423,7 @@ export default function RevenueAnalytics() {
       {/* Stats Cards - 2 Cards Only (Removed Avg Order Value) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         {/* Total Revenue Card */}
-        <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-orange-50 to-white">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-xl">
@@ -407,7 +444,7 @@ export default function RevenueAnalytics() {
         </Card>
 
         {/* Total Orders Card */}
-        <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-amber-50 to-white">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-amber-100 to-amber-200 rounded-xl">
@@ -430,8 +467,8 @@ export default function RevenueAnalytics() {
 
       {/* Main Chart/Table Section */}
       <Tabs defaultValue="chart" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <Card className="border border-orange-200 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-orange-50 to-white border-b border-orange-200 p-4">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
+          <CardHeader className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
@@ -443,17 +480,17 @@ export default function RevenueAnalytics() {
               </div>
               
               <div className="flex items-center gap-4">
-                <TabsList className="bg-orange-100 p-1 rounded-xl">
+                <TabsList className="h-11 rounded-xl border border-orange-200 bg-orange-50/80 p-1">
                   <TabsTrigger 
                     value="chart" 
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm"
                   >
                     <BarChartIcon className="w-4 h-4 mr-2" />
                     Chart
                   </TabsTrigger>
                   <TabsTrigger 
                     value="table" 
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm"
                   >
                     <TableIcon className="w-4 h-4 mr-2" />
                     Table
@@ -474,24 +511,27 @@ export default function RevenueAnalytics() {
             {/* Chart Tab */}
             <TabsContent value="chart" className="mt-0">
               {isLoading ? (
-                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-orange-50/50 to-amber-50/30 rounded-xl border-2 border-dashed border-orange-300">
+                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
                   <p className="text-gray-600 font-medium">Loading revenue data...</p>
                   <p className="text-gray-500 text-sm mt-1">Please wait</p>
                 </div>
               ) : error ? (
-                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-dashed border-red-300 p-6">
-                  <div className="text-4xl mb-4">⚠️</div>
+                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <AlertCircle className="h-6 w-6" />
+                  </div>
                   <p className="text-gray-800 font-bold text-lg mb-2">Failed to Load Data</p>
                   <p className="text-gray-600 text-center mb-6">
                     {error.message || "Unable to fetch revenue analytics."}
                   </p>
                   <button
-                    onClick={() => refetch()}
-                    className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-medium transition-colors"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={primaryButtonClass}
                   >
-                    <RefreshCw className="w-4 h-4 inline mr-2" />
-                    Try Again
+                    <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing ? "Refreshing..." : "Try Again"}
                   </button>
                 </div>
               ) : chartData.length > 0 ? (
@@ -578,8 +618,10 @@ export default function RevenueAnalytics() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border-2 border-dashed border-orange-300 p-6">
-                  <div className="text-5xl mb-4">📊</div>
+                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <BarChartIcon className="h-6 w-6" />
+                  </div>
                   <p className="text-gray-800 font-bold text-lg mb-2">No Revenue Data</p>
                   <p className="text-gray-600 text-center mb-4">
                     {timeRange === "custom" && fromDate && toDate
@@ -589,7 +631,7 @@ export default function RevenueAnalytics() {
                   </p>
                   <button
                     onClick={() => setTimeRange("all")}
-                    className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 font-medium"
+                    className={secondaryButtonClass}
                   >
                     View All Time
                   </button>
@@ -599,10 +641,10 @@ export default function RevenueAnalytics() {
 
             {/* Table Tab */}
             <TabsContent value="table" className="mt-0">
-              <div className="rounded-xl border border-orange-200 overflow-hidden">
+              <div className="overflow-hidden rounded-xl border border-orange-200">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-orange-50">
+                    <TableHeader className="bg-orange-50/70">
                       <TableRow>
                         <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
                           Date
@@ -621,7 +663,7 @@ export default function RevenueAnalytics() {
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mb-3"></div>
-                              <p className="text-gray-600 font-medium">Loading table data...</p>
+                              <p className="text-sm font-medium text-gray-600">Loading table data...</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -655,9 +697,11 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              {/* <div className="text-4xl mb-3">📋</div> */}
-                              <p className="text-gray-700 font-bold mb-2">No Data Available</p>
-                              <p className="text-gray-600">
+                              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                                <TableIcon className="h-5 w-5" />
+                              </div>
+                              <p className="mb-2 font-bold text-gray-700">No Data Available</p>
+                              <p className="max-w-md text-sm text-gray-600">
                                 {timeRange === "custom" && fromDate && toDate
                                   ? `No revenue records found between ${new Date(fromDate).toLocaleDateString()} and ${new Date(toDate).toLocaleDateString()}`
                                   : "No revenue records found for the selected time period"
@@ -673,7 +717,7 @@ export default function RevenueAnalytics() {
                 
                 {/* Table Footer */}
                 {tableData.length > 0 && (
-                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 border-t border-orange-200">
+                  <div className="border-t border-orange-200 bg-gradient-to-r from-orange-50/70 to-amber-50/70 px-4 py-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="text-sm text-gray-600">
                         Showing <span className="font-bold text-orange-700">{tableData.length}</span> records
@@ -702,24 +746,27 @@ export default function RevenueAnalytics() {
             {/* Breakdown Tab */}
             <TabsContent value="breakdown" className="mt-0">
               {isLoading ? (
-                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-orange-50/50 to-amber-50/30 rounded-xl border-2 border-dashed border-orange-300">
+                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
                   <p className="text-gray-600 font-medium">Loading breakdown data...</p>
                   <p className="text-gray-500 text-sm mt-1">Please wait</p>
                 </div>
               ) : error ? (
-                <div className="h-[350px] flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-dashed border-red-300 p-6">
-                  <div className="text-4xl mb-4">⚠️</div>
+                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <AlertCircle className="h-6 w-6" />
+                  </div>
                   <p className="text-gray-800 font-bold text-lg mb-2">Failed to Load Breakdown</p>
                   <p className="text-gray-600 text-center mb-6">
                     {error.message || "Unable to fetch revenue breakdown."}
                   </p>
                   <button
-                    onClick={() => refetch()}
-                    className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-medium transition-colors"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={primaryButtonClass}
                   >
-                    <RefreshCw className="w-4 h-4 inline mr-2" />
-                    Try Again
+                    <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing ? "Refreshing..." : "Try Again"}
                   </button>
                 </div>
               ) : (

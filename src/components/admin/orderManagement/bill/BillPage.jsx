@@ -336,45 +336,35 @@ const BillPage = ({
     }
   };
 
-  const getOrderTypeBadge = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
-        return "bg-green-100 text-green-700 ring-green-200";
-      case "take away":
-        return "bg-blue-100 text-blue-700 ring-blue-200";
-      case "delivery":
-        return "bg-orange-100 text-orange-700 ring-orange-200";
-      default:
-        return "bg-gray-100 text-gray-700 ring-gray-200";
-    }
-  };
+  const getOrderTypeBadge = () => "border-gray-300 bg-white text-gray-700 ring-gray-200";
 
   const availableTables = Array.isArray(tables) ? tables : [];
+  const MotionDiv = motion.div;
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
-      <motion.div
+      <MotionDiv
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden"
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-xl">
+        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900">
               Order Details & Bill
             </h3>
             {isStaff && !isEditMode && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+              <span className="rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
                 Staff View
               </span>
             )}
@@ -383,7 +373,7 @@ const BillPage = ({
             {isStaff && !isEditMode && (
               <button
                 onClick={() => setIsEditMode(true)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                className="rounded-lg p-2 text-orange-700 transition-colors hover:bg-orange-100"
                 title="Edit Order"
               >
                 <Edit3 size={18} />
@@ -391,7 +381,7 @@ const BillPage = ({
             )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200"
+              className="rounded-full p-1 text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor">
                 <path
@@ -407,12 +397,12 @@ const BillPage = ({
 
         {/* Edit Mode Header */}
         {isEditMode && (
-          <div className="bg-blue-50 px-4 py-2 border-b flex items-center justify-between">
-            <span className="text-sm text-blue-700 font-medium">Edit Mode</span>
+          <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/80 px-4 py-2">
+            <span className="text-sm font-medium text-orange-700">Edit Mode</span>
             <div className="flex gap-2">
               <button
                 onClick={handleCancelEdit}
-                className="p-1.5 text-gray-500 hover:bg-gray-200 rounded-lg"
+                className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-orange-100"
                 title="Cancel"
               >
                 <X size={16} />
@@ -420,7 +410,7 @@ const BillPage = ({
               <button
                 onClick={handleSaveChanges}
                 disabled={isSubmitting}
-                className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg disabled:opacity-50"
+                className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-100 disabled:opacity-50"
                 title="Save"
               >
                 <Save size={16} />
@@ -431,7 +421,7 @@ const BillPage = ({
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 px-4 py-2 border-b">
+          <div className="border-b border-red-200 bg-red-50 px-4 py-2">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
@@ -478,7 +468,7 @@ const BillPage = ({
             </div>
 
             {order?.orderType === "Delivery" && order?.address && (
-              <div className="mb-4 text-sm bg-gray-50 p-3 rounded border">
+              <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3 text-sm">
                 <strong>Delivery Address:</strong>
                 <br />
                 {order.address}
@@ -497,25 +487,25 @@ const BillPage = ({
                     value={localOrderData?.orderType}
                     onValueChange={handleOrderTypeChange}
                   >
-                    <SelectTrigger className={`h-9 w-full rounded-lg border-0 shadow-sm ring-1 ring-black/5 ${getOrderTypeBadge(localOrderData?.orderType)}`}>
+                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge()}`}>
                       <div className="flex items-center gap-2 text-sm">
                         {getOrderTypeIcon(localOrderData?.orderType)}
                         <span>{localOrderData?.orderType || "Select"}</span>
                       </div>
                     </SelectTrigger>
-                    <SelectContent className="bg-white border shadow-xl rounded-xl">
+                    <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                       <SelectGroup>
-                        <SelectItem value="Eat Here" className="cursor-pointer py-2">
+                        <SelectItem value="Eat Here" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                           <div className="flex items-center gap-2">
                             <Utensils size={16} /> Eat Here
                           </div>
                         </SelectItem>
-                        <SelectItem value="Take Away" className="cursor-pointer py-2">
+                        <SelectItem value="Take Away" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                           <div className="flex items-center gap-2">
                             <Home size={16} /> Take Away
                           </div>
                         </SelectItem>
-                        <SelectItem value="Delivery" className="cursor-pointer py-2">
+                        <SelectItem value="Delivery" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                           <div className="flex items-center gap-2">
                             <Truck size={16} /> Delivery
                           </div>
@@ -532,13 +522,13 @@ const BillPage = ({
                       Select Table *
                     </label>
                     <Select value={selectedTableId} onValueChange={handleTableChange}>
-                      <SelectTrigger className="h-9 w-full rounded-lg border-0 shadow-sm ring-1 ring-black/5">
+                      <SelectTrigger className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border shadow-xl rounded-xl">
+                      <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                         <SelectGroup>
                           {availableTables.map((table) => (
-                            <SelectItem key={table._id} value={table._id} className="cursor-pointer py-2">
+                            <SelectItem key={table._id} value={table._id} className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                               Table {table.tableNumber || table.number || table._id.slice(-4)}
                             </SelectItem>
                           ))}
@@ -558,7 +548,7 @@ const BillPage = ({
                       value={address}
                       onChange={handleAddressChange}
                       placeholder="Enter delivery address"
-                      className="w-full p-2 border rounded-lg text-sm resize-none"
+                      className="w-full resize-none rounded-xl border border-gray-300 bg-white p-3 text-sm shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
                       rows={2}
                     />
                   </div>
@@ -567,7 +557,7 @@ const BillPage = ({
             )}
 
             {/* Items Table */}
-            <table className="w-full text-sm border-t border-b mb-4">
+            <table className="mb-4 w-full border-y border-gray-200 text-sm">
               <thead>
                 <tr className="bg-gray-50">
                   <th className="py-2 px-2 text-left">Item</th>
@@ -583,7 +573,7 @@ const BillPage = ({
                   const itemTotal = itemPrice * Number(item.quantity || 1);
                   
                   return (
-                    <tr key={i} className="border-b">
+                    <tr key={i} className="border-b border-gray-200">
                       <td className="py-1.5 px-2">
                         <div>
                           {item.name}
@@ -594,7 +584,7 @@ const BillPage = ({
                             <div className="text-xs text-gray-500">{item.customizations}</div>
                           )}
                           {item.comboItems && (
-                            <div className="text-xs text-orange-600">
+                            <div className="text-xs text-gray-500">
                               Combo: {item.comboItems.length} items
                             </div>
                           )}
@@ -605,7 +595,7 @@ const BillPage = ({
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity - 1)}
-                              className="p-1 bg-gray-100 rounded hover:bg-gray-200"
+                              className="rounded bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
                               disabled={item.quantity <= 1}
                             >
                               <Minus size={12} />
@@ -613,7 +603,7 @@ const BillPage = ({
                             <span className="w-6 text-center">{item.quantity}</span>
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity + 1)}
-                              className="p-1 bg-gray-100 rounded hover:bg-gray-200"
+                              className="rounded bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
                             >
                               <Plus size={12} />
                             </button>
@@ -628,12 +618,12 @@ const BillPage = ({
                             value={item.variantName}
                             onValueChange={(v) => handleVariantChange(i, v)}
                           >
-                            <SelectTrigger className="h-7 w-20 text-xs">
+                            <SelectTrigger className="h-8 w-24 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white border shadow-xl rounded-xl">
+                            <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                               {Object.entries(item.variants).map(([variant, price]) => (
-                                <SelectItem key={variant} value={variant} className="cursor-pointer py-1">
+                                <SelectItem key={variant} value={variant} className="cursor-pointer rounded-lg py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                                   {variant}: ₹{price}
                                 </SelectItem>
                               ))}
@@ -650,7 +640,7 @@ const BillPage = ({
                         <td className="py-1.5 px-2 text-center">
                           <button
                             onClick={() => handleRemoveItem(i)}
-                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                            className="rounded p-1 text-red-500 transition-colors hover:bg-red-50"
                             title="Remove item"
                           >
                             <Trash2 size={14} />
@@ -670,13 +660,13 @@ const BillPage = ({
                   Add Item
                 </label>
                 <Select onValueChange={handleAddItem}>
-                  <SelectTrigger className="h-9 w-full rounded-lg border-0 shadow-sm ring-1 ring-black/5">
+                  <SelectTrigger className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
                     <SelectValue placeholder="Select item to add..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border shadow-xl rounded-xl max-h-60">
+                  <SelectContent className="max-h-60 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                     <SelectGroup>
                       {menuItems.map((item) => (
-                        <SelectItem key={item._id} value={item._id} className="cursor-pointer py-2">
+                        <SelectItem key={item._id} value={item._id} className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
                           <div className="flex items-center justify-between">
                             <span>{item.name}</span>
                             <span className="text-gray-500 text-xs ml-2">
@@ -694,7 +684,7 @@ const BillPage = ({
             )}
 
             {/* Totals - Use backend data directly */}
-            <div className="text-sm space-y-1 max-w-xs ml-auto">
+            <div className="ml-auto max-w-xs space-y-1 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{displaySubtotal.toFixed(2)}</span>
@@ -727,11 +717,11 @@ const BillPage = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              className="h-11 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
             >
               Cancel
             </button>
@@ -739,20 +729,20 @@ const BillPage = ({
           
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-orange-100 hover:bg-orange-200 rounded-lg"
+            className="h-11 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
           >
             Close
           </button>
 
           <button
             onClick={handlePrint}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2"
+            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
           >
             Print Bill
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </MotionDiv>
+    </MotionDiv>
   );
 };
 

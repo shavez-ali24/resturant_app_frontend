@@ -32,8 +32,8 @@ const FormInput = ({
         onChange={onChange}
         disabled={disabled}
         inputMode={inputMode}
-        className={`h-11 w-full rounded-lg border ${error ? 'border-red-500' : 'border-orange-500'} px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-orange-500 ${
-          error ? 'bg-red-50' : 'bg-orange-50 hover:bg-orange-100'
+        className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+          error ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'
         } ${icon ? 'pl-10' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         placeholder={placeholder || label}
       />

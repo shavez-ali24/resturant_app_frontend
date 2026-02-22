@@ -13,12 +13,12 @@ const DeleteConfirmModal = ({ isOpen, itemName, onClose, onConfirm }) => {
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
           onClick={onClose}
         >
           <motion.div
             variants={modalContentVariant}
-            className="relative mx-auto w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+            className="relative mx-auto w-full max-w-sm rounded-2xl border border-orange-100 bg-white/95 p-6 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center">
@@ -35,7 +35,7 @@ const DeleteConfirmModal = ({ isOpen, itemName, onClose, onConfirm }) => {
             <div className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
               <button
                 onClick={onClose}
-                className="h-11 w-full rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-200"
+                className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-orange-50"
               >
                 Cancel
               </button>
@@ -54,6 +54,5 @@ const DeleteConfirmModal = ({ isOpen, itemName, onClose, onConfirm }) => {
 };
 
 export default DeleteConfirmModal;
-
 
 

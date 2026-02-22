@@ -10,18 +10,18 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
     
     return (
         <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100">
-            <div className="h-auto min-h-14 bg-orange-300 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 gap-3">
+            <div className="h-auto min-h-14 bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg overflow-hidden border-2 border-white shadow-sm bg-white flex-shrink-0">
                         {restaurantLogo ? (
                             <img src={restaurantLogo} alt="Logo" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-orange-100">
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-150">
                                 <Store className="w-5 h-5 text-orange-500" />
                             </div>
                         )}
                     </div>
-                    <h1 className="text-lg sm:text-xl font-bold text-gray-800 text-center sm:text-left">{restaurantName || "My Restaurant"}</h1>
+                    <h1 className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">{restaurantName || "My Restaurant"}</h1>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
                     {showStaffButton && isAdmin && (

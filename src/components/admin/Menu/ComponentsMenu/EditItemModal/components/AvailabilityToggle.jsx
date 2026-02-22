@@ -1,7 +1,7 @@
 import React from "react";
 
 const AvailabilityToggle = ({ available, handleChange }) => (
-  <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-orange-500 bg-orange-50 px-3 transition-colors hover:bg-orange-100 sm:w-max">
+  <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-orange-200 bg-orange-50/70 px-3 text-gray-700 transition-colors hover:bg-orange-100/70 sm:w-max">
     <input
       type="checkbox"
       name="available"

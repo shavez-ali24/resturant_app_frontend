@@ -269,8 +269,12 @@ const prepareFormData = (formData, file) => {
     }
   };
 
+  const handleFilterResetNotification = useCallback(() => {
+    notify("Filters reset successfully.", "success");
+  }, [notify]);
+
   return (
-    <div className="relative bg-white-50 py-4 px-3 sm:px-4 sm:py-6 md:px-6">
+    <div className="relative min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 sm:px-4 sm:py-4 md:px-6">
       <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
 
       <DeleteConfirmModal
@@ -301,14 +305,14 @@ const prepareFormData = (formData, file) => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between gap-2 sm:gap-3">
+      <div className="mx-auto max-w-7xl pb-4">
+        <div className="mb-4 flex items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:gap-3 sm:p-4">
           <div className="min-w-0 flex-1">
             <Heading title="Menu Management" />
           </div>
           {isAdmin && (
             <Button
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 text-sm font-semibold text-white hover:bg-orange-600 sm:h-11 sm:gap-2 sm:px-4"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:h-11 sm:gap-2 sm:px-4"
               onClick={() => setIsAddModalOpen(true)}
             >
               <CirclePlus size={16} />
@@ -318,21 +322,29 @@ const prepareFormData = (formData, file) => {
           )}
         </div>
 
-        <div className="mb-8 rounded-xl bg-white p-3 shadow sm:p-4">
+        <div className="mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
           <MenuFilter
             value={filters}
             onFilterChange={(v) => setFilters({ ...filters, ...v })}
             categories={restaurantCategories}
+            onResetNotify={handleFilterResetNotification}
           />
         </div>
 
-        <h2 className="mb-5 text-xl font-bold text-gray-800 sm:mb-6 sm:text-2xl">
-          Total Items <span className="text-orange-600 font-extrabold">({filteredItems.length})</span>
-        </h2>
+        <div className="mb-5 flex items-center justify-between rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm sm:mb-6">
+          <h2 className="text-lg font-bold text-gray-800 sm:text-xl">Total Items</h2>
+          <span className="inline-flex min-w-[44px] justify-center rounded-full bg-orange-100 px-3 py-1 text-sm font-extrabold text-orange-700">
+            {filteredItems.length}
+          </span>
+        </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-dashed border-orange-200 bg-orange-50/40 py-12 text-center text-sm text-gray-600 sm:text-base">
+          <div className="rounded-2xl border border-dashed border-orange-200 bg-white/90 py-12 text-center text-sm text-gray-600 sm:text-base">
             Loading menu items...
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-orange-200 bg-white/90 py-12 text-center text-sm text-gray-600 sm:text-base">
+            No menu item found for current filters.
           </div>
         ) : (
           <>
@@ -351,9 +363,14 @@ const prepareFormData = (formData, file) => {
 
             {totalPages > 1 && (
               <Pagination className="mt-6 cursor-pointer justify-center">
-                <PaginationContent>
+                <PaginationContent className="gap-1 rounded-xl border border-orange-200 bg-white/95 px-2 py-1 shadow-sm">
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} />
+                    <PaginationPrevious
+                      onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                      className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                        currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    />
                   </PaginationItem>
 
                   {pageNumbers.map((page, idx) => (
@@ -361,7 +378,15 @@ const prepareFormData = (formData, file) => {
                       {typeof page === "string" ? (
                         <PaginationEllipsis />
                       ) : (
-                        <PaginationLink isActive={currentPage === page} onClick={() => setCurrentPage(page)}>
+                        <PaginationLink
+                          isActive={currentPage === page}
+                          className={`rounded-lg border border-orange-200 ${
+                            currentPage === page
+                              ? "border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600"
+                              : "bg-white text-gray-700 hover:bg-orange-50"
+                          }`}
+                          onClick={() => setCurrentPage(page)}
+                        >
                           {page}
                         </PaginationLink>
                       )}
@@ -369,7 +394,12 @@ const prepareFormData = (formData, file) => {
                   ))}
 
                   <PaginationItem>
-                    <PaginationNext onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} />
+                    <PaginationNext
+                      onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                      className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                        currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

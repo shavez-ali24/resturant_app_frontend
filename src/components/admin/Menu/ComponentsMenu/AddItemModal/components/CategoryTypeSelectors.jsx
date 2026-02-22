@@ -17,7 +17,7 @@ const CategoryTypeSelectors = ({
   setFormData 
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
           Category *
@@ -32,13 +32,13 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`h-11 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${
-              errors.category ? "border-red-500" : "border-orange-500"
+            className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+              errors.category ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"
             }`}
           >
             <SelectValue placeholder="Select a Category" />
           </SelectTrigger>
-          <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px] cursor-pointer">
+          <SelectContent className="min-w-[140px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
             <SelectGroup>
               {restaurantCategories.length === 0 ? (
                 <SelectItem value="no-cat" disabled>No categories found</SelectItem>
@@ -73,13 +73,13 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`h-11 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${
-              errors.type ? "border-red-500" : "border-orange-500"
+            className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+              errors.type ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"
             }`}
           >
             <SelectValue placeholder="Select Food Type" />
           </SelectTrigger>
-          <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px] cursor-pointer">
+          <SelectContent className="min-w-[140px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
             <SelectGroup>
               <SelectItem value="veg" className="data-[highlighted]:bg-orange-200">Veg</SelectItem>
               <SelectItem value="non-veg" className="data-[highlighted]:bg-orange-200">Non-Veg</SelectItem>

@@ -2,7 +2,6 @@ import React from "react";
 import { CurrencyRupeeIcon } from "@heroicons/react/24/solid";
 import FormInput from "./FormInput";
 import ComboItemsManager from "../../ComboItemsManager";
-import DiscountSection from "../../AddItemModal/components/DiscountSection";
 
 const ComboPriceSection = ({ 
   comboPrice, 
@@ -16,8 +15,8 @@ const ComboPriceSection = ({
   discount
 }) => {
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4 sm:p-5">
+      <div>
         <FormInput
           label="Combo Price (₹)"
           name="comboPrice"

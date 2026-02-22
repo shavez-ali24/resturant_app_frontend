@@ -28,7 +28,7 @@ const FormInput = ({
           name={name}
           value={value}
           onChange={onChange}
-          className={`h-11 w-full rounded-lg border ${hasError ? "border-red-500" : "border-orange-500"} bg-orange-50 px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${icon ? "pl-10" : ""}`}
+          className={`h-11 w-full rounded-xl border ${hasError ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"} px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${icon ? "pl-10" : ""}`}
           placeholder={placeholder}
           {...props}
         />

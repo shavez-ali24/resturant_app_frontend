@@ -153,7 +153,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
-      className={`group relative h-fit w-full self-start min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md ${
+      className={`group relative h-fit w-full self-start min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] ${
         showMenu ? "z-40" : "z-10"
       }`}
     >
@@ -246,9 +246,9 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex max-w-full items-center gap-1 rounded-md bg-orange-300/70 px-2 py-1 sm:py-0.5">
-                <Tag size={11} className="shrink-0 text-black" />
-                <span className="max-w-[180px] truncate text-[11px] text-black sm:text-xs">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-md border border-orange-200 bg-orange-100/85 px-2 py-1 sm:py-0.5">
+                <Tag size={11} className="shrink-0 text-orange-700" />
+                <span className="max-w-[180px] truncate text-[11px] font-medium text-orange-800 sm:text-xs">
                   {safeItem.category || "N/A"}
                 </span>
               </div>

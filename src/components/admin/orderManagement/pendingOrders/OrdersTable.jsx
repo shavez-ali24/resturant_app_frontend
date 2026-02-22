@@ -58,11 +58,11 @@ const OrdersTable = ({
   };
 
   return (
-    <div className="shadow-sm">
+    <div className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
       {/* Customizations Modal */}
       {selectedCustomizations && (
         <div 
-          className="fixed inset-0 z-50" 
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]" 
           onClick={handleModalClose}
         >
           <CustomizationsModal
@@ -75,43 +75,43 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-orange-300 to-orange-500 text-gray-800 uppercase tracking-wide text-xs">
+          <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white uppercase tracking-wide text-xs">
             <tr>
-              <th className="text-center border p-2 text-sm font-semibold">Date</th>
-              <th className="text-center border p-2 text-sm font-semibold">Time</th>
-              <th className="text-center p-2 border text-sm font-semibold">Customer</th>
-              <th className="text-center p-2 border text-sm font-semibold">Phone</th>
-              <th className="text-center p-2 border text-sm font-semibold">Order Type</th>
-              <th className="text-center p-2 border text-sm font-semibold">Items</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Date</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Time</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Customer</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Phone</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Order Type</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Items</th>
               {tableType === "pending" && (
-      <th className="text-center p-2 border text-sm font-semibold">Note</th>
-    )}
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Note</th>
+              )}
 
               {tableType === "pending" && (
                 <>
-                  <th className="text-center p-2 border text-sm font-semibold">Status</th>
-                  <th className="text-center p-2 border text-sm font-semibold">Actions</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Status</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Actions</th>
                 </>
               )}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-orange-100 bg-white/95">
             {loading ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-gray-500">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-gray-500">
                   Loading...
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-red-500">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-red-500">
                   {error}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-gray-400 italic">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center italic text-gray-400">
                   No orders yet
                 </td>
               </tr>
@@ -142,11 +142,11 @@ const OrdersTable = ({
       {/* Mobile View */}
       <div className="block md:hidden px-2 sm:px-3">
         {loading ? (
-          <p className="text-center py-6 text-gray-500">Loading...</p>
+          <p className="py-6 text-center text-gray-500">Loading...</p>
         ) : error ? (
-          <p className="text-center py-6 text-red-500">{error}</p>
+          <p className="py-6 text-center text-red-500">{error}</p>
         ) : orders.length === 0 ? (
-          <p className="text-center py-6 text-gray-400 italic">No orders yet</p>
+          <p className="py-6 text-center italic text-gray-400">No orders yet</p>
         ) : (
           <div className="space-y-3.5 pb-2">
             {orders.map((order) => {
@@ -187,13 +187,13 @@ const OrdersTable = ({
               return (
                 <div
                   key={order._id}
-                  className="w-full bg-white rounded-2xl shadow-sm border border-orange-100 p-3 sm:p-3.5 space-y-3"
+                  className="w-full space-y-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-3.5"
                 >
                   <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                     <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
                       {/* Order #{order._id.slice(-6)} */}
                     </h3>
-                    <span className="inline-flex w-fit text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600">
                       {formatDate(order.createdAt)} | {formatTime(order.createdAt)}
                     </span>
                   </div>
@@ -243,7 +243,7 @@ const OrdersTable = ({
 
                     <button
                       onClick={() => dispatch(showBill(order))}
-                      className="h-10 w-full rounded-xl bg-orange-100 border border-orange-300 hover:bg-orange-200 transition text-sm font-medium flex items-center justify-center gap-1 px-4"
+                      className="flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
                     >
                       View Items & Bill
                     </button>
@@ -261,7 +261,7 @@ const OrdersTable = ({
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => setEditingOrder(order)}
-                          className="h-10 w-full px-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition text-sm font-medium"
+                          className="h-10 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
                         >
                           Edit
                         </button>

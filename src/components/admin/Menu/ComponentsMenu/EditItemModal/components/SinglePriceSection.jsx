@@ -15,7 +15,7 @@ const SinglePriceSection = ({ price, discount, errors, handleChange, setFormData
           const val = e.target.value.replace(/[^0-9]/g, "");
           setFormData(prev => ({ ...prev, price: val }));
         }}
-        className={`w-full border ${errors.price ? 'border-red-500' : 'border-orange-500'} rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none text-sm ${errors.price ? 'bg-red-50' : 'bg-orange-50'}`}
+        className={`w-full rounded-xl border p-3 text-sm shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${errors.price ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'}`}
         placeholder="e.g. 299"
       />
       {errors.price && (

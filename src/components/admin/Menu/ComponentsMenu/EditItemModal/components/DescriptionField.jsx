@@ -10,8 +10,8 @@ const DescriptionField = ({ value, onChange, error }) => (
       name="description"
       value={value || ""}
       onChange={onChange}
-      className={`w-full border ${error ? 'border-red-500' : 'border-orange-500'} rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-colors ${
-        error ? 'bg-red-50' : 'bg-orange-50 hover:bg-orange-100'
+      className={`w-full rounded-xl border p-3 text-sm shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
+        error ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'
       }`}
       placeholder="Enter product description"
       rows="3"

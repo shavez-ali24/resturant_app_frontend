@@ -8,7 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Home, Truck, Utensils, AlertCircle, X } from "lucide-react";
+import { Home, Truck, Utensils, AlertCircle } from "lucide-react";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 
 const EditOrderModal = ({ 
   editingOrder, 
@@ -83,7 +84,7 @@ const EditOrderModal = ({
         items: ""
       });
     }
-  }, [editingOrder]);
+  }, [editingOrder, menuItems]);
 
   // Check if any changes were made
   useEffect(() => {
@@ -449,18 +450,7 @@ const EditOrderModal = ({
   // =============================
   // ORDER TYPE BADGE HELPER
   // =============================
-  const getOrderTypeBadge = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
-        return "bg-green-100 text-green-700 ring-green-200";
-      case "take away":
-        return "bg-blue-100 text-blue-700 ring-blue-200";
-      case "delivery":
-        return "bg-orange-100 text-orange-700 ring-orange-200";
-      default:
-        return "bg-gray-100 text-gray-700 ring-gray-200";
-    }
-  };
+  const getOrderTypeBadge = () => "border-orange-200 bg-white text-gray-700 hover:border-orange-300";
 
   // Format tables data (dynamic from props)
   const availableTables = Array.isArray(tables) ? tables : [];
@@ -487,10 +477,12 @@ const EditOrderModal = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Edit Order</h3>
           <button
+            type="button"
             onClick={() => setEditingOrder(null)}
-            className="p-1.5 rounded-full hover:bg-orange-100 text-orange-500 hover:text-orange-700 transition"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
+            aria-label="Close edit order modal"
           >
-            <X size={20} />
+            <XCircleIcon className="h-6 w-6" />
           </button>
         </div>
 
@@ -503,7 +495,7 @@ const EditOrderModal = ({
             value={localOrderData.orderType}
             onValueChange={handleOrderTypeChange}
           >
-            <SelectTrigger className={`h-10 w-full rounded-lg border-0 px-3 text-sm font-medium shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-offset-1 ${getOrderTypeBadge(localOrderData.orderType)}`}>
+            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadge(localOrderData.orderType)}`}>
               <div className="flex items-center gap-2">
                 {getOrderTypeIcon(localOrderData.orderType)}
                 <span>{localOrderData.orderType || "Select Type"}</span>
@@ -512,12 +504,12 @@ const EditOrderModal = ({
             <SelectContent
               side="top"
               sideOffset={6}
-              className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-white border border-gray-200 shadow-xl rounded-xl p-1 z-[10050]"
+              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[60vh]"
             >
               <SelectGroup>
                 <SelectItem 
                   value="Eat Here" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-green-100 hover:text-green-800 data-[highlighted]:bg-green-100 data-[highlighted]:text-green-800"
+                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                 >
                   <div className="flex items-center gap-2">
                     <Utensils size={16} />
@@ -526,7 +518,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Take Away" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-blue-100 hover:text-blue-800 data-[highlighted]:bg-blue-100 data-[highlighted]:text-blue-800"
+                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                 >
                   <div className="flex items-center gap-2">
                     <Home size={16} />
@@ -535,7 +527,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Delivery" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                 >
                   <div className="flex items-center gap-2">
                     <Truck size={16} />
@@ -557,10 +549,10 @@ const EditOrderModal = ({
               value={selectedTableId}
               onValueChange={handleTableChange}
             >
-              <SelectTrigger className={`h-10 w-full rounded-lg px-3 text-sm font-bold shadow-sm ${
+              <SelectTrigger className={`h-11 w-full rounded-xl px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
                 validationErrors.table 
                   ? 'border-red-500 bg-red-50' 
-                  : 'border-orange-600 bg-orange-100'
+                  : 'border-orange-200 bg-white hover:border-orange-300'
               }`}>
                 {selectedTableId && currentTable ? (
                   <span>Table {currentTable.tableNumber || currentTable.name}</span>
@@ -571,7 +563,7 @@ const EditOrderModal = ({
               <SelectContent
                 side="top"
                 sideOffset={6}
-                className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 cursor-pointer z-[10050]"
+                className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[60vh]"
               >
                 <SelectGroup>
                   {availableTables.length > 0 ? (
@@ -579,7 +571,7 @@ const EditOrderModal = ({
                       <SelectItem
                         key={table._id}
                         value={table._id} // Use _id as value
-                        className="border-orange-300 rounded-lg cursor-pointer hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                        className="cursor-pointer rounded-lg border-orange-300 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                       >
                         <div className="flex justify-between items-center w-full gap-4 pb-2 pt-1">
                           <span>Table {table.tableNumber || table.name}</span>
@@ -685,10 +677,10 @@ const EditOrderModal = ({
                         value={item.variantName || ""}
                         onValueChange={(value) => handleVariantChange(idx, value)}
                       >
-                        <SelectTrigger className="h-8 w-full border-orange-400 bg-orange-50 text-xs hover:bg-orange-100">
+                        <SelectTrigger className="h-9 w-full rounded-lg border border-orange-200 bg-white text-xs shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 hover:border-orange-300">
                           <SelectValue placeholder="Select variant" />
                         </SelectTrigger>
-                        <SelectContent className="bg-orange-50 border-orange-300 shadow-lg rounded-lg z-[10050]">
+                        <SelectContent className="z-[10050] rounded-lg border border-orange-200 bg-white p-1 shadow-lg">
                           <SelectGroup>
                             {item.variants && item.variants !== null && Object.entries(item.variants).map(([key, variantData]) => {
                               // Handle both formats: { quarter: 100 } or { quarter: { price: 100, discount: {...} } }
@@ -698,7 +690,7 @@ const EditOrderModal = ({
                                 <SelectItem 
                                   key={key} 
                                   value={key}
-                                  className="hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                                  className="cursor-pointer rounded-md hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                                 >
                                   {key} — ₹{price}
                                 </SelectItem>
@@ -749,20 +741,20 @@ const EditOrderModal = ({
         {/* Add New Item Dropdown */}
         <div className="mb-4">
           <Select onValueChange={handleAddItem}>
-            <SelectTrigger className="h-10 w-full rounded-lg border-orange-600 bg-orange-100 px-3 text-sm font-bold shadow-sm hover:bg-orange-200">
+            <SelectTrigger className="h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 hover:border-orange-300">
               <SelectValue placeholder="+ Add New Item" />
             </SelectTrigger>
             <SelectContent
               side="top"
               sideOffset={6}
-              className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-orange-50 border-orange-300 shadow-xl rounded-xl border border-orange-300 p-1 cursor-pointer z-[10050]"
+              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[60vh]"
             >
               <SelectGroup>
                 {menuItems.map((menu) => (
                   <SelectItem 
                     key={menu._id} 
                     value={menu._id} 
-                    className="border-orange-300 rounded-lg cursor-pointer hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                    className="cursor-pointer rounded-lg border-orange-300 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
                   >
                     <div className="flex justify-between items-center w-full gap-3 pb-2 pt-1">
                       <span className="truncate">{menu.name}</span>
@@ -793,7 +785,7 @@ const EditOrderModal = ({
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
           <button
             onClick={() => setEditingOrder(null)}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+            className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 sm:w-auto"
           >
             Cancel
           </button>
@@ -801,10 +793,10 @@ const EditOrderModal = ({
           <button
             onClick={handleUpdateOrder}
             disabled={isUpdateDisabled}
-            className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors ${
+            className={`h-11 w-full rounded-xl px-4 text-sm font-semibold transition-colors sm:w-auto ${
               isUpdateDisabled
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600'
+                ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm hover:from-orange-600 hover:to-orange-600'
             }`}
           >
             {isSubmitting ? 'Updating...' : 'Update Order'}

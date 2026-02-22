@@ -16,7 +16,7 @@ const VariantPriceSection = ({ variantRates, errors, setFormData }) => (
 
     <div className="space-y-4">
       {["quarter", "half", "full"].map((key) => (
-        <div key={key} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+        <div key={key} className="rounded-xl border border-orange-200 bg-orange-50/70 p-4">
           <div className="mb-3">
             <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">
               {key} Price
@@ -34,7 +34,7 @@ const VariantPriceSection = ({ variantRates, errors, setFormData }) => (
                   }
                 }));
               }}
-              className={`w-full border ${errors.variantRates?.[key] ? 'border-red-500' : 'border-orange-500'} rounded-lg p-2 text-sm ${errors.variantRates?.[key] ? 'bg-red-50' : 'bg-white'}`}
+              className={`w-full rounded-lg border p-2 text-sm shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${errors.variantRates?.[key] ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'}`}
               placeholder={`e.g. ${key === "quarter" ? 150 : key === "half" ? 299 : 499}`}
             />
             {errors.variantRates?.[key] && (

@@ -2,11 +2,10 @@ import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { House, Pointer, SquarePen, Trash, Truck, Utensils, Eye, Ban , Home } from "lucide-react";
+import { SquarePen, Trash, Truck, Utensils, Eye, Ban, Home } from "lucide-react";
 
 const OrderRow = ({
   order,
-  orderNum,
   setEditingOrder,
   setShowConfirmDelete,
   updateOrder,
@@ -14,8 +13,6 @@ const OrderRow = ({
   onCustomizationsClick,
 }) => {
   const dispatch = useDispatch();
-  const userRole = localStorage.getItem("userRole") || "";
-  const isStaff = userRole === "staff";
 
   // Check if any item in the order has customizations
   const hasCustomizations = order.items && 
@@ -62,7 +59,7 @@ const OrderRow = ({
   const orderTypeStyle = getOrderTypeDisplay(order.orderType);
 
   return (
-    <tr className="hover:bg-orange-50 border transition">
+    <tr className="border-b border-orange-100 transition hover:bg-orange-50/70">
       {/* Date Column */}
       <td className="text-center border text-sm text-gray-700 px-1">
         {order.formattedDate || "N/A"}
@@ -99,7 +96,7 @@ const OrderRow = ({
       <td className="text-center border py-2">
         <button
           onClick={() => dispatch(showBill(order))}
-          className="px-4 py-1.5 rounded-xl bg-orange-100 border border-orange-300 hover:bg-orange-200 transition text-sm font-medium"
+          className="rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
         >
           <span className="flex justify-center items-center gap-1">
             View Items & Bill
@@ -113,7 +110,7 @@ const OrderRow = ({
           {hasCustomizations ? (
             <button
               onClick={() => onCustomizationsClick(order)}
-              className="px-3 py-1.5 rounded-md bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600 transition text-xs font-medium flex items-center justify-center gap-1 shadow-sm mx-auto"
+              className="mx-auto flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
               title={`${customizationCount} item(s) have customizations`}
             >
               <Eye size={14} />
@@ -149,7 +146,7 @@ const OrderRow = ({
             <div className="flex items-center justify-center gap-1">
               <button
                 onClick={() => setEditingOrder(order)}
-                className="p-1.5 text-blue-700 hover:bg-blue-100 rounded"
+                className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100"
                 title="Edit order"
               >
                 <SquarePen size={16} />
@@ -157,7 +154,7 @@ const OrderRow = ({
 
               <button
                 onClick={() => setShowConfirmDelete(order)}
-                className="p-1.5 text-red-700 hover:bg-red-100 rounded"
+                className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100"
                 title="Delete order"
               >
                 <Trash size={16} />

@@ -170,7 +170,7 @@ const EditItemModal = ({
     };
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">
             Category *
@@ -181,18 +181,26 @@ const EditItemModal = ({
               setEditFormData(prev => ({ ...prev, category: val }))
             }
           >
-            <SelectTrigger className={`h-11 w-full rounded-lg border px-3 text-sm ${errors.category ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"}`}>
+            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-colors ${errors.category ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"} focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}>
               <SelectValue placeholder="Select a Category">
                 {getCategoryDisplayName() || "Select a Category"}
               </SelectValue>
             </SelectTrigger>
 
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 max-h-60 overflow-y-auto">
+            <SelectContent className="max-h-60 overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
               <SelectGroup>
                 {restaurantCategories.map(cat => {
                   const id = typeof cat === "object" ? cat._id : cat;
                   const name = typeof cat === "object" ? cat.name : cat;
-                  return <SelectItem key={id} value={id}>{name}</SelectItem>;
+                  return (
+                    <SelectItem
+                      key={id}
+                      value={id}
+                      className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+                    >
+                      {name}
+                    </SelectItem>
+                  );
                 })}
               </SelectGroup>
             </SelectContent>
@@ -217,7 +225,7 @@ const EditItemModal = ({
               setEditFormData(prev => ({ ...prev, type: val }))
             }
           >
-            <SelectTrigger className={`h-11 w-full rounded-lg border px-3 text-sm ${errors.type ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"}`}>
+            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-colors ${errors.type ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"} focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}>
               <SelectValue placeholder="Select Food Type">
                 {type === "veg" && "Veg"}
                 {type === "non-veg" && "Non-Veg"}
@@ -226,11 +234,11 @@ const EditItemModal = ({
               </SelectValue>
             </SelectTrigger>
 
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1">
+            <SelectContent className="rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
               <SelectGroup>
-                <SelectItem value="veg">Veg</SelectItem>
-                <SelectItem value="non-veg">Non-Veg</SelectItem>
-                <SelectItem value="mixed">Mixed</SelectItem>
+                <SelectItem value="veg" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Veg</SelectItem>
+                <SelectItem value="non-veg" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Non-Veg</SelectItem>
+                <SelectItem value="mixed" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Mixed</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -255,20 +263,20 @@ const EditItemModal = ({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-[2px] sm:p-4"
         onClick={onClose}
       >
         <motion.div
           variants={modalContentVariant}
-          className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-1 shadow-lg"
+          className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="max-h-[92dvh] overflow-y-auto rounded-[14px] bg-white sm:max-h-[88vh]">
-            <form onSubmit={onSubmitHandler} className="p-4 sm:p-6">
+          <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
+            <form onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
               <ModalHeader itemName={item?.name || ""} onClose={onClose} />
               {backendError && <ErrorDisplay error={backendError} />}
 
-              <div className="space-y-6 mt-6">
+              <div className="mt-5 space-y-5">
                 <FormInput
                   label="Product Name"
                   name="name"

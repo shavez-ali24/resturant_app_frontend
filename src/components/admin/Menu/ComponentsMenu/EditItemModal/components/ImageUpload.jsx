@@ -1,62 +1,77 @@
-import React from "react";
-import { ExclamationCircleIcon, PhotoIcon } from "@heroicons/react/24/solid";
-import { MAX_IMAGE_KB } from "../../../Lib/constants";
+import React, { useEffect, useMemo } from "react";
+import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/solid";
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_KB } from "../../../Lib/constants";
 
-const ImageUpload = ({ imageFile, currentImage, imageError, handleFileChange, isEditMode = false }) => (
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-      Product Image {isEditMode && "(Optional)"}
-    </label>
-    
-    {/* Image Preview */}
-    <div className="mb-3">
-      <img
-        src={
-          imageFile
-            ? URL.createObjectURL(imageFile)
-            : currentImage ||
-              "https://placehold.co/300x200?text=No+Image"
-        }
-        alt="Preview"
-        className="w-full h-48 object-cover rounded-lg border border-orange-300"
-      />
-    </div>
-    
-    {/* File Upload */}
-    <label className={`
-      flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors
-      ${imageError ? 'border-red-500 bg-red-50' : 'border-orange-500 hover:bg-orange-50'}
-    `}>
-      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-        <PhotoIcon className={`w-10 h-10 mb-3 ${imageError ? 'text-red-500' : 'text-orange-500'}`} />
-        <p className="text-sm text-gray-600">
-          <span className="font-semibold">Click to upload</span> or drag and drop
+const ImageUpload = ({ imageFile, currentImage, imageError, handleFileChange, isEditMode = false }) => {
+  const previewUrl = useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : ""),
+    [imageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const finalImageUrl =
+    previewUrl || currentImage || "https://placehold.co/300x200?text=No+Image";
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold text-gray-700">
+        Product Image {isEditMode && "(Optional)"}
+      </label>
+
+      <label
+        className={`
+          block w-full cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-colors
+          ${imageError ? "border-red-500 bg-red-50" : "border-orange-300 bg-orange-50/60 hover:bg-orange-100/60"}
+        `}
+      >
+        <div className="relative h-44 w-full sm:h-48">
+          <img
+            src={finalImageUrl}
+            alt="Preview"
+            className="h-full w-full object-cover"
+          />
+
+          <div className="absolute inset-x-0 bottom-0 bg-black/45 px-3 py-2 text-center text-xs font-semibold text-white">
+            {isEditMode ? "Click to replace image" : "Click to upload image"}
+          </div>
+        </div>
+
+        <input
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+          accept={ALLOWED_IMAGE_TYPES.join(",")}
+        />
+      </label>
+
+      <p className="mt-0.5 text-xs text-gray-500">Max {MAX_IMAGE_KB}KB</p>
+
+      {imageFile && !imageError && (
+        <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
+          <CheckCircleIcon className="h-4 w-4" />
+          {imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)
         </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Max {MAX_IMAGE_KB}KB
-        </p>
-      </div>
-      <input
-        type="file"
-        className="hidden"
-        onChange={handleFileChange}
-        accept="image/*"
-      />
-    </label>
-    
-    <p className="text-xs text-gray-500 mt-1">
-      {isEditMode 
-        ? "Select a new file to replace the current image." 
-        : "Upload an image for the product."}
-    </p>
-    
-    {imageError && (
-      <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-        <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
-        {imageError}
+      )}
+
+      <p className="text-xs text-gray-500">
+        {isEditMode
+          ? "Select a new file to replace the current image."
+          : "Upload an image for the product."}
       </p>
-    )}
-  </div>
-);
+
+      {imageError && (
+        <p className="mt-1 flex items-center gap-1 text-sm text-red-600">
+          <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0" />
+          {imageError}
+        </p>
+      )}
+    </div>
+  );
+};
 
 export default ImageUpload;

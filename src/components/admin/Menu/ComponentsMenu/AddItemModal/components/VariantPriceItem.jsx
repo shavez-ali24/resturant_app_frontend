@@ -19,7 +19,7 @@ const VariantPriceItem = ({
   const discountError = typeof errors === 'object' ? errors[`${variantKey}Discount`] : null;
 
   return (
-    <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+    <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-4">
       <div className="mb-3">
         <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">
           {variantLabels[variantKey]} Price
@@ -30,7 +30,7 @@ const VariantPriceItem = ({
             name={`${variantKey}.price`}
             value={variantData?.price || ""}
             onChange={handleChange}
-            className={`w-full border ${variantError ? 'border-red-500' : 'border-orange-500'} rounded-lg p-2 text-sm ${variantError ? 'bg-red-50' : 'bg-white'} pl-8`}
+            className={`w-full rounded-lg border p-2 pl-8 text-sm shadow-sm outline-none transition-all ${variantError ? 'border-red-500 bg-red-50' : 'border-orange-200 bg-white hover:border-orange-300'} focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}
             placeholder={`e.g. ${variantKey === "quarter" ? 150 : variantKey === "half" ? 299 : 499}`}
           />
           <CurrencyRupeeIcon className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-500" />
