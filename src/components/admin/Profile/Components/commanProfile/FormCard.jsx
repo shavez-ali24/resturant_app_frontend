@@ -17,12 +17,12 @@ export const FormCard = ({ title, icon, children, customIndex }) => (
         animate="visible"
         custom={customIndex}
     >
-        <div className="p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
+        <div className="p-5">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <span className="text-orange-500">{icon}</span>
                 {title}
             </h3>
-            <div className="space-y-6 ">{children}</div>
+            <div className="space-y-4">{children}</div>
         </div>
     </motion.div>
 );

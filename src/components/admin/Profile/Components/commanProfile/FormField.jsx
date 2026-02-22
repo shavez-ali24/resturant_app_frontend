@@ -12,24 +12,24 @@ export const FormField = ({
   // Scroll block function for number inputs
   const handleWheel = (e) => {
     if (type === "number") {
-      e.target.blur(); // ya e.preventDefault() bhi use kar sakte ho
+      e.target.blur();
     }
   };
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
         {label}
       </label>
       <input
         type={type}
         name={name}
-       value={value === 0 ? "" : value ?? ""}
+        value={value === 0 ? "" : value ?? ""}
         onChange={onChange}
         min={min}
         placeholder={placeholder}
-        onWheel={handleWheel} // scroll block
-        className="w-full border border-gray-300 rounded-xl p-2.5 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all cursor-pointer"
+        onWheel={handleWheel}
+        className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-gray-50"
       />
     </div>
   );

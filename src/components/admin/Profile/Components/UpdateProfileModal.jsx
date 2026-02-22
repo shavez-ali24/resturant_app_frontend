@@ -84,13 +84,13 @@ export const UpdateProfileModal = ({
           <div className="w-full p-4 md:p-6 space-y-5 overflow-y-auto">
             {/* HEADER */}
             <div className="flex justify-between items-center pb-4 border-b border-orange-200">
-              <h2 className="text-xl sm:text-2xl font-bold text-orange-700">
+              <h2 className="text-xl font-bold text-orange-700">
                 Update Restaurant Profile
               </h2>
 
               <button
                 onClick={onClose}
-                className="text-orange-400 hover:text-orange-700 transition-colors p-1 rounded-full hover:bg-orange-100"
+                className="text-orange-400 hover:text-orange-700 transition-colors p-1 h-8 w-8 rounded-full hover:bg-orange-100"
               >
                 ✕
               </button>
