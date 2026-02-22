@@ -72,13 +72,13 @@ export function NavUser({ user }) {
   };
 
   return (
-    <SidebarMenu className="rounded-2xl border border-orange-200 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] transition-shadow duration-200 hover:shadow-md">
+    <SidebarMenu className="rounded-2xl border border-orange-400 bg-orange-200/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] transition-shadow duration-200 hover:shadow-md">
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="h-14 rounded-xl bg-transparent px-2.5 text-gray-800 transition-colors duration-200 hover:bg-orange-50 data-[state=open]:bg-orange-100/60"
+              className="h-14 rounded-xl bg-transparent px-2.5 text-gray-800 transition-colors duration-200 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 data-[state=open]:bg-orange-100/60"
             >
               {isLoading ? (
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-200 bg-white animate-pulse">

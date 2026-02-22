@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) => {
+  const MotionDiv = motion.div;
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -147,7 +148,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
   }, [showMenu]);
 
   return (
-    <motion.div
+    <MotionDiv
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -185,7 +186,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
               </button>
 
               {showMenu && (
-                <motion.div
+                <MotionDiv
                   initial={{ opacity: 0, y: 5, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl"
@@ -209,7 +210,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                   >
                     <Trash2 size={15} /> Delete
                   </button>
-                </motion.div>
+                </MotionDiv>
               )}
             </div>
           )}
@@ -340,7 +341,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
           </div>
         </div>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 };
 

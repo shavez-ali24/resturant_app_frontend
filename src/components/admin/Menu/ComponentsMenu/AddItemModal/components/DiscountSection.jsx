@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -40,7 +40,7 @@ const DiscountSection = ({
   const error = getError();
 
   // Validate discount
-  const validateDiscount = () => {
+  const validateDiscount = useCallback(() => {
     if (!safeDiscount.active) {
       setLocalErrors({});
       return true;
@@ -72,12 +72,12 @@ const DiscountSection = ({
 
     setLocalErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [safeDiscount.active, safeDiscount.type, safeDiscount.value]);
 
   // Validate on discount changes
   useEffect(() => {
     validateDiscount();
-  }, [safeDiscount.active, safeDiscount.type, safeDiscount.value]);
+  }, [validateDiscount]);
 
   // Handle discount type change
   const handleTypeChange = (val) => {
@@ -85,12 +85,6 @@ const DiscountSection = ({
     setLocalErrors(prev => ({ ...prev, type: "" }));
     
     // Update form data
-    const updatedDiscount = {
-      ...safeDiscount,
-      type: val,
-      value: "" // Reset value when type changes
-    };
-    
     // Call parent handler
     handleChange({
       target: {
@@ -148,7 +142,7 @@ const DiscountSection = ({
         return { ...prev, discount: newDiscount };
       });
     }
-  }, [safeDiscount.type]);
+  }, [safeDiscount.type, setFormData]);
 
   return (
     <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-4">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
 import { SlRefresh } from "react-icons/sl";
 
@@ -45,10 +45,18 @@ const Orders = () => {
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(
-    () => localStorage.getItem("autoRefresh") || "OFF"
+    () => {
+      const saved = localStorage.getItem("autoRefresh");
+      return ["OFF", "1", "2", "5"].includes(saved) ? saved : "OFF";
+    }
   );
-  const autoRefIntervalId = useRef(null);
   const itemsPerPage = 10;
+  const autoRefreshMinutes = useMemo(() => {
+    if (autoRefresh === "OFF") return 0;
+    const mins = parseInt(autoRefresh, 10);
+    return Number.isNaN(mins) ? 0 : mins;
+  }, [autoRefresh]);
+  const pollingIntervalMs = autoRefreshMinutes > 0 ? autoRefreshMinutes * 60 * 1000 : 0;
 
   // --- RTK Query Hook with API parameters ---
   const {
@@ -57,12 +65,19 @@ const Orders = () => {
     isError: ordersError,
     error: ordersErrorObj,
     refetch: refetchOrders,
-  } = useGetOrdersQuery({
-    status: "pending",
-    page: currentPage,
-    limit: itemsPerPage,
-    range: "all",
-  });
+  } = useGetOrdersQuery(
+    {
+      status: "pending",
+      page: currentPage,
+      limit: itemsPerPage,
+      range: "all",
+    },
+    {
+      pollingInterval: pollingIntervalMs,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
 
   const { data: menuItems = [] } = useGetMenuQuery();
   
@@ -72,7 +87,11 @@ const Orders = () => {
     isLoading: restaurantLoading,
     error: restaurantError,
     refetch: refetchRestaurant
-  } = useGetRestaurantProfileQuery();
+  } = useGetRestaurantProfileQuery(undefined, {
+    pollingInterval: pollingIntervalMs,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
   
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
@@ -256,44 +275,19 @@ const Orders = () => {
   };
 
   // --- Auto Refresh ---
-  const stopAutoRefresh = useCallback(() => {
-    if (autoRefIntervalId.current) {
-      clearInterval(autoRefIntervalId.current);
-      autoRefIntervalId.current = null;
-    }
-    setAutoRefresh("OFF");
-    localStorage.setItem("autoRefresh", "OFF");
-    notify("Auto-refresh turned off", "info");
-  }, [notify]);
+  const handleAutoRefreshChange = (value) => {
+    setAutoRefresh(value);
+    localStorage.setItem("autoRefresh", value);
 
-  const startAutoRefresh = useCallback(
-    (minutes) => {
-      if (autoRefIntervalId.current) clearInterval(autoRefIntervalId.current);
-
-      const id = setInterval(() => {
-        refetchOrders();
-        refetchRestaurant(); // ✅ Restaurant data bhi refresh karein
-      }, minutes * 60 * 1000);
-
-      autoRefIntervalId.current = id;
-      setAutoRefresh(`${minutes}`);
-      localStorage.setItem("autoRefresh", `${minutes}`);
-      notify(`Auto-refresh set to every ${minutes} min`, "success");
-    },
-    [refetchOrders, refetchRestaurant, notify]
-  );
-
-  useEffect(() => {
-    const saved = localStorage.getItem("autoRefresh");
-    if (saved && saved !== "OFF") {
-      const mins = parseInt(saved, 10);
-      if (!isNaN(mins) && mins > 0) startAutoRefresh(mins);
+    if (value === "OFF") {
+      notify("Auto-refresh turned off", "info");
+      return;
     }
 
-    return () => {
-      if (autoRefIntervalId.current) clearInterval(autoRefIntervalId.current);
-    };
-  }, [startAutoRefresh]);
+    notify(`Auto-refresh set to every ${value} min`, "success");
+    refetchOrders();
+    refetchRestaurant();
+  };
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -359,14 +353,7 @@ const Orders = () => {
           {/* Auto Refresh */}
           <Select
             value={autoRefresh}
-            onValueChange={(value) => {
-              if (value === "OFF") {
-                stopAutoRefresh();
-              } else {
-                const mins = parseInt(value, 10);
-                if (!isNaN(mins)) startAutoRefresh(mins);
-              }
-            }}
+            onValueChange={handleAutoRefreshChange}
           >
             <SelectTrigger className="h-10 w-[130px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
               <SelectValue placeholder="Auto Refresh" />

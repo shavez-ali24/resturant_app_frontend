@@ -161,7 +161,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="relative flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] lg:h-[450px] lg:flex-row"
+              className="relative flex max-h-[90dvh] w-full max-w-[880px] flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] lg:h-[410px] lg:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
@@ -174,7 +174,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
               </button>
 
               {/* LEFT – IMAGE */}
-              <div className="relative h-44 w-full overflow-hidden bg-orange-50 sm:h-56 lg:h-full lg:w-[34%]">
+              <div className="relative h-40 w-full overflow-hidden bg-orange-50 sm:h-48 lg:h-full lg:w-[32%]">
                 <img
                   src={
                     item.image?.url ||
@@ -199,24 +199,24 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
               </div>
 
               {/* RIGHT – DETAILS */}
-              <div className="relative flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">
+              <div className="relative flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
                 {/* Title */}
-                <div className="mb-4">
-                  <h2 className="mb-2 text-lg font-bold text-gray-900 md:text-xl">
+                <div className="mb-3">
+                  <h2 className="mb-2 text-base font-bold text-gray-900 sm:text-lg md:text-xl">
                     {item.name}
                   </h2>
                   
                   {/* Badges */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div className="mb-2.5 flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-2">
                       <Tag size={14} className="text-orange-500" />
-                      <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium border border-orange-300">
+                      <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
                         {item.category || "Uncategorized"}
                       </span>
                     </div>
                     
                     <div
-                      className={`px-3 py-1 text-xs font-bold text-white rounded-full ${
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold text-white ${
                         item.type === "veg"
                           ? "bg-green-500"
                           : "bg-red-500"
@@ -225,14 +225,14 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       {item.type === "veg" ? "VEG" : "NON-VEG"}
                     </div>
                     
-                    <div className="rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+                    <div className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
                       {isSinglePricing ? "SINGLE" : 
                        isVariantPricing ? "VARIANT" : 
                        "COMBO"}
                     </div>
                     
                     <div
-                      className={`px-3 py-1 text-xs font-bold text-white rounded-full ${
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold text-white ${
                         item.available
                           ? "bg-emerald-500"
                           : "bg-rose-500"
@@ -244,7 +244,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                 </div>
 
                 {/* Description */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Info size={16} className="text-orange-500" />
                     <h3 className="font-semibold text-orange-700 text-sm uppercase tracking-wider">
@@ -252,31 +252,31 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                     </h3>
                   </div>
 
-                  <div className="h-24 overflow-y-auto rounded-xl border border-orange-200 bg-orange-50/60 p-3">
-                    <p className="text-gray-700 text-sm leading-relaxed">
+                  <div className="h-20 overflow-y-auto rounded-xl border border-orange-200 bg-orange-50/60 p-2.5">
+                    <p className="text-xs leading-relaxed text-gray-700 sm:text-sm">
                       {item.description || "No description available"}
                     </p>
                   </div>
                 </div>
 
                 {/* PRICE SECTION - Unified Style */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="mb-3 flex items-center gap-2">
                     <ShoppingBag size={16} className="text-orange-500" />
-                    <h3 className="text-base font-semibold text-orange-800">
+                    <h3 className="text-sm font-semibold text-orange-800 sm:text-base">
                       Pricing Details
                     </h3>
                   </div>
                   
                   {/* Single Price - Unified Style */}
                   {isSinglePricing && (
-                    <div className="flex min-h-[140px] items-center justify-center rounded-xl border border-orange-200 bg-orange-50/70 p-3.5 shadow-sm sm:p-4">
-                      <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+                    <div className="flex min-h-[110px] items-center justify-center rounded-xl border border-orange-200 bg-orange-50/70 p-3 shadow-sm">
+                      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-5">
                         {discountedPriceInfo ? (
                           <>
                             <div className="flex items-center">
-                              <IndianRupee className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
-                              <span className="text-lg font-bold text-orange-600 sm:text-2xl">
+                              <IndianRupee className="h-3.5 w-3.5 text-orange-600 sm:h-4 sm:w-4" />
+                              <span className="text-base font-bold text-orange-600 sm:text-xl">
                                 {discountedPriceInfo.discounted}
                               </span>
                             </div>
@@ -291,8 +291,8 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                           </>
                         ) : (
                           <div className="flex items-center">
-                            <IndianRupee className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
-                            <span className="text-lg font-bold text-orange-600 sm:text-2xl">
+                            <IndianRupee className="h-3.5 w-3.5 text-orange-600 sm:h-4 sm:w-4" />
+                            <span className="text-base font-bold text-orange-600 sm:text-xl">
                               {item.price}
                             </span>
                           </div>
@@ -303,32 +303,32 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
 
                   {/* Variant Prices - Unified Style */}
                   {isVariantPricing && variantDisplay.length > 0 && (
-                    <div className="flex min-h-[140px] items-center rounded-xl border border-orange-200 bg-orange-50/70 p-3.5 shadow-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex min-h-[110px] items-center rounded-xl border border-orange-200 bg-orange-50/70 p-3 shadow-sm">
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                         {variantDisplay.map((variant) => (
                           <div 
                             key={variant.key} 
-                            className={`rounded-lg border-2 bg-white p-3 text-center sm:p-4 ${
+                            className={`rounded-lg border-2 bg-white p-2.5 text-center sm:p-3 ${
                               variant.hasDiscount ? 'border-orange-300' : 'border-orange-200'
                             }`}
                           >
-                            <div className="text-sm text-orange-600 font-medium mb-2 uppercase">
+                            <div className="mb-1.5 text-xs font-medium uppercase text-orange-600 sm:text-sm">
                               {variant.label}
                             </div>
                             <div className="flex items-center justify-center gap-1">
-                              <IndianRupee className="h-3.5 w-3.5 text-orange-600" />
+                              <IndianRupee className="h-3 w-3 text-orange-600 sm:h-3.5 sm:w-3.5" />
                               <span className={`font-bold text-orange-600 ${
-                                variant.hasDiscount ? "text-base sm:text-lg" : "text-sm sm:text-base"
+                                variant.hasDiscount ? "text-sm sm:text-base" : "text-xs sm:text-sm"
                               }`}>
                                 {variant.discountedPrice || variant.originalPrice}
                               </span>
                             </div>
                             {variant.hasDiscount && (
-                              <div className="mt-2">
+                              <div className="mt-1.5">
                                 <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
                                   {variant.discountText}
                                 </span>
-                                <div className="text-xs text-gray-400 line-through mt-1">
+                                <div className="mt-1 text-xs text-gray-400 line-through">
                                   ₹{variant.originalPrice}
                                 </div>
                               </div>
@@ -341,12 +341,12 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
 
                   {/* Combo Pricing - Unified Style */}
                   {isComboPricing && (
-                    <div className="flex min-h-[140px] flex-col rounded-xl border border-orange-200 bg-orange-50/70 p-3.5 shadow-sm sm:p-4">
+                    <div className="flex min-h-[110px] flex-col rounded-xl border border-orange-200 bg-orange-50/70 p-3 shadow-sm sm:p-3.5">
                       {/* Combo Price Display */}
-                      <div className="mb-3 flex items-center justify-center sm:mb-4">
+                      <div className="mb-2.5 flex items-center justify-center sm:mb-3">
                         <div className="flex items-center">
-                          <IndianRupee className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
-                          <span className="text-lg font-bold text-orange-600 sm:text-2xl">
+                          <IndianRupee className="h-3.5 w-3.5 text-orange-600 sm:h-4 sm:w-4" />
+                          <span className="text-base font-bold text-orange-600 sm:text-xl">
                             {item.comboPrice || "0.00"}
                           </span>
                         </div>
@@ -354,32 +354,32 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       
                       {/* Combo Items List */}
                       {comboItemsDisplay.length > 0 && (
-                        <div className="pt-3 sm:pt-4 border-t border-orange-200">
-                          <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                            <Layers className="h-4 w-4 text-orange-500 sm:h-5 sm:w-5" />
-                            <h4 className="font-semibold text-orange-700 text-sm sm:text-base">Combo Includes:</h4>
+                        <div className="border-t border-orange-200 pt-2.5 sm:pt-3">
+                          <div className="mb-2 flex items-center gap-2 sm:mb-2.5">
+                            <Layers className="h-4 w-4 text-orange-500" />
+                            <h4 className="text-sm font-semibold text-orange-700">Combo Includes:</h4>
                           </div>
                           
-                          <div className="max-h-32 space-y-2 overflow-y-auto pr-2">
+                          <div className="max-h-24 space-y-1.5 overflow-y-auto pr-1.5">
                             {comboItemsDisplay.map((comboItem) => (
                               <div 
                                 key={comboItem.id} 
-                                className="flex items-center justify-between rounded-lg border border-orange-200 bg-white p-2 transition-colors hover:bg-orange-50 sm:p-3"
+                                className="flex items-center justify-between rounded-lg border border-orange-200 bg-white p-2 transition-colors hover:bg-orange-50"
                               >
-                                <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                                   <div>
-                                    <div className="font-medium text-gray-800 text-xs sm:text-sm">
+                                    <div className="text-xs font-medium text-gray-800 sm:text-sm">
                                       {comboItem.name || `Item ${comboItem.id + 1}`}
                                       {comboItem.variant && (
-                                        <span className="ml-1 rounded bg-orange-100 px-1 py-0.5 text-xs text-orange-600 sm:ml-2 sm:px-2">
+                                        <span className="ml-1 rounded bg-orange-100 px-1 py-0.5 text-xs text-orange-600 sm:ml-2">
                                           {comboItem.variant}
                                         </span>
                                       )}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="text-xs sm:text-sm text-gray-600">
+                                <div className="text-xs text-gray-600 sm:text-sm">
                                   {comboItem.quantity > 1 ? `×${comboItem.quantity}` : ''}
                                 </div>
                               </div>

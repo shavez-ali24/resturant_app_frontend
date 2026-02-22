@@ -59,7 +59,7 @@ const ProfessionalComingSoon = () => {
   }, []);
 
   return (
-    <div className="h-full bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 flex flex-col items-center justify-center p-4 overflow-hidden relative">
+    <div className="relative flex min-h-[calc(100dvh-4rem)] w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 p-3 sm:p-4">
       
       {/* Animated Background Particles */}
       {particles.map(particle => (
@@ -77,8 +77,8 @@ const ProfessionalComingSoon = () => {
       ))}
 
       {/* Main Character Container */}
-      <div 
-        className="relative w-full max-w-5xl flex justify-center items-center"
+      <div
+        className="relative flex w-full max-w-6xl items-center justify-center"
         style={{
           transform: `translateY(${characterPosition}px)`,
           transition: 'transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
@@ -86,7 +86,11 @@ const ProfessionalComingSoon = () => {
       >
         
         {/* Character with Enhanced Design */}
-        <div className={`relative transition-all duration-500 ${bounce ? 'transform -translate-y-6' : ''}`}>
+        <div
+          className={`relative origin-center scale-[0.48] transition-all duration-500 sm:scale-[0.62] md:scale-[0.78] lg:scale-[0.9] xl:scale-100 ${
+            bounce ? 'transform -translate-y-6' : ''
+          }`}
+        >
           
           {/* Glow Effect */}
           <div className={`absolute inset-0 rounded-full blur-xl bg-orange-400 opacity-20 transition-all duration-1000 ${
@@ -165,7 +169,7 @@ top-3/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 text-center ">
             
             {/* Professional Coming Soon Board */}
             <div 
-              className={`absolute -top-48 left-1/2 transform -translate-x-1/2 transition-all duration-1000 ${
+              className={`absolute -top-44 left-1/2 -translate-x-1/2 transform transition-all duration-1000 sm:-top-[11.5rem] md:-top-48 ${
                 characterPosition === 0 ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
               }`}
             >
@@ -176,25 +180,25 @@ top-3/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 text-center ">
                 }`}></div>
                 
                 {/* Main Board */}
-                <div className="w-[480px] h-64 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-100 border-6 border-orange-500 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-8 relative z-10">
+                <div className="relative z-10 flex h-40 w-[280px] flex-col items-center justify-center rounded-3xl border-4 border-orange-500 bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-100 p-4 shadow-2xl sm:h-48 sm:w-[340px] sm:p-5 md:h-56 md:w-[420px] md:p-6 lg:h-64 lg:w-[480px] lg:border-[6px] lg:p-8">
                   
                   {/* Metallic Handles */}
-                  <div className="absolute -left-10 top-1/2 transform -translate-y-1/2 w-10 h-28 bg-gradient-to-b from-orange-600 via-amber-600 to-orange-800 rounded-full shadow-lg border-2 border-orange-700"></div>
-                  <div className="absolute -right-10 top-1/2 transform -translate-y-1/2 w-10 h-28 bg-gradient-to-b from-orange-600 via-amber-600 to-orange-800 rounded-full shadow-lg border-2 border-orange-700"></div>
+                  <div className="absolute -left-7 top-1/2 h-20 w-7 -translate-y-1/2 transform rounded-full border-2 border-orange-700 bg-gradient-to-b from-orange-600 via-amber-600 to-orange-800 shadow-lg sm:-left-8 sm:h-24 sm:w-8 md:-left-10 md:h-28 md:w-10"></div>
+                  <div className="absolute -right-7 top-1/2 h-20 w-7 -translate-y-1/2 transform rounded-full border-2 border-orange-700 bg-gradient-to-b from-orange-600 via-amber-600 to-orange-800 shadow-lg sm:-right-8 sm:h-24 sm:w-8 md:-right-10 md:h-28 md:w-10"></div>
                   
                   {/* Board Content */}
                   <div className="text-center relative z-20">
-                    <div className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-red-500 to-orange-700 mb-6 tracking-tight animate-glow-text">
+                    <div className="mb-3 bg-gradient-to-r from-orange-600 via-red-500 to-orange-700 bg-clip-text text-3xl font-black tracking-tight text-transparent animate-glow-text sm:mb-4 sm:text-4xl md:text-5xl lg:mb-6 lg:text-7xl">
                       COMING SOON
                     </div>
-                    <div className="w-full h-3 bg-gradient-to-r from-transparent via-orange-500 to-transparent rounded-full mt-2 shadow-lg"></div>
+                    <div className="mt-1 h-2 w-full rounded-full bg-gradient-to-r from-transparent via-orange-500 to-transparent shadow-lg sm:mt-2 sm:h-3"></div>
                   </div>
                   
                   {/* Corner Accents */}
-                  <div className="absolute top-4 left-4 w-6 h-6 bg-orange-500 rounded-full opacity-60 animate-pulse"></div>
-                  <div className="absolute top-4 right-4 w-6 h-6 bg-orange-500 rounded-full opacity-60 animate-pulse" style={{animationDelay: '0.3s'}}></div>
-                  <div className="absolute bottom-4 left-4 w-6 h-6 bg-orange-500 rounded-full opacity-60 animate-pulse" style={{animationDelay: '0.6s'}}></div>
-                  <div className="absolute bottom-4 right-4 w-6 h-6 bg-orange-500 rounded-full opacity-60 animate-pulse" style={{animationDelay: '0.9s'}}></div>
+                  <div className="absolute left-3 top-3 h-4 w-4 rounded-full bg-orange-500 opacity-60 animate-pulse sm:left-4 sm:top-4 sm:h-6 sm:w-6"></div>
+                  <div className="absolute right-3 top-3 h-4 w-4 rounded-full bg-orange-500 opacity-60 animate-pulse sm:right-4 sm:top-4 sm:h-6 sm:w-6" style={{animationDelay: '0.3s'}}></div>
+                  <div className="absolute bottom-3 left-3 h-4 w-4 rounded-full bg-orange-500 opacity-60 animate-pulse sm:bottom-4 sm:left-4 sm:h-6 sm:w-6" style={{animationDelay: '0.6s'}}></div>
+                  <div className="absolute bottom-3 right-3 h-4 w-4 rounded-full bg-orange-500 opacity-60 animate-pulse sm:bottom-4 sm:right-4 sm:h-6 sm:w-6" style={{animationDelay: '0.9s'}}></div>
                 </div>
               </div>
             </div>
@@ -204,15 +208,15 @@ top-3/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 text-center ">
 
       {/* Bottom Prompt */}
       <div 
-        className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 transition-all duration-1000 delay-2000 ${
+        className={`absolute bottom-4 left-1/2 z-20 w-full max-w-md -translate-x-1/2 transform px-4 transition-all duration-1000 delay-2000 sm:bottom-6 md:bottom-8 ${
           showPrompt ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         }`}
       >
-        <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-8 py-4 rounded-2xl shadow-2xl border-2 border-orange-400 text-center">
+        <div className="w-full rounded-2xl border-2 border-orange-400 bg-gradient-to-r from-orange-500 to-amber-600 px-6 py-3 text-center text-white shadow-2xl sm:px-8 sm:py-4">
           {/* <p className="text-xl font-bold animate-pulse">
             जल्द ही लेकर आ रहे हैं! 🚀
           </p> */}
-          <p className="text-sm mt-1 opacity-90">
+          <p className="mt-1 text-xs opacity-90 sm:text-sm">
             We'll be back soon with something amazing!
           </p>
         </div>

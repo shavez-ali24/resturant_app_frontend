@@ -41,6 +41,7 @@ const EditItemModal = ({
   restaurantCategories,
   menuItems = [],
 }) => {
+  const MotionDiv = motion.div;
   const [editFormData, setEditFormData] = useState({});
   const [newImageFile, setNewImageFile] = useState(null);
   const [imageError, setImageError] = useState("");
@@ -258,7 +259,7 @@ const EditItemModal = ({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <MotionDiv
         variants={modalOverlayVariant}
         initial="hidden"
         animate="visible"
@@ -266,7 +267,7 @@ const EditItemModal = ({
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-[2px] sm:p-4"
         onClick={onClose}
       >
-        <motion.div
+        <MotionDiv
           variants={modalContentVariant}
           className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
           onClick={(e) => e.stopPropagation()}
@@ -356,8 +357,8 @@ const EditItemModal = ({
               </div>
             </form>
           </div>
-        </motion.div>
-      </motion.div>
+        </MotionDiv>
+      </MotionDiv>
     </AnimatePresence>
   );
 };

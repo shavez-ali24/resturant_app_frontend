@@ -1,4 +1,4 @@
-import { validateEditForm, validateImage } from "./validators";
+import { validateImage } from "./validators";
 
 export const handleEditFormChange = (e, formData, setFormData, errors, setErrors, backendError, setBackendError) => {
   const { name, value, type, checked } = e.target;
@@ -264,16 +264,6 @@ export const handleEditSubmit = async (
         formDataToSubmit.discount = null;
       }
     }
-
-    // Debug: log discount state before sending
-    try {
-      // eslint-disable-next-line no-console
-      // console.log("[EditItemModal] editFormData.discount:", JSON.stringify(editFormData.discount));
-      // eslint-disable-next-line no-console
-      // console.log("[EditItemModal] formDataToSubmit.discount:", JSON.stringify(formDataToSubmit.discount));
-      // eslint-disable-next-line no-console
-      // console.log("[EditItemModal] formDataToSubmit.variantRates:", JSON.stringify(formDataToSubmit.variantRates));
-    } catch (e) {}
 
     await onSubmit(formDataToSubmit, newImageFile);
     onClose();

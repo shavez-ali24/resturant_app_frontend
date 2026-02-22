@@ -9,6 +9,8 @@ import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
 const POLLING_INTERVAL = 60000; // 60 seconds for notifications
 
 export default function NotificationBell() {
+  const MotionDiv = motion.div;
+  const MotionSpan = motion.span;
   const dispatch = useDispatch();
   const bellRef = useRef(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -139,39 +141,39 @@ export default function NotificationBell() {
         
         {/* Notification counter badge */}
         {notificationCount > 0 && (
-          <motion.span
+          <MotionSpan
             key={notificationCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold shadow-md"
           >
             {notificationCount > 9 ? "9+" : notificationCount}
-          </motion.span>
+          </MotionSpan>
         )}
       </button>
 
       <AnimatePresence>
         {isDropdownOpen && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: -6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 md:w-96 bg-white border border-orange-200 shadow-2xl rounded-xl z-50 overflow-hidden"
+            className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] md:w-96"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-300 p-4">
+            <div className="border-b border-orange-100 bg-gradient-to-r from-orange-400 to-orange-500 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-white text-lg">New Orders</h4>
-                  <p className="text-orange-100 text-sm mt-1">
+                  <p className="mt-1 text-sm text-orange-50">
                     Real-time notifications
                   </p>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   {notificationCount > 0 && (
-                    <span className="bg-white text-orange-600 text-sm font-bold px-3 py-1 rounded-full">
+                    <span className="rounded-full border border-orange-200 bg-white px-3 py-1 text-sm font-bold text-orange-700">
                       {notificationCount} new
                     </span>
                   )}
@@ -187,16 +189,16 @@ export default function NotificationBell() {
             </div>
 
             {/* Orders list */}
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto bg-white">
               {latestOrders.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-orange-100">
                   {latestOrders.map((order, index) => (
-                    <motion.div
+                    <MotionDiv
                       key={order._id || index}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="p-4 hover:bg-orange-50/50 transition-colors duration-150"
+                      className="p-4 transition-colors duration-150 hover:bg-orange-50/70"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -233,26 +235,26 @@ export default function NotificationBell() {
                         
                         <button
                           onClick={() => handleViewBill(order)}
-                          className="ml-3 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 font-medium px-3 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap"
+                          className="ml-3 whitespace-nowrap rounded-lg border border-orange-200 bg-orange-100 px-3 py-2 text-xs font-semibold text-orange-700 transition-colors duration-200 hover:bg-orange-200"
                         >
                           View Bill
                         </button>
                       </div>
-                    </motion.div>
+                    </MotionDiv>
                   ))}
                 </div>
               ) : (
                 <div className="p-8 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                    <Bell size={24} className="text-gray-400" />
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+                    <Bell size={24} className="text-orange-500" />
                   </div>
-                  <h3 className="text-gray-700 font-medium mb-2">No new orders</h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <h3 className="mb-2 font-semibold text-gray-800">No new orders</h3>
+                  <p className="mb-4 text-sm text-gray-500">
                     New pending orders will appear here
                   </p>
                   <button
                     onClick={handleManualRefresh}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-100"
                   >
                     Check for orders
                   </button>
@@ -261,26 +263,26 @@ export default function NotificationBell() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-gray-50">
+            <div className="border-t border-orange-100 bg-white">
               <div className="flex items-center justify-between p-3">
                 <button
                   onClick={handleClearAll}
                   disabled={latestOrders.length === 0}
                   className={`text-sm px-4 py-2 rounded-lg transition-colors ${
                     latestOrders.length > 0 
-                      ? "text-orange-600 hover:text-orange-900 hover:bg-orange-200" 
+                      ? "font-semibold text-orange-700 hover:bg-orange-200 hover:text-orange-900" 
                       : "text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   Clear all
                 </button>
                 
-                <div className="text-xs text-gray-500">
+                <div className="text-xs font-medium text-gray-600">
                   {latestOrders.length} order{latestOrders.length !== 1 ? 's' : ''}
                 </div>
               </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </div>

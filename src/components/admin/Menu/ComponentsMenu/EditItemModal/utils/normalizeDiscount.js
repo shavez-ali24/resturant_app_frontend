@@ -36,8 +36,3 @@ function normalizeDiscount(discount) {
 
 // ES module default export for frontend usage
 export default normalizeDiscount;
-
-// CommonJS fallback for easy copy-paste into Node backend
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = normalizeDiscount;
-}

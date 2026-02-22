@@ -23,7 +23,7 @@ export function NavMain({ items }) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-xs font-semibold text-black-400 uppercase tracking-wider">
+      <SidebarGroupLabel className="text-xs font-semibold text-orange-700 uppercase tracking-wider">
         ADMIN
       </SidebarGroupLabel>
       <SidebarMenu className="mt-2">
@@ -44,7 +44,7 @@ export function NavMain({ items }) {
           flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded transition-all duration-200 group 
           ${isActive
             ? "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm " /* ACTIVE (stay this color) */
-            : "text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-300 hover:text-orange-900" /* NORMAL */
+            : "text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900" /* NORMAL */
           }
         `}
       >
@@ -83,7 +83,7 @@ export function NavMain({ items }) {
     block px-3 py-1 text-sm rounded transition-colors duration-200
     ${isSubActive
       ? "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
-      : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-300 hover:text-orange-900"
+      : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
     }
   `}
 >

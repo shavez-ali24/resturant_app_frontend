@@ -36,6 +36,8 @@ const AddItemModal = ({
   restaurantCategories = [],
   menuItems = [],
 }) => {
+  const MotionDiv = motion.div;
+  const MotionForm = motion.form;
   const [addFormData, setAddFormData] = useState(defaultAddFormState);
   const [addFile, setAddFile] = useState(null);
   const [addFileError, setAddFileError] = useState("");
@@ -110,7 +112,7 @@ const AddItemModal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <MotionDiv
           variants={modalOverlayVariant}
           initial="hidden"
           animate="visible"
@@ -118,13 +120,13 @@ const AddItemModal = ({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-[2px] sm:p-4"
           onClick={onClose}
         >
-          <motion.div
+          <MotionDiv
             variants={addItemModalVariant}
             className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
-              <motion.form onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
+              <MotionForm onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
                 <ModalHeader onClose={onClose} />
                 {backendError && <ErrorDisplay error={backendError} />}
 
@@ -213,10 +215,10 @@ const AddItemModal = ({
                     submitText="Add Product"
                   />
                 </div>
-              </motion.form>
+              </MotionForm>
             </div>
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
       )}
     </AnimatePresence>
   );

@@ -75,7 +75,7 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white uppercase tracking-wide text-xs">
+          <thead className="bg-gradient-to-r from-orange-400 to-orange-600 text-white uppercase tracking-wide text-xs">
             <tr>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Date</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold">Time</th>
