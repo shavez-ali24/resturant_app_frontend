@@ -1,12 +1,6 @@
 import * as React from "react";
 import {
   ScrollText,
-  SquareMenu,
-  LifeBuoy,
-  Send,
-  Frame,
-  PieChart,
-  Map,
 } from "lucide-react";
 import { NavMain } from "@/components/superAdmin/sidebar/navMain";
 import { NavUser } from "@/components/superAdmin/sidebar/navUser";
@@ -19,22 +13,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
+import logo from "@/assets/tapNOrder.png";
 
 export function SuperAdminSidebar({ ...props }) {
   const { toggleSidebar } = useSidebar();
   const location = useLocation();
-  const navigate = useNavigate();
   const [userData, setUserData] = React.useState({
     name: "Super Admin",
     email: "admin@example.com",
     avatar: ""
-  });
-  const [sidebarStats, setSidebarStats] = React.useState({
-    totalClicks: 0,
-    lastActive: null,
-    frequentlyAccessed: []
   });
 
   // Enhanced user data fetching with validation
@@ -66,22 +55,7 @@ export function SuperAdminSidebar({ ...props }) {
     loadUserData();
   }, []);
 
-  // Track sidebar navigation analytics
-  const trackNavigation = (itemTitle, itemUrl) => {
-    setSidebarStats(prev => ({
-      ...prev,
-      totalClicks: prev.totalClicks + 1,
-      lastActive: new Date().toISOString(),
-      frequentlyAccessed: [
-        ...prev.frequentlyAccessed.filter(item => item.title !== itemTitle),
-        { title: itemTitle, url: itemUrl, timestamp: new Date().toISOString() }
-      ].slice(0, 5) // Keep only last 5 items
-    }));
-
-    // console.log(`Navigation tracked: ${itemTitle} -> ${itemUrl}`);
-  };
-
-  
+ 
   React.useEffect(() => {
     const handleRouteChange = () => {
       if (window.innerWidth < 1024) {
@@ -107,19 +81,7 @@ export function SuperAdminSidebar({ ...props }) {
     return () => document.removeEventListener('keydown', handleKeyNavigation);
   }, []);
 
-  // Session management for sidebar state persistence
-  React.useEffect(() => {
-    const savedSidebarState = sessionStorage.getItem('sidebarState');
-    if (savedSidebarState === 'closed') {
-      toggleSidebar(false);
-    }
-  }, [toggleSidebar]);
-
-  const handleSidebarInteraction = (action, item = null) => {
-    if (item) {
-      trackNavigation(item.title, item.url);
-    }
-
+  const handleSidebarInteraction = () => {
     if (window.innerWidth < 1024) {
       toggleSidebar(false);
       sessionStorage.setItem('sidebarState', 'closed');
@@ -130,16 +92,11 @@ export function SuperAdminSidebar({ ...props }) {
     user: userData,
     navMain: [
       {
-        title: "Details",
+        title: "User Management",
         url: "#",
         icon: ScrollText,
         isActive: location.pathname.startsWith('/super-admin'),
         items: [
-          { 
-            title: "Create User", 
-            url: "/super-admin/create-user",
-            isActive: location.pathname === '/super-admin/create-user'
-          },
           { 
             title: "User List", 
             url: "/super-admin/user-list",
@@ -148,37 +105,28 @@ export function SuperAdminSidebar({ ...props }) {
         ],
       },
     ],
-    navSecondary: [
-      { title: "Support", url: "#", icon: LifeBuoy },
-      { title: "Feedback", url: "#", icon: Send },
-    ],
-    projects: [
-      { name: "Design Engineering", url: "#", icon: Frame },
-      { name: "Sales & Marketing", url: "#", icon: PieChart },
-      { name: "Travel", url: "#", icon: Map },
-    ],
   };
 
   return (
     <Sidebar
-      className="overflow-y-auto !h-[calc(100svh-var(--header-height))]"
+      className="!h-[calc(100svh-var(--header-height))] overflow-y-auto border-r border-orange-100 bg-gradient-to-b from-orange-50 to-orange-100/70"
       {...props}
     >
       {/* Header */}
-      <SidebarHeader>
+      <SidebarHeader className="bg-transparent px-4 pb-3 pt-6 sm:pt-8">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="mt-9">
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="mt-2 h-auto w-full justify-center rounded-xl bg-transparent px-2 py-2 hover:bg-orange-100/70 sm:mt-6"
+            >
               <Link
                 to="/super-admin"
-                onClick={() => handleSidebarInteraction('dashboard_click', { title: 'Dashboard', url: '/super-admin' })}
+                onClick={handleSidebarInteraction}
+                className="flex w-full items-center justify-center"
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col ">
-                    <span className="font-bold text-lg text-gray-900">Super Admin</span>
-                    {/* <span className="text-xs text-gray-500">Admin Panel</span> */}
-                  </div>
-                </div>
+                <img src={logo} alt="Tap N Bite Logo" className="h-11 w-auto sm:h-12" />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -186,20 +134,20 @@ export function SuperAdminSidebar({ ...props }) {
       </SidebarHeader>
 
       {/* Main Navigation */}
-      <SidebarContent>
+      <SidebarContent className="bg-transparent px-2">
         <NavMain
           items={data.navMain.map((section) => ({
             ...section,
             items: section.items.map((item) => ({
               ...item,
-              onClick: () => handleSidebarInteraction('nav_click', item),
+              onClick: handleSidebarInteraction,
             })),
           }))}
         />
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter>
+      <SidebarFooter className="bg-transparent p-2">
         <NavUser user={data.user} />
       </SidebarFooter>
     </Sidebar>

@@ -213,12 +213,22 @@ export default function Header({
     const itemKey = `${itemName}_${variantLabel || ''}`;
     
     // First check itemPrices (from latest order estimation)
-    if (itemPrices[itemKey]) {
+    if (
+      allOrders.length > 0 &&
+      Object.prototype.hasOwnProperty.call(itemPrices, itemKey)
+    ) {
       return Number(itemPrices[itemKey]) || 0;
     }
     
     // If not in itemPrices, check cart item's own price
     if (cartItem) {
+      // Prefer explicit cart price snapshot (discount/final price)
+      if (cartItem.price !== undefined && cartItem.price !== null && cartItem.price !== "") {
+        const explicitPrice = Number(cartItem.price);
+        if (!Number.isNaN(explicitPrice)) {
+          return explicitPrice;
+        }
+      }
       // Handle combo items
       if (isCombo || cartItem.pricingType === "combo") {
         return Number(cartItem.comboPrice) || 0;
@@ -232,6 +242,29 @@ export default function Header({
     }
     
     return 0;
+  };
+
+  const getDisplayOriginalPrice = (cartItem = null) => {
+    if (!cartItem) return 0;
+
+    if (
+      cartItem.originalPrice !== undefined &&
+      cartItem.originalPrice !== null &&
+      cartItem.originalPrice !== ""
+    ) {
+      const original = Number(cartItem.originalPrice);
+      if (!Number.isNaN(original)) return original;
+    }
+
+    if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
+      return Number(cartItem.variantRates[cartItem.variantKey].price) || 0;
+    }
+
+    if (cartItem.isCombo || cartItem.pricingType === "combo") {
+      return Number(cartItem.comboPrice ?? cartItem.price) || 0;
+    }
+
+    return Number(cartItem.price) || 0;
   };
 
   // ✅ CRITICAL FIX: Calculate price directly from cart items
@@ -251,21 +284,12 @@ export default function Header({
     cartItemsArray.forEach(cartItem => {
       if (!cartItem) return;
       const quantity = cartItem.quantity || 1;
-      let itemPrice = 0;
-
-      // Handle combo items
-      if (cartItem.pricingType === "combo" || cartItem.isCombo) {
-        itemPrice = Number(cartItem.comboPrice) || 0;
-      }
-      // Handle variant items
-      else if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
-        const variantData = cartItem.variantRates[cartItem.variantKey];
-        itemPrice = Number(variantData?.price) || 0;
-      }
-      // Handle single items
-      else {
-        itemPrice = Number(cartItem.price) || 0;
-      }
+      const itemPrice = getDisplayPrice(
+        cartItem.name,
+        cartItem.variantLabel,
+        cartItem.isCombo || cartItem.pricingType === "combo",
+        cartItem
+      );
 
       subtotal += itemPrice * quantity;
     });
@@ -299,6 +323,7 @@ export default function Header({
       }
     } else if (cartCount > 0) {
       // If no latest order, calculate directly from cart
+      setItemPrices({});
       const cartTotal = calculateCartTotal();
       setCalculatedDetails({
         ...cartTotal,
@@ -597,63 +622,39 @@ export default function Header({
       }
 
       // console.log("CART ITEMS FOR ORDER:", cartItems);
-      
+
       // ✅ बैकएंड के लिए सही डेटा तैयार करें
       const orderItems = Object.values(cartItems).map((cartItem) => {
-        // console.log("Creating order item for:", cartItem.name);
-        
-        // 🔴 CRITICAL FIX: Price calculation for all item types
-        let price = 0;
-        let discountedPrice = 0;
-        
-        if (cartItem.isCombo) {
-          // Combo items
-          price = cartItem.comboPrice || 0;
-          discountedPrice = cartItem.comboPrice || 0;
-        } else if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
-          // Variant items
-          const variantData = cartItem.variantRates[cartItem.variantKey];
-          price = variantData.price || 0;
-          
-          // Calculate discounted price
-          if (variantData.discount && variantData.discount.active) {
-            if (variantData.discount.type === "percentage") {
-              discountedPrice = price - (price * variantData.discount.value / 100);
-            } else if (variantData.discount.type === "flat") {
-              discountedPrice = price - variantData.discount.value;
-            } else {
-              discountedPrice = price;
-            }
-          } else {
-            discountedPrice = price;
-          }
-        } else {
-          // Single items
-          price = cartItem.price || 0;
-          
-          // Calculate discounted price
-          if (cartItem.discount && cartItem.discount.active) {
-            if (cartItem.discount.type === "percentage") {
-              discountedPrice = price - (price * cartItem.discount.value / 100);
-            } else if (cartItem.discount.type === "flat") {
-              discountedPrice = price - cartItem.discount.value;
-            } else {
-              discountedPrice = price;
-            }
-          } else {
-            discountedPrice = price;
-          }
-        }
+        const variantData =
+          cartItem.variantKey &&
+          cartItem.variantRates &&
+          cartItem.variantRates[cartItem.variantKey]
+            ? cartItem.variantRates[cartItem.variantKey]
+            : null;
+
+        const isComboItem = cartItem.isCombo || cartItem.pricingType === "combo";
+        const variantBasePrice = Number(variantData?.price) || 0;
+
+        const price = Number(
+          cartItem.originalPrice ??
+            (isComboItem ? cartItem.comboPrice : variantBasePrice || cartItem.price) ??
+            0
+        ) || 0;
+
+        const discountedPrice = Number(
+          cartItem.price ??
+            (isComboItem ? cartItem.comboPrice : variantBasePrice) ??
+            0
+        ) || 0;
 
         const orderItem = {
           menuItemId: cartItem._id,
           name: cartItem.name,
           quantity: cartItem.quantity || 1,
           customizations: cartItem.customizations || "",
-          // 🔴 TEMPORARY: Backend के validation के लिए price भेजें
           price: price,
           discountedPrice: discountedPrice,
-          discountApplied: cartItem.discount || null
+          discountApplied: variantData?.discount || cartItem.discount || null
         };
 
         // वेरिएंट भेजें अगर है
@@ -822,80 +823,111 @@ export default function Header({
                     </div>
                   ) : (
                     <>
-                    <ul className="space-y-4">
-                      {Object.entries(cartItems || {}).map(([id, item]) => {
-                        if (!item) return null;
-                        const itemPrice = getDisplayPrice(item.name, item.variantLabel, item.isCombo || item.pricingType === "combo", item);
-                        const itemTotal = itemPrice * (item.quantity || 1);
-                        
-                        return (
-                          <li
-                            key={id}
-                            className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
-                          >
-                            <img
-                              src={item.image?.url || item.image}
-                              alt={item.name}
-                              className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
-                            />
+                      <ul className="space-y-4">
+                        {Object.entries(cartItems || {}).map(([id, item]) => {
+                          if (!item) return null;
+                          const itemPrice = getDisplayPrice(
+                            item.name,
+                            item.variantLabel,
+                            item.isCombo || item.pricingType === "combo",
+                            item
+                          );
+                          const originalPrice = getDisplayOriginalPrice(item);
+                          const effectiveOriginalPrice = originalPrice > 0 ? originalPrice : itemPrice;
+                          const hasDiscountedPrice = effectiveOriginalPrice > itemPrice;
+                          const itemTotal = itemPrice * (item.quantity || 1);
 
-                            <div className="flex-1 flex flex-col">
-                              <p className="font-medium text-gray-800 text-[15px] leading-tight">
-                                {item.name}
-                              </p>
-                              {item.variantLabel && (
-                                <span className="text-xs text-gray-500 mt-1">
-                                  {item.variantLabel}
-                                </span>
-                              )}
-                              {item.isCombo && (
-                                <span className="text-xs text-orange-600 font-medium mt-1">
-                                  Combo
-                                </span>
-                              )}
-                              <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
-                                <button
-                                  className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
-                                  onClick={() => dispatch(removeFromCart(id))}
-                                >
-                                  −
-                                </button>
-                                <span className="w-6 text-center font-medium text-gray-700">
-                                  {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2).replace('.00', '').replace('.25', '¼').replace('.50', '½').replace('.75', '¾')}
-                                </span>
-                                <button
-                                  className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
-                                  onClick={() => dispatch(addToCart({ id, item: item, price: getDisplayPrice(item.name, item.variantLabel, item.isCombo, item) }))}
-                                >
-                                  +
-                                </button>
+                          return (
+                            <li
+                              key={id}
+                              className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
+                            >
+                              <img
+                                src={item.image?.url || item.image}
+                                alt={item.name}
+                                className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
+                              />
 
-                                <span className="ml-auto text-gray-600 font-medium flex flex-col items-end">
-                                  {/* ✅ Item price और total दिखाएं */}
-                                  {itemPrice > 0 ? (
-                                    <>
-                                      <span className="text-sm">₹{itemPrice.toFixed(2)} × {item.quantity}</span>
-                                      <span className="text-base font-semibold text-gray-800">
-                                        = ₹{itemTotal.toFixed(2)}
-                                      </span>
-                                    </>
-                                  ) : item.isCombo ? (
-                                    <>
-                                      <span className="text-sm">Combo: ₹{(item.comboPrice || 0).toFixed(2)} × {item.quantity}</span>
-                                      <span className="text-base font-semibold text-gray-800">
-                                        = ₹{((item.comboPrice || 0) * (item.quantity || 1)).toFixed(2)}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-sm text-gray-500">Price calculating...</span>
-                                  )}
-                                </span>
+                              <div className="flex-1 flex flex-col">
+                                <p className="font-medium text-gray-800 text-[15px] leading-tight">
+                                  {item.name}
+                                </p>
+                                {item.variantLabel && (
+                                  <span className="text-xs text-gray-500 mt-1">
+                                    {item.variantLabel}
+                                  </span>
+                                )}
+                                {item.isCombo && (
+                                  <span className="text-xs text-orange-600 font-medium mt-1">
+                                    Combo
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
+                                  <button
+                                    className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                    onClick={() => dispatch(removeFromCart(id))}
+                                  >
+                                    −
+                                  </button>
+                                  <span className="w-6 text-center font-medium text-gray-700">
+                                    {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2).replace('.00', '').replace('.25', '¼').replace('.50', '½').replace('.75', '¾')}
+                                  </span>
+                                  <button
+                                    className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                    onClick={() =>
+                                      dispatch(
+                                        addToCart({
+                                          id,
+                                          item,
+                                          price: getDisplayPrice(
+                                            item.name,
+                                            item.variantLabel,
+                                            item.isCombo || item.pricingType === "combo",
+                                            item
+                                          ),
+                                        })
+                                      )
+                                    }
+                                  >
+                                    +
+                                  </button>
+
+                                  <span className="ml-auto text-gray-600 font-medium flex flex-col items-end">
+                                    {/* ✅ Item price और total दिखाएं */}
+                                    {itemPrice > 0 ? (
+                                      <>
+                                        <span className="text-sm flex items-center gap-1">
+                                          {hasDiscountedPrice && (
+                                            <span className="text-gray-400 line-through text-xs">
+                                              ₹{effectiveOriginalPrice.toFixed(2)}
+                                            </span>
+                                          )}
+                                          <span className={hasDiscountedPrice ? "text-green-700 font-semibold" : "text-gray-700"}>
+                                            ₹{itemPrice.toFixed(2)}
+                                          </span>
+                                          <span className="text-xs text-gray-500">× {item.quantity}</span>
+                                        </span>
+                                        <span className="text-base font-semibold text-gray-800">
+                                          ₹{itemTotal.toFixed(2)}
+                                        </span>
+                                      </>
+                                    ) : item.isCombo ? (
+                                      <>
+                                        <span className="text-sm">Combo: ₹{(item.comboPrice || 0).toFixed(2)} × {item.quantity}</span>
+                                        <span className="text-base font-semibold text-gray-800">
+                                          = ₹{((item.comboPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-sm text-gray-500">Price calculating...</span>
+                                    )}
+                                  </span>
                               </div>
                             </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     
                     <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
                       {/* Always show calculated totals */}
@@ -933,7 +965,9 @@ export default function Header({
                         </div>
                         
                         <p className="text-xs text-gray-500 text-center mt-2">
-                          {allOrders.length > 0 ? "Amount estimated from previous order" : "Amount calculated from cart items"}
+                          {allOrders.length > 0
+                            ? "Prices synced from latest backend order"
+                            : "Prices synced from current menu data"}
                         </p>
                       </>
                     </div>

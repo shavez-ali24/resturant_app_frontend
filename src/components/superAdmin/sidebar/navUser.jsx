@@ -57,60 +57,60 @@ export function NavUser({ user }) {
   };
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="rounded-2xl border border-orange-200 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-14 rounded-xl bg-transparent px-2.5 text-gray-800 transition-colors duration-200 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 data-[state=open]:bg-orange-100/60"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="h-9 w-9 rounded-xl border border-orange-200 bg-white">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">
+                <AvatarFallback className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold">
                   {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-semibold text-gray-900">{user.name}</span>
+                <span className="truncate text-xs text-gray-500">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 text-gray-500" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-2xl border border-orange-200 bg-white p-1 shadow-xl"
             side={isMobile ? "bottom" : "right"}
             align="end"
-            sideOffset={4}
+            sideOffset={8}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div
-                className="flex items-center gap-2 px-2 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 rounded-md transition-all"
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 hover:bg-orange-50"
                 onClick={handleProfileClick}
               >
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className="h-9 w-9 rounded-xl border border-orange-200">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
+                  <AvatarFallback className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold">
                     {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight" onClick={handleProfileClick}>
-                  <span className="truncate font-semibold">
+                  <span className="truncate font-semibold text-gray-900">
                     {user.name}
                   </span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-xs text-gray-500">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="my-1 border-orange-100" />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="cursor-pointer"
+              className="mt-1 cursor-pointer rounded-xl px-3 py-2 text-red-600 transition-colors duration-150 hover:bg-red-50 hover:text-red-700"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              <span className="font-medium">Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

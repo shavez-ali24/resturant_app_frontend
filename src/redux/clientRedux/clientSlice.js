@@ -16,13 +16,20 @@ const initialState = {
 
 // Helper function to get correct price based on pricing type
 const getCartItemPrice = (cartItem) => {
+  // Prefer explicit cart snapshot price (usually discounted/final)
+  if (cartItem?.price !== undefined && cartItem?.price !== null && cartItem?.price !== "") {
+    const explicitPrice = Number(cartItem.price);
+    if (!Number.isNaN(explicitPrice)) {
+      return explicitPrice;
+    }
+  }
   if (cartItem.pricingType === "combo") {
     return Number(cartItem.comboPrice) || 0;
   }
   if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
     return Number(cartItem.variantRates[cartItem.variantKey].price) || 0;
   }
-  return Number(cartItem.price) || 0;
+  return 0;
 };
 
 const clientSlice = createSlice({

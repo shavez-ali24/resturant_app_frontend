@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import "./index.css";
@@ -22,10 +22,8 @@ import Adminprofile from "./components/admin/Profile/Profile";
 import Revenue from "./components/admin/observability/revenue/Revenue";
 import ComingSoon from "./components/admin/common/ComingSoon";
 import ErrorPage from "./components/admin/common/ErrorPage";
-import CreateUserPage from "./components/superAdmin/Pages/CreateUserPage";
 import SuperLoginPage from "./components/superAdmin/Pages/SuperLoginPage";
 import UserListPage from "./components/superAdmin/Pages/UserListPage";
-import AdminsList from "./components/superAdmin/details/User_List/AdminsList";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import SuperAdminProfile from "./components/superAdmin/Pages/SuperAdminProfile";
 import Sales from "./components/admin/observability/sales/Sales";
@@ -90,10 +88,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               </SuperAdminPrivateRoute>
             }
           >
-            <Route index element={<CreateUserPage />} />
-            <Route path="create-user" element={<CreateUserPage />} />
+            <Route index element={<Navigate to="user-list" replace />} />
+            <Route path="create-user" element={<Navigate to="/super-admin/user-list" replace />} />
             <Route path="user-list" element={<UserListPage />} />
-            <Route path="admins" element={<AdminsList />} />
+            <Route path="admins" element={<Navigate to="/super-admin/user-list" replace />} />
             <Route path="profile" element={<SuperAdminProfile />} />
 
           </Route>

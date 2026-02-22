@@ -35,7 +35,7 @@ const registerSchema = z.object({
   path: ["domain"]
 })
 
-export function RegisterUserForm() {
+export function RegisterUserForm({ onSuccess, hideHeading = false, compact = false }) {
   const [register, { isLoading }] = useRegisterUserMutation();
   const notify = useNotify();
 
@@ -68,6 +68,9 @@ export function RegisterUserForm() {
       await register(cleanedData).unwrap();
       notify("User created successfully!", "success");
       form.reset();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       notify(error?.data?.message || error?.message || "Registration failed", "error");
     }
@@ -77,29 +80,36 @@ export function RegisterUserForm() {
     form.setValue("role", value);
   };
 
+  const containerClassName = compact ? "w-full" : "mx-auto w-full max-w-2xl";
+  const formClassName = compact
+    ? "space-y-4 rounded-xl border border-orange-100 bg-orange-50/40 p-3 sm:p-4"
+    : "space-y-8 rounded-2xl border border-orange-100 bg-orange-50/40 p-4 sm:p-6";
+
   return (
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Register New User</h2>
-          <p className="text-gray-600 mt-2">Create a new user account with role selection</p>
-        </div>
+      <div className={containerClassName}>
+        {!hideHeading && (
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Register New User</h2>
+            <p className="text-gray-600 mt-2">Create a new user account with role selection</p>
+          </div>
+        )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <PersonalInfoSection form={form} />
-            <RoleSection form={form} onRoleChange={handleRoleChange} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className={formClassName}>
+            <PersonalInfoSection form={form} compact={compact} />
+            <RoleSection form={form} onRoleChange={handleRoleChange} compact={compact} />
             
             {/* Show restaurant fields only when admin role is selected */}
             {watchedRole === "admin" && (
-              <RestaurantInfoSection form={form} />
+              <RestaurantInfoSection form={form} compact={compact} />
             )}
 
             <div className="flex justify-center">
               <Button 
                 type="submit" 
-                className="w-auto min-w-[200px]" 
+                className="w-auto min-w-[200px] rounded-xl border border-orange-600 bg-gradient-to-r from-orange-500 to-orange-600 font-semibold text-white hover:from-orange-600 hover:to-orange-700" 
                 disabled={isLoading} 
-                size="lg"
+                size={compact ? "default" : "lg"}
               >
                 {isLoading ? (
                   <>

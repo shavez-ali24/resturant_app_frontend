@@ -67,7 +67,7 @@ const LoginPage = () => {
             alt="Login Background"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-900/25 via-orange-700/15 to-orange-500/20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-950/45 via-orange-800/32 to-orange-600/24 backdrop-blur-sm" />
         </div>
 
         <Card className="relative z-10 w-full max-w-md rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] backdrop-blur">

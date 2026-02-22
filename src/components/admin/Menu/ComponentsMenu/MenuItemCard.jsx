@@ -154,7 +154,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
-      className={`group relative h-fit w-full self-start min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] ${
+      className={`group relative h-full w-full self-stretch min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] ${
         showMenu ? "z-40" : "z-10"
       }`}
     >
@@ -274,9 +274,9 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             </div>
           </div>
 
-          <div className="min-h-[64px] sm:min-h-[34px]">
+          <div className="h-[84px] overflow-hidden sm:h-[56px]">
             {isSinglePricing && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
+              <div className="flex items-center gap-2 sm:gap-1.5">
                 <span className="text-lg font-bold text-green-700 sm:text-base">₹{getFinalPrice() || safeItem.price || 0}</span>
                 {safeItem.discount?.active && (
                   <>
@@ -295,7 +295,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
               <div className="space-y-0.5">
                 {variantDisplay.length > 0 ? (
                   variantDisplay.map((variant) => (
-                    <div key={variant.key} className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <div key={variant.key} className="flex items-center gap-1.5 text-xs">
                       <span className="w-6 font-semibold text-gray-700">{variant.label}</span>
                       <span className="font-bold text-green-700">₹{variant.price}</span>
                       {variant.hasDiscount && (
@@ -317,7 +317,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             )}
 
             {isComboPricing && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
+              <div className="flex items-center gap-2 sm:gap-1.5">
                 <span className="text-lg font-bold text-blue-700 sm:text-base">₹{safeItem.comboPrice || 0}</span>
                 <span className="text-xs text-gray-500">({safeItem.comboItems?.length || 0} items)</span>
                 {safeItem.discount?.active && (

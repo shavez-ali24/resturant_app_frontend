@@ -47,7 +47,7 @@ export default function SuperAdminLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-4" />
           <p className="text-gray-600">Checking authorization...</p>
@@ -58,7 +58,7 @@ export default function SuperAdminLayout() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-4" />
           <p className="text-gray-600">Redirecting to login...</p>
@@ -68,13 +68,13 @@ export default function SuperAdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 [--header-height:calc(--spacing(14))]">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 [--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
         <SiteHeader />
         <div className="flex flex-1">
           <SuperAdminSidebar />
           <SidebarInset>
-            <main className="flex-1 p-6">
+            <main className="flex-1 p-4 sm:p-5 lg:p-6">
               <Outlet />
             </main>
           </SidebarInset>

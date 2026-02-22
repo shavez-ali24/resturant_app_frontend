@@ -11,7 +11,6 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -23,7 +22,9 @@ export function NavMain({ items }) {
 
   return (
     <SidebarGroup>
-     
+      <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-wider text-orange-700">
+        SUPER ADMIN
+      </SidebarGroupLabel>
       <SidebarMenu className="mt-2">
         {items.map((item) => {
           const isActive = item.items
@@ -33,26 +34,28 @@ export function NavMain({ items }) {
           return (
             <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
               <SidebarMenuItem className="rounded-md">
-                {/* Full clickable trigger with soft gray colors */}
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className={`flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded transition-all duration-200
+                    className={`group flex w-full items-center rounded-xl px-3 py-2 text-left text-sm font-medium transition-all duration-200
                       ${isActive
-                        ? "bg-gray-200 text-gray-800" // active dull gray
-                        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900" // normal hover
+                        ? "bg-gradient-to-r from-orange-200 to-orange-300 text-gray-900 shadow-sm"
+                        : "text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
                       }
-                      group
                     `}
                   >
                     <item.icon
-                      className={`mr-3 w-4 h-4 transition-colors duration-200
-                        ${isActive ? "text-gray-800" : "text-gray-500 group-hover:text-gray-700"}
+                      className={`mr-3 h-4 w-4 transition-colors duration-200
+                        ${isActive ? "text-gray-900" : "text-gray-500 group-hover:text-orange-700"}
                       `}
                     />
                     <span className="flex-1 truncate">{item.title}</span>
                     {item.items?.length && (
-                      <ChevronRight className="w-4 h-4 text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      <ChevronRight
+                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                          isActive ? "rotate-90 text-gray-800" : "group-data-[state=open]:rotate-90"
+                        }`}
+                      />
                     )}
                   </button>
                 </CollapsibleTrigger>
@@ -60,7 +63,7 @@ export function NavMain({ items }) {
                 {/* Submenu */}
                 {item.items?.length && (
                   <CollapsibleContent>
-                    <SidebarMenuSub className="pl-6 mt-1 space-y-1">
+                    <SidebarMenuSub className="mt-1 space-y-1 pl-6">
                       {item.items.map((subItem) => {
                         const isSubActive = subItem.url === location.pathname;
                         return (
@@ -68,10 +71,10 @@ export function NavMain({ items }) {
                             <SidebarMenuSubButton asChild>
                               <Link
                                 to={subItem.url}
-                                className={`block px-3 py-1 text-sm rounded transition-colors duration-200
+                                className={`block rounded-lg px-3 py-1.5 text-sm transition-colors duration-200
                                   ${isSubActive
-                                    ? "bg-gray-200 text-gray-800" // active dull gray
-                                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-800" // hover soft gray
+                                    ? "bg-gradient-to-r from-orange-200 to-orange-300 text-gray-900 shadow-sm"
+                                    : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
                                   }`}
                               >
                                 {subItem.title}
