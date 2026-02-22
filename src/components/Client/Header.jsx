@@ -70,6 +70,18 @@ export default function Header({
   const [allOrders, setAllOrders] = useState([]);
   const [hasMore, setHasMore] = useState(true);
 
+  const normalizeOrderType = (value) => {
+    const type = String(value || "").trim().toLowerCase();
+
+    if (type === "delivery") return "Delivery";
+    if (type === "eat here" || type === "eathere") return "Eat Here";
+    if (type === "take away" || type === "takeaway") return "Take Away";
+
+    return "";
+  };
+
+  const normalizedOrderType = normalizeOrderType(orderType);
+
   // Function: Latest order से current cart के लिए estimate बनाएं
   const estimateFromLatestOrder = (latestOrder, currentCartItems) => {
     try {
@@ -170,11 +182,14 @@ export default function Header({
       setItemPrices(newItemPrices);
 
       // GST calculation
-      const gstRate = Number(latestOrder?.gstRate) || 0;
-      const estimatedGstAmount = latestOrder?.gstEnabled ? (estimatedSubtotal * gstRate) / 100 : 0;
+      const restaurant = restaurantData?.restaurant || {};
+      const gstRate = Number(restaurant.gstRate) || 0;
+      const estimatedGstAmount = restaurant.gstEnabled ? (estimatedSubtotal * gstRate) / 100 : 0;
       
       // Delivery charges
-      const deliveryCharges = orderType === "Delivery" ? (Number(latestOrder?.deliveryCharges) || 0) : 0;
+      const deliveryCharges = normalizedOrderType === "Delivery"
+        ? (Number(restaurant.deliveryCharges) || 0)
+        : 0;
       
       const estimatedTotalAmount = estimatedSubtotal + estimatedGstAmount + deliveryCharges;
 
@@ -260,7 +275,9 @@ export default function Header({
     const gstRate = Number(restaurant.gstRate) || 0;
     const gstAmount = restaurant.gstEnabled ? (subtotal * gstRate) / 100 : 0;
     
-    const deliveryCharges = orderType === "Delivery" ? (Number(restaurant.deliveryCharges) || 0) : 0;
+    const deliveryCharges = normalizedOrderType === "Delivery"
+      ? (Number(restaurant.deliveryCharges) || 0)
+      : 0;
     const totalAmount = subtotal + gstAmount + deliveryCharges;
 
     return {
@@ -542,7 +559,7 @@ export default function Header({
       return false;
     }
 
-    switch (orderType) {
+    switch (normalizedOrderType) {
       case "Eat Here":
         return !!tableId;
       case "Take Away":
@@ -558,6 +575,8 @@ export default function Header({
     try {
       // console.log("=== START handleOrderSubmit ===");
       
+      const finalOrderType = normalizedOrderType;
+
       if (!isRestaurantOpen) {
         showErrorMessage("Orders are currently closed. Please try again later.");
         return;
@@ -568,9 +587,9 @@ export default function Header({
         if (!customerName) errorMessage = "Please enter your name.";
         else if (!customerPhone || customerPhone.length !== 10)
           errorMessage = "Please enter a valid 10-digit phone number.";
-        else if (orderType === "Eat Here" && !tableId)
+        else if (finalOrderType === "Eat Here" && !tableId)
           errorMessage = "Please select a table.";
-        else if (orderType === "Delivery" && !address)
+        else if (finalOrderType === "Delivery" && !address)
           errorMessage = "Please enter delivery address.";
 
         showErrorMessage(errorMessage);
@@ -659,15 +678,15 @@ export default function Header({
         customerName: customerName.trim(),
         customerPhone,
         items: orderItems,
-        orderType,
+        orderType: finalOrderType,
       };
 
       // Optional fields
-      if (orderType === "Eat Here" && tableId) {
+      if (finalOrderType === "Eat Here" && tableId) {
         orderData.tableId = tableId;
       }
       
-      if (orderType === "Delivery" && address) {
+      if (finalOrderType === "Delivery" && address) {
         orderData.address = address.trim();
       }
 
@@ -888,7 +907,7 @@ export default function Header({
                           </span>
                         </div>
                         
-                        {orderType === "Delivery" && calculatedDetails.deliveryCharges > 0 && (
+                        {normalizedOrderType === "Delivery" && calculatedDetails.deliveryCharges > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Delivery Charges</span>
                             <span className="font-medium text-orange-600">

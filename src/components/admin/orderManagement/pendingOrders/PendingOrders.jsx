@@ -78,6 +78,72 @@ const Orders = () => {
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
 
+  const getRawErrorText = (errorObj) => {
+    if (!errorObj) return "";
+    if (typeof errorObj === "string") return errorObj;
+    if (typeof errorObj?.data === "string") return errorObj.data;
+    return (
+      errorObj?.data?.message ||
+      errorObj?.error ||
+      errorObj?.message ||
+      ""
+    );
+  };
+
+  const getFriendlyOrderError = (errorObj, context = "general") => {
+    const status = errorObj?.status || errorObj?.originalStatus;
+    const rawMessage = getRawErrorText(errorObj).toLowerCase();
+
+    if (status === 401) {
+      return "Session expired. Please login again.";
+    }
+    if (status === 403) {
+      return "You do not have permission for this action.";
+    }
+    if (status === 404) {
+      return context === "update" || context === "delete"
+        ? "Order not found. Please refresh and try again."
+        : "Orders not found right now. Please refresh.";
+    }
+    if (status === 429) {
+      return "Too many requests. Please wait a moment and try again.";
+    }
+    if (status >= 500) {
+      return "Server issue detected. Please try again in a moment.";
+    }
+
+    if (
+      rawMessage.includes("network") ||
+      rawMessage.includes("failed to fetch") ||
+      rawMessage.includes("timeout")
+    ) {
+      return "Network issue. Please check internet connection and retry.";
+    }
+
+    if (
+      rawMessage.includes("validation") ||
+      rawMessage.includes("invalid") ||
+      rawMessage.includes("required")
+    ) {
+      return "Please check order details and try again.";
+    }
+
+    if (context === "refresh") {
+      return "Unable to refresh pending orders right now.";
+    }
+    if (context === "update") {
+      return "Unable to update order right now.";
+    }
+    if (context === "delete") {
+      return "Unable to delete order right now.";
+    }
+    if (context === "fetch") {
+      return "Unable to load pending orders right now.";
+    }
+
+    return "Something went wrong. Please try again.";
+  };
+
   // ✅ FIXED: Extract tables from restaurant profile
   // Aapke API response ke format ke hisab se adjust karna
   const extractTablesFromRestaurant = () => {
@@ -123,7 +189,9 @@ const Orders = () => {
   const totalOrders = ordersResponse?.totalOrders || 0;
   const totalPages = ordersResponse?.totalPages || 1;
   const loading = ordersLoading || restaurantLoading;
-  const error = ordersError ? ordersErrorObj : null;
+  const error = (ordersError || restaurantError)
+    ? getFriendlyOrderError(ordersErrorObj || restaurantError, "fetch")
+    : null;
 
   // Debug logs
   useEffect(() => {
@@ -160,9 +228,9 @@ const Orders = () => {
       await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
       notify("Orders & Restaurant data refreshed", "success");
     } catch (err) {
-      notify("Failed to refresh", "error");
+      notify(getFriendlyOrderError(err, "refresh"), "error");
     }
-  }, [refetchOrders, refetchRestaurant, notify]);
+  }, [refetchOrders, refetchRestaurant, notify, getFriendlyOrderError]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -183,8 +251,7 @@ const Orders = () => {
       setEditingOrder(null);
     } catch (err) {
       console.error("Update order error:", err);
-      const msg = err?.data?.message || "Failed to update order";
-      notify(msg, "error");
+      notify(getFriendlyOrderError(err, "update"), "error");
     }
   };
 
@@ -196,8 +263,7 @@ const Orders = () => {
       refetchOrders();
       setShowConfirmDelete(null);
     } catch (err) {
-      const msg = err?.data?.message || "Failed to delete order";
-      notify(msg, "error");
+      notify(getFriendlyOrderError(err, "delete"), "error");
     }
   };
 
@@ -345,7 +411,7 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="flex-1 overflow-auto mt-4 mx-4 rounded-xl">
+      <div className="flex-1 overflow-auto mt-2 sm:mt-4 mx-2 sm:mx-4 rounded-xl">
         <OrdersTable
         orders={orders}
         loading={loading}
@@ -440,6 +506,7 @@ const Orders = () => {
           editingOrder={editingOrder}
           setEditingOrder={setEditingOrder}
           updateOrder={updateOrder}
+          getFriendlyErrorMessage={getFriendlyOrderError}
           menuItems={menuItems}
           tables={tables} // ✅ Passing tables from restaurant profile
         />

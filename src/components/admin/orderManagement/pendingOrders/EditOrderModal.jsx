@@ -7,13 +7,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../ui/select";
-import { Home, Truck, Utensils, AlertCircle } from "lucide-react";
+} from "@/components/ui/select";
+import { Home, Truck, Utensils, AlertCircle, X } from "lucide-react";
 
 const EditOrderModal = ({ 
   editingOrder, 
   setEditingOrder, 
   updateOrder, 
+  getFriendlyErrorMessage,
   menuItems,
   tables
 }) => {
@@ -37,25 +38,27 @@ const EditOrderModal = ({
   // =============================
   useEffect(() => {
     if (editingOrder) {
+      const normalizedItems = editingOrder.items.map(item => {
+        // Look up the menu item from menuItems prop to get variantRates
+        const menuItem = menuItems.find(m => m._id === (item.menuItemId || item.menuItem?._id || item._id));
+        return {
+          ...item,
+          menuItemId: item.menuItemId || item.menuItem?._id || item._id,
+          name: item.name || item.menuItem?.name || menuItem?.name || "",
+          price: item.price || item.menuItem?.price || menuItem?.price || 0,
+          quantity: item.quantity || 1,
+          // Ensure variantName is set for variant items
+          variantName: item.variantName || item.variant || null,
+          variant: item.variant || item.variantName || null,
+          // Get variants from menuItems lookup
+          variants: item.variants || item.menuItem?.variantRates || menuItem?.variantRates || null,
+          customizations: item.customizations || ""
+        };
+      });
+
       const newLocalOrderData = {
         ...editingOrder,
-        items: editingOrder.items.map(item => {
-          // Look up the menu item from menuItems prop to get variantRates
-          const menuItem = menuItems.find(m => m._id === (item.menuItemId || item.menuItem?._id || item._id));
-          return {
-            ...item,
-            menuItemId: item.menuItemId || item.menuItem?._id || item._id,
-            name: item.name || item.menuItem?.name || menuItem?.name || "",
-            price: item.price || item.menuItem?.price || menuItem?.price || 0,
-            quantity: item.quantity || 1,
-            // Ensure variantName is set for variant items
-            variantName: item.variantName || item.variant || null,
-            variant: item.variant || item.variantName || null,
-            // Get variants from menuItems lookup
-            variants: item.variants || item.menuItem?.variantRates || menuItem?.variantRates || null,
-            customizations: item.customizations || ""
-          };
-        })
+        items: normalizedItems
       };
       
       setLocalOrderData(newLocalOrderData);
@@ -110,7 +113,23 @@ const EditOrderModal = ({
     }
   }, [localOrderData?.items]);
 
-  if (!editingOrder || !localOrderData) return null;
+  if (!editingOrder) return null;
+
+  // Show loading state while data is initializing
+  if (!localOrderData) {
+    return (
+      <div
+        id="editOrderBackdrop"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]"
+      >
+        <div className="bg-white rounded-2xl border-2 shadow-lg max-w-md w-full p-6">
+          <div className="flex items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // =============================
   // ADD ITEM
@@ -388,7 +407,10 @@ const EditOrderModal = ({
       setEditingOrder(null);
     } catch (err) {
       console.error("Update Order Failed:", err);
-      const errorMsg = err?.data?.message || "Failed to update order";
+      const errorMsg =
+        typeof getFriendlyErrorMessage === "function"
+          ? getFriendlyErrorMessage(err, "update")
+          : "Unable to update order right now.";
       // Show error in items section
       setValidationErrors(prev => ({
         ...prev,
@@ -400,6 +422,7 @@ const EditOrderModal = ({
   };
 
   const isUpdateDisabled = isSubmitting || localOrderData.items.length === 0 || !isDirty;
+  const itemsSubtotal = recalcTotal(localOrderData?.items || []);
 
   const handleBackdropClick = (e) => {
     if (e.target.id === "editOrderBackdrop") {
@@ -454,13 +477,22 @@ const EditOrderModal = ({
     <div
       id="editOrderBackdrop"
       onClick={handleBackdropClick}
-      className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 z-[9999]"
     >
       <div
-        className="bg-white rounded-2xl border-2 shadow-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-xl sm:rounded-2xl border-2 shadow-lg w-full max-w-[calc(100vw-1rem)] sm:max-w-md p-4 sm:p-6 max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Edit Order</h3>
+        {/* Header with Close Button */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Edit Order</h3>
+          <button
+            onClick={() => setEditingOrder(null)}
+            className="p-1.5 rounded-full hover:bg-orange-100 text-orange-500 hover:text-orange-700 transition"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         {/* Order Type Dropdown */}
         <div className="mb-4">
@@ -477,7 +509,11 @@ const EditOrderModal = ({
                 <span>{localOrderData.orderType || "Select Type"}</span>
               </div>
             </SelectTrigger>
-            <SelectContent className="bg-white border border-gray-200 shadow-xl rounded-xl p-1 min-w-full">
+            <SelectContent
+              side="top"
+              sideOffset={6}
+              className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-white border border-gray-200 shadow-xl rounded-xl p-1 z-[10050]"
+            >
               <SelectGroup>
                 <SelectItem 
                   value="Eat Here" 
@@ -532,7 +568,11 @@ const EditOrderModal = ({
                   <SelectValue placeholder="Select Table" />
                 )}
               </SelectTrigger>
-              <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-full cursor-pointer">
+              <SelectContent
+                side="top"
+                sideOffset={6}
+                className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 cursor-pointer z-[10050]"
+              >
                 <SelectGroup>
                   {availableTables.length > 0 ? (
                     availableTables.map((table) => (
@@ -612,7 +652,7 @@ const EditOrderModal = ({
           
           <div
             ref={itemsContainerRef}
-            className={`space-y-3 mb-4 max-h-64 overflow-y-auto border rounded-lg p-3 ${
+            className={`space-y-3 mb-4 max-h-52 sm:max-h-64 overflow-y-auto border rounded-lg p-3 ${
               validationErrors.items 
                 ? 'border-red-300 bg-red-50' 
                 : 'border-orange-300 bg-gray-50'
@@ -626,16 +666,16 @@ const EditOrderModal = ({
               localOrderData.items.map((item, idx) => (
                 <div
                   key={`${item.menuItemId}-${idx}`}
-                  className="flex items-center justify-between bg-white p-3 rounded-lg border border-orange-300 shadow-sm"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-orange-300 shadow-sm"
                 >
                   {/* Item Info */}
-                  <div className="flex-1 mr-3">
+                  <div className="flex-1 sm:mr-3">
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-gray-800">
                         {item.name}
                       </span>
                       <span className="font-bold text-orange-600 ml-2">
-                        ₹{item.price * item.quantity}
+                        ₹{((item.price || 0) * (item.quantity || 1))}
                       </span>
                     </div>
                     
@@ -648,10 +688,11 @@ const EditOrderModal = ({
                         <SelectTrigger className="h-8 w-full border-orange-400 bg-orange-50 text-xs hover:bg-orange-100">
                           <SelectValue placeholder="Select variant" />
                         </SelectTrigger>
-                        <SelectContent className="bg-orange-50 border-orange-300 shadow-lg rounded-lg">
+                        <SelectContent className="bg-orange-50 border-orange-300 shadow-lg rounded-lg z-[10050]">
                           <SelectGroup>
-                            {Object.entries(item.variants).map(([key, variantData]) => {
+                            {item.variants && item.variants !== null && Object.entries(item.variants).map(([key, variantData]) => {
                               // Handle both formats: { quarter: 100 } or { quarter: { price: 100, discount: {...} } }
+                              if (!variantData) return null;
                               const price = typeof variantData === 'object' ? variantData.price : variantData;
                               return (
                                 <SelectItem 
@@ -668,14 +709,14 @@ const EditOrderModal = ({
                       </Select>
                     ) : (
                       <div className="text-sm text-gray-600">
-                        Price: ₹{item.price}
+                        Price: ₹{item.price || 0}
                       </div>
                     )}
                   </div>
 
                   {/* Quantity Controls */}
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center mb-2">
+                  <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-start gap-2">
+                    <div className="flex items-center">
                       <input
                         type="number"
                         min="1"
@@ -711,7 +752,11 @@ const EditOrderModal = ({
             <SelectTrigger className="h-10 w-full rounded-lg border-orange-600 bg-orange-100 px-3 text-sm font-bold shadow-sm hover:bg-orange-200">
               <SelectValue placeholder="+ Add New Item" />
             </SelectTrigger>
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl border border-orange-300 p-1 min-w-full cursor-pointer">
+            <SelectContent
+              side="top"
+              sideOffset={6}
+              className="w-[var(--radix-select-trigger-width)] max-h-[45dvh] sm:max-h-[60vh] bg-orange-50 border-orange-300 shadow-xl rounded-xl border border-orange-300 p-1 cursor-pointer z-[10050]"
+            >
               <SelectGroup>
                 {menuItems.map((menu) => (
                   <SelectItem 
@@ -719,9 +764,9 @@ const EditOrderModal = ({
                     value={menu._id} 
                     className="border-orange-300 rounded-lg cursor-pointer hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
                   >
-                    <div className="flex justify-between items-center w-full gap-4 pb-2 pt-1">
-                      <span>{menu.name}</span>
-                      <span className="text-sm text-gray-600 gap-2 flex items-center text-orange-600">
+                    <div className="flex justify-between items-center w-full gap-3 pb-2 pt-1">
+                      <span className="truncate">{menu.name}</span>
+                      <span className="text-xs sm:text-sm text-gray-600 gap-2 flex items-center text-orange-600 shrink-0">
                         {menu.pricingType === "variant"
                           ? "Variants"
                           : `₹${menu.price}`}
@@ -734,21 +779,21 @@ const EditOrderModal = ({
           </Select>
         </div>
 
-        {/* Total Amount */}
+        {/* Items Subtotal */}
         <div className="mb-6 p-3 bg-orange-50 rounded-lg border border-orange-200">
           <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-800">Total Amount</span>
+            <span className="font-semibold text-gray-800">Items Total</span>
             <span className="text-xl font-bold text-orange-600">
-              ₹{localOrderData.totalAmount}
+              ₹{itemsSubtotal}
             </span>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
           <button
             onClick={() => setEditingOrder(null)}
-            className="px-4 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
           >
             Cancel
           </button>
@@ -756,7 +801,7 @@ const EditOrderModal = ({
           <button
             onClick={handleUpdateOrder}
             disabled={isUpdateDisabled}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors ${
               isUpdateDisabled
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-orange-500 text-white hover:bg-orange-600'

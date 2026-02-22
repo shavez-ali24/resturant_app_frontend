@@ -1,14 +1,21 @@
 import React from "react";
 
-const SubmitButton = ({ isAddingItem }) => {
+const SubmitButton = ({ isAddingItem, onClose, submitText = "Add Product" }) => {
   return (
-    <div className="mt-6 text-right">
+    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        onClick={onClose}
+        className="h-11 w-full rounded-xl bg-orange-100 px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-orange-200 sm:w-auto"
+      >
+        Cancel
+      </button>
       <button
         type="submit"
         disabled={isAddingItem}
-        className="py-3 px-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="h-11 w-full rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
-        {isAddingItem ? "Adding..." : "Add Product"}
+        {isAddingItem ? "Adding..." : submitText}
       </button>
     </div>
   );

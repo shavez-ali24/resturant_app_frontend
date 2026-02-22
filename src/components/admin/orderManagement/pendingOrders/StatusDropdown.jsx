@@ -21,7 +21,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
       <SelectTrigger
-        className={`h-8 w-[130px] rounded-lg border-0 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-offset-1 ${getStatusBadge(
+        className={`h-10 md:h-8 w-full md:w-[130px] rounded-lg border-0 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-offset-1 ${getStatusBadge(
           order.status
         )}`}
       >

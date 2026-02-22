@@ -1,18 +1,18 @@
 import React from "react";
 
 const SubmitButton = ({ isSubmitting, onClose, submitText = "Save Changes" }) => (
-  <div className="flex justify-end gap-3 pt-4">
+  <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
     <button
       type="button"
       onClick={onClose}
-      className="px-6 py-3 bg-orange-100 text-gray-800 rounded-xl hover:bg-orange-200 transition font-semibold"
+      className="h-11 w-full rounded-xl bg-orange-100 px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-orange-200 sm:w-auto"
     >
       Cancel
     </button>
     <button
       type="submit"
       disabled={isSubmitting}
-      className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="h-11 w-full rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
     >
       {isSubmitting ? "Saving..." : submitText}
     </button>

@@ -8,10 +8,10 @@ const ModalHeader = ({ itemName, onClose }) => (
     <button
       type="button"
       onClick={onClose}
-      className="text-gray-400 hover:text-gray-600"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-gray-700"
       aria-label="Close modal"
     >
-      <XCircleIcon className="w-7 h-7" />
+      <XCircleIcon className="h-6 w-6" />
     </button>
   </div>
 );

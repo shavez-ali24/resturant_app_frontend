@@ -32,7 +32,7 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-orange-50 text-sm ${
+            className={`h-11 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${
               errors.category ? "border-red-500" : "border-orange-500"
             }`}
           >
@@ -73,7 +73,7 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-orange-50 text-sm ${
+            className={`h-11 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${
               errors.type ? "border-red-500" : "border-orange-500"
             }`}
           >

@@ -32,7 +32,7 @@ const FormInput = ({
         onChange={onChange}
         disabled={disabled}
         inputMode={inputMode}
-        className={`w-full border ${error ? 'border-red-500' : 'border-orange-500'} rounded-lg p-3 focus:ring-2 focus:ring-orange-500 outline-none text-sm transition-colors ${
+        className={`h-11 w-full rounded-lg border ${error ? 'border-red-500' : 'border-orange-500'} px-3 text-sm transition-colors outline-none focus:ring-2 focus:ring-orange-500 ${
           error ? 'bg-red-50' : 'bg-orange-50 hover:bg-orange-100'
         } ${icon ? 'pl-10' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         placeholder={placeholder || label}

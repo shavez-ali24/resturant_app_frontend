@@ -115,16 +115,16 @@ const AddItemModal = ({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm h-full pt-20 flex items-center justify-center z-50 p-2"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
           onClick={onClose}
         >
           <motion.div
             variants={addItemModalVariant}
-            className="bg-gradient-to-br from-gray-50 to-gray-100 p-1 rounded-2xl shadow-lg w-full max-w-3xl"
+            className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-1 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="max-h-[85vh] overflow-y-auto rounded-[14px] bg-white">
-              <motion.form onSubmit={onSubmitHandler} className="p-6 sm:p-8">
+            <div className="max-h-[92dvh] overflow-y-auto rounded-[14px] bg-white sm:max-h-[88vh]">
+              <motion.form onSubmit={onSubmitHandler} className="p-4 sm:p-6">
                 <ModalHeader onClose={onClose} />
                 {backendError && <ErrorDisplay error={backendError} />}
 
@@ -207,7 +207,11 @@ const AddItemModal = ({
                     handleChange={handleChange}
                   />
 
-                  <SubmitButton isAddingItem={isAddingItem} />
+                  <SubmitButton
+                    isAddingItem={isAddingItem}
+                    onClose={onClose}
+                    submitText="Add Product"
+                  />
                 </div>
               </motion.form>
             </div>

@@ -181,7 +181,7 @@ const EditItemModal = ({
               setEditFormData(prev => ({ ...prev, category: val }))
             }
           >
-            <SelectTrigger className={`w-full border ${errors.category ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"} rounded-lg p-3 text-sm`}>
+            <SelectTrigger className={`h-11 w-full rounded-lg border px-3 text-sm ${errors.category ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"}`}>
               <SelectValue placeholder="Select a Category">
                 {getCategoryDisplayName() || "Select a Category"}
               </SelectValue>
@@ -217,7 +217,7 @@ const EditItemModal = ({
               setEditFormData(prev => ({ ...prev, type: val }))
             }
           >
-            <SelectTrigger className={`w-full border ${errors.type ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"} rounded-lg p-3 text-sm`}>
+            <SelectTrigger className={`h-11 w-full rounded-lg border px-3 text-sm ${errors.type ? "border-red-500 bg-red-50" : "border-orange-500 bg-orange-50"}`}>
               <SelectValue placeholder="Select Food Type">
                 {type === "veg" && "Veg"}
                 {type === "non-veg" && "Non-Veg"}
@@ -255,16 +255,16 @@ const EditItemModal = ({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
         onClick={onClose}
       >
         <motion.div
           variants={modalContentVariant}
-          className="bg-gradient-to-br from-gray-50 to-gray-100 p-1 rounded-2xl shadow-lg w-full max-w-3xl"
+          className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-1 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="max-h-[90vh] overflow-y-auto rounded-[14px] bg-white">
-            <form onSubmit={onSubmitHandler} className="p-6 sm:p-8">
+          <div className="max-h-[92dvh] overflow-y-auto rounded-[14px] bg-white sm:max-h-[88vh]">
+            <form onSubmit={onSubmitHandler} className="p-4 sm:p-6">
               <ModalHeader itemName={item?.name || ""} onClose={onClose} />
               {backendError && <ErrorDisplay error={backendError} />}
 

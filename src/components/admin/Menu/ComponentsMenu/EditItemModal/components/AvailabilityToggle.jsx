@@ -1,13 +1,13 @@
 import React from "react";
 
 const AvailabilityToggle = ({ available, handleChange }) => (
-  <label className="flex items-center gap-3 cursor-pointer p-3 bg-orange-50 rounded-lg border border-orange-500 w-max hover:bg-orange-100 transition-colors">
+  <label className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-orange-500 bg-orange-50 px-3 transition-colors hover:bg-orange-100 sm:w-max">
     <input
       type="checkbox"
       name="available"
       checked={available || false}
       onChange={handleChange}
-      className="w-5 h-5 accent-orange-500"
+      className="h-4 w-4 accent-orange-500"
     />
     <span className="text-sm font-semibold text-gray-700">
       Available

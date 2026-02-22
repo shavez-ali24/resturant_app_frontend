@@ -64,7 +64,7 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-12 w-full items-center justify-between rounded-xl border border-orange-300 bg-white px-4 py-2 text-base text-gray-700 shadow-sm transition-all hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
+        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
       >
         <span className="mr-2">
           {label}: <span className="font-semibold text-gray-900">{displayLabel}</span>
@@ -80,7 +80,7 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
                 type="button"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onSelect(option.value)}
-                className={`block w-full px-5 py-2.5 text-left text-base ${
+                className={`block w-full px-4 py-2.5 text-left text-sm ${
                   String(option.value) === String(selectedValue)
                     ? "font-semibold bg-orange-50 text-orange-600"
                     : "text-gray-700 hover:bg-orange-50"
@@ -112,13 +112,13 @@ function FilterModal({ isOpen, onClose, children }) {
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto rounded-b-2xl bg-white p-6 shadow-2xl"
+        className="relative mx-4 max-h-[82vh] w-full max-w-md overflow-y-auto rounded-b-2xl bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()} // Stop propagation to prevent modal from closing when clicking inside
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Filters</h3>
-          <button type="button" onClick={onClose} className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-black">
-            <XIcon className="h-6 w-6" />
+          <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+          <button type="button" onClick={onClose} className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-black">
+            <XIcon className="h-5 w-5" />
           </button>
         </div>
         {children}
@@ -149,10 +149,10 @@ function FilterControls({
           id="search"
           value={filters.search}
           onChange={handleSearchChange}
-          className="h-12 w-full border border-orange-300 rounded-xl py-2 px-4 pl-10 text-base focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white"
+          className="h-11 w-full rounded-xl border border-orange-300 bg-white px-4 py-2 pl-10 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
           placeholder="Search by name or category..."
         />
-        <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
       </div>
 
       <FilterDropdown
@@ -188,7 +188,7 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className="h-12 w-full md:w-auto bg-orange-500 hover:bg-orange-400 text-white flex-shrink-0 rounded-xl border border-transparent px-4 py-2 text-base font-medium transition-all duration-200"
+        className="h-11 w-full flex-shrink-0 rounded-xl border border-transparent bg-orange-500 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-orange-600 md:w-auto"
       >
         Reset Filters
       </button>
@@ -272,9 +272,9 @@ export default function MenuFilter({ onFilterChange, categories, value }) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-orange-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 shadow-sm transition-all hover:bg-orange-50"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-300 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-orange-50"
         >
-          <FilterIcon className="h-5 w-5" />
+          <FilterIcon className="h-4 w-4" />
           Filters
         </button>
       </div>
@@ -294,7 +294,7 @@ export default function MenuFilter({ onFilterChange, categories, value }) {
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className="mt-4 w-full rounded-xl bg-orange-500 px-4 py-3 text-base font-semibold text-white shadow-md transition-all hover:bg-orange-600"
+            className="mt-2 h-11 w-full rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white shadow-md transition-all hover:bg-orange-600"
           >
             Apply Filters
           </button>

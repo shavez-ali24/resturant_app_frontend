@@ -70,7 +70,7 @@ const CategoryTypeSelectors = ({
               errors.category
                 ? "border-red-500 bg-red-50"
                 : "border-orange-500 bg-orange-50"
-            } rounded-lg p-3 text-sm`}
+            } h-11 rounded-lg px-3 text-sm`}
           >
             <SelectValue placeholder="Select a Category">
               {getCategoryDisplayName() || "Select a Category"}
@@ -126,7 +126,7 @@ const CategoryTypeSelectors = ({
               errors.type
                 ? "border-red-500 bg-red-50"
                 : "border-orange-500 bg-orange-50"
-            } rounded-lg p-3 text-sm`}
+            } h-11 rounded-lg px-3 text-sm`}
           >
             <SelectValue placeholder="Select Food Type">
               {type === "veg" && "Veg"}

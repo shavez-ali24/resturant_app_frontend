@@ -28,12 +28,12 @@ const FormInput = ({
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full border ${hasError ? "border-red-500" : "border-orange-500"} rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-orange-50 text-sm ${icon ? "pl-10" : ""}`}
+          className={`h-11 w-full rounded-lg border ${hasError ? "border-red-500" : "border-orange-500"} bg-orange-50 px-3 text-sm transition-all outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 ${icon ? "pl-10" : ""}`}
           placeholder={placeholder}
           {...props}
         />
         {icon && (
-          <div className="absolute left-3 top-3.5 text-gray-500">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
             {icon}
           </div>
         )}

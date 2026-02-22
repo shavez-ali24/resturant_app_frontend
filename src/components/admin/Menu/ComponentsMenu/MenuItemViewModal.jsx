@@ -166,9 +166,10 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-20 p-2 rounded-full bg-orange-500 text-white shadow-lg hover:bg-orange-600 transition-colors"
+                className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-colors hover:bg-orange-600"
+                aria-label="Close item details"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
               {/* LEFT – IMAGE */}
@@ -273,7 +274,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                         {discountedPriceInfo ? (
                           <>
                             <div className="flex items-center">
-                              <IndianRupee size={20} sm:size={28} className="text-orange-600" />
+                              <IndianRupee className="h-5 w-5 text-orange-600 sm:h-7 sm:w-7" />
                               <span className="text-2xl sm:text-4xl font-bold text-orange-600">
                                 {discountedPriceInfo.discounted}
                               </span>
@@ -289,7 +290,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                           </>
                         ) : (
                           <div className="flex items-center">
-                            <IndianRupee size={20} sm:size={28} className="text-orange-600" />
+                            <IndianRupee className="h-5 w-5 text-orange-600 sm:h-7 sm:w-7" />
                             <span className="text-2xl sm:text-4xl font-bold text-orange-600">
                               {item.price}
                             </span>
@@ -314,7 +315,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                               {variant.label}
                             </div>
                             <div className="flex items-center justify-center gap-1">
-                              <IndianRupee size={16} sm:size={20} className="text-orange-600" />
+                              <IndianRupee className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
                               <span className={`font-bold text-orange-600 ${
                                 variant.hasDiscount ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'
                               }`}>
@@ -343,7 +344,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       {/* Combo Price Display */}
                       <div className="flex items-center justify-center mb-4 sm:mb-6">
                         <div className="flex items-center">
-                          <IndianRupee size={20} sm:size={28} className="text-orange-600" />
+                          <IndianRupee className="h-5 w-5 text-orange-600 sm:h-7 sm:w-7" />
                           <span className="text-2xl sm:text-4xl font-bold text-orange-600">
                             {item.comboPrice || "0.00"}
                           </span>
@@ -354,7 +355,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       {comboItemsDisplay.length > 0 && (
                         <div className="pt-3 sm:pt-4 border-t border-orange-200">
                           <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                            <Layers size={14} sm:size={16} className="text-orange-500" />
+                            <Layers className="h-4 w-4 text-orange-500 sm:h-5 sm:w-5" />
                             <h4 className="font-semibold text-orange-700 text-sm sm:text-base">Combo Includes:</h4>
                           </div>
                           

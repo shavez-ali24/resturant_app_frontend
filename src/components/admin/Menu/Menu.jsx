@@ -63,9 +63,48 @@ const Menu = () => {
 
   const notify = useNotify();
 
-  const showNotification = useCallback((message, type = "success") => {
-    notify(message, type);
-  }, [notify]);
+  const getRawErrorText = useCallback((errorObj) => {
+    if (!errorObj) return "";
+    if (typeof errorObj === "string") return errorObj;
+    if (typeof errorObj?.data === "string") return errorObj.data;
+    return (
+      errorObj?.data?.message ||
+      errorObj?.data?.error ||
+      errorObj?.message ||
+      errorObj?.error ||
+      ""
+    );
+  }, []);
+
+  const getFriendlyMenuError = useCallback((errorObj, context = "general") => {
+    const status = errorObj?.status || errorObj?.originalStatus;
+    const rawMessage = getRawErrorText(errorObj).toLowerCase();
+
+    if (status === 401) return "Your session has expired. Please login again.";
+    if (status === 403) return "You do not have permission for this action.";
+    if (status === 404) return "Menu item not found. Please refresh and try again.";
+    if (status === 409) return "This menu item already exists.";
+    if (status === 413) return "Image size is too large. Please upload a smaller image.";
+    if (status === 429) return "Too many requests. Please wait and try again.";
+    if (status >= 500) return "Server is busy right now. Please try again in a moment.";
+
+    if (
+      rawMessage.includes("network") ||
+      rawMessage.includes("fetch") ||
+      rawMessage.includes("timeout")
+    ) {
+      return "Network issue detected. Please check your connection and retry.";
+    }
+
+    if (rawMessage.includes("image")) return "Please upload a valid image file.";
+    if (rawMessage.includes("category")) return "Please select a valid category.";
+    if (rawMessage.includes("price")) return "Please enter a valid price.";
+
+    if (context === "add") return "Unable to add menu item right now.";
+    if (context === "update") return "Unable to update menu item right now.";
+    if (context === "delete") return "Unable to delete menu item right now.";
+    return "Something went wrong. Please try again.";
+  }, [getRawErrorText]);
 
   useEffect(() => setCurrentPage(1), [filters]);
 
@@ -83,7 +122,7 @@ const Menu = () => {
           String(!!item.available) === filters.available)
       );
     });
-  }, [items, filters]);
+  }, [normalizedItems, filters]);
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
@@ -191,12 +230,6 @@ const prepareFormData = (formData, file) => {
   // FILE
   if (file) fd.append("file", file);
 
-  // Debug: log all entries
-  // console.log("[prepareFormData] FormData entries:");
-  Array.from(fd.entries()).forEach(([key, value]) => {
-    // console.log(`  ${key}: ${value}`);
-  });
-
   return fd;
 };
 
@@ -205,11 +238,11 @@ const prepareFormData = (formData, file) => {
     try {
       const fd = prepareFormData(formData, file);
       await createMenuItem(fd).unwrap();
-      notify("Item added successfully", "success");
+      notify("Menu item added successfully.", "success");
       setIsAddModalOpen(false);
       refetch();
     } catch (error) {
-      notify(error?.data?.error || "Failed to add item", "error");
+      notify(getFriendlyMenuError(error, "add"), "error");
     }
   };
 
@@ -217,27 +250,27 @@ const prepareFormData = (formData, file) => {
     try {
       const fd = prepareFormData(formData, file);
       await updateMenuItem({ itemId: formData._id, updatedData: fd }).unwrap();
-      notify("Item updated successfully", "success");
+      notify("Menu item updated successfully.", "success");
       setEditingItem(null);
       refetch();
     } catch (error) {
-      notify(error?.data?.error || "Failed to update item", "error");
+      notify(getFriendlyMenuError(error, "update"), "error");
     }
   };
 
   const handleDeleteItem = async () => {
     try {
       await deleteMenuItem(deleteConfirm.id).unwrap();
-      notify("Item deleted successfully", "success");
+      notify("Menu item deleted successfully.", "success");
       setDeleteConfirm(null);
       refetch();
-    } catch {
-      notify("Failed to delete item", "error");
+    } catch (error) {
+      notify(getFriendlyMenuError(error, "delete"), "error");
     }
   };
 
   return (
-    <div className="bg-white-50 py-6 px-4 relative  ">
+    <div className="relative bg-white-50 py-4 px-3 sm:px-4 sm:py-6 md:px-6">
       <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
 
       <DeleteConfirmModal
@@ -269,20 +302,23 @@ const prepareFormData = (formData, file) => {
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <Heading title="Menu Management" />
+        <div className="mb-6 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1">
+            <Heading title="Menu Management" />
+          </div>
           {isAdmin && (
             <Button
-              className="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 text-sm font-semibold text-white hover:bg-orange-600 sm:h-11 sm:gap-2 sm:px-4"
               onClick={() => setIsAddModalOpen(true)}
             >
-              <CirclePlus size={18} className="mr-2" />
-              Add Item
+              <CirclePlus size={16} />
+              <span className="hidden min-[390px]:inline">Add Item</span>
+              <span className="inline min-[390px]:hidden">Add</span>
             </Button>
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow p-4 mb-8">
+        <div className="mb-8 rounded-xl bg-white p-3 shadow sm:p-4">
           <MenuFilter
             value={filters}
             onFilterChange={(v) => setFilters({ ...filters, ...v })}
@@ -290,15 +326,17 @@ const prepareFormData = (formData, file) => {
           />
         </div>
 
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        <h2 className="mb-5 text-xl font-bold text-gray-800 sm:mb-6 sm:text-2xl">
           Total Items <span className="text-orange-600 font-extrabold">({filteredItems.length})</span>
         </h2>
 
         {isLoading ? (
-          <div className="text-center py-12">Loading menu items...</div>
+          <div className="rounded-xl border border-dashed border-orange-200 bg-orange-50/40 py-12 text-center text-sm text-gray-600 sm:text-base">
+            Loading menu items...
+          </div>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {currentItems.map((item) => (
                 <MenuItemCard
                   key={item._id}
@@ -312,7 +350,7 @@ const prepareFormData = (formData, file) => {
             </div>
 
             {totalPages > 1 && (
-              <Pagination className="mt-4 cursor-pointer justify-center">
+              <Pagination className="mt-6 cursor-pointer justify-center">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} />
@@ -344,4 +382,3 @@ const prepareFormData = (formData, file) => {
 };
 
 export default Menu;
-

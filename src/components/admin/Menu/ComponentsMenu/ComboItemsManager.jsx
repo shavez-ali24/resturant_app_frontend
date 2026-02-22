@@ -223,7 +223,7 @@ const ComboItemsManager = ({
   return (
     <div className="space-y-4">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Combo Items *
@@ -233,7 +233,7 @@ const ComboItemsManager = ({
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {!isLoadingMenu && availableMenuItems.length > 0 && (
             <span className="text-xs text-gray-600">
               {getAvailableItemsCount()} items available
@@ -243,9 +243,9 @@ const ComboItemsManager = ({
             type="button"
             onClick={addComboItem}
             disabled={isLoadingMenu || getAvailableItemsCount() === 0}
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            <PlusCircleIcon className="w-5 h-5" />
+            <PlusCircleIcon className="h-4 w-4" />
             {isLoadingMenu ? "Loading..." : "Add Item"}
           </button>
         </div>
@@ -370,9 +370,9 @@ const ComboItemsManager = ({
                         e.stopPropagation();
                         removeComboItem(index);
                       }}
-                      className="p-1 text-red-600 hover:text-red-800"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 hover:text-red-800"
                     >
-                      <TrashIcon className="w-5 h-5" />
+                      <TrashIcon className="h-4 w-4" />
                     </button>
                     {isExpanded ? (
                       <ChevronUpIcon className="w-5 h-5 text-gray-500" />
@@ -499,7 +499,7 @@ const ComboItemsManager = ({
                             type="button"
                             onClick={() => handleQuantityChange(index, -1)}
                             disabled={(item.quantity || 1) <= 1}
-                            className="bg-orange-50 text-orange-700 hover:bg-orange-100 active:bg-orange-200 w-10 h-10 flex items-center justify-center rounded-l-lg border border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            className="flex h-11 w-11 items-center justify-center rounded-l-lg border border-orange-300 bg-orange-50 text-orange-700 transition-all duration-200 hover:bg-orange-100 active:bg-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -512,7 +512,7 @@ const ComboItemsManager = ({
                               value={item.quantity || 1}
                               onChange={(e) => handleComboItemChange(index, "quantity", e.target.value)}
                               min="1"
-                              className="w-full h-10 border-y border-orange-300 text-center p-2.5 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              className="h-11 w-full border-y border-orange-300 bg-white p-2.5 text-center text-sm font-medium focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             />
                             <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
                               <span className="text-xs text-gray-400 ml-3">Qty</span>
@@ -522,7 +522,7 @@ const ComboItemsManager = ({
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(index, 1)}
-                            className="bg-orange-50 text-orange-700 hover:bg-orange-100 active:bg-orange-200 w-10 h-10 flex items-center justify-center rounded-r-lg border border-orange-300 transition-all duration-200"
+                            className="flex h-11 w-11 items-center justify-center rounded-r-lg border border-orange-300 bg-orange-50 text-orange-700 transition-all duration-200 hover:bg-orange-100 active:bg-orange-200"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
