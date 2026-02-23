@@ -160,7 +160,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
     >
       <div className="flex h-full flex-col sm:flex-row">
         {/* Image */}
-        <div className="relative h-44 w-full flex-shrink-0 overflow-hidden rounded-t-2xl bg-gray-100 sm:h-auto sm:w-36 sm:min-h-[152px] lg:min-h-[146px] sm:rounded-l-2xl sm:rounded-tr-none">
+        <div className="relative h-[12.5rem] w-full flex-shrink-0 overflow-hidden rounded-t-2xl bg-gray-100 sm:h-auto sm:w-36 sm:min-h-[166px] lg:min-h-[160px] sm:rounded-l-2xl sm:rounded-tr-none">
           <img
             src={
               safeItem.image?.url ||
@@ -274,7 +274,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             </div>
           </div>
 
-          <div className="h-[84px] overflow-hidden sm:h-[56px]">
+          <div className="h-[96px] overflow-hidden sm:h-[64px]">
             {isSinglePricing && (
               <div className="flex items-center gap-2 sm:gap-1.5">
                 <span className="text-lg font-bold text-green-700 sm:text-base">₹{getFinalPrice() || safeItem.price || 0}</span>
