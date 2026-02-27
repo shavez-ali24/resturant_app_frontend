@@ -20,6 +20,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { getCompactPageNumbers } from "@/lib/pagination";
 
 import {
   useGetMenuQuery,
@@ -133,17 +134,10 @@ const Menu = () => {
     return filteredItems.slice(start, start + itemsPerPage);
   }, [filteredItems, currentPage]);
 
-  const getPageNumbers = () => {
-    const pages = [];
-    if (currentPage > 3) pages.push(1, "ellipsis-1");
-    const start = Math.max(1, currentPage - 1);
-    const end = Math.min(totalPages, currentPage + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (currentPage < totalPages - 2) pages.push("ellipsis-2", totalPages);
-    return pages;
-  };
-
-  const pageNumbers = getPageNumbers();
+  const pageNumbers = useMemo(
+    () => getCompactPageNumbers(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
 
 // ✅ Fully fixed prepareFormData with robust discount handling
 const prepareFormData = (formData, file) => {
@@ -362,47 +356,51 @@ const prepareFormData = (formData, file) => {
             </div>
 
             {totalPages > 1 && (
-              <Pagination className="mt-6 cursor-pointer justify-center">
-                <PaginationContent className="gap-1 rounded-xl border border-orange-200 bg-white/95 px-2 py-1 shadow-sm">
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                      className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
-                        currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                      }`}
-                    />
-                  </PaginationItem>
-
-                  {pageNumbers.map((page, idx) => (
-                    <PaginationItem key={idx}>
-                      {typeof page === "string" ? (
-                        <PaginationEllipsis />
-                      ) : (
-                        <PaginationLink
-                          isActive={currentPage === page}
-                          className={`rounded-lg border border-orange-200 ${
-                            currentPage === page
-                              ? "border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600"
-                              : "bg-white text-gray-700 hover:bg-orange-50"
+              <div className="mt-6 px-2">
+                <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <Pagination className="min-w-max cursor-pointer justify-center">
+                    <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                          className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
+                            currentPage === 1 ? "pointer-events-none opacity-50" : ""
                           }`}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </PaginationLink>
-                      )}
-                    </PaginationItem>
-                  ))}
+                        />
+                      </PaginationItem>
 
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                      className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
-                        currentPage === totalPages ? "pointer-events-none opacity-50" : ""
-                      }`}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                      {pageNumbers.map((page, idx) => (
+                        <PaginationItem key={idx}>
+                          {typeof page === "string" ? (
+                            <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
+                          ) : (
+                            <PaginationLink
+                              isActive={currentPage === page}
+                              className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
+                                currentPage === page
+                                  ? "border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600"
+                                  : "bg-white text-gray-700 hover:bg-orange-50"
+                              }`}
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </PaginationLink>
+                          )}
+                        </PaginationItem>
+                      ))}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                          className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
+                            currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                          }`}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              </div>
             )}
           </>
         )}

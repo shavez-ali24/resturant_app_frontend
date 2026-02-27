@@ -14,11 +14,13 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { getCompactPageNumbers } from "@/lib/pagination";
 
 import OrdersTable from "./OrdersTable";
 import EditOrderModal from "./EditOrderModal";
@@ -294,46 +296,10 @@ const Orders = () => {
     setCurrentPage(newPage);
   };
 
-  // Generate page numbers with ellipsis logic
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-
-    pageNumbers.push(1);
-
-    let startPage = Math.max(2, currentPage - 1);
-    let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-    if (currentPage <= 3) {
-      startPage = 2;
-      endPage = 4;
-    } else if (currentPage >= totalPages - 2) {
-      startPage = totalPages - 3;
-      endPage = totalPages - 1;
-    }
-
-    if (startPage > 2) {
-      pageNumbers.push('ellipsis-left');
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-
-    if (endPage < totalPages - 1) {
-      pageNumbers.push('ellipsis-right');
-    }
-
-    if (totalPages > 1) {
-      pageNumbers.push(totalPages);
-    }
-
-    return pageNumbers;
-  };
+  const pageNumbers = useMemo(
+    () => getCompactPageNumbers(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
@@ -388,9 +354,10 @@ const Orders = () => {
 
       {/* Server-side Pagination */}
       {totalPages > 1 && (
-        <div className="flex flex-shrink-0 justify-center py-2">
-          <Pagination>
-            <PaginationContent className="gap-1 rounded-xl border border-orange-200 bg-white/95 px-2 py-1 shadow-sm">
+        <div className="flex flex-shrink-0 justify-center px-2 py-2">
+          <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Pagination className="min-w-max">
+              <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
@@ -398,17 +365,17 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage > 1) handlePageChange(currentPage - 1);
                   }}
-                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
                     currentPage === 1 ? "pointer-events-none opacity-50" : ""
                   }`}
                 />
               </PaginationItem>
 
-              {getPageNumbers().map((pageNum, index) => {
-                if (pageNum === 'ellipsis-left' || pageNum === 'ellipsis-right') {
+              {pageNumbers.map((pageNum, index) => {
+                if (typeof pageNum === "string") {
                   return (
-                    <PaginationItem key={`ellipsis-${index}`}>
-                      <span className="px-2 py-1">...</span>
+                    <PaginationItem key={`${pageNum}-${index}`}>
+                      <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
                     </PaginationItem>
                   );
                 }
@@ -418,7 +385,7 @@ const Orders = () => {
                       <PaginationLink
                         href="#"
                         isActive={currentPage === pageNum}
-                        className={`rounded-lg border border-orange-200 ${
+                        className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
                           currentPage === pageNum
                             ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
                             : "bg-white text-gray-700 hover:bg-orange-50"
@@ -441,13 +408,14 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage < totalPages) handlePageChange(currentPage + 1);
                   }}
-                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
                     currentPage === totalPages ? "pointer-events-none opacity-50" : ""
                   }`}
                 />
               </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       )}
 

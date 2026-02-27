@@ -1,6 +1,6 @@
 /* CompletedOrders.jsx */
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Heading from "../../common/Heading";
 
 import {
@@ -25,6 +25,7 @@ import {
   PaginationContent,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { getCompactPageNumbers } from "@/lib/pagination";
 
 const CompletedOrders = () => {
   const [dateRange, setDateRange] = useState("7d");
@@ -46,26 +47,10 @@ const CompletedOrders = () => {
     setCurrentPage(1);
   };
 
-  const pageNumbers = (() => {
-    const pages = [];
-
-    if (currentPage > 3) {
-      pages.push(1);
-      pages.push("ellipsis-1");
-    }
-
-    const start = Math.max(1, currentPage - 1);
-    const end = Math.min(totalPages, currentPage + 1);
-
-    for (let i = start; i <= end; i++) pages.push(i);
-
-    if (currentPage < totalPages - 2) {
-      pages.push("ellipsis-2");
-      pages.push(totalPages);
-    }
-
-    return pages;
-  })();
+  const pageNumbers = useMemo(
+    () => getCompactPageNumbers(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
@@ -95,25 +80,26 @@ const CompletedOrders = () => {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex-shrink-0 flex justify-center py-2">
-          <Pagination>
-            <PaginationContent className="gap-1 rounded-xl border border-orange-200 bg-white/95 px-2 py-1 shadow-sm">
+        <div className="flex-shrink-0 flex justify-center px-2 py-2">
+          <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Pagination className="min-w-max">
+              <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
 
               <PaginationItem>
                 <PaginationPrevious
                   onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${currentPage === 1 ? "pointer-events-none opacity-50" : ""}`}
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${currentPage === 1 ? "pointer-events-none opacity-50" : ""}`}
                 />
               </PaginationItem>
 
               {pageNumbers.map((page, idx) => (
                 <PaginationItem key={idx}>
                   {typeof page === "string" ? (
-                    <PaginationEllipsis />
+                    <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
                   ) : (
                     <PaginationLink
                       isActive={currentPage === page}
-                      className={`rounded-lg border border-orange-200 ${
+                      className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
                         currentPage === page
                           ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
                           : "bg-white text-gray-700 hover:bg-orange-50"
@@ -131,14 +117,15 @@ const CompletedOrders = () => {
                   onClick={() =>
                     currentPage < totalPages && setCurrentPage(currentPage + 1)
                   }
-                  className={`rounded-lg border border-orange-200 bg-white hover:bg-orange-50 ${
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
                     currentPage === totalPages ? "pointer-events-none opacity-50" : ""
                   }`}
                 />
               </PaginationItem>
 
-            </PaginationContent>
-          </Pagination>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       )}
     </div>

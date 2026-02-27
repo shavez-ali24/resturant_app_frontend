@@ -35,7 +35,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
           {/* Item: Pending */}
           <SelectItem
             value="pending"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-yellow-100 hover:text-yellow-800 focus:bg-yellow-100 focus:text-yellow-800 data-[highlighted]:bg-yellow-200 data-[highlighted]:text-yellow-800"
           >
             <div className="flex items-center gap-2">
               <span><Hourglass size={16} /></span> Pending
@@ -45,7 +45,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
           {/* Item: Completed */}
           <SelectItem
             value="completed"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-green-100 hover:text-green-800 focus:bg-green-100 focus:text-green-800 data-[highlighted]:bg-green-200 data-[highlighted]:text-green-800"
           >
             <div className="flex items-center gap-2">
               <span><ClipboardCheck size={16} /></span> Completed
@@ -55,7 +55,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
           {/* Item: Cancelled */}
           <SelectItem
             value="cancelled"
-            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-100 hover:text-orange-800 focus:bg-orange-100 focus:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+            className="cursor-pointer rounded-lg py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-red-100 hover:text-red-800 focus:bg-red-100 focus:text-red-800 data-[highlighted]:bg-red-200 data-[highlighted]:text-red-800"
           >
             <div className="flex items-center gap-2">
               <span><X size={16} /></span> Cancelled

@@ -64,7 +64,7 @@ export const reverseGeocode = async (latitude, longitude) => {
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&extratags=1&namedetails=1`,
       {
         headers: {
-          "User-Agent": "TapNOrder/1.0", // Required by Nominatim
+          "User-Agent": "TapnBite/1.0", // Required by Nominatim
           "Accept-Language": "en", // Request English language
         },
       }

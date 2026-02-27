@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
-import logo from "@/assets/tapNOrder.png";
+import logo from "@/assets/tapNbite.png";
 
 export function SuperAdminSidebar({ ...props }) {
   const { toggleSidebar } = useSidebar();
