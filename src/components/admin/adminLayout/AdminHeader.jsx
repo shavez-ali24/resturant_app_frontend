@@ -23,6 +23,7 @@ export default function AdminHeader() {
     error: restaurantError, 
     isLoading: restaurantLoading 
   } = useGetRestaurantProfileQuery();
+  // console.log("Restaurant Data:", restaurantData);
   
   // Fetch menu items
   const { data: menuItems } = useGetMenuQuery();

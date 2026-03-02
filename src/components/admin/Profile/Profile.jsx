@@ -16,6 +16,7 @@ const Profile = () => {
   const isAdmin = userRole === "admin";
 
   const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantProfileQuery();
+  // console.log("Fetched restaurant profile data:", restaurant);
 
   const handleUpdateSuccess = () => {
     setIsUpdateModalOpen(false);

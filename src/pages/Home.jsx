@@ -150,7 +150,7 @@ export default function Home() {
           <p className="text-base sm:text-lg font-semibold text-gray-700 mb-1">
             {filters.combo ? "No combo items available" :
              filters.veg ? "No veg items available" :
-             filters.nonVeg ? "No non-veg items available" :
+             filters.nonVeg ? "No non-veg items available" : 
              filters.mixed ? "No mixed items available" :
              activeCategory ? `No items in ${activeCategory}` :
              search.trim() ? "No items found" : "No items available"}
