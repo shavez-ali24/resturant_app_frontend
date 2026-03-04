@@ -35,6 +35,9 @@ const AddItemModal = ({
   onSubmit,
   restaurantCategories = [],
   menuItems = [],
+  onAddCategory,
+  onRenameCategory,
+  onDeleteCategory,
 }) => {
   const MotionDiv = motion.div;
   const MotionForm = motion.form;
@@ -144,12 +147,16 @@ const AddItemModal = ({
                     pricingType={addFormData.pricingType}
                     setPricingType={handlePricingTypeChange}
                   />
-                   <CategoryTypeSelectors
+                  <CategoryTypeSelectors
                     category={addFormData.category}
                     type={addFormData.type}
                     restaurantCategories={restaurantCategories}
                     errors={formErrors}
                     setFormData={setAddFormData}
+                    setFormErrors={setFormErrors}
+                    onAddCategory={onAddCategory}
+                    onRenameCategory={onRenameCategory}
+                    onDeleteCategory={onDeleteCategory}
                   />
 
                   {addFormData.pricingType === "single" && (

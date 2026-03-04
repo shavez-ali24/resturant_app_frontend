@@ -28,6 +28,7 @@ import {
   useUpdateMenuItemMutation,
   useCreateMenuItemMutation,
   useGetRestaurantProfileQuery,
+  useUpdateRestaurantProfileMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
 const Menu = () => {
@@ -40,15 +41,11 @@ const Menu = () => {
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
   const isAdmin = userRole === 'admin' || userRole === 'superadmin';
 
-  const restaurantCategories = useMemo(() => {
-    return restaurantData?.restaurant?.categories?.length > 0
-      ? [...restaurantData.restaurant.categories].sort()
-      : [];
-  }, [restaurantData]);
-
   const [createMenuItem] = useCreateMenuItemMutation();
   const [updateMenuItem] = useUpdateMenuItemMutation();
   const [deleteMenuItem] = useDeleteMenuItemMutation();
+  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
+  const [restaurantCategories, setRestaurantCategories] = useState([]);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -106,6 +103,165 @@ const Menu = () => {
     if (context === "delete") return "Unable to delete menu item right now.";
     return "Something went wrong. Please try again.";
   }, [getRawErrorText]);
+
+  const sortUniqueCategories = useCallback((categories = []) => {
+    return Array.from(
+      new Set(
+        categories
+          .filter((category) => typeof category === "string")
+          .map((category) => category.trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  useEffect(() => {
+    const incomingCategories = restaurantData?.restaurant?.categories || [];
+    setRestaurantCategories(sortUniqueCategories(incomingCategories));
+  }, [restaurantData, sortUniqueCategories]);
+
+  const normalizeCategoryLabel = useCallback((value = "") => {
+    const cleanedValue = value
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    if (!cleanedValue) return "";
+    return cleanedValue.charAt(0).toUpperCase() + cleanedValue.slice(1);
+  }, []);
+
+  const persistRestaurantCategories = useCallback(
+    async (updatedCategories, successMessage) => {
+      const normalizedCategories = sortUniqueCategories(updatedCategories);
+      const fd = new FormData();
+
+      if (normalizedCategories.length === 0) {
+        fd.append("categories", "");
+      } else {
+        normalizedCategories.forEach((category) =>
+          fd.append("categories", category)
+        );
+      }
+
+      try {
+        await updateRestaurantProfile(fd).unwrap();
+        setRestaurantCategories(normalizedCategories);
+        if (successMessage) notify(successMessage, "success");
+        return { ok: true, categories: normalizedCategories };
+      } catch (error) {
+        const message =
+          getRawErrorText(error) || "Unable to update categories right now.";
+        notify(message, "error");
+        return { ok: false, message };
+      }
+    },
+    [getRawErrorText, notify, sortUniqueCategories, updateRestaurantProfile]
+  );
+
+  const handleAddRestaurantCategory = useCallback(
+    async (rawCategoryName) => {
+      const categoryName = normalizeCategoryLabel(rawCategoryName);
+      if (!categoryName) {
+        return { ok: false, message: "Please enter a valid category name." };
+      }
+
+      const duplicate = restaurantCategories.find(
+        (cat) =>
+          typeof cat === "string" &&
+          cat.toLowerCase() === categoryName.toLowerCase()
+      );
+
+      if (duplicate) {
+        return { ok: true, category: duplicate, duplicate: true };
+      }
+
+      const updateResult = await persistRestaurantCategories(
+        [...restaurantCategories, categoryName],
+        `Category "${categoryName}" added.`
+      );
+
+      if (!updateResult.ok) return updateResult;
+      return { ok: true, category: categoryName };
+    },
+    [
+      normalizeCategoryLabel,
+      persistRestaurantCategories,
+      restaurantCategories,
+    ]
+  );
+
+  const handleRenameRestaurantCategory = useCallback(
+    async (currentCategoryName, rawUpdatedCategoryName) => {
+      const currentCategory = restaurantCategories.find(
+        (category) =>
+          category.toLowerCase() === String(currentCategoryName || "").toLowerCase()
+      );
+
+      if (!currentCategory) {
+        return { ok: false, message: "Category not found." };
+      }
+
+      const updatedCategory = normalizeCategoryLabel(rawUpdatedCategoryName);
+      if (!updatedCategory) {
+        return { ok: false, message: "Please enter a valid category name." };
+      }
+
+      if (currentCategory.toLowerCase() === updatedCategory.toLowerCase()) {
+        return { ok: true, category: currentCategory, unchanged: true };
+      }
+
+      const duplicate = restaurantCategories.find(
+        (category) => category.toLowerCase() === updatedCategory.toLowerCase()
+      );
+
+      if (duplicate) {
+        return {
+          ok: false,
+          message: `Category "${updatedCategory}" already exists.`,
+        };
+      }
+
+      const updatedCategories = restaurantCategories.map((category) =>
+        category === currentCategory ? updatedCategory : category
+      );
+
+      const updateResult = await persistRestaurantCategories(
+        updatedCategories,
+        `Category "${currentCategory}" renamed to "${updatedCategory}".`
+      );
+
+      if (!updateResult.ok) return updateResult;
+      return { ok: true, oldCategory: currentCategory, category: updatedCategory };
+    },
+    [normalizeCategoryLabel, persistRestaurantCategories, restaurantCategories]
+  );
+
+  const handleDeleteRestaurantCategory = useCallback(
+    async (categoryNameToDelete) => {
+      const targetCategory = restaurantCategories.find(
+        (category) =>
+          category.toLowerCase() === String(categoryNameToDelete || "").toLowerCase()
+      );
+
+      if (!targetCategory) {
+        return { ok: false, message: "Category not found." };
+      }
+
+      const updatedCategories = restaurantCategories.filter(
+        (category) => category !== targetCategory
+      );
+
+      const updateResult = await persistRestaurantCategories(
+        updatedCategories,
+        `Category "${targetCategory}" deleted.`
+      );
+
+      if (!updateResult.ok) return updateResult;
+      return { ok: true, deletedCategory: targetCategory };
+    },
+    [persistRestaurantCategories, restaurantCategories]
+  );
 
   useEffect(() => setCurrentPage(1), [filters]);
 
@@ -284,6 +440,9 @@ const prepareFormData = (formData, file) => {
         onSubmit={handleAddItem}
         restaurantCategories={restaurantCategories}
         menuItems={normalizedItems}
+        onAddCategory={handleAddRestaurantCategory}
+        onRenameCategory={handleRenameRestaurantCategory}
+        onDeleteCategory={handleDeleteRestaurantCategory}
       />
 
       <AnimatePresence>
@@ -295,6 +454,9 @@ const prepareFormData = (formData, file) => {
             restaurantCategories={restaurantCategories}
               menuItems={normalizedItems.filter(item => item._id !== editingItem._id)}
             onSubmit={handleUpdateItem}
+            onAddCategory={handleAddRestaurantCategory}
+            onRenameCategory={handleRenameRestaurantCategory}
+            onDeleteCategory={handleDeleteRestaurantCategory}
           />
         )}
       </AnimatePresence>
@@ -325,7 +487,7 @@ const prepareFormData = (formData, file) => {
           />
         </div>
 
-        <div className="mb-5 flex items-center justify-between rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm sm:mb-6">
+        <div className="mb-5 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm sm:mb-6 sm:gap-3">
           <h2 className="text-lg font-bold text-gray-800 sm:text-xl">Total Items</h2>
           <span className="inline-flex min-w-[44px] justify-center rounded-full bg-orange-100 px-3 py-1 text-sm font-extrabold text-orange-700">
             {filteredItems.length}

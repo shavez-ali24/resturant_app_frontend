@@ -13,11 +13,11 @@ export default function UpdateCategoriesForm({
   categorySuggestions,
 }) {
   return (
-    <FormCard title="Categories" customIndex={2}>
+    <FormCard title="Food Categories" customIndex={2}>
       <div>
-        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-          Categories
-        </label>
+        {/* <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+        Food  Categories
+        </label> */}
         <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-orange-200 bg-white p-2 shadow-sm transition-all hover:border-orange-300 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200">
           <AnimatePresence>
             {categories?.map((category) => (

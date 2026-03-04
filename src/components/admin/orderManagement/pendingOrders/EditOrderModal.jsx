@@ -705,9 +705,42 @@ const EditOrderModal = ({
   };
 
   // =============================
-  // ORDER TYPE BADGE HELPER
+  // ORDER TYPE COLOR HELPERS
   // =============================
-  const getOrderTypeBadge = () => "border-orange-200 bg-white text-gray-700 hover:border-orange-300";
+  const getOrderTypeStyle = (type) => {
+    switch (type?.toLowerCase()) {
+      case "eat here":
+        return {
+          trigger:
+            "border-green-200 bg-green-50 text-green-700 hover:border-green-300",
+          item:
+            "text-green-700 data-[highlighted]:bg-green-100 data-[highlighted]:text-green-800 data-[state=checked]:bg-green-100 data-[state=checked]:text-green-800",
+        };
+      case "take away":
+        return {
+          trigger:
+            "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300",
+          item:
+            "text-blue-700 data-[highlighted]:bg-blue-100 data-[highlighted]:text-blue-800 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-800",
+        };
+      case "delivery":
+        return {
+          trigger:
+            "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-300",
+          item:
+            "text-orange-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
+        };
+      default:
+        return {
+          trigger: "border-orange-200 bg-white text-gray-700 hover:border-orange-300",
+          item:
+            "text-gray-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
+        };
+    }
+  };
+
+  const getOrderTypeBadge = (type) => getOrderTypeStyle(type).trigger;
+  const getOrderTypeItemClass = (type) => getOrderTypeStyle(type).item;
 
   // Format tables data (dynamic from props)
   const availableTables = Array.isArray(tables) ? tables : [];
@@ -766,7 +799,7 @@ const EditOrderModal = ({
               <SelectGroup>
                 <SelectItem 
                   value="Eat Here" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Utensils size={16} />
@@ -775,7 +808,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Take Away" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Home size={16} />
@@ -784,7 +817,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Delivery" 
-                  className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Truck size={16} />

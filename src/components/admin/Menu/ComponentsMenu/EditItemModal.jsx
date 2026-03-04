@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { modalOverlayVariant, modalContentVariant } from "../Lib/constants";
 import ModalHeader from "./EditItemModal/components/ModalHeader";
@@ -18,6 +9,7 @@ import PricingTypeSelector from "./EditItemModal/components/PricingTypeSelector"
 import SinglePriceSection from "./EditItemModal/components/SinglePriceSection";
 import VariantPriceSection from "./EditItemModal/components/VariantPriceSection";
 import ComboPriceSection from "./EditItemModal/components/ComboPriceSection";
+import CategoryTypeSelectors from "./EditItemModal/components/CategoryTypeSelectors";
 import ImageUpload from "./EditItemModal/components/ImageUpload";
 import AvailabilityToggle from "./EditItemModal/components/AvailabilityToggle";
 import SubmitButton from "./EditItemModal/components/SubmitButton";
@@ -40,6 +32,9 @@ const EditItemModal = ({
   onSubmit,
   restaurantCategories,
   menuItems = [],
+  onAddCategory,
+  onRenameCategory,
+  onDeleteCategory,
 }) => {
   const MotionDiv = motion.div;
   const [editFormData, setEditFormData] = useState({});
@@ -159,102 +154,6 @@ const EditItemModal = ({
       onClose
     );
 
-  const CategoryTypeSelectors = ({ category, type, errors }) => {
-    const getCategoryDisplayName = () => {
-      if (!category) return "";
-      const found = restaurantCategories.find(cat => {
-        const id = typeof cat === "object" ? cat._id : cat;
-        const name = typeof cat === "object" ? cat.name : cat;
-        return id === category || name === category;
-      });
-      return found ? (typeof found === "object" ? found.name : found) : category;
-    };
-
-    return (
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-            Category *
-          </label>
-          <Select
-            value={category || ""}
-            onValueChange={(val) =>
-              setEditFormData(prev => ({ ...prev, category: val }))
-            }
-          >
-            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-colors ${errors.category ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"} focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}>
-              <SelectValue placeholder="Select a Category">
-                {getCategoryDisplayName() || "Select a Category"}
-              </SelectValue>
-            </SelectTrigger>
-
-            <SelectContent className="max-h-60 overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
-              <SelectGroup>
-                {restaurantCategories.map(cat => {
-                  const id = typeof cat === "object" ? cat._id : cat;
-                  const name = typeof cat === "object" ? cat.name : cat;
-                  return (
-                    <SelectItem
-                      key={id}
-                      value={id}
-                      className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
-                    >
-                      {name}
-                    </SelectItem>
-                  );
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          {errors.category && (
-            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-              <ExclamationCircleIcon className="w-4 h-4" />
-              {errors.category}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-            Food Type *
-          </label>
-
-          <Select
-            value={type || ""}
-            onValueChange={(val) =>
-              setEditFormData(prev => ({ ...prev, type: val }))
-            }
-          >
-            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-colors ${errors.type ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"} focus:border-orange-400 focus:ring-2 focus:ring-orange-200`}>
-              <SelectValue placeholder="Select Food Type">
-                {type === "veg" && "Veg"}
-                {type === "non-veg" && "Non-Veg"}
-                {type === "mixed" && "Mixed"}
-                {!type && "Select Food Type"}
-              </SelectValue>
-            </SelectTrigger>
-
-            <SelectContent className="rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
-              <SelectGroup>
-                <SelectItem value="veg" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Veg</SelectItem>
-                <SelectItem value="non-veg" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Non-Veg</SelectItem>
-                <SelectItem value="mixed" className="cursor-pointer rounded-lg data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Mixed</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          {errors.type && (
-            <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-              <ExclamationCircleIcon className="w-4 h-4" />
-              {errors.type}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -295,7 +194,13 @@ const EditItemModal = ({
                 <CategoryTypeSelectors
                   category={editFormData.category}
                   type={editFormData.type}
+                  restaurantCategories={restaurantCategories}
                   errors={formErrors}
+                  setFormData={setEditFormData}
+                  setFormErrors={setFormErrors}
+                  onAddCategory={onAddCategory}
+                  onRenameCategory={onRenameCategory}
+                  onDeleteCategory={onDeleteCategory}
                 />
 
                 {editFormData.pricingType === "single" && (

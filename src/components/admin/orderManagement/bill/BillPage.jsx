@@ -336,7 +336,37 @@ const BillPage = ({
     }
   };
 
-  const getOrderTypeBadge = () => "border-gray-300 bg-white text-gray-700 ring-gray-200";
+  const getOrderTypeStyle = (type) => {
+    switch (type?.toLowerCase()) {
+      case "eat here":
+        return {
+          trigger: "border-green-200 bg-green-50 text-green-700 ring-green-100",
+          item:
+            "bg-green-50/80 text-green-700 data-[highlighted]:bg-green-100 data-[highlighted]:text-green-800 data-[state=checked]:bg-green-100 data-[state=checked]:text-green-800",
+        };
+      case "take away":
+        return {
+          trigger: "border-blue-200 bg-blue-50 text-blue-700 ring-blue-100",
+          item:
+            "bg-blue-50/80 text-blue-700 data-[highlighted]:bg-blue-100 data-[highlighted]:text-blue-800 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-800",
+        };
+      case "delivery":
+        return {
+          trigger: "border-orange-200 bg-orange-50 text-orange-700 ring-orange-100",
+          item:
+            "bg-orange-50/80 text-orange-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
+        };
+      default:
+        return {
+          trigger: "border-gray-300 bg-white text-gray-700 ring-gray-200",
+          item:
+            "text-gray-700 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900 data-[state=checked]:bg-gray-100 data-[state=checked]:text-gray-900",
+        };
+    }
+  };
+
+  const getOrderTypeBadge = (type) => getOrderTypeStyle(type).trigger;
+  const getOrderTypeItemClass = (type) => getOrderTypeStyle(type).item;
 
   const availableTables = Array.isArray(tables) ? tables : [];
   const MotionDiv = motion.div;
@@ -487,7 +517,7 @@ const BillPage = ({
                     value={localOrderData?.orderType}
                     onValueChange={handleOrderTypeChange}
                   >
-                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge()}`}>
+                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}>
                       <div className="flex items-center gap-2 text-sm">
                         {getOrderTypeIcon(localOrderData?.orderType)}
                         <span>{localOrderData?.orderType || "Select"}</span>
@@ -495,17 +525,17 @@ const BillPage = ({
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                       <SelectGroup>
-                        <SelectItem value="Eat Here" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                        <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
                           <div className="flex items-center gap-2">
                             <Utensils size={16} /> Eat Here
                           </div>
                         </SelectItem>
-                        <SelectItem value="Take Away" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                        <SelectItem value="Take Away" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}>
                           <div className="flex items-center gap-2">
                             <Home size={16} /> Take Away
                           </div>
                         </SelectItem>
-                        <SelectItem value="Delivery" className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                        <SelectItem value="Delivery" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}>
                           <div className="flex items-center gap-2">
                             <Truck size={16} /> Delivery
                           </div>

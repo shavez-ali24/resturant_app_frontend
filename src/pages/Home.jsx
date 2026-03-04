@@ -56,8 +56,13 @@ export default function Home() {
 
   if (showLoader)
     return (
-      <div className="flex justify-center items-center max-h-screen min-h-screen bg-white">
-        <img src={loader} alt="Loading..." className="h-60" />
+      <div className="relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.12),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.1),transparent_42%)]" />
+        <img
+          src={loader}
+          alt="Loading..."
+          className="relative h-60 w-auto drop-shadow-[0_14px_30px_rgba(249,115,22,0.22)]"
+        />
       </div>
     );
 
