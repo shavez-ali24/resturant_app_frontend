@@ -32,21 +32,21 @@ export default function Filter({ filters, onChange }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="w-full flex items-center py-2 justify-between backdrop-blur-xl border-gray-200 px-2 pt-2"
+      transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      className="mx-2 mb-2 flex w-auto items-center justify-between px-1.5 py-1.5"
     >
       {/* Veg / Non-Veg / Mixed Toggle - Left */}
-      <div className="flex items-center text-gray-800 text-xs sm:text-sm md:text-base">
-        <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1 shadow-sm">
+      <div className="flex min-w-0 items-center text-xs text-gray-800 sm:text-sm md:text-base">
+        <div className="inline-flex items-center gap-0.5 rounded-full bg-white p-0.5 shadow-sm">
           <button
             type="button"
             onClick={() => setMode("all")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "all"
-                ? "bg-white text-gray-900 shadow"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-orange-100 text-orange-800 shadow-sm"
+                : "text-orange-500 hover:bg-orange-50 hover:text-orange-700"
             }`}
           >
             All
@@ -54,10 +54,10 @@ export default function Filter({ filters, onChange }) {
           <button
             type="button"
             onClick={() => setMode("veg")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "veg"
                 ? "bg-green-500 text-white shadow"
-                : "text-green-700 hover:bg-green-50"
+                : "text-green-700 hover:bg-green-50/80"
             }`}
           >
             Veg
@@ -65,10 +65,10 @@ export default function Filter({ filters, onChange }) {
           <button
             type="button"
             onClick={() => setMode("nonVeg")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "nonVeg"
                 ? "bg-red-500 text-white shadow"
-                : "text-red-700 hover:bg-red-50"
+                : "text-red-700 hover:bg-red-50/80"
             }`}
           >
             Non-Veg
@@ -76,10 +76,10 @@ export default function Filter({ filters, onChange }) {
           <button
             type="button"
             onClick={() => setMode("mixed")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "mixed"
                 ? "bg-orange-500 text-white shadow"
-                : "text-orange-700 hover:bg-orange-50"
+                : "text-orange-700 hover:bg-orange-50/90"
             }`}
           >
             Mixed
@@ -91,10 +91,10 @@ export default function Filter({ filters, onChange }) {
       <button
         type="button"
         onClick={() => onChange("combo", !filters.combo)}
-        className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition ${
+        className={`ml-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
           filters.combo
-            ? "bg-orange-600 text-white shadow-md"
-            : "bg-white text-orange-600 border-2 border-orange-500 hover:bg-orange-50"
+            ? "bg-primary text-white shadow-md"
+            : "bg-white text-orange-700 shadow-sm hover:bg-orange-50"
         }`}
       >
         Combo

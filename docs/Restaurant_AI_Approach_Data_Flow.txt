@@ -1,0 +1,89 @@
+RESTAURANT APP AI APPROACH AND DATA FLOW
+Prepared for: Restaurant Admin + Client App
+Date: 5 March 2026
+
+1) GOAL
+Add AI features in a controlled and useful way for Admin + Client apps,
+without building a custom model on day one.
+
+2) RECOMMENDED STRATEGY (BEST APPROACH)
+Use: LLM API + RAG + Guardrails + Human Approval
+- LLM API: text generation, summaries, recommendations
+- RAG: answer only from your restaurant data
+- Guardrails: scope control and safe outputs
+- Human approval: admin confirms before final save/publish
+
+3) CORE FEATURES TO LAUNCH
+A. Admin Menu Content Assistant
+- Generate item descriptions (short/long)
+- Suggest tags (veg/non-veg, spicy, kids-friendly, bestseller)
+- Translation support (Hindi/English)
+
+B. Admin Image-Aware Suggestion
+- After image upload, suggest dish name/category/tags
+- Admin accepts or rejects suggestions
+
+C. Restaurant-Only Admin Copilot
+- Q&A for your own restaurant analytics and operations
+- If data missing, AI must say "Not enough data"
+
+D. Client Guided Search
+- Natural queries like "spicy veg under 250"
+- Recommend only currently available items
+
+4) END-TO-END DATA FLOW
+Flow A: Admin Description Generation
+Admin UI -> Backend AI Endpoint -> Prompt Builder -> LLM ->
+Structured Output -> Backend Validation -> Admin Review -> Save DB
+
+Flow B: Image Suggestion
+Image Upload -> Metadata Prep -> AI Analysis -> Suggestions ->
+Admin Approval -> Save DB
+
+Flow C: Restaurant-Only Copilot (RAG)
+Admin Question -> Tenant Identification -> Context Retrieval ->
+Scoped Prompt -> LLM Response -> Source Trace -> UI Answer
+
+5) DATA SOURCES FOR AI CONTEXT
+- Menu items, categories, pricing, availability
+- Order history and time-slot sales
+- Restaurant timings, policies, charges, taxes
+- Admin-maintained FAQ/policy content
+
+6) SAFETY AND GOVERNANCE
+- Strict tenant isolation (domain/id based)
+- Scope-limited prompts (no out-of-business answers)
+- PII masking before model call
+- Rate limiting and request logging
+- Fallback safe response on AI failure
+
+7) COST AND PERFORMANCE
+- Small model for simple writing tasks
+- Strong model for analytics/copilot reasoning
+- Cache repeated prompts
+- Token budgets and output length limits
+
+8) ROLLOUT PLAN
+Phase 1 (fast):
+- Admin description generator
+- Image-based suggestions
+
+Phase 2 (high value):
+- Restaurant-only RAG copilot
+- Daily analytics insight cards
+
+Phase 3 (client intelligence):
+- Natural language search
+- Smart recommendation/upsell
+
+9) SUCCESS METRICS
+- Admin time saved per item creation
+- AI acceptance rate
+- Menu quality/completeness score
+- Client conversion uplift
+- Reduced repetitive support queries
+
+10) FINAL RECOMMENDATION
+Start with AI-assisted content + admin approval workflow,
+then expand to restaurant-only RAG copilot.
+This gives immediate value, lower risk, and scalable architecture.

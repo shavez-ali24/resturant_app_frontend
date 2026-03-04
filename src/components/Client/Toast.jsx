@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
 } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 /** Toast context + hook */
 const ToastContext = createContext(null);
@@ -41,13 +42,15 @@ export function ToastProvider({ children }) {
   const value = useMemo(() => ({ toast }), [toast]);
 
   return (
-    <ToastContext.Provider value={value}>
-      {children}
-      {/* Toast viewport */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-3">
-        {toasts.map((t) => (
-          <ToastItem key={t.id} toast={t} onClose={() => remove(t.id)} />
-        ))}
+      <ToastContext.Provider value={value}>
+        {children}
+        {/* Toast viewport */}
+      <div className="fixed bottom-3 left-1/2 z-[110] flex w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 flex-col gap-2.5 sm:bottom-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-none sm:translate-x-0">
+        <AnimatePresence initial={false}>
+          {toasts.map((t) => (
+            <ToastItem key={t.id} toast={t} onClose={() => remove(t.id)} />
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
@@ -61,7 +64,13 @@ function ToastItem({ toast, onClose }) {
   }, [onClose, toast.duration]);
 
   return (
-    <div className="w-[320px] rounded-2xl shadow-lg border bg-white p-4">
+    <motion.div
+      initial={{ opacity: 0, y: 22, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 290, damping: 24 }}
+      className="w-full rounded-2xl border border-orange-100/90 bg-gradient-to-b from-white to-orange-50/40 p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.12)] sm:w-[320px] sm:p-4"
+    >
       {toast.title && <div className="font-semibold mb-1">{toast.title}</div>}
       {toast.description && (
         <div className="text-sm text-gray-600">{toast.description}</div>
@@ -69,12 +78,12 @@ function ToastItem({ toast, onClose }) {
       <div className="mt-3 flex justify-end">
         <button
           onClick={onClose}
-          className="text-sm px-3 py-1 rounded-full border hover:bg-gray-50"
+          className="rounded-full border border-orange-200 bg-white px-3 py-1 text-sm text-gray-700 transition hover:bg-orange-50"
           aria-label="Close"
         >
           Close
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

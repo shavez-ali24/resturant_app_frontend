@@ -1,7 +1,7 @@
 export default function Copywright() {
   return (
     <div
-      className="text-center fixed bottom-0 bg-white w-full text-xs p-1 border-t text-gray-600"
+      className="fixed bottom-0 left-0 right-0 z-20 border-t border-orange-100/80 bg-white px-2 py-1 text-center text-[11px] text-gray-600"
       style={{
         paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)",
       }}

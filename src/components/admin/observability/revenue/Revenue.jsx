@@ -38,6 +38,11 @@ const formatCompactNumber = (number) => {
   return `₹${number}`
 }
 
+const analyticsTabsListClass =
+  "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)]"
+const analyticsTabsTriggerClass =
+  "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)]"
+
 // Format date for chart X-axis
 const formatChartDate = (dateString, range) => {
   try {
@@ -480,17 +485,17 @@ export default function RevenueAnalytics() {
               </div>
               
               <div className="flex items-center gap-4">
-                <TabsList className="h-11 rounded-xl border border-orange-200 bg-orange-50/80 p-1">
+                <TabsList className={analyticsTabsListClass}>
                   <TabsTrigger 
                     value="chart" 
-                    className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm"
+                    className={analyticsTabsTriggerClass}
                   >
                     <BarChartIcon className="w-4 h-4 mr-2" />
                     Chart
                   </TabsTrigger>
                   <TabsTrigger 
                     value="table" 
-                    className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm"
+                    className={analyticsTabsTriggerClass}
                   >
                     <TableIcon className="w-4 h-4 mr-2" />
                     Table

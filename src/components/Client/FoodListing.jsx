@@ -6,8 +6,9 @@ import {
   removeFromCart,
   updateCartItem,
 } from "../../redux/clientRedux/clientSlice";
-import { Dot, ChevronsUpDown, Plus, Edit3, X, Percent } from "lucide-react";
+import { Dot, ChevronsUpDown, Edit3, X } from "lucide-react";
 import { Button } from "../ui/button";
+import { AnimatePresence, motion } from "framer-motion";
 
 const groupByCategory = (items) => {
   return items.reduce((acc, item) => {
@@ -232,9 +233,17 @@ export default function FoodListing({
       : "";
   const isLongDescription =
     descriptionText.split(/\s+/).filter(Boolean).length > 60;
+  const customizationTargetItem =
+    customizationModal.cartKey && cartItems[customizationModal.cartKey]
+      ? cartItems[customizationModal.cartKey]
+      : null;
+  const customizationItemName = customizationTargetItem?.name || "this item";
+  const customizationItemVariant = customizationTargetItem?.variantLabel
+    ? ` (${customizationTargetItem.variantLabel})`
+    : "";
 
   return (
-    <div className="bg-white flex flex-col pb-20 px-2 sm:px-3 pt-2">
+    <div className="flex flex-col bg-white px-2 pb-24 pt-2 sm:px-3">
       {Object.keys(groupedMenu).map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
@@ -244,17 +253,30 @@ export default function FoodListing({
             ? "double"
             : "multi";
 
+        const hasOpenVariantInSection = itemsInCategory.some(
+          (menuItem) => openVariantMenu === menuItem._id
+        );
         const containerClass =
           layoutMode === "multi"
-            ? "flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 sm:-mx-3 px-2 sm:px-3 py-3"
-            : `grid gap-4 ${
+            ? "flex gap-3 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 pl-2 pr-0 py-2.5 sm:-mx-3 sm:gap-4 sm:pl-3 sm:pr-1"
+            : `grid items-start gap-3 ${
                 layoutMode === "single"
-                  ? "grid-cols-1 py-3"
-                  : "grid-cols-2 py-3"
+                  ? "grid-cols-1 pt-1 pb-2"
+                  : "grid-cols-2 pt-1 pb-2"
               }`;
 
         return (
-          <div key={category} id={`category-${category}`} className="">
+          <motion.section
+            key={category}
+            id={`category-${category}`}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.16 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className={`relative ${
+              hasOpenVariantInSection ? "z-40" : "z-0"
+            }`}
+          >
             <style dangerouslySetInnerHTML={{
               __html: `
                 @keyframes expand {
@@ -274,12 +296,12 @@ export default function FoodListing({
               `
             }} />
             {/* ✅ Category Header */}
-            <div className="flex items-center gap-2 pt:2">
-              <div className="relative w-3 h-3">
+            <div className="flex items-center gap-2 pt-1">
+              <div className="relative h-3 w-3">
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 rounded-full animate-pulse"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 rounded-full animate-ping"></div>
               </div>
-              <h2 className="text-base font-semibold text-gray-800 tracking-wide">
+              <h2 className="text-base font-semibold tracking-wide text-gray-800">
                 {category}
               </h2>
               <div 
@@ -293,8 +315,389 @@ export default function FoodListing({
             </div>
 
             {/* ✅ Food Cards - Responsive Layout */}
-            <div className={containerClass} style={{ position: "relative" }}>
-              {itemsInCategory.map((item) => {
+            {layoutMode === "multi" ? (
+              <div className="relative">
+              <div className={containerClass} style={{ position: "relative" }}>
+                  {itemsInCategory.map((item) => {
+                    const isMenuOpen = openVariantMenu === item._id;
+                    const selectedVariant = item.pricingType === "variant" ? selectedVariants[item._id] : null;
+                    const variantRates = item.variantRates || {};
+                    const variantPrice = selectedVariant ? variantRates[selectedVariant] : null;
+                    
+                    const cartKey = item.pricingType === "variant" && selectedVariant
+                      ? `${item._id}-${selectedVariant}`
+                      : item._id;
+                    const quantity = cartItems[cartKey]?.quantity || 0;
+                    
+                    // Handle different pricing types - same logic as modal
+                    let basePrice = item.price;
+                    if (item.pricingType === "variant" && selectedVariant && variantPrice) {
+                      basePrice = variantPrice.price;
+                    } else if (item.pricingType === "combo") {
+                      basePrice = item.comboPrice;
+                    }
+                    
+                    // Calculate discounted prices - same as modal
+                    const discountedPrice = calculateDiscountedPrice(item, selectedVariant);
+                    const hasDiscount = hasActiveDiscount(item, selectedVariant);
+                    const originalPrice = basePrice;
+                    const comboItemsCount = getComboItemsCount(item);
+                    const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice)) && isRestaurantOpen;
+                    const isUnavailable = !item.available || !isRestaurantOpen;
+                    
+                    // Food type color coding
+                    const getFoodTypeColor = (type) => {
+                      switch(type?.toLowerCase()) {
+                        case 'veg': return 'border-green-500';
+                        case 'non-veg': return 'border-red-500';
+                        case 'mixed': return 'border-orange-500';
+                        default: return 'border-gray-300';
+                      }
+                    };
+
+                    return (
+                      <motion.div
+                        key={item._id}
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        whileHover={{ y: -2 }}
+                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
+                          isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                        } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
+                      >
+                        {/* ✅ Image Section */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDescription(item);
+                          }}
+                          className={`relative h-28 w-full cursor-pointer overflow-hidden rounded-t-2xl`}
+                        >
+                          <img
+                            src={item.image?.url}
+                            alt={item.name}
+                            className="w-full h-full object-cover object-center"
+                          />
+                          {/* Veg / Non-Veg / Mixed dot badge over image */}
+                          <div className="absolute top-2 left-2 rounded-full bg-white p-1 shadow-sm border border-white">
+                            {item.type === "veg" ? (
+                              <Dot
+                                size={12}
+                                strokeWidth={12}
+                                className="border-2 border-green-700 text-green-700"
+                              />
+                            ) : item.type === "non-veg" ? (
+                              <Dot
+                                size={12}
+                                strokeWidth={12}
+                                className="border-2 border-red-600 text-red-600"
+                              />
+                            ) : (
+                              <Dot
+                                size={12}
+                                strokeWidth={12}
+                                className="border-2 border-orange-600 text-orange-600"
+                              />
+                            )}
+                          </div>
+                          
+                          {/* Discount badge */}
+                          {hasDiscount && (
+                            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full border border-white bg-green-600 px-2 py-1 text-white shadow-sm">
+                              <span className="text-xs font-bold">
+                                {item.pricingType === "variant" && selectedVariant
+                                  ? (() => {
+                                      const discount = variantRates[selectedVariant]?.discount;
+                                      const discountValue = Number(discount?.value || 0);
+                                      // console.log("🔥 FoodListing - Variant Discount Badge:", { selectedVariant, discount, discountValue });
+                                      return discountValue > 0 
+                                        ? (discount?.type?.toLowerCase() === "percentage" 
+                                          ? `${discountValue}% OFF` 
+                                          : `₹${discountValue} OFF`)
+                                        : '';
+                                    })()
+                                  : (() => {
+                                      const discount = item.discount;
+                                      const discountValue = Number(discount?.value || 0);
+                                      // console.log("🔥 FoodListing - Single Discount Badge:", { discount, discountValue });
+                                      return discountValue > 0 
+                                        ? (discount?.type?.toLowerCase() === "percentage" 
+                                          ? `${discountValue}% OFF` 
+                                          : `₹${discountValue} OFF`)
+                                        : '';
+                                    })()
+                                }
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Combo badge */}
+                          {item.pricingType === "combo" && (
+                            <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-orange-600 px-2 py-1 text-white shadow-sm">
+                              <span className="text-xs font-bold">
+                                Combo
+                              </span>
+                            </div>
+                          )}
+                          {isUnavailable && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-semibold">
+                              {!item.available ? "Not Available" : "Orders Closed"}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ✅ Fixed Size Details Section */}
+                        <div className="flex h-28 flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 p-2">
+                          {/* Item Name with Pencil Icon */}
+                          <h3 className="flex h-8 items-center justify-between text-xs font-semibold leading-tight text-gray-900">
+                            <span className="flex-1 truncate pr-1">{item.name}</span>
+                            {quantity > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCustomization(cartKey);
+                                }}
+                                className="text-gray-400 hover:text-orange-600 p-0.5 rounded hover:bg-orange-50 flex-shrink-0"
+                                title="Customize item"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </h3>
+                          
+                          {/* Variant Selection or Price Display */}
+                          <div className="flex flex-col items-start">
+                            {item.pricingType === "variant" && Object.keys(variantRates).length > 0 ? (
+                              <div className="relative z-10 w-full">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setOpenVariantMenu((prev) =>
+                                      prev === item._id ? null : item._id
+                                    );
+                                  }}
+                                  className="text-orange-600 text-xs font-semibold hover:underline flex items-center gap-1 w-full justify-between"
+                                >
+                                  <span className="truncate">
+                                    {selectedVariant && variantPrice != null && variantPrice !== undefined
+                                      ? formatVariantLabel(selectedVariant)
+                                      : "Select size"}
+                                  </span>
+                                  <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
+                                </button>
+
+                                <AnimatePresence>
+                                  {isMenuOpen && (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                                      exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                                      transition={{ duration: 0.18, ease: "easeOut" }}
+                                      className="absolute bottom-full left-0 z-[70] mb-1.5 w-[128px] overflow-hidden rounded-xl border border-orange-100 bg-white shadow-2xl"
+                                      onClick={(event) =>
+                                        event.stopPropagation()
+                                      }
+                                    >
+                                      {Object.entries(variantRates)
+                                        .filter(
+                                          ([key, price]) =>
+                                            price != null && price !== undefined
+                                        )
+                                        .map(([key, price]) => {
+                                          const isActive =
+                                            selectedVariant === key;
+                                          const hasVariantDiscount = hasActiveDiscount(item, key) && Number(price.discount?.value || 0) > 0;
+                                          const discountedVariantPrice = calculateDiscountedPrice(item, key);
+                                          
+                                          return (
+                                            <button
+                                              key={key}
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                setSelectedVariants((prev) => ({
+                                                  ...prev,
+                                                  [item._id]: key,
+                                                }));
+                                                setOpenVariantMenu(null);
+                                              }}
+                                              className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition ${
+                                                isActive
+                                                  ? "bg-gray-100 font-semibold text-orange-700"
+                                                  : "text-gray-700 hover:bg-orange-50"
+                                              }`}
+                                            >
+                                              <span>{formatVariantLabel(key)}</span>
+                                              
+                                              {/* ✅ सिर्फ final price (discount के बाद) */}
+                                              {(() => {
+                                                const finalPrice = hasVariantDiscount ? 
+                                                  discountedVariantPrice : 
+                                                  Number(price.price);
+                                                return (
+                                                  <span className="text-xs font-semibold text-orange-600">
+                                                    ₹{finalPrice.toFixed(2)}
+                                                  </span>
+                                                );
+                                              })()}
+                                            </button>
+                                          );
+                                        })}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            ) : null}
+                            
+                            {/* Show price for variants below selection */}
+                            {item.pricingType === "variant" && selectedVariant && variantPrice && (
+                            <div className="mt-1 flex items-center gap-1">
+                                {hasDiscount ? (
+                                  <>
+                                    <span className="text-xs text-gray-400 line-through">
+                                      ₹{Number(variantPrice.price).toFixed(2)}
+                                    </span>
+                                    <span className="text-xs font-bold text-orange-600">
+                                      ₹{Number(discountedPrice).toFixed(2)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-bold text-orange-600">
+                                    ₹{Number(variantPrice.price).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Show price for non-variant items */}
+                            {item.pricingType !== "variant" && (
+                              <div className="mt-1 flex items-center gap-1">
+                                {hasDiscount ? (
+                                  <>
+                                    <span className="text-xs text-gray-400 line-through">
+                                      ₹{Number(originalPrice).toFixed(2)}
+                                    </span>
+                                    <span className="text-xs font-bold text-orange-600">
+                                      ₹{Number(discountedPrice).toFixed(2)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-bold text-orange-600">
+                                    ₹{Number(originalPrice).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Add Button */}
+                          <div className="mt-auto">
+                            {!item.available ? null : (
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="flex-1" />
+                                <div className="flex items-center gap-1">
+                                  {quantity > 0 ? (
+                                    <>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            dispatch(removeFromCart(cartKey));
+                                          }}
+                                          disabled={!isRestaurantOpen}
+                                          className="h-6 w-6 rounded-lg border-gray-300 p-0 text-xs font-bold hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          -
+                                        </Button>
+                                        <span className="min-w-[14px] text-center text-xs font-semibold">
+                                          {quantity}
+                                        </span>
+                                        <Button
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            dispatch(
+                                              addToCart({
+                                                id: cartKey,
+                                                item: {
+                                                  ...item,
+                                                  price: discountedPrice || basePrice,
+                                                  originalPrice: originalPrice,
+                                                  hasDiscount: hasDiscount,
+                                                  variantKey: selectedVariant,
+                                                  variantLabel:
+                                                    selectedVariant &&
+                                                    variantPrice != null &&
+                                                    variantPrice !== undefined
+                                                      ? formatVariantLabel(selectedVariant)
+                                                      : null,
+                                                  customizations:
+                                                    cartItems[cartKey]?.customizations || "",
+                                                },
+                                                quantity: 1,
+                                              })
+                                            );
+                                          }}
+                                          disabled={!isRestaurantOpen || !canAdd}
+                                          className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          +
+                                        </Button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        dispatch(
+                                          addToCart({
+                                            id: cartKey,
+                                            item: {
+                                              ...item,
+                                              price: discountedPrice || basePrice,
+                                              originalPrice: originalPrice,
+                                              hasDiscount: hasDiscount,
+                                              variantKey: selectedVariant,
+                                              variantLabel:
+                                                selectedVariant &&
+                                                variantPrice != null &&
+                                                variantPrice !== undefined
+                                                  ? formatVariantLabel(selectedVariant)
+                                                  : null,
+                                              customizations:
+                                                cartItems[cartKey]?.customizations || "",
+                                            },
+                                            quantity: 1,
+                                          })
+                                        );
+                                      }}
+                                      disabled={!isRestaurantOpen || !canAdd}
+                                      className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      Add
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+                <div className="pointer-events-none absolute inset-y-2 right-0 w-4 bg-gradient-to-l from-[#fff8f2] to-transparent" />
+              </div>
+            ) : (
+              <div className={containerClass} style={{ position: "relative" }}>
+                {itemsInCategory.map((item) => {
                 const isMenuOpen = openVariantMenu === item._id;
                 const selectedVariant = item.pricingType === "variant" ? selectedVariants[item._id] : null;
                 const variantRates = item.variantRates || {};
@@ -332,15 +735,20 @@ export default function FoodListing({
                 };
 
                 return (
-                  <div
+                  <motion.div
                     key={item._id}
-                    className={`relative bg-white rounded-2xl shadow-md transition-transform hover:scale-[1.02] ${
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    whileHover={layoutMode === "single" ? { y: 0 } : { y: -2 }}
+                    className={`relative rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
                       isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                     } ${
-                      layoutMode === "multi"
-                        ? "flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px]"
-                        : "w-[140px] sm:w-[160px] md:w-[180px]"
-                    } ${isMenuOpen ? "z-10" : ""}`}
+                      layoutMode === "single"
+                        ? "flex min-h-[128px] w-full self-start"
+                        : "w-full"
+                    } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
                   >
                     {/* ✅ Image Section */}
                     <div
@@ -348,7 +756,11 @@ export default function FoodListing({
                         e.stopPropagation();
                         openDescription(item);
                       }}
-                      className={`relative w-full h-28 overflow-hidden rounded-t-2xl cursor-pointer`}
+                      className={`relative cursor-pointer overflow-hidden ${
+                        layoutMode === "single"
+                          ? "h-[128px] w-[118px] shrink-0 rounded-l-2xl rounded-tr-none sm:w-[126px]"
+                          : "h-28 w-full rounded-t-2xl"
+                      }`}
                     >
                       <img
                         src={item.image?.url}
@@ -356,7 +768,7 @@ export default function FoodListing({
                         className="w-full h-full object-cover object-center"
                       />
                       {/* Veg / Non-Veg / Mixed dot badge over image */}
-                      <div className="absolute top-2 left-2 backdrop-blur-sm bg-white/80 p-1 rounded-full shadow-sm border border-white/70">
+                      <div className="absolute top-2 left-2 rounded-full bg-white p-1 shadow-sm border border-white">
                         {item.type === "veg" ? (
                           <Dot
                             size={12}
@@ -380,7 +792,7 @@ export default function FoodListing({
                       
                       {/* Discount badge */}
                       {hasDiscount && (
-                        <div className="absolute top-2 right-2 backdrop-blur-sm bg-green-600/90 text-white px-2 py-1 rounded-full shadow-sm border border-white/70 flex items-center gap-1">
+                        <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full border border-white bg-green-600 px-2 py-1 text-white shadow-sm">
                           <span className="text-xs font-bold">
                             {item.pricingType === "variant" && selectedVariant
                               ? (() => {
@@ -410,7 +822,7 @@ export default function FoodListing({
                       
                       {/* Combo badge */}
                       {item.pricingType === "combo" && (
-                        <div className="absolute bottom-2 left-2 backdrop-blur-sm bg-orange-600/90 text-white px-2 py-1 rounded-full shadow-sm border border-white/70 flex items-center gap-1">
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-orange-600 px-2 py-1 text-white shadow-sm">
                           <span className="text-xs font-bold">
                             Combo
                           </span>
@@ -424,9 +836,21 @@ export default function FoodListing({
                     </div>
 
                     {/* ✅ Fixed Size Details Section */}
-                    <div className="p-2 flex flex-col gap-1 h-28">
+                    <div
+                      className={`flex flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 ${
+                        layoutMode === "single"
+                          ? "min-h-[128px] flex-1 justify-start px-3 py-2"
+                          : "h-28 p-2"
+                      }`}
+                    >
                       {/* Item Name with Pencil Icon */}
-                      <h3 className="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 h-8 flex items-center justify-between">
+                      <h3
+                        className={`flex items-center justify-between leading-tight text-gray-900 ${
+                          layoutMode === "single"
+                            ? "min-h-[26px] text-sm font-semibold"
+                            : "h-8 text-xs font-semibold"
+                        }`}
+                      >
                         <span className="flex-1 truncate pr-1">{item.name}</span>
                         {quantity > 0 && (
                           <button
@@ -465,67 +889,72 @@ export default function FoodListing({
                               <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
                             </button>
 
-                            {isMenuOpen && (
-                              <div
-                                className="absolute -left-2 bottom-0 w-[120px] rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden z-10"
-                                onClick={(event) =>
-                                  event.stopPropagation()
-                                }
-                              >
-                                {Object.entries(variantRates)
-                                  .filter(
-                                    ([key, price]) =>
-                                      price != null && price !== undefined
-                                  )
-                                  .map(([key, price]) => {
-                                    const isActive =
-                                      selectedVariant === key;
-                                    const hasVariantDiscount = hasActiveDiscount(item, key) && Number(price.discount?.value || 0) > 0;
-                                    const discountedVariantPrice = calculateDiscountedPrice(item, key);
-                                    const originalVariantPrice = Number(price.price || 0);
-                                    
-                                    return (
-                                      <button
-                                        key={key}
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          setSelectedVariants((prev) => ({
-                                            ...prev,
-                                            [item._id]: key,
-                                          }));
-                                          setOpenVariantMenu(null);
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center justify-between text-xs transition ${
-                                          isActive
-                                            ? "bg-gray-100 text-orange-700 font-semibold"
-                                            : "text-gray-700 hover:bg-orange-50"
-                                        }`}
-                                      >
-                                        <span>{formatVariantLabel(key)}</span>
-                                        
-                                        {/* ✅ सिर्फ final price (discount के बाद) */}
-                                        {(() => {
-                                          const finalPrice = hasVariantDiscount ? 
-                                            discountedVariantPrice : 
-                                            Number(price.price);
-                                          return (
-                                            <span className="text-xs font-semibold text-orange-600">
-                                              ₹{finalPrice.toFixed(2)}
-                                            </span>
-                                          );
-                                        })()}
-                                      </button>
-                                    );
-                                  })}
-                              </div>
-                            )}
+                            <AnimatePresence>
+                              {isMenuOpen && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                                  transition={{ duration: 0.18, ease: "easeOut" }}
+                                  className="absolute left-0 top-full z-[70] mt-1.5 w-[128px] overflow-hidden rounded-xl border border-orange-100 bg-white shadow-2xl"
+                                  onClick={(event) =>
+                                    event.stopPropagation()
+                                  }
+                                >
+                                  {Object.entries(variantRates)
+                                    .filter(
+                                      ([key, price]) =>
+                                        price != null && price !== undefined
+                                    )
+                                    .map(([key, price]) => {
+                                      const isActive =
+                                        selectedVariant === key;
+                                      const hasVariantDiscount = hasActiveDiscount(item, key) && Number(price.discount?.value || 0) > 0;
+                                      const discountedVariantPrice = calculateDiscountedPrice(item, key);
+                                      
+                                      return (
+                                        <button
+                                          key={key}
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedVariants((prev) => ({
+                                              ...prev,
+                                              [item._id]: key,
+                                            }));
+                                            setOpenVariantMenu(null);
+                                          }}
+                                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition ${
+                                            isActive
+                                              ? "bg-gray-100 font-semibold text-orange-700"
+                                              : "text-gray-700 hover:bg-orange-50"
+                                          }`}
+                                        >
+                                          <span>{formatVariantLabel(key)}</span>
+                                          
+                                          {/* ✅ सिर्फ final price (discount के बाद) */}
+                                          {(() => {
+                                            const finalPrice = hasVariantDiscount ? 
+                                              discountedVariantPrice : 
+                                              Number(price.price);
+                                            return (
+                                              <span className="text-xs font-semibold text-orange-600">
+                                                ₹{finalPrice.toFixed(2)}
+                                              </span>
+                                            );
+                                          })()}
+                                        </button>
+                                      );
+                                    })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         ) : null}
                         
                         {/* Show price for variants below selection */}
                         {item.pricingType === "variant" && selectedVariant && variantPrice && (
-                          <div className="flex items-center gap-1 mt-1">
+                        <div className="mt-1 flex items-center gap-1">
                             {hasDiscount ? (
                               <>
                                 <span className="text-xs text-gray-400 line-through">
@@ -545,7 +974,7 @@ export default function FoodListing({
                         
                         {/* Show price for non-variant items */}
                         {item.pricingType !== "variant" && (
-                          <div className="flex items-center gap-1 mt-1">
+                          <div className="mt-1 flex items-center gap-1">
                             {hasDiscount ? (
                               <>
                                 <span className="text-xs text-gray-400 line-through">
@@ -581,11 +1010,11 @@ export default function FoodListing({
                                         dispatch(removeFromCart(cartKey));
                                       }}
                                       disabled={!isRestaurantOpen}
-                                      className="rounded-lg h-5 w-5 p-0 text-xs font-bold border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="h-6 w-6 rounded-lg border-gray-300 p-0 text-xs font-bold hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       -
                                     </Button>
-                                    <span className="text-xs font-medium min-w-[12px] text-center">
+                                    <span className="min-w-[14px] text-center text-xs font-semibold">
                                       {quantity}
                                     </span>
                                     <Button
@@ -615,7 +1044,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="rounded-lg h-5 w-5 p-0 text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
                                     </Button>
@@ -649,7 +1078,7 @@ export default function FoodListing({
                                     );
                                   }}
                                   disabled={!isRestaurantOpen || !canAdd}
-                                  className="rounded-lg px-2 py-1 text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                                  className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Add
                                 </Button>
@@ -659,23 +1088,33 @@ export default function FoodListing({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
-            </div>
-          </div>
+              </div>
+            )}
+          </motion.section>
         );
       })}
       {/* Description Modal - Fixed Size with Scroll */}
-      {descModal.open && descModal.item && (
-        <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-8"
-          onClick={closeDescription}
-        >
-          <div
-            className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-orange-100 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {descModal.open && descModal.item && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+            onClick={closeDescription}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
+            <motion.div
+              className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-orange-100/90 bg-gradient-to-b from-[#fffaf4] via-[#fff7f0] to-[#fff2e8] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 290, damping: 24 }}
+            >
             {/* Header with Image */}
             <div className="relative h-48 overflow-hidden">
               <img
@@ -694,7 +1133,7 @@ export default function FoodListing({
               </button>
 
               {/* Food type badge */}
-              <div className="absolute top-4 left-4 backdrop-blur-sm bg-white/80 p-2 rounded-full shadow-sm border border-white/70">
+              <div className="absolute top-4 left-4 rounded-full bg-white p-2 shadow-sm border border-white">
                 {descModal.item.type === "veg" ? (
                   <Dot
                     size={16}
@@ -719,7 +1158,7 @@ export default function FoodListing({
               {/* Category and badges */}
               <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2">
                 {descModal.item.category && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/80 text-gray-800">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-800">
                     {descModal.item.category}
                   </span>
                 )}
@@ -748,120 +1187,100 @@ export default function FoodListing({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Price display with discount - consistent colors */}
-                {(() => {
-                  const item = descModal.item;
-                  
-                  // Use same base price logic as cards
-                  let basePrice = item.price;
-                  if (item.pricingType === "combo") {
-                    basePrice = item.comboPrice;
-                  }
-                  
-                  const hasItemDiscount = hasActiveDiscount(item) && Number(item.discount?.value || 0) > 0;
-                  const discountedItemPrice = calculateDiscountedPrice(item);
-                  const originalItemPrice = basePrice;
-                  
-                  if (item.pricingType === "combo") {
-                    return (
-                      <div className="flex flex-col items-center">
-                        <div className="flex items-center gap-1">
-                          {hasItemDiscount && originalItemPrice > 0 && (
+              <div className="rounded-2xl border border-orange-100/80 bg-gradient-to-br from-[#fff8f1] via-[#fffdf9] to-[#fff3e9] p-3 shadow-sm">
+                <div className="space-y-2">
+                  {(() => {
+                    const item = descModal.item;
+                    const getDiscountLabel = (discount) => {
+                      const value = Number(discount?.value || 0);
+                      if (value <= 0) return "";
+                      return discount?.type?.toLowerCase() === "percentage"
+                        ? `${value}% OFF`
+                        : `₹${value} OFF`;
+                    };
+
+                    const renderPriceLine = (label, originalPrice, finalPrice, discountLabel, key) => (
+                      <div
+                        key={key || label}
+                        className="flex items-center justify-between gap-1.5 border-b border-orange-100/80 pb-1.5 last:border-b-0 last:pb-0"
+                      >
+                        <span className="text-xs font-semibold leading-none text-gray-700 sm:text-sm">
+                          {label}
+                        </span>
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          {originalPrice > finalPrice && (
                             <span className="text-xs text-gray-400 line-through">
-                              ₹{originalItemPrice.toFixed(2)}
+                              ₹{Number(originalPrice).toFixed(2)}
                             </span>
                           )}
-                          <span className={`text-lg font-bold ${hasItemDiscount ? 'text-orange-600' : 'text-orange-700'}`}>
-                            ₹{Number(discountedItemPrice).toFixed(2)}
+                          <span className="text-base font-bold leading-none text-orange-600">
+                            ₹{Number(finalPrice).toFixed(2)}
                           </span>
+                          {discountLabel ? (
+                            <span className="rounded-full bg-orange-50 px-1.5 py-0 text-[9px] font-semibold text-orange-600">
+                              {discountLabel}
+                            </span>
+                          ) : null}
                         </div>
-                        {hasItemDiscount && (
-                          <span className="text-xs text-orange-600 font-medium">
-                            {item.discount?.type?.toLowerCase() === "percentage" 
-                              ? `${item.discount.value}% OFF` 
-                              : `₹${item.discount.value} OFF`}
-                          </span>
-                        )}
-                        {/* <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full border border-orange-100">
-                          Combo ({getComboItemsCount(item)} items)
-                        </span> */}
                       </div>
                     );
-                  } else if (item.pricingType === "variant") {
-                    const variantRates = item.variantRates || {};
-                    return Object.entries(variantRates).map(([key, variant]) => {
-                      const hasVariantDiscount = hasActiveDiscount(item, key) && Number(variant.discount?.value || 0) > 0;
-                      const discountedVariantPrice = calculateDiscountedPrice(item, key);
-                      const originalVariantPrice = Number(variant.price || 0);
-                      
-                      return (
-                        <div key={key} className="flex flex-col items-center">
-                          <span className="text-xs font-medium text-gray-500 capitalize">
-                            {formatVariantLabel(key)}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {hasVariantDiscount && originalVariantPrice > 0 && (
-                              <span className="text-xs text-gray-400 line-through">
-                                ₹{originalVariantPrice.toFixed(2)}
-                              </span>
-                            )}
-                            <span className={`text-sm font-bold ${hasVariantDiscount ? 'text-orange-600' : 'text-orange-700'}`}>
-                              ₹{Number(discountedVariantPrice).toFixed(2)}
-                            </span>
-                          </div>
-                          {hasVariantDiscount && (
-                            <span className="text-xs text-orange-600 font-medium">
-                              {variant.discount?.type?.toLowerCase() === "percentage" 
-                                ? `${variant.discount.value}% OFF` 
-                                : `₹${variant.discount.value} OFF`}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    });
-                  } else {
-                    // Use same base price logic as cards
+
+                    if (item.pricingType === "variant") {
+                      const variantRates = item.variantRates || {};
+
+                      return Object.entries(variantRates)
+                        .filter(([, variant]) => variant?.price != null)
+                        .map(([key, variant]) => {
+                          const hasVariantDiscount =
+                            hasActiveDiscount(item, key) &&
+                            Number(variant.discount?.value || 0) > 0;
+                          const discountedVariantPrice = calculateDiscountedPrice(
+                            item,
+                            key
+                          );
+                          const originalVariantPrice = Number(variant.price || 0);
+                          const discountLabel = hasVariantDiscount
+                            ? getDiscountLabel(variant.discount)
+                            : "";
+
+                          return renderPriceLine(
+                            formatVariantLabel(key),
+                            originalVariantPrice,
+                            discountedVariantPrice,
+                            discountLabel,
+                            key
+                          );
+                        });
+                    }
+
                     let basePrice = item.price;
-                    
-                    const hasItemDiscount = hasActiveDiscount(item) && Number(item.discount?.value || 0) > 0;
+                    if (item.pricingType === "combo") {
+                      basePrice = item.comboPrice;
+                    }
+
+                    const hasItemDiscount =
+                      hasActiveDiscount(item) && Number(item.discount?.value || 0) > 0;
                     const discountedItemPrice = calculateDiscountedPrice(item);
-                    const originalItemPrice = basePrice;
-                    
-                    return (
-                      <div className="flex flex-col items-center">
-                        <div className="flex items-center gap-1">
-                          {hasItemDiscount && originalItemPrice > 0 && (
-                            <span className="text-xs text-gray-400 line-through">
-                              ₹{originalItemPrice.toFixed(2)}
-                            </span>
-                          )}
-                          <span className={`text-lg font-bold ${hasItemDiscount ? 'text-orange-600' : 'text-orange-700'}`}>
-                            ₹{Number(discountedItemPrice).toFixed(2)}
-                          </span>
-                        </div>
-                        {hasItemDiscount && (
-                          <span className="text-xs text-orange-600 font-medium">
-                            {item.discount?.type?.toLowerCase() === "percentage" 
-                              ? `${item.discount.value}% OFF` 
-                              : `₹${item.discount.value} OFF`}
-                          </span>
-                        )}
-                      </div>
+                    const originalItemPrice = Number(basePrice || 0);
+                    const discountLabel = getDiscountLabel(item.discount);
+
+                    return renderPriceLine(
+                      item.pricingType === "combo" ? "Combo" : "Price",
+                      originalItemPrice,
+                      discountedItemPrice,
+                      hasItemDiscount ? discountLabel : "",
+                      "base-price"
                     );
-                  }
-                })()}
-                
-                {descModal.item.pricingType === "variant" && (
-                  <span className="text-xs font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
-                    Multiple portions available
-                  </span>
-                )}
-                {!descModal.item.available && (
-                  <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
-                    Currently unavailable
-                  </span>
-                )}
+                  })()}
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {!descModal.item.available && (
+                    <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                      Currently unavailable
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Combo items details */}
@@ -922,42 +1341,53 @@ export default function FoodListing({
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Customization Modal */}
-      {customizationModal.open && (
-        <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 py-8"
-          onClick={closeCustomization}
-        >
-          <div
-            className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl border border-orange-100 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {customizationModal.open && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+            onClick={closeCustomization}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
+            <motion.div
+              className="relative w-full max-w-[390px] overflow-hidden rounded-3xl border border-orange-200/90 bg-gradient-to-b from-[#fffdf9] via-[#fff7ef] to-[#fff3e8] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 290, damping: 24 }}
+            >
             <button
               onClick={closeCustomization}
-              className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
+              className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white/95 shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
               aria-label="Close customizations"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-4 sm:p-6">
               <div className="flex flex-col gap-2">
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
                   Add Customization
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Add special instructions or notes for this item
+                  Add special instructions for{" "}
+                  <span className="font-semibold text-gray-800">
+                    {customizationItemName}
+                    {customizationItemVariant}
+                  </span>
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Customization Note
-                </label>
                 <textarea
                   value={customizationModal.customizations}
                   onChange={(e) =>
@@ -966,12 +1396,12 @@ export default function FoodListing({
                       customizations: e.target.value,
                     })
                   }
-                  placeholder="e.g., No onions, Extra spicy, Less salt..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm"
+                  placeholder="Add note"
+                  className="w-full resize-none rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   rows={4}
                   maxLength={200}
                 />
-                <p className="text-xs text-gray-500 text-right">
+                <p className="text-right text-xs text-gray-500">
                   {customizationModal.customizations.length}/200
                 </p>
               </div>
@@ -981,22 +1411,23 @@ export default function FoodListing({
                   size="sm"
                   variant="outline"
                   onClick={closeCustomization}
-                  className="rounded-full px-6"
+                  className="rounded-full border-orange-200 bg-white px-6 text-gray-700 hover:bg-orange-50"
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
-                  className="rounded-full px-6 bg-primary text-white hover:bg-primary/90"
+                  className="rounded-full px-6 bg-primary text-white shadow-md hover:bg-primary/90"
                   onClick={handleCustomizationSave}
                 >
                   Save
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

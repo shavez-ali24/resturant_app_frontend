@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { MoonStar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 const swingKeyframes = `
   @keyframes swing {
@@ -26,12 +27,17 @@ export default function RestaurantClosed({
   return (
     <>
       {styleTag}
-      <div className="relative min-h-screen bg-gradient-to-br from-primary/5 via-white to-orange-50 flex items-center justify-center px-6 py-10 overflow-hidden">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-white to-amber-50/55 px-4 py-8 sm:px-6 sm:py-10">
         {/* Decorative blurred circles */}
         <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute top-1/2 right-0 h-72 w-72 rounded-full bg-orange-200/20 blur-3xl" />
 
-        <div className="relative z-10 w-full max-w-xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-xl rounded-3xl px-8 py-12 text-center flex flex-col items-center gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 16, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="relative z-10 flex w-full max-w-xl flex-col items-center gap-6 rounded-3xl border border-orange-100/80 bg-white px-6 py-10 text-center shadow-[0_14px_34px_rgba(15,23,42,0.12)] sm:px-8 sm:py-12"
+        >
           {/* Hanging Closed Sign */}
           <div className="relative flex flex-col items-center mb-4">
             <div
@@ -39,7 +45,7 @@ export default function RestaurantClosed({
               style={{ animation: "ropeBounce 3s ease-in-out infinite" }}
             />
             <div
-              className="mt-4 flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white/90 px-10 py-4 shadow-lg"
+              className="mt-4 flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white px-10 py-4 shadow-lg"
               style={{
                 animation: "swing 4s ease-in-out infinite",
                 transformOrigin: "top center",
@@ -69,7 +75,7 @@ export default function RestaurantClosed({
             <p className="text-sm uppercase tracking-[0.4em] text-primary/70">
               We're taking a short break
             </p>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl md:text-4xl">
               {siteName} is currently closed
             </h1>
             <p className="text-gray-600 text-base leading-relaxed max-w-lg mx-auto">
@@ -93,7 +99,7 @@ export default function RestaurantClosed({
 
             <Button
               size="lg"
-              className="rounded-full px-8 py-6 text-base font-semibold bg-primary text-white shadow-lg hover:bg-primary/90 transition-all duration-200"
+              className="rounded-full bg-primary px-7 py-5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:bg-primary/90 sm:px-8 sm:py-6 sm:text-base"
               onClick={() => window.location.reload()}
             >
               Refresh Status
@@ -103,7 +109,7 @@ export default function RestaurantClosed({
           <p className="text-xs text-gray-400 mt-6">
             We appreciate your patience and can't wait to serve you soon.
           </p>
-        </div>
+        </motion.div>
       </div>
     </>
   );

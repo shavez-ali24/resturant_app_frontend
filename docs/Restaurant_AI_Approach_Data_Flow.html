@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant AI Approach and Data Flow</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #1f2937;
+      margin: 36px 44px;
+      line-height: 1.45;
+      font-size: 12.5pt;
+    }
+    h1, h2, h3 {
+      color: #b45309;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 22pt;
+      margin-top: 0;
+      border-bottom: 2px solid #fed7aa;
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 15pt;
+      margin-top: 20px;
+    }
+    h3 {
+      font-size: 12.5pt;
+      margin-top: 14px;
+    }
+    p, li {
+      margin-top: 6px;
+      margin-bottom: 6px;
+    }
+    ul {
+      margin-top: 6px;
+      margin-bottom: 6px;
+    }
+    .meta {
+      font-size: 10.5pt;
+      color: #6b7280;
+      margin-bottom: 14px;
+    }
+    .box {
+      border: 1px solid #fdba74;
+      background: #fff7ed;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .flow {
+      border-left: 4px solid #fb923c;
+      padding: 8px 12px;
+      background: #fffaf5;
+      margin: 10px 0;
+    }
+    .small {
+      font-size: 10.5pt;
+      color: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <h1>Restaurant App AI Approach and Data Flow</h1>
+  <div class="meta">Prepared for: Restaurant Admin + Client App | Date: 5 March 2026</div>
+
+  <h2>1. Goal</h2>
+  <p>
+    Add AI features in a controlled and useful way for your existing Admin + Client app, without building a custom model from day one.
+    Focus on business impact first, then scale.
+  </p>
+
+  <h2>2. Recommended Strategy (Best Approach)</h2>
+  <div class="box">
+    <p><strong>Use this stack:</strong> LLM API + Retrieval-Augmented Generation (RAG) + Guardrails + Human Approval.</p>
+    <ul>
+      <li><strong>LLM API:</strong> Text generation, rewriting, summaries, recommendations.</li>
+      <li><strong>RAG:</strong> AI answers only from your restaurant data (menu, timings, policies, offers, order data).</li>
+      <li><strong>Guardrails:</strong> Scope control, safe responses, no hallucinated promises.</li>
+      <li><strong>Human-in-the-loop:</strong> Admin approves AI output before publishing.</li>
+    </ul>
+  </div>
+
+  <h2>3. Core AI Features to Launch</h2>
+  <h3>3.1 Admin: Menu Content Assistant</h3>
+  <ul>
+    <li>Generate item description from item name, ingredients, cuisine style, spice level.</li>
+    <li>Create short and long versions (menu card + detailed page).</li>
+    <li>Suggest tags: veg/non-veg, spicy, kids-friendly, bestseller, meal-time.</li>
+    <li>Optional translation: Hindi/English.</li>
+  </ul>
+
+  <h3>3.2 Admin: Image-Aware Suggestion</h3>
+  <ul>
+    <li>After item image upload, AI suggests likely dish type and better naming ideas.</li>
+    <li>AI suggests category and presentation notes.</li>
+    <li>Final decision remains with admin.</li>
+  </ul>
+
+  <h3>3.3 Admin: Restaurant-Only Copilot</h3>
+  <ul>
+    <li>Ask: "top low-performing categories this week", "which items to promote", "peak order hours".</li>
+    <li>Copilot must answer only from your tenant data.</li>
+    <li>If data missing, it should clearly say "Not enough data".</li>
+  </ul>
+
+  <h3>3.4 Client: Guided Menu Search</h3>
+  <ul>
+    <li>Natural search like: "spicy veg under 250", "high protein options", "quick snacks".</li>
+    <li>Recommend only items currently available.</li>
+    <li>Respect live conditions: restaurant open/closed, delivery mode, stock availability.</li>
+  </ul>
+
+  <h2>4. End-to-End Data Flow</h2>
+
+  <h3>4.1 Flow A: Admin Generates Item Description</h3>
+  <div class="flow">
+    <p>
+      Admin UI (Add/Edit Item) -> Backend AI Endpoint -> Prompt Builder -> LLM -> Structured Output ->
+      Backend Validation -> Response to Admin UI -> Admin Review/Edit -> Save to DB.
+    </p>
+  </div>
+  <p class="small">
+    Key rule: AI output is a draft; database update only after admin confirms.
+  </p>
+
+  <h3>4.2 Flow B: Image-Based Suggestions</h3>
+  <div class="flow">
+    <p>
+      Admin uploads image -> Image service prepares metadata -> AI analysis request ->
+      Suggested name/category/tags -> Admin accepts or rejects -> final save.
+    </p>
+  </div>
+  <p class="small">
+    Key rule: Do not auto-overwrite existing item details.
+  </p>
+
+  <h3>4.3 Flow C: Restaurant-Only Copilot (RAG)</h3>
+  <div class="flow">
+    <p>
+      Admin asks question -> Backend detects tenant (restaurant domain/id) -> Context Retriever fetches relevant documents/data ->
+      Prompt composer adds strict scope rules -> LLM answer -> Citation/trace metadata ->
+      UI shows answer (and optionally source rows/metrics).
+    </p>
+  </div>
+  <p class="small">
+    Key rule: No cross-tenant data exposure, no open internet answers for internal analytics.
+  </p>
+
+  <h2>5. Data Sources for AI Context</h2>
+  <ul>
+    <li>Menu items, categories, pricing, availability.</li>
+    <li>Order history, time-slot sales, repeat order patterns.</li>
+    <li>Restaurant timings, delivery policy, tax/charge rules.</li>
+    <li>FAQ and policy text prepared by admin.</li>
+  </ul>
+
+  <h2>6. Safety, Governance, and Quality Controls</h2>
+  <ul>
+    <li><strong>Tenant isolation:</strong> Every AI request is tied to restaurant domain/id.</li>
+    <li><strong>Prompt policy:</strong> AI must stay inside restaurant scope.</li>
+    <li><strong>PII protection:</strong> Mask sensitive customer fields before sending to model.</li>
+    <li><strong>Rate limits:</strong> Prevent abuse from admin and client endpoints.</li>
+    <li><strong>Observability:</strong> Store prompt summary, token usage, latency, and response grade.</li>
+    <li><strong>Fallback:</strong> If model fails, return deterministic safe message.</li>
+  </ul>
+
+  <h2>7. Cost and Performance Model</h2>
+  <ul>
+    <li>Use a lighter model for simple writing tasks (description, rewrite).</li>
+    <li>Use a stronger model only for analytics/copilot reasoning.</li>
+    <li>Add caching for repeated prompts (same item inputs, same date range questions).</li>
+    <li>Set token budgets and output length limits per feature.</li>
+  </ul>
+
+  <h2>8. Rollout Plan (Recommended)</h2>
+  <h3>Phase 1 (Fast, Low Risk)</h3>
+  <ul>
+    <li>Admin description generator.</li>
+    <li>Admin image-based suggestions.</li>
+  </ul>
+
+  <h3>Phase 2 (Business Value)</h3>
+  <ul>
+    <li>Restaurant-only admin copilot with RAG.</li>
+    <li>Daily insight cards generated from analytics.</li>
+  </ul>
+
+  <h3>Phase 3 (Client Intelligence)</h3>
+  <ul>
+    <li>Natural language menu search and recommendation.</li>
+    <li>Personalized upsell prompts with policy guardrails.</li>
+  </ul>
+
+  <h2>9. Success Metrics</h2>
+  <ul>
+    <li>Admin time saved per item creation.</li>
+    <li>AI suggestion acceptance rate.</li>
+    <li>Menu completion quality score.</li>
+    <li>Client conversion uplift from guided search/recommendation.</li>
+    <li>Support query reduction for repetitive questions.</li>
+  </ul>
+
+  <h2>10. Final Recommendation</h2>
+  <div class="box">
+    <p>
+      Start with <strong>AI-assisted content + approval workflow</strong>, then add <strong>restaurant-only RAG copilot</strong>.
+      This gives immediate value, controlled risk, and a scalable foundation for future AI capabilities.
+    </p>
+  </div>
+</body>
+</html>

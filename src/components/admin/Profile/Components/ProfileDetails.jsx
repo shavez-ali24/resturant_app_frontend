@@ -23,6 +23,11 @@ export default function ProfileDetails({ profileData }) {
   const isStaff = userRole === "staff";
   const emailOfAdmin = localStorage.getItem("userEmail") || "";
   const userName = localStorage.getItem("userName") || "";
+  const restaurantName = profileData?.name?.trim() || "Restaurant";
+  const restaurantSlug = restaurantName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
   const cardClass =
     "overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]";
@@ -44,7 +49,7 @@ export default function ProfileDetails({ profileData }) {
     const qrUrl = getFinalQR();
     const link = document.createElement("a");
     link.href = qrUrl;
-    link.download = "restaurant-qr.png";
+    link.download = `${restaurantSlug || "restaurant"}-qr.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -163,7 +168,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <ScanLine className="h-4 w-4" />
               </span>
-              Tap N&apos; Order QR
+              {restaurantName} QR
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">

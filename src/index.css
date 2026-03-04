@@ -94,4 +94,53 @@
   display: none;
 }
 
+.client-category-scroll {
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+}
 
+.client-category-chip {
+  width: 116px;
+  min-width: 116px;
+  height: 54px;
+}
+
+.client-category-image {
+  display: block;
+  width: 100%;
+  min-width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  -webkit-user-drag: none;
+  user-select: none;
+  transform: translateZ(0);
+}
+
+@supports (-webkit-touch-callout: none) {
+  .client-category-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .client-category-track {
+    display: -webkit-inline-flex;
+    display: inline-flex;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  .client-category-chip {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  .client-category-image {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}

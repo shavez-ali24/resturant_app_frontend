@@ -11,9 +11,9 @@ export default function SearchItem({ search, onSearch }) {
       {/* 🔍 Floating Search Button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-40 right-6 z-20 bg-primary text-white w-12 h-12 rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl hover:scale-105 active:scale-95 transition-transform duration-200"
+        className="fixed bottom-24 right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-[0_10px_22px_rgba(249,115,22,0.4)] transition-transform duration-200 hover:scale-105 hover:shadow-[0_14px_26px_rgba(249,115,22,0.45)] active:scale-95 sm:h-12 sm:w-12"
       >
-        <Search size={20} />
+        <Search size={18} />
       </button>
 
       {/* 🔽 Animated Search Bar */}
@@ -22,7 +22,7 @@ export default function SearchItem({ search, onSearch }) {
           <>
             {/* Background Overlay */}
             <motion.div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 z-40 bg-black/45"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -41,17 +41,17 @@ export default function SearchItem({ search, onSearch }) {
                 damping: 15,
                 duration: 0.25,
               }}
-              className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-2xl px-4 pt-4 pb-6 z-50 rounded-t-3xl"
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-orange-100/80 bg-gradient-to-b from-white via-orange-50 to-orange-50 px-4 pb-6 pt-4 shadow-2xl"
             >
-              <div className="max-w-md mx-auto space-y-3">
+              <div className="mx-auto max-w-md space-y-3">
                 {/* Header text */}
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-800">
+                  <p className="text-sm font-semibold text-gray-800">
                     Find your favourite <span className="text-primary">food</span>
                   </p>
                   <button
                     onClick={() => setOpen(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-50 text-gray-500 transition hover:bg-orange-100 hover:text-gray-700"
                   >
                     <X size={16} />
                   </button>
@@ -69,13 +69,13 @@ export default function SearchItem({ search, onSearch }) {
                       placeholder="Search for dishes..."
                       value={search}
                       onChange={(e) => onSearch(e.target.value)}
-                      className="w-full rounded-full pl-9 pr-4 py-1 bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 shadow-sm outline-none focus:bg-white focus:border-primary focus:ring-0 transition-all duration-200"
+                      className="w-full rounded-full border border-orange-100 bg-white py-2 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:bg-white focus:ring-0"
                     />
                   </div>
 
                   <button
                     onClick={() => setOpen(false)}
-                    className="flex items-center justify-center w-11 h-11 rounded-full bg-primary text-white shadow-md hover:shadow-lg hover:bg-primary/90 active:scale-95 transition-all duration-150"
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all duration-150 hover:bg-primary/90 hover:shadow-lg active:scale-95 sm:h-11 sm:w-11"
                     title="Search"
                   >
                     <Search size={18} />

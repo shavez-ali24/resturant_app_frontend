@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight } from "lucide-react";
+import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight, Rocket } from "lucide-react";
+import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -11,7 +13,6 @@ import {
 } from "../../redux/clientRedux/clientSlice";
 import { useGetRestaurantQuery, useCreateOrderMutation, useGetOrdersByFingerprintQuery } from "../../redux/clientRedux/clientAPI";
 import { Toaster } from "@/components/ui/toaster";
-import { useToast } from "@/hooks/use-toast";
 import OrderComplete from "@/components/Client/OrderComplete";
 import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
@@ -28,10 +29,13 @@ export default function Header({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
-  const { toast } = useToast();
+  const [isCartBarBump, setIsCartBarBump] = useState(false);
+  const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
+  const ordersButtonRef = useRef(null);
+  const prevCartCountRef = useRef(0);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -62,8 +66,8 @@ export default function Header({
   const [itemPrices, setItemPrices] = useState({});
 
   const cartEntries = Object.entries(cartItems);
-  const visibleCartItems = cartEntries.slice(0, 4);
-  const extraCartCount = Math.max(0, cartCount - visibleCartItems.length);
+  const MAX_CART_PREVIEW_IMAGES = 4;
+  const visibleCartItems = cartEntries.slice(0, MAX_CART_PREVIEW_IMAGES);
 
   const [fingerPrint, setFingerPrint] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,6 +85,19 @@ export default function Header({
   };
 
   const normalizedOrderType = normalizeOrderType(orderType);
+
+  useEffect(() => {
+    const previousCount = prevCartCountRef.current;
+
+    if (cartCount > previousCount) {
+      setIsCartBarBump(true);
+      const timer = setTimeout(() => setIsCartBarBump(false), 320);
+      prevCartCountRef.current = cartCount;
+      return () => clearTimeout(timer);
+    }
+
+    prevCartCountRef.current = cartCount;
+  }, [cartCount]);
 
   // Function: Latest order से current cart के लिए estimate बनाएं
   const estimateFromLatestOrder = (latestOrder, currentCartItems) => {
@@ -458,74 +475,99 @@ export default function Header({
     }
   };
 
-  const showSuccessMessage = (orderId) => {
-    const messageDiv = document.createElement("div");
-    messageDiv.className =
-      "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm";
+  const pulseOrdersIcon = () => {
+    setIsOrdersIconHighlighted(true);
+    setTimeout(() => setIsOrdersIconHighlighted(false), 2200);
+  };
 
-    messageDiv.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-200" style="animation: scale-in 0.3s ease-out;">
-        <div class="text-center">
-          <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-            </svg>
-          </div>
-          
-          <h3 class="text-xl font-bold text-gray-800 mb-2">Order Confirmed!</h3>
-          <p class="text-gray-600 mb-1">Thank you for your order</p>
-          
-          
-          <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
-            <div class="flex items-center justify-center gap-2 text-orange-700">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-              </svg>
-              <span class="text-sm font-medium">Your order is on its way.</span>
-            </div>
-          </div>
-          
-          <button class="w-full bg-orange-500 text-white py-3 rounded-xl text-base font-medium hover:bg-orange-600 transition-colors duration-200 shadow-md">
-            Got It
-          </button>
-        </div>
-      </div>
-    `;
+  const animateOrderRocketToOrders = () => {
+    const targetEl = ordersButtonRef.current;
+    if (!targetEl || typeof window === "undefined") {
+      pulseOrdersIcon();
+      return;
+    }
 
-    document.body.appendChild(messageDiv);
+    const targetRect = targetEl.getBoundingClientRect();
+    const targetX = targetRect.left + targetRect.width / 2;
+    const targetY = targetRect.top + targetRect.height / 2;
+    const startX = window.innerWidth * 0.5;
+    const startY = window.innerHeight * 0.68;
+    const dx = targetX - startX;
+    const dy = targetY - startY;
 
-    const content = messageDiv.querySelector("div > div");
-    content.style.transform = "scale(0.9)";
-    content.style.opacity = "0";
-    content.style.transition = "all 0.3s ease-out";
+    const rocket = document.createElement("div");
+    rocket.className =
+      "pointer-events-none fixed z-[145] flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-[0_10px_24px_rgba(0,0,0,0.24)]";
+    rocket.style.left = `${startX}px`;
+    rocket.style.top = `${startY}px`;
+    rocket.style.transform = "translate(-50%, -50%)";
+    document.body.appendChild(rocket);
 
-    setTimeout(() => {
-      content.style.transform = "scale(1)";
-      content.style.opacity = "1";
-    }, 10);
+    const rocketRoot = createRoot(rocket);
+    rocketRoot.render(<Rocket className="h-5 w-5 text-primary" strokeWidth={2.4} />);
 
-    const closeMessage = () => {
-      content.style.transform = "scale(0.9)";
-      content.style.opacity = "0";
-      setTimeout(() => {
-        if (document.body.contains(messageDiv)) {
-          document.body.removeChild(messageDiv);
+    const rocketAnimation = rocket.animate(
+      [
+        {
+          transform: "translate(-50%, -50%) translate(0px, 0px) scale(0.7) rotate(-20deg)",
+          opacity: 0,
+        },
+        {
+          transform: `translate(-50%, -50%) translate(${dx * 0.28}px, ${dy * 0.34 - 46}px) scale(1.05) rotate(6deg)`,
+          opacity: 1,
+          offset: 0.5,
+        },
+        {
+          transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(0.72) rotate(18deg)`,
+          opacity: 0.1,
+        },
+      ],
+      {
+        duration: 1200,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        fill: "forwards",
+      }
+    );
+
+    rocketAnimation.onfinish = () => {
+      rocketRoot.unmount();
+      if (document.body.contains(rocket)) {
+        document.body.removeChild(rocket);
+      }
+
+      const ping = document.createElement("div");
+      ping.className = "pointer-events-none fixed z-[145] h-14 w-14 rounded-full border-2 border-orange-400/80 bg-orange-400/20";
+      ping.style.left = `${targetX}px`;
+      ping.style.top = `${targetY}px`;
+      ping.style.transform = "translate(-50%, -50%)";
+      document.body.appendChild(ping);
+
+      const pingAnimation = ping.animate(
+        [
+          { transform: "translate(-50%, -50%) scale(0.55)", opacity: 0.95 },
+          { transform: "translate(-50%, -50%) scale(1.45)", opacity: 0 },
+        ],
+        { duration: 650, easing: "ease-out" }
+      );
+
+      pingAnimation.onfinish = () => {
+        if (document.body.contains(ping)) {
+          document.body.removeChild(ping);
         }
-      }, 300);
-    };
+      };
 
-    messageDiv.querySelector("button").onclick = closeMessage;
-    messageDiv.onclick = (e) => {
-      if (e.target === messageDiv) closeMessage();
+      pulseOrdersIcon();
     };
+  };
 
-    setTimeout(closeMessage, 5000);
+  const showSuccessMessage = () => {
+    animateOrderRocketToOrders();
   };
 
   const showErrorMessage = (message) => {
     const messageDiv = document.createElement("div");
     messageDiv.className =
-      "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm";
+      "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm";
 
     messageDiv.innerHTML = `
       <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-200" style="animation: scale-in 0.3s ease-out;">
@@ -696,7 +738,7 @@ export default function Header({
       // Send to backend
       const response = await createOrder(orderData).unwrap();
       
-      showSuccessMessage(response?.orderId || response?.order?._id || `ORD${Date.now()}`);
+      showSuccessMessage();
 
       // Reset everything
       setCurrentPage(1);
@@ -759,71 +801,114 @@ export default function Header({
         {cartCount > 0 && (
           <>
             {/* Collapsed View */}
-            {!isAccordionOpen && (
-              <div className="fixed bottom-2 left-2 right-2 bg-gray-900/95 backdrop-blur-md rounded-3xl border-t border-gray-700 shadow-[0_-8px_30px_rgba(0,0,0,0.3)]">
-                <div className="flex items-center justify-between p-2">
-                  {/* Overlapping Images on Left */}
-                  <div className="flex items-center gap-2" style={{ height: "48px" }}>
-                    <div className="flex -space-x-7 pl-1">
-                      {visibleCartItems.map(([id, item]) => (
-                        <div
-                          key={id}
-                          className="relative w-12 h-12 rounded-full border border-white shadow-md bg-gray-100 overflow-hidden flex-shrink-0"
-                        >
-                          <img
-                            src={item.image?.url || item.image}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    {/* Total Items Count */}
-                    <div className="flex items-center gap-1 text-sm font-semibold text-white">
-                      <span>{cartCount}</span>
-                      <span className="text-sm text-gray-300">items</span>
-                    </div>
-                  </div>
-
-                  {/* View Cart Button on Right */}
-                  <button
-                    onClick={() => {setIsAccordionOpen(true);onSidebarToggle?.(true);}}
-                    className="text-base flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
+            <AnimatePresence>
+              {!isAccordionOpen && (
+                <motion.div
+                  className="fixed bottom-2 left-2 right-2"
+                  initial={{ y: 64, opacity: 0, scale: 0.88 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 56, opacity: 0, scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 26, mass: 0.78 }}
+                >
+                  <motion.div
+                    animate={isCartBarBump ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="relative overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
                   >
-                    View Cart
-                    <ArrowRight className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-            )}
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]" />
+                    <div className="relative flex items-center justify-between gap-3 p-2.5">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+                        <div className="flex shrink-0 -space-x-2.5">
+                          {visibleCartItems.map(([id, item]) => (
+                            <div
+                              key={id}
+                              className="relative grid h-9 w-9 aspect-square flex-shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 ring-2 ring-white"
+                              style={{ clipPath: "circle(50% at 50% 50%)" }}
+                            >
+                              {item?.image ? (
+                                <img
+                                  src={item.image?.url || item.image}
+                                  alt={item.name || "Cart item"}
+                                  className="h-full w-full rounded-full object-cover object-center scale-[1.18]"
+                                  style={{ clipPath: "circle(50% at 50% 50%)" }}
+                                />
+                              ) : (
+                                <span className="h-full w-full rounded-full bg-slate-200" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="min-w-0 text-white">
+                          <p className="leading-none">
+                            <span className="text-2xl font-bold">{cartCount}</span>
+                            <span className="ml-1 hidden text-sm font-semibold text-slate-200 min-[360px]:inline">
+                              item{cartCount > 1 ? "s" : ""}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* View Cart Button on Right */}
+                      <button
+                        onClick={() => {setIsAccordionOpen(true);onSidebarToggle?.(true);}}
+                        className="group inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-slate-700 px-2.5 py-2 text-[13px] font-semibold text-white shadow-[0_5px_14px_rgba(15,23,42,0.45)] transition-all duration-200 hover:bg-slate-600 active:scale-95"
+                      >
+                        <span>View Cart</span>
+                        <span className="grid h-6 w-6 place-items-center rounded-full bg-slate-500 transition-transform duration-200 group-hover:translate-x-0.5">
+                          <ArrowRight className="h-4 w-4 text-white" />
+                        </span>
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Full Screen Accordion View */}
-            {isAccordionOpen && (
-              <div className="fixed inset-0 bg-white z-[100] flex flex-col">
+            <AnimatePresence>
+              {isAccordionOpen && (
+              <motion.div
+                className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 12 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
                 {/* Header with Close Button */}
-                <div className="flex items-center justify-between p-2 border-b bg-white sticky top-0 z-10">
-                  <h2 className="text-xl font-semibold text-gray-800">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9] px-4 py-3">
+                  <h2 className="text-xl font-semibold text-slate-900 sm:text-[1.65rem]">
                     Your Order ({cartCount})
                   </h2>
                   <button
                     onClick={() => {setIsAccordionOpen(false); onSidebarToggle?.(false);}}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-1 text-slate-600 transition-colors hover:text-slate-900"
                     aria-label="Close"
                   >
-                    <X className="w-6 h-6 text-gray-600" />
+                    <X className="w-6 h-6" />
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 pb-24">
+                <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-xl border border-orange-200/80 bg-white p-2 shadow-[0_6px_14px_rgba(15,23,42,0.05)]">
+                    <div className="flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2">
+                      <span className="text-sm font-bold text-white">Total Amount</span>
+                      <span className="text-lg font-bold text-primary">
+                        ₹{calculatedDetails.totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-3 py-3 pb-28">
                   {cartCount === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full">
-                      <p className="text-gray-500 text-center text-lg py-6">
+                      <p className="py-6 text-center text-lg text-slate-500">
                         Your cart is empty 🛒
                       </p>
                     </div>
                   ) : (
                     <>
-                      <ul className="space-y-4">
+                      <ul className="space-y-2.5">
                         {Object.entries(cartItems || {}).map(([id, item]) => {
                           if (!item) return null;
                           const itemPrice = getDisplayPrice(
@@ -840,40 +925,41 @@ export default function Header({
                           return (
                             <li
                               key={id}
-                              className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100 hover:bg-gray-100 transition-all"
+                              className="group flex min-h-[96px] items-center gap-2 rounded-xl border border-orange-200/80 bg-gradient-to-br from-white to-orange-50 p-2 shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition-all duration-200 hover:border-orange-300/90 hover:shadow-[0_10px_22px_rgba(15,23,42,0.09)]"
                             >
                               <img
                                 src={item.image?.url || item.image}
                                 alt={item.name}
-                                className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0"
+                                className="h-12 w-12 aspect-square flex-shrink-0 rounded-full border-2 border-white object-cover object-center shadow-[0_8px_14px_rgba(15,23,42,0.16)]"
                               />
 
-                              <div className="flex-1 flex flex-col">
-                                <p className="font-medium text-gray-800 text-[15px] leading-tight">
-                                  {item.name}
-                                </p>
-                                {item.variantLabel && (
-                                  <span className="text-xs text-gray-500 mt-1">
-                                    {item.variantLabel}
-                                  </span>
-                                )}
-                                {item.isCombo && (
-                                  <span className="text-xs text-orange-600 font-medium mt-1">
-                                    Combo
-                                  </span>
-                                )}
-                                <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
+                              <div className="flex-1 min-w-0 flex flex-col">
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  <p className="truncate text-sm font-semibold leading-tight tracking-tight text-slate-900">
+                                    {item.name}
+                                  </p>
+                                  {item.variantLabel ? (
+                                    <span className="inline-flex shrink-0 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                                      {item.variantLabel}
+                                    </span>
+                                  ) : item.isCombo ? (
+                                    <span className="inline-flex shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                      Combo
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-1 text-sm text-slate-600">
                                   <button
-                                    className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-bold text-orange-700 shadow-sm transition-colors hover:bg-orange-100 sm:h-7 sm:w-7"
                                     onClick={() => dispatch(removeFromCart(id))}
                                   >
                                     −
                                   </button>
-                                  <span className="w-6 text-center font-medium text-gray-700">
+                                  <span className="w-5 text-center text-base font-semibold text-slate-800 sm:w-6">
                                     {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2).replace('.00', '').replace('.25', '¼').replace('.50', '½').replace('.75', '¾')}
                                   </span>
                                   <button
-                                    className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded-full hover:bg-gray-200 text-sm font-bold transition"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 sm:h-7 sm:w-7"
                                     onClick={() =>
                                       dispatch(
                                         addToCart({
@@ -892,34 +978,34 @@ export default function Header({
                                     +
                                   </button>
 
-                                  <span className="ml-auto text-gray-600 font-medium flex flex-col items-end">
+                                  <span className="ml-auto flex w-[112px] shrink-0 flex-col items-end overflow-hidden rounded-lg border border-orange-200/80 bg-orange-50 px-2 py-1 text-right font-medium text-slate-600 sm:w-[124px]">
                                     {/* ✅ Item price और total दिखाएं */}
                                     {itemPrice > 0 ? (
                                       <>
-                                        <span className="text-sm flex items-center gap-1">
+                                        <span className="flex w-full items-center justify-end gap-0.5 whitespace-nowrap text-[10px] leading-none">
                                           {hasDiscountedPrice && (
-                                            <span className="text-gray-400 line-through text-xs">
+                                            <span className="text-[9px] text-slate-400 line-through">
                                               ₹{effectiveOriginalPrice.toFixed(2)}
                                             </span>
                                           )}
-                                          <span className={hasDiscountedPrice ? "text-green-700 font-semibold" : "text-gray-700"}>
+                                          <span className={hasDiscountedPrice ? "font-semibold text-primary" : "text-slate-700"}>
                                             ₹{itemPrice.toFixed(2)}
                                           </span>
-                                          <span className="text-xs text-gray-500">× {item.quantity}</span>
+                                          <span className="text-[9px] text-slate-500">× {item.quantity}</span>
                                         </span>
-                                        <span className="text-base font-semibold text-gray-800">
+                                        <span className="text-lg font-bold leading-tight text-slate-900">
                                           ₹{itemTotal.toFixed(2)}
                                         </span>
                                       </>
                                     ) : item.isCombo ? (
                                       <>
-                                        <span className="text-sm">Combo: ₹{(item.comboPrice || 0).toFixed(2)} × {item.quantity}</span>
-                                        <span className="text-base font-semibold text-gray-800">
+                                        <span className="text-[10px] leading-tight">Combo: ₹{(item.comboPrice || 0).toFixed(2)} × {item.quantity}</span>
+                                        <span className="text-sm font-semibold text-slate-800">
                                           = ₹{((item.comboPrice || 0) * (item.quantity || 1)).toFixed(2)}
                                         </span>
                                       </>
                                     ) : (
-                                      <span className="text-sm text-gray-500">Price calculating...</span>
+                                      <span className="text-[10px] text-slate-500">Price calculating...</span>
                                     )}
                                   </span>
                               </div>
@@ -928,60 +1014,28 @@ export default function Header({
                           );
                         })}
                       </ul>
-                    
-                    <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
-                      {/* Always show calculated totals */}
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="font-medium text-gray-800">
-                            ₹{calculatedDetails.subtotal.toFixed(2)}
-                          </span>
-                        </div>
-                        
-                        {normalizedOrderType === "Delivery" && calculatedDetails.deliveryCharges > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Delivery Charges</span>
-                            <span className="font-medium text-orange-600">
-                              ₹{calculatedDetails.deliveryCharges.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {calculatedDetails.gstAmount > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">GST</span>
-                            <span className="font-medium text-gray-800">
-                              ₹{calculatedDetails.gstAmount.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="border-t pt-2 flex justify-between items-center">
-                          <span className="text-base font-bold text-gray-800">Total Amount</span>
-                          <span className="text-lg font-bold text-primary">
-                            ₹{calculatedDetails.totalAmount.toFixed(2)}
-                          </span>
-                        </div>
-                        
-                        <p className="text-xs text-gray-500 text-center mt-2">
-                          {allOrders.length > 0
-                            ? "Prices synced from latest backend order"
-                            : "Prices synced from current menu data"}
-                        </p>
-                      </>
-                    </div>
                     </>
                   )}
                 </div>
 
-                <div className="px-6 py-4 border-t bg-white sticky bottom-0">
+                <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4">
                   {!isRestaurantOpen ? (
-                    <div className="w-full py-3 px-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-center text-sm font-semibold text-red-700">
-                        Orders are currently closed
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className="w-full rounded-xl border border-orange-200/80 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 px-4 py-3 shadow-[0_8px_18px_rgba(249,115,22,0.12)]"
+                    >
+                      <div className="flex items-center justify-center gap-2.5 text-orange-700">
+                        <Clock className="h-5 w-5" />
+                        <p className="text-base font-black uppercase tracking-[0.07em] text-red-600">
+                          Restaurant Closed
+                        </p>
+                      </div>
+                      <p className="mt-1 text-center text-sm font-medium text-orange-600">
+                        We'll be back soon
                       </p>
-                    </div>
+                    </motion.div>
                   ) : (
                     <OrderComplete
                       buttonText="Order Now"
@@ -996,47 +1050,56 @@ export default function Header({
                         setIsAccordionOpen(false);
                         onSidebarToggle?.(false);
                       }}
-                      className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
+                      className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${
                         cartCount === 0
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-primary hover:bg-primary/90 hover:shadow-lg text-white"
+                          ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
+                          : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
                       }`}
                     />
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </>
         )}
 
         {/* Header */}
         <header
-          className="flex items-center justify-between p-3 relative"
+          className="relative flex items-center justify-between bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40 px-3 py-2.5 sm:p-3"
           ref={searchRef}
         >
           <Link to="/" className="flex items-center space-x-2">
             {logo && <img src={logo} alt="Logo" className="h-12 w-auto" />}
-            <span className="text-primary font-mostrate text-2xl">
+            <span className="font-mostrate text-xl text-primary drop-shadow-[0_1px_0_rgba(249,115,22,0.15)] sm:text-2xl">
               {siteName}
             </span>
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             {/* Search Icon */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`relative p-2 rounded-full transition-colors ${
+              className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${
                 isSearchOpen
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-gray-100 text-gray-700 hover:text-black"
+                  ? "bg-primary text-white shadow-md"
+                  : "bg-orange-50 text-primary hover:bg-orange-100"
               }`}
             >
-              <Search className="w-6 h-6" />
+              <Search className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
 
             {/* Cart Icon */}
-            <button onClick={() => {setIsCartOpen(true);onSidebarToggle?.(true);}} className="relative">
-              <UtensilsCrossed className="w-6 h-6 text-gray-700 hover:text-black" />
+            <button
+              onClick={() => {setIsCartOpen(true);onSidebarToggle?.(true);}}
+              ref={ordersButtonRef}
+              className={`relative rounded-full bg-orange-50 p-1.5 text-primary transition-all sm:p-2 ${
+                isOrdersIconHighlighted
+                  ? "ring-2 ring-orange-400/70 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"
+                  : "hover:bg-orange-100"
+              }`}
+            >
+              <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6" />
               {allOrders.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
                   {allOrders.length}
@@ -1046,71 +1109,89 @@ export default function Header({
           </div>
 
           {/* Search Bar Dropdown */}
-          {isSearchOpen && (
-            <div className="absolute top-full left-0 right-0 bg-white shadow-lg z-50">
-              <div className="p-4">
-                <div className="flex items-center gap-3">
-                  {/* Pill search input */}
-                  <div className="relative flex-1">
-                    <Search
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={18}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search for food items..."
-                      value={search || ""}
-                      onChange={(e) => safeOnSearch(e.target.value)}
-                      className="w-full rounded-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:shadow-md"
-                      autoFocus
-                    />
-                  </div>
+          <AnimatePresence>
+            {isSearchOpen && (
+              <motion.div
+                className="absolute left-0 right-0 top-full z-50 bg-white shadow-lg"
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.99 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+              >
+                <div className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    {/* Pill search input */}
+                    <div className="relative flex-1">
+                      <Search
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                        size={17}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Search for food items..."
+                        value={search || ""}
+                        onChange={(e) => safeOnSearch(e.target.value)}
+                        className="w-full rounded-full border border-orange-100 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:bg-white focus:shadow-md"
+                        autoFocus
+                      />
+                    </div>
 
-                  {/* Round action / close button */}
-                  <button
-                    onClick={() => {
-                      onSearch("");
-                      setIsSearchOpen(false);
-                    }}
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white shadow-md hover:shadow-lg hover:bg-primary/90 active:scale-95 transition-all duration-150 flex-shrink-0"
-                    title="Close search"
-                  >
-                    <X size={18} />
-                  </button>
+                    {/* Round action / close button */}
+                    <button
+                      onClick={() => {
+                        onSearch("");
+                        setIsSearchOpen(false);
+                      }}
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all duration-150 hover:bg-primary/90 hover:shadow-lg active:scale-95"
+                      title="Close search"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </header>
 
         {/* Sidebar overlay with backdrop blur */}
-        {isCartOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-40"
-            onClick={() => {  setIsCartOpen(false);onSidebarToggle?.(false);}}
-          ></div>
-        )}
+        <AnimatePresence>
+          {isCartOpen && (
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm"
+              onClick={() => { setIsCartOpen(false); onSidebarToggle?.(false); }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Sidebar with multiple */}
-        <div
-          className={`fixed top-0 right-0 h-full w-[85%] max-w-sm bg-white shadow-xl z-50 transform transition-transform duration-300 ease-out ${
-            isCartOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
+        <AnimatePresence>
+          {isCartOpen && (
+          <motion.div
+            className="fixed top-0 right-0 z-50 h-full w-[87%] max-w-sm border-l border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6] shadow-2xl"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">Your Orders</h2>
+          <div className="flex items-center justify-between border-b border-orange-100 p-4">
+            <h2 className="text-lg font-semibold text-gray-800 sm:text-xl">Your Orders</h2>
             <button
               onClick={() => {setIsCartOpen(false);onSidebarToggle?.(false)}}
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              className="p-1 text-gray-600 transition-colors hover:text-gray-900"
             >
               <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
           {/* Orders List */}
-          <div className="flex-1 overflow-y-auto h-[calc(100%-80px)]">
-            <div className="p-4 space-y-4">
+          <div className="h-[calc(100%-80px)] flex-1 overflow-y-auto">
+            <div className="space-y-4 p-4">
               {ordersLoading && currentPage === 1 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500">Loading orders...</p>
@@ -1125,59 +1206,61 @@ export default function Header({
                   {allOrders.slice(0, 1).map((order) => (
                   <div
                     key={order._id || order.id || order.orderId}
-                    className="border border-orange-200 rounded-lg p-3 bg-white shadow-sm"
+                    className="rounded-2xl border border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] ring-1 ring-orange-100 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
                   >
                     {/* Order Header with Labels */}
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-500">
+                    <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                             Name:
                           </span>
-                          <p className="font-medium text-gray-800">
+                          <p className="text-base font-semibold text-gray-900">
                             {order.customerName}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-gray-500 mt-3">
+                        <div>
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                             Phone:
                           </span>
-                          <p className="text-sm text-gray-600 mt-3">
+                          <p className="break-all text-sm font-medium text-gray-700">
                             {order.customerPhone}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 justify-end mb-1">
-                          <span className="text-xs font-medium text-gray-500">
+                      <div className="flex flex-col items-end gap-2 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                             Type:
                           </span>
                           <span
-                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm ring-1 ring-white ${
                               order.orderType === "Delivery"
-                                ? "bg-blue-100 text-blue-700"
+                                ? "border-orange-200 bg-orange-100 text-orange-700"
                                 : order.orderType === "Take Away"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-orange-100 text-orange-700"
+                                ? "border-blue-200 bg-blue-100 text-blue-700"
+                                : order.orderType === "Eat Here"
+                                ? "border-green-200 bg-green-100 text-green-700"
+                                : "border-gray-200 bg-gray-100 text-gray-700"
                             }`}
                           >
                             {order.orderType}
                           </span>
                         </div>
                         {order.status && (
-                          <div className="flex items-center gap-1 justify-end mb-1">
-                            <span className="text-xs font-medium text-gray-500">
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                               Status:
                             </span>
                             <span
-                              className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize ${
                                 order.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-700"
+                                  ? "border-yellow-200 bg-yellow-100 text-yellow-700"
                                   : order.status === "completed"
-                                  ? "bg-green-100 text-green-700"
+                                  ? "border-green-200 bg-green-100 text-green-700"
                                   : order.status === "cancelled"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-gray-100 text-gray-700"
+                                  ? "border-red-200 bg-red-100 text-red-700"
+                                  : "border-gray-200 bg-gray-100 text-gray-700"
                               }`}
                             >
                               {order.status}
@@ -1185,13 +1268,13 @@ export default function Header({
                           </div>
                         )}
                         {order.tableId && (
-                          <div className="flex items-center gap-1 justify-end">
-                            <span className="text-xs font-medium text-gray-500 mt-3">
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                               Table:
                             </span>
-                            <p className="text-xs text-gray-600 font-medium mt-3">
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                               {order.tableId}
-                            </p>
+                            </span>
                           </div>
                         )}
                       </div>
@@ -1199,13 +1282,11 @@ export default function Header({
 
                     {/* Delivery Address (if any) */}
                     {order.address && (
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-500">
-                            Address:
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                      <div className="mb-3 rounded-xl border border-orange-200/80 bg-orange-50/30 p-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                          Address:
+                        </span>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-600">
                           {order.address}
                         </p>
                       </div>
@@ -1213,8 +1294,8 @@ export default function Header({
 
                     {/* Order Items with Label */}
                     <div className="mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-gray-500">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                           Items:
                         </span>
                       </div>
@@ -1222,7 +1303,7 @@ export default function Header({
                         {order.items.map((item, index) => (
                           <div
                             key={index}
-                            className="flex justify-between text-sm"
+                            className="flex items-start justify-between gap-3 rounded-lg border border-orange-200/80 bg-white px-2.5 py-2 text-sm"
                           >
                             <span className="text-gray-700">
                               {item.name}
@@ -1230,10 +1311,12 @@ export default function Header({
                                 <span className="ml-1 text-xs text-gray-500">
                                   ({item.variant})
                                 </span>
-                              )}{" "}
-                              × {item.quantity}
+                              )}
+                              <span className="ml-1 font-semibold text-gray-600">
+                                × {item.quantity}
+                              </span>
                             </span>
-                            <span className="font-medium text-gray-800">
+                            <span className="font-semibold text-gray-800">
                               ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
                             </span>
                           </div>
@@ -1243,11 +1326,11 @@ export default function Header({
 
                     {/* GST (if enabled) */}
                     {order.gstAmount !== undefined && (
-                      <div className="flex justify-between items-center mt-1">
+                      <div className="mt-1 flex items-center justify-between text-sm">
                         <span className="text-sm text-gray-600">
                           GST {order.gstRate ? `(${order.gstRate}%)` : ""}:
                         </span>
-                        <span className="text-sm font-medium text-gray-800">
+                        <span className="text-sm font-semibold text-gray-800">
                           ₹{Number(order.gstAmount).toFixed(2)}
                         </span>
                       </div>
@@ -1255,22 +1338,22 @@ export default function Header({
 
                     {/* Delivery Charges (if delivery order) */}
                     {order.orderType === "Delivery" && typeof order.deliveryCharges === "number" && (
-                      <div className="flex justify-between items-center mt-1">
+                      <div className="mt-1 flex items-center justify-between text-sm">
                         <span className="text-sm text-gray-600">
                           Delivery Charges:
                         </span>
-                        <span className="text-sm font-medium text-gray-800">
+                        <span className="text-sm font-semibold text-gray-800">
                           ₹{Number(order.deliveryCharges).toFixed(2)}
                         </span>
                       </div>
                     )}
 
                     {/* Total Amount */}
-                    <div className="border-t pt-2 flex justify-between items-center mt-2">
-                      <span className="font-semibold text-gray-800">
+                    <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2.5">
+                      <span className="font-semibold text-white">
                         Total Amount:
                       </span>
-                      <span className="text-lg font-bold text-primary">
+                      <span className="text-xl font-bold text-primary">
                         ₹{order.totalAmount?.toFixed(2) || "0.00"}
                       </span>
                     </div>
@@ -1280,7 +1363,9 @@ export default function Header({
               )}
             </div>
           </div>
-        </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
 
         {/* Order Form Modal */}
         <OrderFormModal
