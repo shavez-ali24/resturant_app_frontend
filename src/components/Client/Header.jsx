@@ -1208,74 +1208,81 @@ export default function Header({
                     key={order._id || order.id || order.orderId}
                     className="rounded-2xl border border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] ring-1 ring-orange-100 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
                   >
-                    {/* Order Header with Labels */}
-                    <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
-                      <div className="space-y-2">
-                        <div>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                            Name:
-                          </span>
-                          <p className="text-base font-semibold text-gray-900">
-                            {order.customerName}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                            Phone:
-                          </span>
-                          <p className="break-all text-sm font-medium text-gray-700">
-                            {order.customerPhone}
-                          </p>
-                        </div>
+                    {/* Customer + order meta */}
+                    <div className="mb-3 rounded-xl border border-orange-200/80 bg-white/80 p-3 shadow-[0_6px_14px_rgba(15,23,42,0.05)]">
+                      <div className="grid grid-cols-[72px_1fr] items-center gap-x-2.5 gap-y-2.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                          Name
+                        </span>
+                        <p className="truncate text-[15px] font-bold text-slate-900">
+                          {order.customerName || "Guest"}
+                        </p>
+
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                          Phone
+                        </span>
+                        <p className="break-all text-sm font-semibold text-slate-700">
+                          {order.customerPhone || "Not provided"}
+                        </p>
                       </div>
-                      <div className="flex flex-col items-end gap-2 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                            Type:
-                          </span>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ring-white/70 ${
+                            order.orderType === "Delivery"
+                              ? "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 ring-orange-200/70"
+                              : order.orderType === "Take Away"
+                              ? "border-blue-200 bg-gradient-to-r from-blue-50 to-sky-100 text-blue-700 ring-blue-200/70"
+                              : order.orderType === "Eat Here"
+                              ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
+                              : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
+                          }`}
+                        >
                           <span
-                            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm ring-1 ring-white ${
+                            className={`h-1.5 w-1.5 rounded-full ${
                               order.orderType === "Delivery"
-                                ? "border-orange-200 bg-orange-100 text-orange-700"
+                                ? "bg-orange-500"
                                 : order.orderType === "Take Away"
-                                ? "border-blue-200 bg-blue-100 text-blue-700"
+                                ? "bg-blue-500"
                                 : order.orderType === "Eat Here"
-                                ? "border-green-200 bg-green-100 text-green-700"
-                                : "border-gray-200 bg-gray-100 text-gray-700"
+                                ? "bg-green-500"
+                                : "bg-gray-500"
+                            }`}
+                          />
+                          <span>{order.orderType || "Unknown Type"}</span>
+                        </span>
+
+                        {order.status && (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold capitalize shadow-sm ring-1 ring-white/70 ${
+                              String(order.status || "").toLowerCase() === "pending"
+                                ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 ring-amber-200/80"
+                                : String(order.status || "").toLowerCase() === "completed"
+                                ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
+                                : String(order.status || "").toLowerCase() === "cancelled"
+                                ? "border-red-200 bg-gradient-to-r from-red-50 to-rose-100 text-red-700 ring-red-200/70"
+                                : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
                             }`}
                           >
-                            {order.orderType}
-                          </span>
-                        </div>
-                        {order.status && (
-                          <div className="inline-flex items-center gap-1.5">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                              Status:
-                            </span>
                             <span
-                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize ${
-                                order.status === "pending"
-                                  ? "border-yellow-200 bg-yellow-100 text-yellow-700"
-                                  : order.status === "completed"
-                                  ? "border-green-200 bg-green-100 text-green-700"
-                                  : order.status === "cancelled"
-                                  ? "border-red-200 bg-red-100 text-red-700"
-                                  : "border-gray-200 bg-gray-100 text-gray-700"
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                String(order.status || "").toLowerCase() === "pending"
+                                  ? "bg-amber-600"
+                                  : String(order.status || "").toLowerCase() === "completed"
+                                  ? "bg-green-600"
+                                  : String(order.status || "").toLowerCase() === "cancelled"
+                                  ? "bg-red-600"
+                                  : "bg-gray-500"
                               }`}
-                            >
-                              {order.status}
-                            </span>
-                          </div>
+                            />
+                            <span>{order.status}</span>
+                          </span>
                         )}
+
                         {order.tableId && (
-                          <div className="inline-flex items-center gap-1.5">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                              Table:
-                            </span>
-                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                              {order.tableId}
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            Table {order.tableId}
+                          </span>
                         )}
                       </div>
                     </div>
