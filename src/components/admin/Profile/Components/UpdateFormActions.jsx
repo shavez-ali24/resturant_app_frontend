@@ -25,7 +25,7 @@ export default function UpdateFormActions({ onClose, isSubmitting, fileError }) 
       <button
         type="button"
         onClick={onClose}
-        className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 sm:w-auto"
+        className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto"
       >
         Cancel
       </button>

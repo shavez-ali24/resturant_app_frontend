@@ -4,8 +4,6 @@ import {
   User,
   ListOrdered,
   ChartNoAxesCombined,
-  Users,
-  DollarSign,
 } from "lucide-react";
 import { NavMain } from "@/components/admin/adminLayout/nav-main";
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -25,9 +23,15 @@ import logo from "@/assets/tapNbite.png";
 
 import { useSidebar } from "@/components/ui/sidebar";
 
-export function AppSidebar({ ...props }) {
+export function AppSidebar({ isDarkMode = false, ...props }) {
   const { toggleSidebar } = useSidebar();
   const location = useLocation();
+  const sidebarShellClass = isDarkMode
+    ? "border-r border-slate-700/70 bg-slate-950 [&_[data-sidebar=sidebar]]:bg-slate-950"
+    : "";
+  const sidebarSectionClass = isDarkMode
+    ? "bg-slate-950"
+    : "bg-gradient-to-r from-orange-50 to-orange-100";
 
   // Get user role from localStorage
   const userRole = localStorage.getItem("userRole") || "";
@@ -112,21 +116,21 @@ export function AppSidebar({ ...props }) {
     if (window.innerWidth < 1024) {
       toggleSidebar(false);
     }
-  }, [location.pathname]);
+  }, [location.pathname, toggleSidebar]);
 
   return (
     <Sidebar
-      className="overflow-y-auto  !h-[calc(100svh-var(--header-height))] "
+      className={`overflow-y-auto !h-[calc(100svh-var(--header-height))] ${sidebarShellClass}`}
       {...props}
     >
       {/* Header */}
-      <SidebarHeader className=" px-14 py-3  bg-gradient-to-r from-orange-50 to-orange-100 ">
+      <SidebarHeader className={`px-14 py-3 ${sidebarSectionClass}`}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               asChild
-              className="mt-0 sm:mt-20 bg-gradient-to-r from-orange-50 to-orange-100"
+              className={`mt-0 sm:mt-20 ${sidebarSectionClass}`}
             >
               <Link
                 to="/admin"
@@ -140,9 +144,9 @@ export function AppSidebar({ ...props }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="bg-gradient-to-r from-orange-50 to-orange-100">
+      <SidebarContent className={sidebarSectionClass}>
         <NavMain
-          className="bg-gradient-to-r from-orange-50 to-orange-100"
+          isDarkMode={isDarkMode}
           items={filteredNavMain.map((section) => ({
             ...section,
             items: section.items.map((item) => ({
@@ -151,13 +155,12 @@ export function AppSidebar({ ...props }) {
                 window.innerWidth < 1024 && toggleSidebar(false),
             })),
           }))}
-          itemClassName="hover:bg-orange-200/70 rounded-lg transition-colors duration-200"
         />
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className=" bg-gradient-to-r from-orange-50 to-orange-100">
-        <NavUser user={userData} />
+      <SidebarFooter className={sidebarSectionClass}>
+        <NavUser user={userData} isDarkMode={isDarkMode} />
       </SidebarFooter>
     </Sidebar>
   );

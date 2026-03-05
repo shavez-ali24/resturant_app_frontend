@@ -97,6 +97,34 @@ const formatFullDate = (dateString) => {
   }
 };
 
+const renderDistributionLabel = (
+  { cx, cy, midAngle, outerRadius, percent, name },
+  minPercent = 0.05
+) => {
+  if (percent < minPercent) return null;
+
+  const radian = Math.PI / 180;
+  const radius = outerRadius + 12;
+  const x = cx + radius * Math.cos(-midAngle * radian);
+  const y = cy + radius * Math.sin(-midAngle * radian);
+  const textAnchor = x > cx ? "start" : "end";
+  const labelText = `${name}: ${Math.round(percent * 100)}%`;
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#fb923c"
+      textAnchor={textAnchor}
+      dominantBaseline="central"
+      fontSize={11}
+      fontWeight={700}
+    >
+      {labelText}
+    </text>
+  );
+};
+
 const timeRangeOptions = [
   { value: "1d", label: "Last 24 Hours" },
   { value: "7d", label: "Last 7 Days" },
@@ -115,9 +143,9 @@ const ORANGE_COLORS = [
 ];
 
 const analyticsTabsListClass =
-  "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)]";
+  "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)] dark:border-slate-600 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.2),0_10px_24px_-18px_rgba(2,6,23,0.9)]";
 const analyticsTabsTriggerClass =
-  "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)]";
+  "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current";
 
 export default function TopSellingAnalytics() {
   const [activeTab, setActiveTab] = useState("products");
@@ -255,16 +283,16 @@ export default function TopSellingAnalytics() {
   };
 
   const secondaryButtonClass =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800";
   const primaryButtonClass =
     "inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
   const selectTriggerClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px]";
-  const selectContentClass = "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl";
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
+  const selectContentClass = "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950";
   const selectItemClass =
-    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800";
+    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-orange-200";
   const inputClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
 
   // Memoized data transformations
   const productsData = useMemo(() => {
@@ -390,7 +418,7 @@ export default function TopSellingAnalytics() {
   // Loading skeleton
   if (productsLoading || categoriesLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
+      <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
         <div className="mb-6">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-12 w-full max-w-md" />
@@ -409,7 +437,7 @@ export default function TopSellingAnalytics() {
                   productsData?.error || categoriesData?.error;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
+    <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -753,30 +781,7 @@ export default function TopSellingAnalytics() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
-                                  if (percent < 0.06) return null;
-
-                                  const radian = Math.PI / 180;
-                                  const radius = outerRadius + 10;
-                                  const x = cx + radius * Math.cos(-midAngle * radian);
-                                  const y = cy + radius * Math.sin(-midAngle * radian);
-                                  const textAnchor = x > cx ? "start" : "end";
-                                  const labelText = `${name} ${Math.round(percent * 100)}%`;
-
-                                  return (
-                                    <text
-                                      x={x}
-                                      y={y}
-                                      fill="#7c2d12"
-                                      textAnchor={textAnchor}
-                                      dominantBaseline="central"
-                                      fontSize={10}
-                                      fontWeight={500}
-                                    >
-                                      {labelText}
-                                    </text>
-                                  );
-                                }}
+                                label={(props) => renderDistributionLabel(props, 0.06)}
                                 outerRadius={72}
                                 fill="#f97316"
                                 dataKey="revenue"
@@ -843,9 +848,9 @@ export default function TopSellingAnalytics() {
                               <tr key={index} className="hover:bg-orange-50/30">
                                 <td className="py-3 px-4 border-r border-orange-100">
                                   <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300' :
-                                      index === 1 ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300' :
+                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
+                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
+                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
                                       'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
                                     }`}>
                                     #{index + 1}
@@ -981,10 +986,7 @@ export default function TopSellingAnalytics() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }) => {
-                                  if (percent < 0.05) return '';
-                                  return `${name}: ${(percent * 100).toFixed(0)}%`;
-                                }}
+                                label={(props) => renderDistributionLabel(props, 0.05)}
                                 outerRadius={80}
                                 fill="#f97316"
                                 dataKey="revenue"
@@ -1051,9 +1053,9 @@ export default function TopSellingAnalytics() {
                               <tr key={index} className="hover:bg-orange-50/30">
                                 <td className="py-3 px-4 border-r border-orange-100">
                                   <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300' :
-                                      index === 1 ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300' :
+                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
+                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
+                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
                                       'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
                                     }`}>
                                     #{index + 1}

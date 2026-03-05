@@ -30,10 +30,10 @@ export default function ProfileDetails({ profileData }) {
     .replace(/^-+|-+$/g, "");
 
   const cardClass =
-    "overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]";
+    "overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-slate-950/40";
   const headerClass =
-    "border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4";
-  const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-orange-700";
+    "border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800";
+  const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-orange-700 dark:text-orange-300";
   const iconBadgeClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm";
 
@@ -185,7 +185,7 @@ export default function ProfileDetails({ profileData }) {
             ) : (
               <div className="flex flex-col items-center py-8">
                 <QrCode className="mb-2 h-16 w-16 text-orange-200" />
-                <p className="text-sm text-gray-400">QR Not Generated</p>
+                <p className="text-sm text-gray-400 dark:text-slate-400">QR Not Generated</p>
               </div>
             )}
           </div>

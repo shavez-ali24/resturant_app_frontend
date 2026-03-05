@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
 import {
   useGetRestaurantQuery,
   useGetMenuQuery,
@@ -14,6 +15,10 @@ import Filter from "@/components/Client/Filter";
 import fingerprintService from "@/service/fingerprintService";
 
 export default function Home() {
+  const outletContext = useOutletContext() || {};
+  const isDarkMode = Boolean(outletContext?.isDarkMode);
+  const toggleDarkMode = outletContext?.toggleDarkMode || (() => {});
+
   const {
     data: menuData,
     isLoading: menuLoading,
@@ -28,7 +33,7 @@ export default function Home() {
   const [showLoader, setShowLoader] = useState(true);
   const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -56,8 +61,8 @@ export default function Home() {
 
   if (showLoader)
     return (
-      <div className="relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.12),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.1),transparent_42%)]" />
+      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]"}`}>
+        <div className={`pointer-events-none absolute inset-0 ${isDarkMode ? "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.22),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.14),transparent_42%)]" : "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.12),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.1),transparent_42%)]"}`} />
         <img
           src={loader}
           alt="Loading..."
@@ -112,11 +117,11 @@ export default function Home() {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden">
+    <div className={`h-[100dvh] flex flex-col overflow-hidden ${isDarkMode ? "text-slate-100" : ""}`}>
       {/* Orders Closed Banner */}
       {!isRestaurantOpen && !isSidebarOpen && (
-        <div className="z-30 shrink-0 border-b border-orange-300/70 bg-gradient-to-r from-orange-100 via-red-50 to-orange-100 px-3 py-2.5 shadow-[0_8px_18px_rgba(239,68,68,0.14)]">
-          <div className="mx-auto flex max-w-[520px] items-center justify-center gap-3 rounded-lg border border-orange-300/70 bg-white/85 px-3.5 py-2 text-orange-900">
+        <div className={`z-30 shrink-0 border-b px-3 py-2.5 shadow-[0_8px_18px_rgba(239,68,68,0.14)] ${isDarkMode ? "border-orange-500/30 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900" : "border-orange-300/70 bg-gradient-to-r from-orange-100 via-red-50 to-orange-100"}`}>
+          <div className={`mx-auto flex max-w-[520px] items-center justify-center gap-3 rounded-lg border px-3.5 py-2 ${isDarkMode ? "border-orange-500/40 bg-slate-900/85 text-orange-100" : "border-orange-300/70 bg-white/85 text-orange-900"}`}>
             <Clock className="h-5 w-5 flex-shrink-0 text-orange-700" />
             <div className="text-left leading-tight">
               <p className="text-sm font-black uppercase tracking-[0.08em] text-red-600 sm:text-base">
@@ -134,7 +139,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="shrink-0 z-20 border-b border-orange-200/60 bg-gradient-to-b from-orange-50/95 via-orange-50/80 to-orange-50/45 shadow-[0_8px_20px_rgba(249,115,22,0.1)]">
+      <div className={`shrink-0 z-20 border-b shadow-[0_8px_20px_rgba(249,115,22,0.1)] ${isDarkMode ? "border-slate-700/70 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-800/80" : "border-orange-200/60 bg-gradient-to-b from-orange-50/95 via-orange-50/80 to-orange-50/45"}`}>
         <Header
           logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
           siteName={
@@ -145,6 +150,8 @@ export default function Home() {
           onSearch={setSearch}
           isRestaurantOpen={isRestaurantOpen}
           onSidebarToggle={setIsSidebarOpen}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
 
         <Category
@@ -153,13 +160,13 @@ export default function Home() {
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
         />
-        <Filter filters={filters} onChange={handleFilterChange} />
+        <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
       </div>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain bg-white">
+      <div className={`flex-1 overflow-y-auto overscroll-contain ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-gray-500">
-            <p className="text-base sm:text-lg font-semibold text-gray-700 mb-1">
+          <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
+            <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
               {filters.combo ? "No combo items available" :
                filters.veg ? "No veg items available" :
                filters.nonVeg ? "No non-veg items available" : 
@@ -172,7 +179,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <FoodListing menu={filteredMenu} onQuantityChange={setTotal} isRestaurantOpen={isRestaurantOpen} />
+          <FoodListing menu={filteredMenu} onQuantityChange={setTotal} isRestaurantOpen={isRestaurantOpen} isDarkMode={isDarkMode} />
         )}
       </div>
     </div>

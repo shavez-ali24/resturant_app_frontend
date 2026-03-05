@@ -424,7 +424,7 @@ const prepareFormData = (formData, file) => {
   }, [notify]);
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 sm:px-4 sm:py-4 md:px-6">
+    <div className="relative min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 dark:bg-none dark:bg-slate-950 sm:px-4 sm:py-4 md:px-6">
       <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
 
       <DeleteConfirmModal

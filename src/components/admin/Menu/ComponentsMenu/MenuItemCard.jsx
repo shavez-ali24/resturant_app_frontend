@@ -154,13 +154,13 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
-      className={`group relative h-full w-full self-stretch min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] ${
+      className={`group relative h-full w-full self-stretch min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 dark:shadow-slate-950/40 ${
         showMenu ? "z-40" : "z-10"
       }`}
     >
       <div className="flex h-full flex-col sm:flex-row">
         {/* Image */}
-        <div className="relative h-[12.5rem] w-full flex-shrink-0 overflow-hidden rounded-t-2xl bg-gray-100 sm:h-auto sm:w-36 sm:min-h-[166px] lg:min-h-[160px] sm:rounded-l-2xl sm:rounded-tr-none">
+        <div className="relative h-[12.5rem] w-full flex-shrink-0 overflow-hidden rounded-t-2xl bg-gray-100 dark:bg-slate-800 sm:h-auto sm:w-36 sm:min-h-[166px] lg:min-h-[160px] sm:rounded-l-2xl sm:rounded-tr-none">
           <img
             src={
               safeItem.image?.url ||
@@ -180,7 +180,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                   e.stopPropagation();
                   setShowMenu((prev) => !prev);
                 }}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-orange-200 hover:bg-orange-50 sm:h-8 sm:w-8"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-slate-700 transition-colors hover:border-orange-200 hover:bg-orange-50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800 sm:h-8 sm:w-8"
               >
                 <MoreVertical size={16} />
               </button>
@@ -189,14 +189,14 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                 <MotionDiv
                   initial={{ opacity: 0, y: 5, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl"
+                  className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
                 >
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       onEdit();
                     }}
-                    className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm hover:bg-orange-50"
+                    className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-orange-50 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     <Edit size={15} /> Edit Item
                   </button>
@@ -206,7 +206,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                       setShowMenu(false);
                       onDelete();
                     }}
-                    className="flex h-10 w-full items-center gap-2 border-t px-3 text-left text-sm text-red-600 hover:bg-red-50"
+                    className="flex h-10 w-full items-center gap-2 border-t px-3 text-left text-sm text-red-600 hover:bg-red-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-red-500/20"
                   >
                     <Trash2 size={15} /> Delete
                   </button>
@@ -237,19 +237,19 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                 />
               </div>
 
-              <h3 className="min-w-0 flex-1 truncate text-base font-bold leading-5 text-gray-900 sm:text-sm sm:leading-4">
+              <h3 className="min-w-0 flex-1 truncate text-base font-bold leading-5 text-gray-900 dark:text-slate-100 sm:text-sm sm:leading-4">
                 {safeItem.name || "Unnamed Item"}
               </h3>
             </div>
 
-            <p className="line-clamp-3 break-words text-xs leading-5 text-gray-500 sm:line-clamp-1 sm:leading-4">
+            <p className="line-clamp-3 break-words text-xs leading-5 text-gray-500 dark:text-slate-300 sm:line-clamp-1 sm:leading-4">
               {safeItem.description || "No description available"}
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex max-w-full items-center gap-1 rounded-md border border-orange-200 bg-orange-100/85 px-2 py-1 sm:py-0.5">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-md border border-orange-200 bg-orange-100/85 px-2 py-1 dark:border-slate-600 dark:bg-slate-800 sm:py-0.5">
                 <Tag size={11} className="shrink-0 text-orange-700" />
-                <span className="max-w-[180px] truncate text-[11px] font-medium text-orange-800 sm:text-xs">
+                <span className="max-w-[180px] truncate text-[11px] font-medium text-orange-800 dark:text-orange-200 sm:text-xs">
                   {safeItem.category || "N/A"}
                 </span>
               </div>
@@ -280,7 +280,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                 <span className="text-lg font-bold text-green-700 sm:text-base">₹{getFinalPrice() || safeItem.price || 0}</span>
                 {safeItem.discount?.active && (
                   <>
-                    <span className="text-xs text-gray-400 line-through">₹{safeItem.price}</span>
+                    <span className="text-xs text-gray-400 dark:text-slate-400 line-through">₹{safeItem.price}</span>
                     <span className="rounded-md bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
                       {safeItem.discount.type?.toLowerCase() === "percentage"
                         ? `${safeItem.discount.value}% OFF`
@@ -296,11 +296,11 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                 {variantDisplay.length > 0 ? (
                   variantDisplay.map((variant) => (
                     <div key={variant.key} className="flex items-center gap-1.5 text-xs">
-                      <span className="w-6 font-semibold text-gray-700">{variant.label}</span>
+                      <span className="w-6 font-semibold text-gray-700 dark:text-slate-300">{variant.label}</span>
                       <span className="font-bold text-green-700">₹{variant.price}</span>
                       {variant.hasDiscount && (
                         <>
-                          <span className="text-gray-400 line-through">₹{variant.originalPrice}</span>
+                          <span className="text-gray-400 dark:text-slate-400 line-through">₹{variant.originalPrice}</span>
                           <span className="rounded-md bg-orange-100 px-2 py-0.5 font-semibold text-orange-700">
                             {variant.discountInfo.type === "percentage"
                               ? `${variant.discountInfo.value}% OFF`
@@ -311,7 +311,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                     </div>
                   ))
                 ) : (
-                  <span className="text-xs text-gray-500">Variant prices not available</span>
+                  <span className="text-xs text-gray-500 dark:text-slate-300">Variant prices not available</span>
                 )}
               </div>
             )}
@@ -319,7 +319,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
             {isComboPricing && (
               <div className="flex items-center gap-2 sm:gap-1.5">
                 <span className="text-lg font-bold text-blue-700 sm:text-base">₹{safeItem.comboPrice || 0}</span>
-                <span className="text-xs text-gray-500">({safeItem.comboItems?.length || 0} items)</span>
+                <span className="text-xs text-gray-500 dark:text-slate-300">({safeItem.comboItems?.length || 0} items)</span>
                 {safeItem.discount?.active && (
                   <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                     {safeItem.discount.type?.toLowerCase() === "percentage"
@@ -334,7 +334,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
           <div className="mt-auto flex justify-end pt-0.5">
             <button
               onClick={onView}
-              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white hover:bg-orange-600 sm:h-7 sm:w-auto sm:px-3 sm:text-xs"
+              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 dark:border dark:border-orange-300/40 dark:bg-orange-500 dark:text-white dark:hover:bg-orange-400 sm:h-7 sm:w-auto sm:px-3 sm:text-xs"
             >
               View Details
             </button>

@@ -113,6 +113,7 @@ export default function FoodListing({
   menu,
   onQuantityChange,
   isRestaurantOpen = true,
+  isDarkMode = false,
 }) {
   const groupedMenu = groupByCategory(menu || []);
   const dispatch = useDispatch();
@@ -243,7 +244,7 @@ export default function FoodListing({
     : "";
 
   return (
-    <div className="flex flex-col bg-white px-2 pb-24 pt-2 sm:px-3">
+    <div className={`flex flex-col px-2 pb-24 pt-2 sm:px-3 ${isDarkMode ? "bg-slate-950" : "bg-white"}`}>
       {Object.keys(groupedMenu).map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
@@ -271,7 +272,7 @@ export default function FoodListing({
             id={`category-${category}`}
             initial={{ opacity: 0, y: 14 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.16 }}
+            viewport={{ once: true, amount: 0.02 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
             className={`relative ${
               hasOpenVariantInSection ? "z-40" : "z-0"
@@ -297,9 +298,10 @@ export default function FoodListing({
             }} />
             {/* ✅ Category Header */}
             <div className="flex items-center gap-2 pt-1">
-              <div className="relative h-3 w-3">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 rounded-full animate-ping"></div>
+              <div className="relative h-2.5 w-2.5">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 animate-pulse"></div>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 animate-ping"></div>
+                <div className="relative h-2.5 w-2.5 rounded-full bg-orange-600/95 ring-1 ring-orange-300"></div>
               </div>
               <h2 className="text-base font-semibold tracking-wide text-gray-800">
                 {category}
@@ -360,7 +362,7 @@ export default function FoodListing({
                         key={item._id}
                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                         whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                        viewport={{ once: true, amount: 0.2 }}
+                        viewport={{ once: true, amount: 0.06 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         whileHover={{ y: -2 }}
                         className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
@@ -693,7 +695,7 @@ export default function FoodListing({
                     );
                   })}
               </div>
-                <div className="pointer-events-none absolute inset-y-2 right-0 w-4 bg-gradient-to-l from-[#fff8f2] to-transparent" />
+                <div className={`pointer-events-none absolute inset-y-2 right-0 w-4 bg-gradient-to-l ${isDarkMode ? "from-slate-950" : "from-[#fff8f2]"} to-transparent`} />
               </div>
             ) : (
               <div className={containerClass} style={{ position: "relative" }}>
@@ -739,7 +741,7 @@ export default function FoodListing({
                     key={item._id}
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                     whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                    viewport={{ once: true, amount: 0.2 }}
+                    viewport={{ once: true, amount: 0.06 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                     whileHover={layoutMode === "single" ? { y: 0 } : { y: -2 }}
                     className={`relative rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
@@ -1108,7 +1110,11 @@ export default function FoodListing({
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-orange-100/90 bg-gradient-to-b from-[#fffaf4] via-[#fff7f0] to-[#fff2e8] shadow-2xl"
+              className={`relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border shadow-2xl ${
+                isDarkMode
+                  ? "border-slate-700 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800"
+                  : "border-orange-100/90 bg-gradient-to-b from-[#fffaf4] via-[#fff7f0] to-[#fff2e8]"
+              }`}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, y: 20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1126,14 +1132,18 @@ export default function FoodListing({
               {/* Close button */}
               <button
                 onClick={closeDescription}
-                className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
+                className={`absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full shadow-md transition ${
+                  isDarkMode
+                    ? "bg-slate-900/95 text-slate-200 hover:text-red-400 hover:shadow-lg"
+                    : "bg-white text-gray-500 hover:text-red-500 hover:shadow-lg"
+                }`}
                 aria-label="Close description"
               >
                 <X size={20} />
               </button>
 
               {/* Food type badge */}
-              <div className="absolute top-4 left-4 rounded-full bg-white p-2 shadow-sm border border-white">
+              <div className={`absolute top-4 left-4 rounded-full p-2 shadow-sm border ${isDarkMode ? "bg-slate-900 border-slate-700" : "bg-white border-white"}`}>
                 {descModal.item.type === "veg" ? (
                   <Dot
                     size={16}
@@ -1158,12 +1168,16 @@ export default function FoodListing({
               {/* Category and badges */}
               <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2">
                 {descModal.item.category && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-800">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    isDarkMode ? "bg-slate-900/90 text-slate-100 border border-slate-600" : "bg-white text-gray-800"
+                  }`}>
                     {descModal.item.category}
                   </span>
                 )}
                 {descModal.item.pricingType === "combo" && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-600/80 text-white">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    isDarkMode ? "bg-orange-500/20 text-orange-200 border border-orange-500/40" : "bg-orange-600/80 text-white"
+                  }`}>
                     Combo ({getComboItemsCount(descModal.item)} items)
                   </span>
                 )}
@@ -1173,7 +1187,7 @@ export default function FoodListing({
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="flex flex-col gap-2">
-                <h3 className="text-2xl font-bold text-gray-900 leading-snug">
+                <h3 className={`text-2xl font-bold leading-snug ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
                   {descModal.item.name}
                 </h3>
                 <div
@@ -1181,13 +1195,19 @@ export default function FoodListing({
                     isLongDescription ? "max-h-40 overflow-y-auto pr-1" : ""
                   }
                 >
-                  <p className="text-gray-600 text-sm leading-relaxed">
+                  <p className={`text-sm leading-relaxed ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                     {descModal.item.description}
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-orange-100/80 bg-gradient-to-br from-[#fff8f1] via-[#fffdf9] to-[#fff3e9] p-3 shadow-sm">
+              <div
+                className={`rounded-2xl border p-3 shadow-sm ${
+                  isDarkMode
+                    ? "border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+                    : "border-orange-100/80 bg-gradient-to-br from-[#fff8f1] via-[#fffdf9] to-[#fff3e9]"
+                }`}
+              >
                 <div className="space-y-2">
                   {(() => {
                     const item = descModal.item;
@@ -1202,14 +1222,16 @@ export default function FoodListing({
                     const renderPriceLine = (label, originalPrice, finalPrice, discountLabel, key) => (
                       <div
                         key={key || label}
-                        className="flex items-center justify-between gap-1.5 border-b border-orange-100/80 pb-1.5 last:border-b-0 last:pb-0"
+                        className={`flex items-center justify-between gap-1.5 border-b pb-1.5 last:border-b-0 last:pb-0 ${
+                          isDarkMode ? "border-slate-700" : "border-orange-100/80"
+                        }`}
                       >
-                        <span className="text-xs font-semibold leading-none text-gray-700 sm:text-sm">
+                        <span className={`text-xs font-semibold leading-none sm:text-sm ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
                           {label}
                         </span>
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
                           {originalPrice > finalPrice && (
-                            <span className="text-xs text-gray-400 line-through">
+                            <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-400"}`}>
                               ₹{Number(originalPrice).toFixed(2)}
                             </span>
                           )}
@@ -1217,7 +1239,9 @@ export default function FoodListing({
                             ₹{Number(finalPrice).toFixed(2)}
                           </span>
                           {discountLabel ? (
-                            <span className="rounded-full bg-orange-50 px-1.5 py-0 text-[9px] font-semibold text-orange-600">
+                            <span className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${
+                              isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-orange-50 text-orange-600"
+                            }`}>
                               {discountLabel}
                             </span>
                           ) : null}
@@ -1276,7 +1300,11 @@ export default function FoodListing({
 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {!descModal.item.available && (
-                    <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${
+                      isDarkMode
+                        ? "text-red-300 bg-red-500/20 border-red-500/40"
+                        : "text-red-600 bg-red-50 border-red-100"
+                    }`}>
                       Currently unavailable
                     </span>
                   )}
@@ -1285,23 +1313,27 @@ export default function FoodListing({
 
               {/* Combo items details */}
               {descModal.item.pricingType === "combo" && descModal.item.comboItems && (
-                <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-                  <h4 className="text-sm font-semibold text-orange-800 mb-2">
+                <div className={`rounded-2xl p-4 border ${
+                  isDarkMode ? "bg-slate-900/80 border-slate-700" : "bg-orange-50 border-orange-100"
+                }`}>
+                  <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-orange-300" : "text-orange-800"}`}>
                     Combo Includes ({descModal.item.comboItems.length} items)
                   </h4>
                   <div className="space-y-2">
                     {descModal.item.comboItems.map((comboItem, index) => (
-                      <div key={index} className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-orange-200">
-                        <span className="text-sm text-gray-700">
+                      <div key={index} className={`flex justify-between items-center rounded-lg px-3 py-2 border ${
+                        isDarkMode ? "bg-slate-900 border-slate-600" : "bg-white border-orange-200"
+                      }`}>
+                        <span className={`text-sm ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
                           {getComboItemName(comboItem, menu)}
                         </span>
                         <div className="flex items-center gap-2">
                           {comboItem.variant && (
-                            <span className="text-xs text-gray-500 bg-orange-100 px-2 py-1 rounded">
+                            <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? "text-orange-200 bg-orange-500/20" : "text-gray-500 bg-orange-100"}`}>
                               {comboItem.variant}
                             </span>
                           )}
-                          <span className="text-xs text-gray-600">
+                          <span className={`text-xs ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                             Qty: {comboItem.quantity || 1}
                           </span>
                         </div>
@@ -1312,15 +1344,21 @@ export default function FoodListing({
               )}
 
               {descModal.item.ingredients?.length ? (
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                <div className={`rounded-2xl p-4 border ${
+                  isDarkMode ? "bg-slate-900/80 border-slate-700" : "bg-gray-50 border-gray-100"
+                }`}>
+                  <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                     Key Ingredients
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {descModal.item.ingredients.map((ingredient, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs text-gray-600"
+                        className={`px-3 py-1 rounded-full border text-xs ${
+                          isDarkMode
+                            ? "bg-slate-900 border-slate-600 text-slate-300"
+                            : "bg-white border-gray-200 text-gray-600"
+                        }`}
                       >
                         {ingredient}
                       </span>
@@ -1358,7 +1396,11 @@ export default function FoodListing({
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className="relative w-full max-w-[390px] overflow-hidden rounded-3xl border border-orange-200/90 bg-gradient-to-b from-[#fffdf9] via-[#fff7ef] to-[#fff3e8] shadow-2xl"
+              className={`relative w-full max-w-[390px] overflow-hidden rounded-3xl border shadow-2xl ${
+                isDarkMode
+                  ? "border-slate-700 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800"
+                  : "border-orange-200/90 bg-gradient-to-b from-[#fffdf9] via-[#fff7ef] to-[#fff3e8]"
+              }`}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, y: 20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1367,7 +1409,11 @@ export default function FoodListing({
             >
             <button
               onClick={closeCustomization}
-              className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full bg-white/95 shadow-md text-gray-500 hover:text-red-500 hover:shadow-lg transition"
+              className={`absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full shadow-md transition ${
+                isDarkMode
+                  ? "bg-slate-900/95 text-slate-200 hover:text-red-400 hover:shadow-lg"
+                  : "bg-white/95 text-gray-500 hover:text-red-500 hover:shadow-lg"
+              }`}
               aria-label="Close customizations"
             >
               <X className="h-5 w-5" />
@@ -1375,12 +1421,12 @@ export default function FoodListing({
 
             <div className="p-5 space-y-4 sm:p-6">
               <div className="flex flex-col gap-2">
-                <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
+                <h3 className={`text-lg font-bold sm:text-xl ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
                   Add Customization
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                   Add special instructions for{" "}
-                  <span className="font-semibold text-gray-800">
+                  <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                     {customizationItemName}
                     {customizationItemVariant}
                   </span>
@@ -1397,11 +1443,15 @@ export default function FoodListing({
                     })
                   }
                   placeholder="Add note"
-                  className="w-full resize-none rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className={`w-full resize-none rounded-xl border px-4 py-3 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+                    isDarkMode
+                      ? "border-slate-600 bg-slate-900 text-slate-100"
+                      : "border-orange-200 bg-white text-gray-800"
+                  }`}
                   rows={4}
                   maxLength={200}
                 />
-                <p className="text-right text-xs text-gray-500">
+                <p className={`text-right text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                   {customizationModal.customizations.length}/200
                 </p>
               </div>
@@ -1411,7 +1461,11 @@ export default function FoodListing({
                   size="sm"
                   variant="outline"
                   onClick={closeCustomization}
-                  className="rounded-full border-orange-200 bg-white px-6 text-gray-700 hover:bg-orange-50"
+                  className={`rounded-full px-6 ${
+                    isDarkMode
+                      ? "border-slate-600 bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50"
+                  }`}
                 >
                   Cancel
                 </Button>

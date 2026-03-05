@@ -13,6 +13,10 @@ import { Link } from "react-router-dom";
 import { getCurrentAddress } from "@/service/deliveryService";
 import { AnimatePresence, motion } from "framer-motion";
 
+const NAME_INPUT_PATTERN = /^[A-Za-z\s]*$/;
+const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
+const PHONE_VALID_PATTERN = /^\d{10}$/;
+
 export default function OrderFormModal({
   showModal,
   setShowModal,
@@ -34,7 +38,8 @@ export default function OrderFormModal({
   logo,
   resetForm,
   cartItems = {},
-  totalAmount = 0
+  totalAmount = 0,
+  isDarkMode = false,
 }) {
   const [selectedOrderType, setSelectedOrderType] = useState(orderType);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -53,7 +58,7 @@ export default function OrderFormModal({
         label: "Eat Here",
         description: "Dine in at our restaurant",
         icon: Utensils,
-        color: "bg-green-500",
+        color: isDarkMode ? "bg-green-600" : "bg-green-500",
         modeKey: "eathere",
       },
       {
@@ -61,7 +66,7 @@ export default function OrderFormModal({
         label: "Take Away",
         description: "Pick up your order",
         icon: Home,
-        color: "bg-blue-500",
+        color: isDarkMode ? "bg-blue-600" : "bg-blue-500",
         modeKey: "takeaway",
       },
       {
@@ -69,7 +74,7 @@ export default function OrderFormModal({
         label: "Delivery",
         description: "Get it delivered to you",
         icon: Truck,
-        color: "bg-orange-500",
+        color: isDarkMode ? "bg-orange-600" : "bg-orange-500",
         modeKey: "delivery",
       },
     ];
@@ -79,7 +84,7 @@ export default function OrderFormModal({
     }
 
     return baseOptions.filter((option) => Boolean(orderModes?.[option.modeKey]));
-  }, [orderModes]);
+  }, [orderModes, isDarkMode]);
 
   useEffect(() => {
     setSelectedOrderType(orderType);
@@ -123,7 +128,10 @@ export default function OrderFormModal({
   };
 
   const isFormValid = () => {
-    if (!customerName || !customerPhone || customerPhone.length !== 10) {
+    const trimmedName = customerName.trim();
+    const isNameValid = NAME_VALID_PATTERN.test(trimmedName);
+
+    if (!isNameValid || !PHONE_VALID_PATTERN.test(customerPhone)) {
       return false;
     }
 
@@ -133,7 +141,7 @@ export default function OrderFormModal({
       case "Take Away":
         return true;
       case "Delivery":
-        return !!address;
+        return !!address && address.trim().length > 0;
       default:
         return false;
     }
@@ -154,11 +162,21 @@ export default function OrderFormModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 280, damping: 24 }}
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-orange-100/90 bg-gradient-to-b from-white via-orange-50 to-orange-50 shadow-2xl"
+            className={`max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border shadow-2xl ${
+              isDarkMode
+                ? "border-slate-700 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800"
+                : "border-orange-100/90 bg-gradient-to-b from-white via-orange-50 to-orange-50"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
         {/* Header */}
-        <div className="sticky top-0 rounded-t-2xl border-b border-orange-100/80 bg-white px-4 py-3">
+        <div
+          className={`sticky top-0 rounded-t-2xl border-b px-4 py-3 ${
+            isDarkMode
+              ? "border-slate-700 bg-slate-900/95"
+              : "border-orange-100/80 bg-white"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-between gap-3">
               {/* Home Button - Only show when no order type is selected */}
@@ -166,7 +184,9 @@ export default function OrderFormModal({
                 <Link 
                   to="/"
                   onClick={() => setShowModal(false)}
-                  className="flex items-center gap-2 text-sm font-semibold text-primary transition-colors duration-200 hover:underline"
+                  className={`flex items-center gap-2 text-sm font-semibold transition-colors duration-200 hover:underline ${
+                    isDarkMode ? "text-orange-300" : "text-primary"
+                  }`}
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Home
@@ -180,7 +200,9 @@ export default function OrderFormModal({
                     setOrderType("");
                     setSelectedOrderType("");
                   }}
-                  className="flex items-center gap-2 text-sm font-semibold text-primary transition-colors duration-200 hover:underline"
+                  className={`flex items-center gap-2 text-sm font-semibold transition-colors duration-200 hover:underline ${
+                    isDarkMode ? "text-orange-300" : "text-primary"
+                  }`}
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to Order Types
@@ -194,7 +216,7 @@ export default function OrderFormModal({
           {/* Order Type Selection - Vertical Layout */}
           {!orderType ? (
             <div className="space-y-3">
-              <h3 className="text-base font-semibold text-gray-800 sm:text-lg">Choose Order Type</h3>
+              <h3 className={`text-base font-semibold sm:text-lg ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>Choose Order Type</h3>
               {orderTypeOptions.length > 0 ? (
                 orderTypeOptions.map((option) => (
                   <button
@@ -203,7 +225,11 @@ export default function OrderFormModal({
                     onClick={() => handleOrderTypeSelect(option.value)}
                     className={`w-full rounded-xl border-2 p-3.5 transition-all duration-300 hover:scale-[1.01] ${
                       selectedOrderType === option.value
-                        ? "border-primary bg-primary/10 shadow-lg"
+                        ? isDarkMode
+                          ? "border-orange-400 bg-orange-500/15 shadow-lg"
+                          : "border-primary bg-primary/10 shadow-lg"
+                        : isDarkMode
+                        ? "border-slate-600 bg-slate-900/90 shadow-sm hover:border-slate-500 hover:shadow-md"
                         : "border-orange-200/80 bg-white shadow-sm hover:border-orange-300 hover:shadow-md"
                     }`}
                   >
@@ -212,11 +238,11 @@ export default function OrderFormModal({
                         <option.icon className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-semibold text-gray-800">{option.label}</div>
-                        <div className="text-xs text-gray-600 sm:text-sm">{option.description}</div>
+                        <div className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>{option.label}</div>
+                        <div className={`text-xs sm:text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>{option.description}</div>
                         {/* Delivery charges info only for Delivery option */}
                         {option.value === "Delivery" && deliveryCharges > 0 && (
-                          <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-orange-600">
+                          <div className={`mt-1 flex items-center gap-1 text-xs font-semibold ${isDarkMode ? "text-orange-300" : "text-orange-600"}`}>
                             <IndianRupee className="w-3 h-3" />
                             <span>Delivery charges: ₹{deliveryCharges}</span>
                           </div>
@@ -224,14 +250,24 @@ export default function OrderFormModal({
                       </div>
                       <div
                         className={`w-3 h-3 rounded-full border-2 ${
-                          selectedOrderType === option.value ? "bg-primary border-primary" : "border-orange-300/80"
+                          selectedOrderType === option.value
+                            ? isDarkMode
+                              ? "bg-orange-400 border-orange-400"
+                              : "bg-primary border-primary"
+                            : isDarkMode
+                            ? "border-slate-400"
+                            : "border-orange-300/80"
                         }`}
                       />
                     </div>
                   </button>
                 ))
               ) : (
-                <p className="rounded-xl border border-dashed border-orange-200 bg-orange-50/40 p-4 text-sm text-gray-500">
+                <p className={`rounded-xl border border-dashed p-4 text-sm ${
+                  isDarkMode
+                    ? "border-slate-600 bg-slate-900/70 text-slate-300"
+                    : "border-orange-200 bg-orange-50/40 text-gray-500"
+                }`}>
                   Ordering is currently unavailable. Please check back soon.
                 </p>
               )}
@@ -251,9 +287,12 @@ export default function OrderFormModal({
                   placeholder="Enter your name"
                   value={customerName}
                   onChange={(e) => {
-                    if (e.target.value.length <= 15)
-                      setCustomerName(e.target.value);
+                    const { value } = e.target;
+                    if (value.length <= 15 && NAME_INPUT_PATTERN.test(value)) {
+                      setCustomerName(value);
+                    }
                   }}
+                  maxLength={15}
                   className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
                 />
                 <p className="mt-2 text-xs text-gray-500">
@@ -274,6 +313,8 @@ export default function OrderFormModal({
                     const value = e.target.value.replace(/\D/g, "");
                     if (value.length <= 10) setCustomerPhone(value);
                   }}
+                  maxLength={10}
+                  inputMode="numeric"
                   className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
                 />
                 <p className="mt-2 text-xs text-gray-500">

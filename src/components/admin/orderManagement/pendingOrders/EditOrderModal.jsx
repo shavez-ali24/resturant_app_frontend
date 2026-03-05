@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { recalcTotal } from "../commonOrderFile/utils";
+import {
+  getOrderTypeBadgeClass,
+  getOrderTypeItemClass as getOrderTypeSelectItemClass,
+  getOrderTypeKey,
+  getOrderTypeLabel,
+  recalcTotal,
+} from "../commonOrderFile/utils";
 import {
   Select,
   SelectContent,
@@ -497,28 +503,21 @@ const EditOrderModal = ({
   // ORDER TYPE CHANGE
   // =============================
   const handleOrderTypeChange = (orderType) => {
-    const currentType = localOrderData.orderType?.toLowerCase();
-    const newType = orderType.toLowerCase();
+    const currentType = getOrderTypeKey(localOrderData.orderType);
+    const newType = getOrderTypeKey(orderType);
     
     // Clear fields based on transition
-    if (currentType === "delivery" && newType === "eat here") {
-      // Delivery → Eat Here: Need tableId, clear address
+    if (
+      currentType === "delivery" &&
+      (newType === "eat_here" || newType === "take_away")
+    ) {
       setAddress("");
-    } else if (currentType === "delivery" && newType === "take away") {
-      // Delivery → Take Away: Clear address
-      setAddress("");
-    } else if (currentType === "eat here" && newType === "take away") {
-      // Eat Here → Take Away: Clear tableId
+    }
+    if (
+      currentType === "eat_here" &&
+      (newType === "take_away" || newType === "delivery")
+    ) {
       setSelectedTableId("");
-    } else if (currentType === "eat here" && newType === "delivery") {
-      // Eat Here → Delivery: Need address, clear tableId
-      setSelectedTableId("");
-    } else if (currentType === "take away" && newType === "eat here") {
-      // Take Away → Eat Here: Need tableId
-      // Keep as is
-    } else if (currentType === "take away" && newType === "delivery") {
-      // Take Away → Delivery: Need address
-      // Keep as is
     }
 
     // Clear validation errors when order type changes
@@ -595,12 +594,14 @@ const EditOrderModal = ({
       hasError = true;
     }
     
-    if (localOrderData.orderType?.toLowerCase() === "eat here" && !selectedTableId) {
+    const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
+
+    if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
       errors.table = "Please select a table for Eat Here order";
       hasError = true;
     }
     
-    if (localOrderData.orderType?.toLowerCase() === "delivery" && !address.trim()) {
+    if (selectedOrderTypeKey === "delivery" && !address.trim()) {
       errors.address = "Please enter address for Delivery order";
       hasError = true;
     }
@@ -643,17 +644,17 @@ const EditOrderModal = ({
       };
 
       // Add tableId for Eat Here
-      if (localOrderData.orderType?.toLowerCase() === "eat here" && selectedTableId) {
+      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
         payload.tableId = selectedTableId;
       }
 
       // Add address for Delivery
-      if (localOrderData.orderType?.toLowerCase() === "delivery" && address.trim()) {
+      if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
       }
 
       // Clear tableId for Take Away (if exists from previous state)
-      if (localOrderData.orderType?.toLowerCase() === "take away") {
+      if (selectedOrderTypeKey === "take_away") {
         payload.tableId = null;
         payload.address = null;
       }
@@ -692,10 +693,10 @@ const EditOrderModal = ({
   // ORDER TYPE ICON HELPER
   // =============================
   const getOrderTypeIcon = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
+    switch (getOrderTypeKey(type)) {
+      case "eat_here":
         return <Utensils size={16} />;
-      case "take away":
+      case "take_away":
         return <Home size={16} />;
       case "delivery":
         return <Truck size={16} />;
@@ -703,44 +704,9 @@ const EditOrderModal = ({
         return <Utensils size={16} />;
     }
   };
-
-  // =============================
-  // ORDER TYPE COLOR HELPERS
-  // =============================
-  const getOrderTypeStyle = (type) => {
-    switch (type?.toLowerCase()) {
-      case "eat here":
-        return {
-          trigger:
-            "border-green-200 bg-green-50 text-green-700 hover:border-green-300",
-          item:
-            "text-green-700 data-[highlighted]:bg-green-100 data-[highlighted]:text-green-800 data-[state=checked]:bg-green-100 data-[state=checked]:text-green-800",
-        };
-      case "take away":
-        return {
-          trigger:
-            "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300",
-          item:
-            "text-blue-700 data-[highlighted]:bg-blue-100 data-[highlighted]:text-blue-800 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-800",
-        };
-      case "delivery":
-        return {
-          trigger:
-            "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-300",
-          item:
-            "text-orange-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
-        };
-      default:
-        return {
-          trigger: "border-orange-200 bg-white text-gray-700 hover:border-orange-300",
-          item:
-            "text-gray-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
-        };
-    }
-  };
-
-  const getOrderTypeBadge = (type) => getOrderTypeStyle(type).trigger;
-  const getOrderTypeItemClass = (type) => getOrderTypeStyle(type).item;
+  const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
+  const getOrderTypeDropdownItemClass = (type) =>
+    getOrderTypeSelectItemClass(type);
 
   // Format tables data (dynamic from props)
   const availableTables = Array.isArray(tables) ? tables : [];
@@ -785,21 +751,21 @@ const EditOrderModal = ({
             value={localOrderData.orderType}
             onValueChange={handleOrderTypeChange}
           >
-            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadge(localOrderData.orderType)}`}>
+            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadge(localOrderData.orderType)}`}>
               <div className="flex items-center gap-2">
                 {getOrderTypeIcon(localOrderData.orderType)}
-                <span>{localOrderData.orderType || "Select Type"}</span>
+                <span>{getOrderTypeLabel(localOrderData.orderType)}</span>
               </div>
             </SelectTrigger>
             <SelectContent
               side="top"
               sideOffset={6}
-              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[60vh]"
+              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:max-h-[60vh]"
             >
               <SelectGroup>
                 <SelectItem 
                   value="Eat Here" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Eat Here")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Utensils size={16} />
@@ -808,7 +774,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Take Away" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Take Away")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Home size={16} />
@@ -817,7 +783,7 @@ const EditOrderModal = ({
                 </SelectItem>
                 <SelectItem 
                   value="Delivery" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Delivery")}`}
                 >
                   <div className="flex items-center gap-2">
                     <Truck size={16} />
@@ -830,7 +796,7 @@ const EditOrderModal = ({
         </div>
 
         {/* Table Selection - Only show when "Eat Here" is selected */}
-        {localOrderData.orderType?.toLowerCase() === "eat here" && (
+        {getOrderTypeKey(localOrderData.orderType) === "eat_here" && (
           <div className="mb-4" data-error={!!validationErrors.table}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Table *
@@ -853,7 +819,7 @@ const EditOrderModal = ({
               <SelectContent
                 side="top"
                 sideOffset={6}
-                className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[60vh]"
+                className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:max-h-[60vh]"
               >
                 <SelectGroup>
                   {availableTables.length > 0 ? (
@@ -861,7 +827,7 @@ const EditOrderModal = ({
                       <SelectItem
                         key={table._id}
                         value={table._id} // Use _id as value
-                        className="cursor-pointer rounded-lg border-orange-300 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+                        className="cursor-pointer rounded-lg bg-orange-50 text-orange-800 hover:bg-orange-100 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-900"
                       >
                         <div className="flex justify-between items-center w-full gap-4 pb-2 pt-1">
                           <span>Table {table.tableNumber || table.name}</span>
@@ -891,7 +857,7 @@ const EditOrderModal = ({
         )}
 
         {/* Address Input - Only show when "Delivery" is selected */}
-        {localOrderData.orderType?.toLowerCase() === "delivery" && (
+        {getOrderTypeKey(localOrderData.orderType) === "delivery" && (
           <div className="mb-4" data-error={!!validationErrors.address}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Delivery Address *

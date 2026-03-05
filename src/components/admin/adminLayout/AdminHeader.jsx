@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "@/components/admin/adminLayout/app-sidebar";
 import { SiteHeader } from "@/components/admin/adminLayout/site-header";
@@ -14,7 +14,10 @@ import {
   useUpdateOrderMutation
 } from "@/redux/adminRedux/adminAPI";
 
-export default function AdminHeader() {
+export default function AdminHeader({
+  isDarkMode = false,
+  onToggleDarkMode = () => {},
+}) {
   const dispatch = useDispatch();
   
   // Fetch restaurant profile (includes tables)
@@ -72,19 +75,26 @@ export default function AdminHeader() {
   const tables = extractTablesFromRestaurant();
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className={`h-screen overflow-hidden ${isDarkMode ? "bg-slate-950 text-slate-100" : ""}`}>
       <SidebarProvider className="flex flex-col h-full">
-        <SiteHeader />
+        <SiteHeader
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={onToggleDarkMode}
+        />
 
         <div className="flex flex-1 overflow-hidden">
-          <AppSidebar />
+          <AppSidebar isDarkMode={isDarkMode} />
 
           <SidebarInset className="flex flex-1 overflow-hidden">
             {/* 👇 ONLY THIS PART SCROLLS */}
             <div className="flex flex-1 flex-col overflow-y-auto">
-              {restaurantLoading && <p className="p-4">Loading restaurant...</p>}
+              {restaurantLoading && (
+                <p className={`p-4 ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
+                  Loading restaurant...
+                </p>
+              )}
               {restaurantError && (
-                <p className="p-4 text-red-500">
+                <p className={`p-4 ${isDarkMode ? "text-red-300" : "text-red-500"}`}>
                   Failed to load restaurant
                 </p>
               )}

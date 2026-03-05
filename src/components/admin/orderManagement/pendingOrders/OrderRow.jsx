@@ -2,7 +2,14 @@ import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { SquarePen, Trash, Truck, Utensils, Eye, Ban, Home } from "lucide-react";
+import { SquarePen, Trash, Truck, Utensils, Eye, Ban, House } from "lucide-react";
+import {
+  formatOrderTableId,
+  getOrderTypeBadgeClass,
+  getOrderTypeKey,
+  getOrderTypeLabel,
+  isEatHereOrder,
+} from "../commonOrderFile/utils";
 
 const OrderRow = ({
   order,
@@ -22,51 +29,32 @@ const OrderRow = ({
   const customizationCount = order.items ? 
     order.items.filter(item => item.customizations && item.customizations.trim() !== "").length : 0;
 
-  // Order Type Badge Helper (same styling as EditOrderModal but only display)
-  const getOrderTypeDisplay = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
-        return {
-          bg: "bg-green-100",
-          text: "text-green-700",
-          ring: "ring-green-200",
-          icon: <Utensils size={16} />
-        };
-      case "take away":
-        return {
-          bg: "bg-blue-100",
-          text: "text-blue-700",
-          ring: "ring-blue-200",
-          icon: <Home size={16} />
-        };
+  const getOrderTypeIcon = (type) => {
+    switch (getOrderTypeKey(type)) {
+      case "eat_here":
+        return <Utensils size={16} />;
+      case "take_away":
+        return <House size={16} />;
       case "delivery":
-        return {
-          bg: "bg-orange-100",
-          text: "text-orange-700",
-          ring: "ring-orange-200",
-          icon: <Truck size={16} />
-        };
+        return <Truck size={16} />;
       default:
-        return {
-          bg: "bg-gray-100",
-          text: "text-gray-700",
-          ring: "ring-gray-200",
-          icon: <Utensils size={16} />
-        };
+        return <Utensils size={16} />;
     }
   };
 
-  const orderTypeStyle = getOrderTypeDisplay(order.orderType);
+  const orderTypeLabel = getOrderTypeLabel(order.orderType);
+  const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
+  const tableLabel = formatOrderTableId(order.tableId);
 
   return (
-    <tr className="border-b border-orange-100 transition hover:bg-orange-50/70">
+    <tr className="border-b border-orange-100 transition hover:bg-orange-50/70 dark:border-slate-700 dark:hover:bg-slate-800/40">
       {/* Date Column */}
-      <td className="text-center border text-sm text-gray-700 px-1">
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
         {order.formattedDate || "N/A"}
       </td>
 
       {/* Time Column */}
-      <td className="text-center border text-sm text-gray-700 px-1">
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
         {order.formattedTime || "N/A"}
       </td>
 
@@ -74,19 +62,19 @@ const OrderRow = ({
       {/* <td className="text-center border font-medium text-gray-800">{orderNum}</td> */}
 
       {/* Customer */}
-      <td className="text-center border text-sm text-gray-700 px-1">{order.customerName}</td>
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerName}</td>
 
       {/* Phone */}
-      <td className="text-center border text-sm text-gray-700 px-1">{order.customerPhone}</td>
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerPhone}</td>
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
-      <td className="text-center border py-2 px-1">
-        <div className={`inline-flex items-center justify-center h-9 px-3 rounded-xl font-semibold text-sm ring-1 ring-black/5 w-full ${orderTypeStyle.bg} ${orderTypeStyle.text} ${orderTypeStyle.ring}`}>
+      <td className="px-1 py-2 text-center border dark:border-slate-700">
+        <div className={`inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
           <div className="flex items-center gap-1.5">
-            {orderTypeStyle.icon}
-            <span>{order.orderType || "Type"}</span>
-            {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
-              <span className="ml-0.5">: {order.tableId}</span>
+            {getOrderTypeIcon(order.orderType)}
+            <span>{orderTypeLabel}</span>
+            {isEatHereOrder(order.orderType) && tableLabel && (
+              <span className="ml-0.5">: {tableLabel}</span>
             )}
           </div>
         </div>

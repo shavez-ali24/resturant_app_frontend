@@ -10,7 +10,13 @@ import {
   SelectValue,
 } from "../../../ui/select";
 import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X } from "lucide-react";
-import { recalcTotal } from "../commonOrderFile/utils";
+import {
+  getOrderTypeBadgeClass,
+  getOrderTypeItemClass,
+  getOrderTypeKey,
+  getOrderTypeLabel,
+  recalcTotal,
+} from "../commonOrderFile/utils";
 
 const BillPage = ({ 
   order, 
@@ -30,6 +36,25 @@ const BillPage = ({
   const [address, setAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const root = document.documentElement;
+    const updateMode = () =>
+      setIsDarkMode(
+        root.classList.contains("admin-dark") || root.classList.contains("dark")
+      );
+
+    updateMode();
+    const observer = new MutationObserver(updateMode);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   // Initialize local order data
   useEffect(() => {
@@ -165,14 +190,14 @@ const BillPage = ({
 
   // Order type change
   const handleOrderTypeChange = (orderType) => {
-    const currentType = localOrderData.orderType?.toLowerCase();
-    const newType = orderType.toLowerCase();
+    const currentType = getOrderTypeKey(localOrderData.orderType);
+    const newType = getOrderTypeKey(orderType);
     
     // Clear fields based on transition
-    if (currentType === "delivery" && (newType === "eat here" || newType === "take away")) {
+    if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
       setAddress("");
     }
-    if (currentType === "eat here" && (newType === "take away" || newType === "delivery")) {
+    if (currentType === "eat_here" && (newType === "take_away" || newType === "delivery")) {
       setSelectedTableId("");
     }
 
@@ -201,13 +226,15 @@ const BillPage = ({
       setError("Minimum 1 item required");
       return;
     }
+
+    const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
     
-    if (localOrderData.orderType?.toLowerCase() === "eat here" && !selectedTableId) {
+    if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
       setError("Please select a table for Eat Here order");
       return;
     }
     
-    if (localOrderData.orderType?.toLowerCase() === "delivery" && !address.trim()) {
+    if (selectedOrderTypeKey === "delivery" && !address.trim()) {
       setError("Please enter address for Delivery order");
       return;
     }
@@ -227,15 +254,15 @@ const BillPage = ({
         }))
       };
 
-      if (localOrderData.orderType?.toLowerCase() === "eat here" && selectedTableId) {
+      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
         payload.tableId = selectedTableId;
       }
 
-      if (localOrderData.orderType?.toLowerCase() === "delivery" && address.trim()) {
+      if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
       }
 
-      if (localOrderData.orderType?.toLowerCase() === "take away") {
+      if (selectedOrderTypeKey === "take_away") {
         payload.tableId = null;
         payload.address = null;
       }
@@ -324,10 +351,10 @@ const BillPage = ({
   };
 
   const getOrderTypeIcon = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
+    switch (getOrderTypeKey(type)) {
+      case "eat_here":
         return <Utensils size={16} />;
-      case "take away":
+      case "take_away":
         return <Home size={16} />;
       case "delivery":
         return <Truck size={16} />;
@@ -335,38 +362,7 @@ const BillPage = ({
         return <Utensils size={16} />;
     }
   };
-
-  const getOrderTypeStyle = (type) => {
-    switch (type?.toLowerCase()) {
-      case "eat here":
-        return {
-          trigger: "border-green-200 bg-green-50 text-green-700 ring-green-100",
-          item:
-            "bg-green-50/80 text-green-700 data-[highlighted]:bg-green-100 data-[highlighted]:text-green-800 data-[state=checked]:bg-green-100 data-[state=checked]:text-green-800",
-        };
-      case "take away":
-        return {
-          trigger: "border-blue-200 bg-blue-50 text-blue-700 ring-blue-100",
-          item:
-            "bg-blue-50/80 text-blue-700 data-[highlighted]:bg-blue-100 data-[highlighted]:text-blue-800 data-[state=checked]:bg-blue-100 data-[state=checked]:text-blue-800",
-        };
-      case "delivery":
-        return {
-          trigger: "border-orange-200 bg-orange-50 text-orange-700 ring-orange-100",
-          item:
-            "bg-orange-50/80 text-orange-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800 data-[state=checked]:bg-orange-100 data-[state=checked]:text-orange-800",
-        };
-      default:
-        return {
-          trigger: "border-gray-300 bg-white text-gray-700 ring-gray-200",
-          item:
-            "text-gray-700 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900 data-[state=checked]:bg-gray-100 data-[state=checked]:text-gray-900",
-        };
-    }
-  };
-
-  const getOrderTypeBadge = (type) => getOrderTypeStyle(type).trigger;
-  const getOrderTypeItemClass = (type) => getOrderTypeStyle(type).item;
+  const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
 
   const availableTables = Array.isArray(tables) ? tables : [];
   const MotionDiv = motion.div;
@@ -384,17 +380,31 @@ const BillPage = ({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
+        className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] ${
+          isDarkMode
+            ? "border-slate-700 bg-slate-950 text-slate-100 shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
+            : "border-orange-100 bg-white/95"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4">
+        <div
+          className={`flex items-center justify-between border-b p-4 ${
+            isDarkMode
+              ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800"
+              : "border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white"
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
               Order Details & Bill
             </h3>
             {isStaff && !isEditMode && (
-              <span className="rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                isDarkMode
+                  ? "border-orange-500/40 bg-orange-500/20 text-orange-200"
+                  : "border-orange-200 bg-orange-100 text-orange-700"
+              }`}>
                 Staff View
               </span>
             )}
@@ -403,7 +413,11 @@ const BillPage = ({
             {isStaff && !isEditMode && (
               <button
                 onClick={() => setIsEditMode(true)}
-                className="rounded-lg p-2 text-orange-700 transition-colors hover:bg-orange-100"
+                className={`rounded-lg p-2 transition-colors ${
+                  isDarkMode
+                    ? "text-orange-300 hover:bg-slate-800"
+                    : "text-orange-700 hover:bg-orange-100"
+                }`}
                 title="Edit Order"
               >
                 <Edit3 size={18} />
@@ -411,7 +425,11 @@ const BillPage = ({
             )}
             <button
               onClick={onClose}
-              className="rounded-full p-1 text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
+              className={`rounded-full p-1 transition-colors ${
+                isDarkMode
+                  ? "text-slate-400 hover:bg-slate-800 hover:text-orange-300"
+                  : "text-gray-400 hover:bg-orange-100 hover:text-orange-700"
+              }`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor">
                 <path
@@ -427,12 +445,18 @@ const BillPage = ({
 
         {/* Edit Mode Header */}
         {isEditMode && (
-          <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/80 px-4 py-2">
-            <span className="text-sm font-medium text-orange-700">Edit Mode</span>
+          <div className={`flex items-center justify-between border-b px-4 py-2 ${
+            isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-100 bg-orange-50/80"
+          }`}>
+            <span className={`text-sm font-medium ${isDarkMode ? "text-orange-300" : "text-orange-700"}`}>Edit Mode</span>
             <div className="flex gap-2">
               <button
                 onClick={handleCancelEdit}
-                className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-orange-100"
+                className={`rounded-lg p-1.5 transition-colors ${
+                  isDarkMode
+                    ? "text-slate-400 hover:bg-slate-800"
+                    : "text-gray-500 hover:bg-orange-100"
+                }`}
                 title="Cancel"
               >
                 <X size={16} />
@@ -440,7 +464,11 @@ const BillPage = ({
               <button
                 onClick={handleSaveChanges}
                 disabled={isSubmitting}
-                className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-100 disabled:opacity-50"
+                className={`rounded-lg p-1.5 transition-colors disabled:opacity-50 ${
+                  isDarkMode
+                    ? "text-emerald-300 hover:bg-emerald-500/15"
+                    : "text-green-600 hover:bg-green-100"
+                }`}
                 title="Save"
               >
                 <Save size={16} />
@@ -451,7 +479,9 @@ const BillPage = ({
 
         {/* Error Message */}
         {error && (
-          <div className="border-b border-red-200 bg-red-50 px-4 py-2">
+          <div className={`border-b px-4 py-2 ${
+            isDarkMode ? "border-red-500/40 bg-red-500/15" : "border-red-200 bg-red-50"
+          }`}>
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
@@ -461,12 +491,12 @@ const BillPage = ({
           <div ref={billRef} className="printable-bill">
 
             {/* Restaurant Header */}
-            <div className="text-center border-b pb-4 mb-4">
+            <div className={`mb-4 border-b pb-4 text-center ${isDarkMode ? "border-slate-700" : ""}`}>
               <h2 className="text-xl font-bold">{restaurantName}</h2>
-              <p className="text-gray-600 text-sm">{restaurantAddress}</p>
-              <p className="text-gray-600 text-sm">Phone: {restaurantPhone}</p>
+              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>{restaurantAddress}</p>
+              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Phone: {restaurantPhone}</p>
               {restaurantGstin && (
-                <p className="text-gray-600 text-sm">GSTIN: {restaurantGstin}</p>
+                <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>GSTIN: {restaurantGstin}</p>
               )}
             </div>
 
@@ -498,7 +528,9 @@ const BillPage = ({
             </div>
 
             {order?.orderType === "Delivery" && order?.address && (
-              <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3 text-sm">
+              <div className={`mb-4 rounded border p-3 text-sm ${
+                isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
+              }`}>
                 <strong>Delivery Address:</strong>
                 <br />
                 {order.address}
@@ -510,20 +542,22 @@ const BillPage = ({
               <div className="mb-4 space-y-3">
                 {/* Order Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
                     Order Type
                   </label>
                   <Select
                     value={localOrderData?.orderType}
                     onValueChange={handleOrderTypeChange}
                   >
-                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}>
+                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}>
                       <div className="flex items-center gap-2 text-sm">
                         {getOrderTypeIcon(localOrderData?.orderType)}
-                        <span>{localOrderData?.orderType || "Select"}</span>
+                        <span>{getOrderTypeLabel(localOrderData?.orderType)}</span>
                       </div>
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                    <SelectContent className={`rounded-xl border p-1 shadow-xl ${
+                      isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
+                    }`}>
                       <SelectGroup>
                         <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
                           <div className="flex items-center gap-2">
@@ -546,19 +580,29 @@ const BillPage = ({
                 </div>
 
                 {/* Table Selection - Eat Here */}
-                {localOrderData?.orderType?.toLowerCase() === "eat here" && (
+                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
                       Select Table *
                     </label>
                     <Select value={selectedTableId} onValueChange={handleTableChange}>
-                      <SelectTrigger className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
+                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
+                        isDarkMode
+                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                      }`}>
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${
+                        isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
+                      }`}>
                         <SelectGroup>
                           {availableTables.map((table) => (
-                            <SelectItem key={table._id} value={table._id} className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                            <SelectItem key={table._id} value={table._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
+                              isDarkMode
+                                ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
+                                : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
+                            }`}>
                               Table {table.tableNumber || table.number || table._id.slice(-4)}
                             </SelectItem>
                           ))}
@@ -569,16 +613,20 @@ const BillPage = ({
                 )}
 
                 {/* Address - Delivery */}
-                {localOrderData?.orderType?.toLowerCase() === "delivery" && (
+                {getOrderTypeKey(localOrderData?.orderType) === "delivery" && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
                       Delivery Address *
                     </label>
                     <textarea
                       value={address}
                       onChange={handleAddressChange}
                       placeholder="Enter delivery address"
-                      className="w-full resize-none rounded-xl border border-gray-300 bg-white p-3 text-sm shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                      className={`w-full resize-none rounded-xl border p-3 text-sm shadow-sm transition-all outline-none ${
+                        isDarkMode
+                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                          : "border-gray-300 bg-white hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                      }`}
                       rows={2}
                     />
                   </div>
@@ -587,9 +635,11 @@ const BillPage = ({
             )}
 
             {/* Items Table */}
-            <table className="mb-4 w-full border-y border-gray-200 text-sm">
+            <table className={`mb-4 w-full border-y text-sm ${
+              isDarkMode ? "border-slate-700" : "border-gray-200"
+            }`}>
               <thead>
-                <tr className="bg-gray-50">
+                <tr className={isDarkMode ? "bg-slate-900" : "bg-gray-50"}>
                   <th className="py-2 px-2 text-left">Item</th>
                   <th className="py-2 px-2 text-center">Qty</th>
                   <th className="py-2 px-2 text-right">Price</th>
@@ -603,18 +653,18 @@ const BillPage = ({
                   const itemTotal = itemPrice * Number(item.quantity || 1);
                   
                   return (
-                    <tr key={i} className="border-b border-gray-200">
+                    <tr key={i} className={isDarkMode ? "border-b border-slate-700" : "border-b border-gray-200"}>
                       <td className="py-1.5 px-2">
                         <div>
                           {item.name}
                           {item.variant && (
-                            <div className="text-xs text-gray-500">({item.variant})</div>
+                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>({item.variant})</div>
                           )}
                           {item.customizations && (
-                            <div className="text-xs text-gray-500">{item.customizations}</div>
+                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{item.customizations}</div>
                           )}
                           {item.comboItems && (
-                            <div className="text-xs text-gray-500">
+                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                               Combo: {item.comboItems.length} items
                             </div>
                           )}
@@ -625,7 +675,11 @@ const BillPage = ({
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity - 1)}
-                              className="rounded bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
+                              className={`rounded p-1 transition-colors ${
+                                isDarkMode
+                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
                               disabled={item.quantity <= 1}
                             >
                               <Minus size={12} />
@@ -633,7 +687,11 @@ const BillPage = ({
                             <span className="w-6 text-center">{item.quantity}</span>
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity + 1)}
-                              className="rounded bg-gray-100 p-1 text-gray-700 transition-colors hover:bg-gray-200"
+                              className={`rounded p-1 transition-colors ${
+                                isDarkMode
+                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
                             >
                               <Plus size={12} />
                             </button>
@@ -648,12 +706,22 @@ const BillPage = ({
                             value={item.variantName}
                             onValueChange={(v) => handleVariantChange(i, v)}
                           >
-                            <SelectTrigger className="h-8 w-24 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
+                            <SelectTrigger className={`h-8 w-24 rounded-lg border text-xs font-medium shadow-sm transition-all outline-none ${
+                              isDarkMode
+                                ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                            }`}>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                            <SelectContent className={`rounded-xl border p-1 shadow-xl ${
+                              isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
+                            }`}>
                               {Object.entries(item.variants).map(([variant, price]) => (
-                                <SelectItem key={variant} value={variant} className="cursor-pointer rounded-lg py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                                <SelectItem key={variant} value={variant} className={`cursor-pointer rounded-lg py-1 text-xs font-medium ${
+                                  isDarkMode
+                                    ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
+                                    : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
+                                }`}>
                                   {variant}: ₹{price}
                                 </SelectItem>
                               ))}
@@ -686,20 +754,30 @@ const BillPage = ({
             {/* EDIT MODE: Add Item */}
             {isEditMode && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
                   Add Item
                 </label>
                 <Select onValueChange={handleAddItem}>
-                  <SelectTrigger className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200">
+                  <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
+                    isDarkMode
+                      ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  }`}>
                     <SelectValue placeholder="Select item to add..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                  <SelectContent className={`max-h-60 rounded-xl border p-1 shadow-xl ${
+                    isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
+                  }`}>
                     <SelectGroup>
                       {menuItems.map((item) => (
-                        <SelectItem key={item._id} value={item._id} className="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900">
+                        <SelectItem key={item._id} value={item._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
+                          isDarkMode
+                            ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
+                            : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
+                        }`}>
                           <div className="flex items-center justify-between">
                             <span>{item.name}</span>
-                            <span className="text-gray-500 text-xs ml-2">
+                            <span className={`ml-2 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                               {item.pricingType === "variant" 
                                 ? "Variant" 
                                 : `₹${item.price || 0}`}
@@ -714,7 +792,9 @@ const BillPage = ({
             )}
 
             {/* Totals - Use backend data directly */}
-            <div className="ml-auto max-w-xs space-y-1 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
+            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${
+              isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
+            }`}>
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{displaySubtotal.toFixed(2)}</span>
@@ -740,18 +820,28 @@ const BillPage = ({
               </div>
             </div>
 
-            <p className="text-center text-gray-600 text-xs border-t pt-3 mt-4">
+            <p className={`mt-4 border-t pt-3 text-center text-xs ${
+              isDarkMode ? "border-slate-700 text-slate-400" : "text-gray-600"
+            }`}>
               Thank you! Visit again!
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
+        <div className={`flex justify-end gap-3 border-t p-4 ${
+          isDarkMode
+            ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800"
+            : "border-orange-100 bg-gradient-to-r from-orange-50/70 to-white"
+        }`}>
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className="h-11 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+              className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+                isDarkMode
+                  ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
+                  : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50"
+              }`}
             >
               Cancel
             </button>
@@ -759,7 +849,11 @@ const BillPage = ({
           
           <button
             onClick={onClose}
-            className="h-11 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+            className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+              isDarkMode
+                ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
+                : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50"
+            }`}
           >
             Close
           </button>

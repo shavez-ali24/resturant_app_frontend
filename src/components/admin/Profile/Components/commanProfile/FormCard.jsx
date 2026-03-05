@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export const FormCard = ({ title, icon, children, customIndex }) => (
   <motion.div
-    className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]"
+    className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-slate-950/40"
     variants={{
       hidden: { opacity: 0, y: 20 },
       visible: (i) => ({
@@ -19,8 +19,8 @@ export const FormCard = ({ title, icon, children, customIndex }) => (
   >
     <div className="p-4 sm:p-5">
       {(title || icon) && (
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 sm:text-lg">
-          {icon ? <span className="text-orange-500">{icon}</span> : null}
+        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-slate-100 sm:text-lg">
+          {icon ? <span className="text-orange-500 dark:text-orange-300">{icon}</span> : null}
           {title}
         </h3>
       )}

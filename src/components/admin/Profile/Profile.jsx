@@ -30,7 +30,7 @@ const Profile = () => {
   const resData = restaurant?.data || restaurant?.restaurant;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-3 md:p-6">
+    <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-3 dark:bg-none dark:bg-slate-950 md:p-6">
       <div className="mx-auto max-w-6xl space-y-4">
         <ProfileHeader
           onUpdateClick={() => setIsUpdateModalOpen(true)}

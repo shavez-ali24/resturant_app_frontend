@@ -18,7 +18,7 @@ export const FormField = ({
 
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+      <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-slate-200">
         {label}
       </label>
       <input
@@ -29,7 +29,7 @@ export const FormField = ({
         min={min}
         placeholder={placeholder || label}
         onWheel={handleWheel}
-        className="h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+        className="h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-800 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 placeholder:text-gray-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 dark:hover:border-orange-400"
       />
     </div>
   );

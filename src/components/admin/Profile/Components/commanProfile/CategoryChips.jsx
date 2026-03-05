@@ -7,14 +7,14 @@ export const CategoryChips = ({ categories }) => (
         {categories.map((category) => (
           <span
             key={category}
-            className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-3 py-1.5 text-sm font-medium text-orange-800"
+            className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-3 py-1.5 text-sm font-medium text-orange-800 dark:border-slate-700 dark:bg-slate-800 dark:text-orange-200"
           >
             {category}
           </span>
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-orange-100 bg-orange-50/60 p-3 text-sm text-gray-500">
+      <p className="rounded-xl border border-orange-100 bg-orange-50/60 p-3 text-sm text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
         No categories listed
       </p>
     )}

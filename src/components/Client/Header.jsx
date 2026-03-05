@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight, Rocket } from "lucide-react";
+import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -17,13 +17,26 @@ import OrderComplete from "@/components/Client/OrderComplete";
 import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
 
+const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
+const PHONE_VALID_PATTERN = /^\d{10}$/;
+const sanitizeCustomerName = (value) =>
+  String(value || "")
+    .replace(/[^A-Za-z\s]/g, "")
+    .slice(0, 15);
+const sanitizeCustomerPhone = (value) =>
+  String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 10);
+
 export default function Header({
   logo,
   siteName = "Default Name",
   search,
   onSearch,
   isRestaurantOpen = true,
-  onSidebarToggle
+  onSidebarToggle,
+  isDarkMode = false,
+  onToggleDarkMode = () => {},
 }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -447,10 +460,10 @@ export default function Header({
       const latestOrder = allOrders[0];
       
       if (latestOrder.customerName) {
-        setCustomerName(latestOrder.customerName);
+        setCustomerName(sanitizeCustomerName(latestOrder.customerName));
       }
       if (latestOrder.customerPhone) {
-        setCustomerPhone(latestOrder.customerPhone);
+        setCustomerPhone(sanitizeCustomerPhone(latestOrder.customerPhone));
       }
       
       setOrderType("");
@@ -458,7 +471,7 @@ export default function Header({
       setAddress("");
       setUseCurrentLocation(false);
     }
-  }, [showModal]);
+  }, [showModal, allOrders]);
 
   // Reset to page 1 when fingerprint changes
   useEffect(() => {
@@ -619,10 +632,12 @@ export default function Header({
   };
 
   const isFormValid = () => {
-    if (!customerName || customerName.trim().length === 0) {
+    const trimmedName = customerName.trim();
+
+    if (!trimmedName || !NAME_VALID_PATTERN.test(trimmedName)) {
       return false;
     }
-    if (!customerPhone || customerPhone.length !== 10) {
+    if (!PHONE_VALID_PATTERN.test(customerPhone)) {
       return false;
     }
 
@@ -643,6 +658,9 @@ export default function Header({
       // console.log("=== START handleOrderSubmit ===");
       
       const finalOrderType = normalizedOrderType;
+      const trimmedName = customerName.trim();
+      const formattedName = trimmedName.replace(/\s+/g, " ");
+      const trimmedAddress = address.trim();
 
       if (!isRestaurantOpen) {
         showErrorMessage("Orders are currently closed. Please try again later.");
@@ -651,12 +669,14 @@ export default function Header({
 
       if (!isFormValid()) {
         let errorMessage = "Please fill all required fields correctly.";
-        if (!customerName) errorMessage = "Please enter your name.";
-        else if (!customerPhone || customerPhone.length !== 10)
+        if (!trimmedName) errorMessage = "Please enter your name.";
+        else if (!NAME_VALID_PATTERN.test(trimmedName))
+          errorMessage = "Name can contain only letters and spaces.";
+        else if (!PHONE_VALID_PATTERN.test(customerPhone))
           errorMessage = "Please enter a valid 10-digit phone number.";
         else if (finalOrderType === "Eat Here" && !tableId)
           errorMessage = "Please select a table.";
-        else if (finalOrderType === "Delivery" && !address)
+        else if (finalOrderType === "Delivery" && !trimmedAddress)
           errorMessage = "Please enter delivery address.";
 
         showErrorMessage(errorMessage);
@@ -718,7 +738,7 @@ export default function Header({
       // ✅ बैकएंड को डेटा भेजें (बैकएंड कैलकुलेशन करेगा)
       const orderData = {
         fingerPrint,
-        customerName: customerName.trim(),
+        customerName: formattedName,
         customerPhone,
         items: orderItems,
         orderType: finalOrderType,
@@ -729,8 +749,8 @@ export default function Header({
         orderData.tableId = tableId;
       }
       
-      if (finalOrderType === "Delivery" && address) {
-        orderData.address = address.trim();
+      if (finalOrderType === "Delivery" && trimmedAddress) {
+        orderData.address = trimmedAddress;
       }
 
       // console.log("FINAL DATA TO BACKEND:", JSON.stringify(orderData, null, 2));
@@ -796,7 +816,7 @@ export default function Header({
   return (
     <>
       <Toaster />
-      <div className="relative z-50">
+      <div className={`relative z-50 ${isDarkMode ? "text-slate-100" : ""}`}>
         {/* 🌟 Bottom Order Summary */}
         {cartCount > 0 && (
           <>
@@ -813,9 +833,19 @@ export default function Header({
                   <motion.div
                     animate={isCartBarBump ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="relative overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
+                    className={`relative overflow-hidden rounded-3xl border ${
+                      isDarkMode
+                        ? "border-orange-300 bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 shadow-[0_-12px_34px_rgba(249,115,22,0.42)]"
+                        : "border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
+                    }`}
                   >
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]" />
+                    <div
+                      className={`pointer-events-none absolute inset-0 ${
+                        isDarkMode
+                          ? "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.22),transparent_48%)]"
+                          : "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]"
+                      }`}
+                    />
                     <div className="relative flex items-center justify-between gap-3 p-2.5">
                       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
                         <div className="flex shrink-0 -space-x-2.5">
@@ -841,7 +871,11 @@ export default function Header({
                         <div className="min-w-0 text-white">
                           <p className="leading-none">
                             <span className="text-2xl font-bold">{cartCount}</span>
-                            <span className="ml-1 hidden text-sm font-semibold text-slate-200 min-[360px]:inline">
+                            <span
+                              className={`ml-1 hidden text-sm font-semibold min-[360px]:inline ${
+                                isDarkMode ? "text-orange-100" : "text-slate-200"
+                              }`}
+                            >
                               item{cartCount > 1 ? "s" : ""}
                             </span>
                           </p>
@@ -851,10 +885,18 @@ export default function Header({
                       {/* View Cart Button on Right */}
                       <button
                         onClick={() => {setIsAccordionOpen(true);onSidebarToggle?.(true);}}
-                        className="group inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-slate-700 px-2.5 py-2 text-[13px] font-semibold text-white shadow-[0_5px_14px_rgba(15,23,42,0.45)] transition-all duration-200 hover:bg-slate-600 active:scale-95"
+                        className={`group inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-white transition-all duration-200 active:scale-95 ${
+                          isDarkMode
+                            ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-[0_8px_18px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700"
+                            : "bg-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.45)] hover:bg-slate-600"
+                        }`}
                       >
                         <span>View Cart</span>
-                        <span className="grid h-6 w-6 place-items-center rounded-full bg-slate-500 transition-transform duration-200 group-hover:translate-x-0.5">
+                        <span
+                          className={`grid h-6 w-6 place-items-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 ${
+                            isDarkMode ? "bg-orange-400" : "bg-slate-500"
+                          }`}
+                        >
                           <ArrowRight className="h-4 w-4 text-white" />
                         </span>
                       </button>
@@ -868,28 +910,28 @@ export default function Header({
             <AnimatePresence>
               {isAccordionOpen && (
               <motion.div
-                className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
+                className={`fixed inset-0 z-[100] flex flex-col ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 12 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
                 {/* Header with Close Button */}
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9] px-4 py-3">
-                  <h2 className="text-xl font-semibold text-slate-900 sm:text-[1.65rem]">
+                <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 ${isDarkMode ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900" : "border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9]"}`}>
+                  <h2 className={`text-xl font-semibold sm:text-[1.65rem] ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
                     Your Order ({cartCount})
                   </h2>
                   <button
                     onClick={() => {setIsAccordionOpen(false); onSidebarToggle?.(false);}}
-                    className="p-1 text-slate-600 transition-colors hover:text-slate-900"
+                    className={`p-1 transition-colors ${isDarkMode ? "text-slate-300 hover:text-slate-100" : "text-slate-600 hover:text-slate-900"}`}
                     aria-label="Close"
                   >
                     <X className="w-6 h-6" />
                   </button>
                 </div>
 
-                <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-3">
-                  <div className="rounded-xl border border-orange-200/80 bg-white p-2 shadow-[0_6px_14px_rgba(15,23,42,0.05)]">
+                <div className={`shrink-0 border-b px-3 py-3 ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-slate-200 bg-white"}`}>
+                  <div className={`rounded-xl border p-2 shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200/80 bg-white"}`}>
                     <div className="flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2">
                       <span className="text-sm font-bold text-white">Total Amount</span>
                       <span className="text-lg font-bold text-primary">
@@ -1018,7 +1060,7 @@ export default function Header({
                   )}
                 </div>
 
-                <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4">
+                <div className={`sticky bottom-0 border-t px-4 py-4 ${isDarkMode ? "border-slate-700 bg-slate-900/95" : "border-slate-200 bg-white"}`}>
                   {!isRestaurantOpen ? (
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
@@ -1066,23 +1108,42 @@ export default function Header({
 
         {/* Header */}
         <header
-          className="relative flex items-center justify-between bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40 px-3 py-2.5 sm:p-3"
+          className={`relative flex items-center justify-between px-3 py-2.5 sm:p-3 ${
+            isDarkMode
+              ? "bg-gradient-to-r from-slate-900 via-slate-800/70 to-slate-900"
+              : "bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40"
+          }`}
           ref={searchRef}
         >
           <Link to="/" className="flex items-center space-x-2">
             {logo && <img src={logo} alt="Logo" className="h-12 w-auto" />}
-            <span className="font-mostrate text-xl text-primary drop-shadow-[0_1px_0_rgba(249,115,22,0.15)] sm:text-2xl">
+            <span className={`font-mostrate text-xl drop-shadow-[0_1px_0_rgba(249,115,22,0.15)] sm:text-2xl ${isDarkMode ? "text-orange-400" : "text-primary"}`}>
               {siteName}
             </span>
           </Link>
 
           <div className="flex items-center space-x-2.5">
+            <button
+              onClick={onToggleDarkMode}
+              className={`client-theme-toggle relative rounded-full p-1.5 transition-colors sm:p-2 ${
+                isDarkMode
+                  ? "border border-slate-600 bg-slate-800 text-amber-300 hover:bg-slate-700"
+                  : "bg-orange-50 text-primary hover:bg-orange-100"
+              }`}
+              aria-label="Toggle dark mode"
+              title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDarkMode ? <Sun className="h-5 w-5 sm:h-6 sm:w-6" /> : <Moon className="h-5 w-5 sm:h-6 sm:w-6" />}
+            </button>
+
             {/* Search Icon */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${
                 isSearchOpen
                   ? "bg-primary text-white shadow-md"
+                  : isDarkMode
+                  ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
                   : "bg-orange-50 text-primary hover:bg-orange-100"
               }`}
             >
@@ -1093,10 +1154,12 @@ export default function Header({
             <button
               onClick={() => {setIsCartOpen(true);onSidebarToggle?.(true);}}
               ref={ordersButtonRef}
-              className={`relative rounded-full bg-orange-50 p-1.5 text-primary transition-all sm:p-2 ${
+              className={`relative rounded-full p-1.5 transition-all sm:p-2 ${
                 isOrdersIconHighlighted
                   ? "ring-2 ring-orange-400/70 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"
-                  : "hover:bg-orange-100"
+                  : isDarkMode
+                  ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
+                  : "bg-orange-50 text-primary hover:bg-orange-100"
               }`}
             >
               <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -1112,7 +1175,7 @@ export default function Header({
           <AnimatePresence>
             {isSearchOpen && (
               <motion.div
-                className="absolute left-0 right-0 top-full z-50 bg-white shadow-lg"
+                className={`absolute left-0 right-0 top-full z-50 shadow-lg ${isDarkMode ? "bg-slate-900 border-t border-slate-700" : "bg-white"}`}
                 initial={{ opacity: 0, y: -6, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.99 }}
@@ -1131,7 +1194,11 @@ export default function Header({
                         placeholder="Search for food items..."
                         value={search || ""}
                         onChange={(e) => safeOnSearch(e.target.value)}
-                        className="w-full rounded-full border border-orange-100 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:bg-white focus:shadow-md"
+                        className={`w-full rounded-full border pl-10 pr-4 py-2.5 text-sm shadow-sm outline-none transition-all duration-200 ${
+                          isDarkMode
+                            ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:border-orange-400 focus:bg-slate-800 focus:shadow-md"
+                            : "border-orange-100 bg-white text-gray-800 placeholder-gray-400 focus:border-primary focus:bg-white focus:shadow-md"
+                        }`}
                         autoFocus
                       />
                     </div>
@@ -1172,20 +1239,20 @@ export default function Header({
         <AnimatePresence>
           {isCartOpen && (
           <motion.div
-            className="fixed top-0 right-0 z-50 h-full w-[87%] max-w-sm border-l border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6] shadow-2xl"
+            className={`fixed top-0 right-0 z-50 h-full w-[87%] max-w-sm border-l shadow-2xl ${isDarkMode ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"}`}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-orange-100 p-4">
-            <h2 className="text-lg font-semibold text-gray-800 sm:text-xl">Your Orders</h2>
+          <div className={`flex items-center justify-between border-b p-4 ${isDarkMode ? "border-slate-700" : "border-orange-100"}`}>
+            <h2 className={`text-lg font-semibold sm:text-xl ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>Your Orders</h2>
             <button
               onClick={() => {setIsCartOpen(false);onSidebarToggle?.(false)}}
-              className="p-1 text-gray-600 transition-colors hover:text-gray-900"
+              className={`p-1 transition-colors ${isDarkMode ? "text-slate-300 hover:text-slate-100" : "text-gray-600 hover:text-gray-900"}`}
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X className={`w-5 h-5 ${isDarkMode ? "text-slate-300" : "text-gray-600"}`} />
             </button>
           </div>
 
@@ -1194,42 +1261,58 @@ export default function Header({
             <div className="space-y-4 p-4">
               {ordersLoading && currentPage === 1 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">Loading orders...</p>
+                  <p className={isDarkMode ? "text-slate-300" : "text-gray-500"}>Loading orders...</p>
                 </div>
               ) : allOrders.length === 0 ? (
                 <div className="text-center py-8">
-                  <FiShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No orders yet</p>
+                  <FiShoppingCart className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? "text-slate-500" : "text-gray-300"}`} />
+                  <p className={isDarkMode ? "text-slate-300" : "text-gray-500"}>No orders yet</p>
                 </div>
               ) : (
                 <>
                   {allOrders.slice(0, 1).map((order) => (
                   <div
                     key={order._id || order.id || order.orderId}
-                    className="rounded-2xl border border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] ring-1 ring-orange-100 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
+                    className={`rounded-2xl border p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)] ${
+                      isDarkMode
+                        ? "border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ring-1 ring-slate-700"
+                        : "border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 ring-1 ring-orange-100"
+                    }`}
                   >
                     {/* Customer + order meta */}
-                    <div className="mb-3 rounded-xl border border-orange-200/80 bg-white/80 p-3 shadow-[0_6px_14px_rgba(15,23,42,0.05)]">
+                    <div className={`mb-3 rounded-xl border p-3 shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${
+                      isDarkMode
+                        ? "border-slate-600 bg-slate-900/90"
+                        : "border-orange-200/80 bg-white/80"
+                    }`}>
                       <div className="grid grid-cols-[72px_1fr] items-center gap-x-2.5 gap-y-2.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                        <span className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
                           Name
                         </span>
-                        <p className="truncate text-[15px] font-bold text-slate-900">
+                        <p className={`truncate text-[15px] font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
                           {order.customerName || "Guest"}
                         </p>
 
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                        <span className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
                           Phone
                         </span>
-                        <p className="break-all text-sm font-semibold text-slate-700">
+                        <p className={`break-all text-sm font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
                           {order.customerPhone || "Not provided"}
                         </p>
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ring-white/70 ${
-                            order.orderType === "Delivery"
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ${
+                            isDarkMode
+                              ? order.orderType === "Delivery"
+                                ? "border-orange-500/50 bg-orange-500/15 text-orange-200 ring-orange-500/30"
+                                : order.orderType === "Take Away"
+                                ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
+                                : order.orderType === "Eat Here"
+                                ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
+                                : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
+                              : order.orderType === "Delivery"
                               ? "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 ring-orange-200/70"
                               : order.orderType === "Take Away"
                               ? "border-blue-200 bg-gradient-to-r from-blue-50 to-sky-100 text-blue-700 ring-blue-200/70"
@@ -1254,8 +1337,16 @@ export default function Header({
 
                         {order.status && (
                           <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold capitalize shadow-sm ring-1 ring-white/70 ${
-                              String(order.status || "").toLowerCase() === "pending"
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold capitalize shadow-sm ring-1 ${
+                              isDarkMode
+                                ? String(order.status || "").toLowerCase() === "pending"
+                                  ? "border-amber-500/50 bg-amber-500/15 text-amber-200 ring-amber-500/30"
+                                  : String(order.status || "").toLowerCase() === "completed"
+                                  ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
+                                  : String(order.status || "").toLowerCase() === "cancelled"
+                                  ? "border-red-500/50 bg-red-500/15 text-red-200 ring-red-500/30"
+                                  : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
+                                : String(order.status || "").toLowerCase() === "pending"
                                 ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 ring-amber-200/80"
                                 : String(order.status || "").toLowerCase() === "completed"
                                 ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
@@ -1280,7 +1371,7 @@ export default function Header({
                         )}
 
                         {order.tableId && (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${isDarkMode ? "border-slate-600 bg-slate-700/80 text-slate-200" : "border-slate-200 bg-slate-100 text-slate-700"}`}>
                             Table {order.tableId}
                           </span>
                         )}
@@ -1289,11 +1380,11 @@ export default function Header({
 
                     {/* Delivery Address (if any) */}
                     {order.address && (
-                      <div className="mb-3 rounded-xl border border-orange-200/80 bg-orange-50/30 p-3">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      <div className={`mb-3 rounded-xl border p-3 ${isDarkMode ? "border-slate-600 bg-slate-900/70" : "border-orange-200/80 bg-orange-50/30"}`}>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                           Address:
                         </span>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                        <p className={`mt-1 text-xs leading-relaxed ${isDarkMode ? "text-slate-200" : "text-gray-600"}`}>
                           {order.address}
                         </p>
                       </div>
@@ -1302,7 +1393,7 @@ export default function Header({
                     {/* Order Items with Label */}
                     <div className="mb-3">
                       <div className="mb-2 flex items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                           Items:
                         </span>
                       </div>
@@ -1310,20 +1401,20 @@ export default function Header({
                         {order.items.map((item, index) => (
                           <div
                             key={index}
-                            className="flex items-start justify-between gap-3 rounded-lg border border-orange-200/80 bg-white px-2.5 py-2 text-sm"
+                            className={`flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-sm ${isDarkMode ? "border-slate-600 bg-slate-900/90" : "border-orange-200/80 bg-white"}`}
                           >
-                            <span className="text-gray-700">
+                            <span className={isDarkMode ? "text-slate-100" : "text-gray-700"}>
                               {item.name}
                               {item.variant && (
-                                <span className="ml-1 text-xs text-gray-500">
+                                <span className={`ml-1 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                   ({item.variant})
                                 </span>
                               )}
-                              <span className="ml-1 font-semibold text-gray-600">
+                              <span className={`ml-1 font-semibold ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                                 × {item.quantity}
                               </span>
                             </span>
-                            <span className="font-semibold text-gray-800">
+                            <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                               ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
                             </span>
                           </div>
@@ -1334,10 +1425,10 @@ export default function Header({
                     {/* GST (if enabled) */}
                     {order.gstAmount !== undefined && (
                       <div className="mt-1 flex items-center justify-between text-sm">
-                        <span className="text-sm text-gray-600">
+                        <span className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                           GST {order.gstRate ? `(${order.gstRate}%)` : ""}:
                         </span>
-                        <span className="text-sm font-semibold text-gray-800">
+                        <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                           ₹{Number(order.gstAmount).toFixed(2)}
                         </span>
                       </div>
@@ -1346,10 +1437,10 @@ export default function Header({
                     {/* Delivery Charges (if delivery order) */}
                     {order.orderType === "Delivery" && typeof order.deliveryCharges === "number" && (
                       <div className="mt-1 flex items-center justify-between text-sm">
-                        <span className="text-sm text-gray-600">
+                        <span className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                           Delivery Charges:
                         </span>
-                        <span className="text-sm font-semibold text-gray-800">
+                        <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                           ₹{Number(order.deliveryCharges).toFixed(2)}
                         </span>
                       </div>
@@ -1397,6 +1488,7 @@ export default function Header({
           logo={logo}
           resetForm={resetForm}
           calculatedDetails={calculatedDetails}
+          isDarkMode={isDarkMode}
         />
       </div>
     </>

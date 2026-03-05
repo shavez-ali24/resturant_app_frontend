@@ -9,7 +9,7 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
     const isAdmin = userRole === "admin";
     
     return (
-        <div className="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100">
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-lg shadow-gray-100/50 dark:border-slate-700 dark:bg-slate-900 dark:shadow-slate-950/40">
             <div className="h-auto min-h-14 bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg overflow-hidden border-2 border-white shadow-sm bg-white flex-shrink-0">
@@ -25,12 +25,19 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
                 </div>
                 <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
                     {showStaffButton && isAdmin && (
-                        <Button variant="outline" onClick={() => navigate('/admin/staff')} className="border-white/50 text-white hover:bg-white/20 bg-transparent text-sm">
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/admin/staff')}
+                          className="border-white/50 bg-transparent text-sm text-white hover:bg-white/20 dark:border-white/40 dark:text-white dark:hover:bg-white/20"
+                        >
                             <Users className="w-4 h-4 mr-1" /> Staff
                         </Button>
                     )}
                     {showUpdateButton && (
-                        <Button onClick={onUpdateClick} className="bg-white text-orange-600 hover:bg-gray-100 text-sm">
+                        <Button
+                          onClick={onUpdateClick}
+                          className="bg-white text-sm text-orange-600 hover:bg-gray-100 dark:border dark:border-slate-600 dark:bg-slate-900 dark:text-orange-300 dark:hover:bg-slate-800"
+                        >
                             <Settings className="w-4 h-4 mr-1" /> Edit
                         </Button>
                     )}
