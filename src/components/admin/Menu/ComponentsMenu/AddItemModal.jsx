@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   defaultAddFormState,
@@ -48,6 +48,7 @@ const AddItemModal = ({
   const [formErrors, setFormErrors] = useState({});
   const [backendError, setBackendError] = useState("");
   const [comboItems, setComboItems] = useState([]);
+  const modalContentRef = useRef(null);
 
   const {
     data: apiResponse = {},
@@ -97,6 +98,56 @@ const AddItemModal = ({
   const handlePricingTypeChange = (type) =>
     setPricingType(type, setFormErrors, setAddFormData, setComboItems);
 
+  const scrollToFirstError = (errors = {}) => {
+    if (typeof document === "undefined") return;
+
+    const fieldOrder = [
+      "name",
+      "category",
+      "type",
+      "price",
+      "variantRates",
+      "comboPrice",
+      "comboItems",
+      "discount",
+      "description",
+    ];
+
+    const firstErrorField = fieldOrder.find((field) => {
+      const value = errors[field];
+      if (value === undefined || value === null || value === "") return false;
+      if (typeof value === "object") return Object.keys(value).length > 0;
+      return true;
+    });
+
+    if (!firstErrorField) return;
+
+    const selectorMap = {
+      name: 'input[name="name"]',
+      category: '[data-field="category"]',
+      type: '[data-field="type"]',
+      price: 'input[name="price"]',
+      variantRates:
+        '[data-field="variantRates"], input[name="quarter.price"], input[name="half.price"], input[name="full.price"]',
+      comboPrice: 'input[name="comboPrice"]',
+      description: 'textarea[name="description"], input[name="description"]',
+    };
+
+    const target =
+      modalContentRef.current?.querySelector(
+        selectorMap[firstErrorField] || `[name="${firstErrorField}"]`
+      ) || null;
+
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof target.focus === "function") {
+        target.focus({ preventScroll: true });
+      }
+    });
+  };
+
   const onSubmitHandler = async (e) =>
     handleSubmit(
       e,
@@ -109,7 +160,8 @@ const AddItemModal = ({
       setBackendError,
       setIsAddingItem,
       onSubmit,
-      onClose
+      onClose,
+      scrollToFirstError
     );
 
   return (
@@ -128,7 +180,7 @@ const AddItemModal = ({
             className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
+            <div ref={modalContentRef} className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
               <MotionForm onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
                 <ModalHeader onClose={onClose} />
                 {backendError && <ErrorDisplay error={backendError} />}
@@ -172,11 +224,7 @@ const AddItemModal = ({
                   {addFormData.pricingType === "variant" && (
                     <VariantPriceSection
                       variantRates={addFormData.variantRates}
-                      errors={
-                        typeof formErrors.variantRates === "object"
-                          ? formErrors.variantRates
-                          : {}
-                      }
+                      errors={formErrors.variantRates}
                       handleChange={handleChange}
                       setFormData={setAddFormData}
                     />

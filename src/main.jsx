@@ -36,6 +36,17 @@ const SuperAdminPrivateRoute = ({ children }) => {
   return children;
 };
 
+const AdminOnlyRoute = ({ children }) => {
+  const userRole =
+    typeof window !== "undefined" ? localStorage.getItem("userRole") : "";
+
+  if (userRole === "staff") {
+    return <Navigate to="/admin/orders" replace />;
+  }
+
+  return children;
+};
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <NotificationProvider>
@@ -70,9 +81,30 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="cancelledorder" element={<CancelledOrders />} />
 
             <Route path="profile" element={<Adminprofile />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="revenue" element={<Revenue />} />
-            <Route path="staff" element={<StaffManagement />} />
+            <Route
+              path="sales"
+              element={
+                <AdminOnlyRoute>
+                  <Sales />
+                </AdminOnlyRoute>
+              }
+            />
+            <Route
+              path="revenue"
+              element={
+                <AdminOnlyRoute>
+                  <Revenue />
+                </AdminOnlyRoute>
+              }
+            />
+            <Route
+              path="staff"
+              element={
+                <AdminOnlyRoute>
+                  <StaffManagement />
+                </AdminOnlyRoute>
+              }
+            />
             <Route path="comingsoon" element={<ComingSoon />} />
           </Route>
 

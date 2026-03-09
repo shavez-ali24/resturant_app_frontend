@@ -82,22 +82,22 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-orange-400 to-orange-600 text-xs uppercase tracking-wide text-white dark:from-slate-800 dark:to-slate-900">
+          <thead className="bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Date</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Time</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Customer</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Phone</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Order Type</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Items</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Customer</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Type</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Items</th>
               {tableType === "pending" && (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Note</th>
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Note</th>
               )}
 
               {tableType === "pending" && (
                 <>
-                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Status</th>
-                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-slate-700 dark:text-slate-100">Actions</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Status</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Actions</th>
                 </>
               )}
             </tr>
@@ -132,7 +132,6 @@ const OrdersTable = ({
                     formattedTime: formatTime(order.createdAt),
                   }}
                   index={index}
-                  orderNum={order._id.slice(-6)}
                   setEditingOrder={setEditingOrder}
                   setShowConfirmDelete={setShowConfirmDelete}
                   setOrderForBillModal={setOrderForBillModal}
@@ -187,7 +186,7 @@ const OrdersTable = ({
                 >
                   <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                     <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
-                      {/* Order #{order._id.slice(-6)} */}
+                      Order
                     </h3>
                     <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                       {formatDate(order.createdAt)} | {formatTime(order.createdAt)}

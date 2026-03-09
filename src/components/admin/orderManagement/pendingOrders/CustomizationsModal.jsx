@@ -34,9 +34,6 @@ const CustomizationsModal = ({ order, onClose }) => {
         <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Order Customizations</h2>
-            {/* <p className="mt-1 text-sm text-gray-500">
-              Order #{order._id?.slice(-6) || "N/A"} • {order.customerName}
-            </p> */}
           </div>
           <button
             onClick={onClose}

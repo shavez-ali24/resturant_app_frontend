@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { modalOverlayVariant, modalContentVariant } from "../Lib/constants";
@@ -25,6 +25,109 @@ import {
 
 const defaultDiscount = { type: "flat", value: "", active: false };
 
+const extractTextCandidate = (value, priorityKeys = []) => {
+  if (value === undefined || value === null) return "";
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = extractTextCandidate(entry, priorityKeys);
+      if (resolved) return resolved;
+    }
+    return "";
+  }
+
+  if (typeof value === "object") {
+    for (const key of priorityKeys) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const resolved = extractTextCandidate(value[key], priorityKeys);
+        if (resolved) return resolved;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const resolved = extractTextCandidate(nestedValue, priorityKeys);
+      if (resolved) return resolved;
+    }
+  }
+
+  return "";
+};
+
+const normalizeFoodType = (value = "") => {
+  const rawValue = extractTextCandidate(value, [
+    "type",
+    "foodType",
+    "food_type",
+    "foodtype",
+    "name",
+    "label",
+    "value",
+  ]);
+
+  const normalized = String(rawValue || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+
+  if (normalized === "veg" || normalized === "vegetarian") return "veg";
+  if (normalized === "nonveg" || normalized === "non-veg") return "non-veg";
+  if (normalized === "mixed") return "mixed";
+  return "";
+};
+
+const pickCategoryTextFromObject = (rawCategory = {}) => {
+  if (!rawCategory || typeof rawCategory !== "object") return "";
+
+  const fallback = extractTextCandidate(rawCategory, [
+    "name",
+    "categoryName",
+    "categoryLabel",
+    "category_label",
+    "category_name",
+    "label",
+    "title",
+    "value",
+    "slug",
+    "category",
+    "categoryId",
+    "category_id",
+    "id",
+    "_id",
+  ]);
+
+  return fallback && !/^[a-f0-9]{24}$/i.test(fallback) ? fallback : "";
+};
+
+const resolveCategoryValue = (rawCategory, restaurantCategories = []) => {
+  const categories = Array.isArray(restaurantCategories)
+    ? restaurantCategories
+        .map((category) => String(category || "").trim())
+        .filter(Boolean)
+    : [];
+
+  const categoryFromObject =
+    rawCategory && typeof rawCategory === "object"
+      ? pickCategoryTextFromObject(rawCategory)
+      : rawCategory;
+
+  const candidate = String(categoryFromObject || "").trim();
+  if (!candidate) return "";
+
+  const matchedCategory = categories.find(
+    (category) => category.toLowerCase() === candidate.toLowerCase()
+  );
+  if (matchedCategory) return matchedCategory;
+
+  // Do not keep object ids in UI field when no matching category label exists.
+  if (/^[a-f0-9]{24}$/i.test(candidate)) return "";
+
+  return candidate;
+};
+
 const EditItemModal = ({
   isOpen,
   item,
@@ -44,14 +147,33 @@ const EditItemModal = ({
   const [formErrors, setFormErrors] = useState({});
   const [backendError, setBackendError] = useState("");
   const [comboItems, setComboItems] = useState([]);
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!item || !isOpen) return;
 
-    const categoryValue =
-      item.category && typeof item.category === "object"
-        ? item.category._id || item.category.name
-        : item.category || "";
+    const categoryValue = resolveCategoryValue(
+      {
+        categoryName:
+          item.categoryName ||
+          item.categoryLabel ||
+          item.category_label ||
+          item.category_name ||
+          "",
+        category:
+          item.category ||
+          item.menuCategory ||
+          item.productCategory ||
+          item.details?.category ||
+          item.meta?.category ||
+          "",
+        categoryId: item.categoryId || item.category_id || "",
+      },
+      restaurantCategories
+    );
+    const normalizedType = normalizeFoodType(
+      item.type || item.foodType || item.food_type || item.foodtype || ""
+    );
 
     const defaultVariantRates = {
       quarter: { price: "", discount: { ...defaultDiscount } },
@@ -93,7 +215,7 @@ const EditItemModal = ({
       ...item,
       name: item.name || "",
       description: item.description || "",
-      type: item.type || "veg",
+      type: normalizedType || "veg",
       category: categoryValue,
       available: item.available ?? true,
       pricingType: item.pricingType || "single",
@@ -118,7 +240,7 @@ const EditItemModal = ({
     setImageError("");
     setFormErrors({});
     setBackendError("");
-  }, [item, isOpen]);
+  }, [item, isOpen, restaurantCategories]);
 
   const handleChange = (e) =>
     handleEditFormChange(
@@ -137,6 +259,56 @@ const EditItemModal = ({
   const handlePricingTypeChange = (type) =>
     setEditPricingType(type, setFormErrors, setEditFormData, setComboItems);
 
+  const scrollToFirstError = (errors = {}) => {
+    if (typeof document === "undefined") return;
+
+    const fieldOrder = [
+      "name",
+      "category",
+      "type",
+      "price",
+      "variantRates",
+      "comboPrice",
+      "comboItems",
+      "discount",
+      "description",
+    ];
+
+    const firstErrorField = fieldOrder.find((field) => {
+      const value = errors[field];
+      if (value === undefined || value === null || value === "") return false;
+      if (typeof value === "object") return Object.keys(value).length > 0;
+      return true;
+    });
+
+    if (!firstErrorField) return;
+
+    const selectorMap = {
+      name: 'input[name="name"]',
+      category: '[data-field="category"]',
+      type: '[data-field="type"]',
+      price: 'input[name="price"]',
+      variantRates:
+        '[data-field="variantRates"], input[name="quarter.price"], input[name="half.price"], input[name="full.price"]',
+      comboPrice: 'input[name="comboPrice"]',
+      description: 'textarea[name="description"], input[name="description"]',
+    };
+
+    const target =
+      modalContentRef.current?.querySelector(
+        selectorMap[firstErrorField] || `[name="${firstErrorField}"]`
+      ) || null;
+
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof target.focus === "function") {
+        target.focus({ preventScroll: true });
+      }
+    });
+  };
+
   const onSubmitHandler = async (e) =>
     handleEditSubmit(
       e,
@@ -151,7 +323,8 @@ const EditItemModal = ({
       setBackendError,
       setIsUpdating,
       onSubmit,
-      onClose
+      onClose,
+      scrollToFirstError
     );
 
   if (!isOpen) return null;
@@ -171,7 +344,7 @@ const EditItemModal = ({
           className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
+          <div ref={modalContentRef} className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
             <form onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
               <ModalHeader itemName={item?.name || ""} onClose={onClose} />
               {backendError && <ErrorDisplay error={backendError} />}
@@ -216,7 +389,7 @@ const EditItemModal = ({
                 {editFormData.pricingType === "variant" && (
                   <VariantPriceSection
                     variantRates={editFormData.variantRates}
-                    errors={formErrors.variantRates || {}}
+                    errors={formErrors.variantRates}
                     handleChange={handleChange}
                     setFormData={setEditFormData}
                   />

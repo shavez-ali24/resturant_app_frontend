@@ -1,17 +1,23 @@
 import React from "react";
+import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import VariantPriceItem from "./VariantPriceItem";
-import ErrorDisplay from "./ErrorDisplay";
 
 const VariantPriceSection = ({ variantRates, errors, handleChange, setFormData }) => {
-  const hasGlobalError = typeof errors === 'string';
+  const globalError = typeof errors === "string" ? errors : "";
+  const variantFieldErrors =
+    errors && typeof errors === "object" ? errors : {};
   
   return (
-    <div>
+    <div data-field="variantRates">
       <label className="block text-sm font-semibold text-gray-700 mb-2">
         Variant Prices (₹) *
       </label>
-      {hasGlobalError && (
-        <ErrorDisplay error={errors} type="form" />
+
+      {globalError && (
+        <p className="mb-2 flex items-center gap-1 text-xs text-red-600">
+          <ExclamationCircleIcon className="h-4 w-4" />
+          {globalError}
+        </p>
       )}
       
       <div className="space-y-4">
@@ -20,7 +26,7 @@ const VariantPriceSection = ({ variantRates, errors, handleChange, setFormData }
             key={key}
             variantKey={key}
             variantData={variantRates?.[key]}
-            errors={errors}
+            errors={variantFieldErrors}
             handleChange={handleChange}
             setFormData={setFormData}
           />

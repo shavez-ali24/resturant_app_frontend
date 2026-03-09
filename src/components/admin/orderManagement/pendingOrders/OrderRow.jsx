@@ -58,9 +58,6 @@ const OrderRow = ({
         {order.formattedTime || "N/A"}
       </td>
 
-      {/* Order ID */}
-      {/* <td className="text-center border font-medium text-gray-800">{orderNum}</td> */}
-
       {/* Customer */}
       <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerName}</td>
 

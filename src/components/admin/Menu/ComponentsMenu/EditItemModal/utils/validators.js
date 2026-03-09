@@ -2,10 +2,14 @@ import { MAX_IMAGE_KB } from "../../../Lib/constants";
 
 export const validateEditForm = (formData, imageFile, comboItems) => {
   const errors = {};
+  const normalizedName = String(formData?.name || "").trim();
+  const productNamePattern = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
   
   // Name validation
-  if (!formData.name?.trim()) {
+  if (!normalizedName) {
     errors.name = "Product name is required";
+  } else if (!productNamePattern.test(normalizedName)) {
+    errors.name = "Product name can contain only letters and spaces";
   }
   
   // Category validation

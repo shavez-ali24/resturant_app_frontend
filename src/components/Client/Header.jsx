@@ -19,10 +19,14 @@ import fingerprintService from "@/service/fingerprintService";
 
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
+const capitalizeFirstLetter = (value) =>
+  String(value || "").replace(/^(\s*)([a-z])/, (_, spaces, char) => `${spaces}${char.toUpperCase()}`);
 const sanitizeCustomerName = (value) =>
-  String(value || "")
-    .replace(/[^A-Za-z\s]/g, "")
-    .slice(0, 15);
+  capitalizeFirstLetter(
+    String(value || "")
+      .replace(/[^A-Za-z\s]/g, "")
+      .slice(0, 15)
+  );
 const sanitizeCustomerPhone = (value) =>
   String(value || "")
     .replace(/\D/g, "")
@@ -659,7 +663,7 @@ export default function Header({
       
       const finalOrderType = normalizedOrderType;
       const trimmedName = customerName.trim();
-      const formattedName = trimmedName.replace(/\s+/g, " ");
+      const formattedName = capitalizeFirstLetter(trimmedName.replace(/\s+/g, " "));
       const trimmedAddress = address.trim();
 
       if (!isRestaurantOpen) {

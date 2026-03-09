@@ -334,7 +334,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
           <div className="mt-auto flex justify-end pt-0.5">
             <button
               onClick={onView}
-              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 dark:border dark:border-orange-300/40 dark:bg-orange-500 dark:text-white dark:hover:bg-orange-400 sm:h-7 sm:w-auto sm:px-3 sm:text-xs"
+              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl !bg-orange-500 px-4 text-sm font-semibold !text-white shadow-sm transition-colors hover:!bg-orange-600 dark:border dark:border-orange-300/40 dark:!bg-orange-500 dark:!text-white dark:hover:!bg-orange-400 sm:h-7 sm:w-auto sm:px-3 sm:text-xs"
             >
               View Details
             </button>

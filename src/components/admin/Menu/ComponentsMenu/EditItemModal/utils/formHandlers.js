@@ -1,5 +1,15 @@
 import { validateImage } from "./validators";
 
+const sanitizeProductNameInput = (value) =>
+  String(value || "")
+    .replace(/[^A-Za-z\s]/g, "")
+    .replace(/^(\s*)([a-z])/, (_, spaces, char) => `${spaces}${char.toUpperCase()}`);
+
+const normalizeProductName = (value) =>
+  sanitizeProductNameInput(value)
+    .replace(/\s+/g, " ")
+    .trim();
+
 export const handleEditFormChange = (e, formData, setFormData, errors, setErrors, backendError, setBackendError) => {
   const { name, value, type, checked } = e.target;
 
@@ -64,6 +74,12 @@ export const handleEditFormChange = (e, formData, setFormData, errors, setErrors
   if (name === "price" || name === "comboPrice") {
     setFormData(prev => ({ ...prev, [name]: value.replace(/[^0-9]/g, "") }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+    return;
+  }
+
+  // PRODUCT NAME
+  if (name === "name") {
+    setFormData(prev => ({ ...prev, name: sanitizeProductNameInput(value) }));
     return;
   }
 
@@ -148,7 +164,8 @@ export const handleEditSubmit = async (
   setBackendError,
   setIsUpdating,
   onSubmit,
-  onClose
+  onClose,
+  scrollToFirstError
 ) => {
   e.preventDefault();
 
@@ -164,6 +181,9 @@ export const handleEditSubmit = async (
 
   if (Object.keys(formErrors).length > 0) {
     setFormErrors(formErrors);
+    if (typeof scrollToFirstError === "function") {
+      scrollToFirstError(formErrors);
+    }
     return;
   }
 
@@ -173,6 +193,7 @@ export const handleEditSubmit = async (
   try {
     const formDataToSubmit = {
       ...editFormData,
+      name: normalizeProductName(editFormData.name),
       price: editFormData.pricingType === "single" ? (parseInt(editFormData.price) || 0) : null,
       comboPrice: editFormData.pricingType === "combo" ? (parseInt(editFormData.comboPrice) || 0) : null,
     };

@@ -37,6 +37,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
   const userRole = localStorage.getItem("userRole") || "";
   const isAdmin = userRole === "admin";
   const isStaff = userRole === "staff";
+  const homeRoute = isStaff ? "/admin/orders" : "/admin";
 
   const userData = {
     name: localStorage.getItem("userName") || "User",
@@ -133,7 +134,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
               className={`mt-0 sm:mt-20 ${sidebarSectionClass}`}
             >
               <Link
-                to="/admin"
+                to={homeRoute}
                 onClick={() =>
                   window.innerWidth < 1024 && toggleSidebar(false)
                 }

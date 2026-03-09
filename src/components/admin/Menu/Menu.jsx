@@ -31,10 +31,167 @@ import {
   useUpdateRestaurantProfileMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
+const extractTextCandidate = (value, priorityKeys = []) => {
+  if (value === undefined || value === null) return "";
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = extractTextCandidate(entry, priorityKeys);
+      if (resolved) return resolved;
+    }
+    return "";
+  }
+
+  if (typeof value === "object") {
+    for (const key of priorityKeys) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const resolved = extractTextCandidate(value[key], priorityKeys);
+        if (resolved) return resolved;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const resolved = extractTextCandidate(nestedValue, priorityKeys);
+      if (resolved) return resolved;
+    }
+  }
+
+  return "";
+};
+
+const normalizeFoodType = (value = "") => {
+  const rawValue = extractTextCandidate(value, [
+    "type",
+    "foodType",
+    "food_type",
+    "foodtype",
+    "foodTypeName",
+    "food_type_name",
+    "name",
+    "label",
+    "value",
+  ]);
+
+  const normalized = String(rawValue || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+
+  if (
+    normalized === "veg" ||
+    normalized === "vegetarian" ||
+    normalized === "vegitarian"
+  ) {
+    return "veg";
+  }
+
+  if (
+    normalized === "nonveg" ||
+    normalized === "non-veg" ||
+    normalized === "non-vegetarian" ||
+    normalized === "nonvegetarian" ||
+    normalized === "egg"
+  ) {
+    return "non-veg";
+  }
+
+  if (normalized === "mixed" || normalized === "mix" || normalized === "both") {
+    return "mixed";
+  }
+
+  return "";
+};
+
+const buildCategoryLookup = (categories = []) => {
+  const lookup = {};
+
+  categories.forEach((entry) => {
+    if (typeof entry === "string" || typeof entry === "number") {
+      const label = String(entry).trim();
+      if (label) lookup[label.toLowerCase()] = label;
+      return;
+    }
+
+    if (!entry || typeof entry !== "object") return;
+
+    const label = extractTextCandidate(entry, [
+      "name",
+      "category",
+      "categoryName",
+      "category_label",
+      "label",
+      "title",
+      "value",
+    ]);
+
+    if (!label) return;
+
+    const idCandidates = [
+      entry._id,
+      entry.id,
+      entry.categoryId,
+      entry.category_id,
+      entry.value,
+    ]
+      .map((val) => String(val || "").trim())
+      .filter(Boolean);
+
+    lookup[label.toLowerCase()] = label;
+    idCandidates.forEach((id) => {
+      lookup[id.toLowerCase()] = label;
+    });
+  });
+
+  return lookup;
+};
+
+const resolveCategoryValue = (item = {}, categoryLookup = {}, categoryOptions = []) => {
+  const rawCategory =
+    item?.category ??
+    item?.categoryName ??
+    item?.categoryLabel ??
+    item?.category_label ??
+    item?.categoryId ??
+    item?.category_id ??
+    item?.menuCategory ??
+    item?.productCategory ??
+    item?.details?.category ??
+    item?.meta?.category ??
+    "";
+
+  const candidate = extractTextCandidate(rawCategory, [
+    "name",
+    "category",
+    "categoryName",
+    "category_label",
+    "label",
+    "title",
+    "value",
+    "slug",
+  ]);
+
+  const trimmed = String(candidate || "").trim();
+  if (!trimmed) return "";
+
+  const fromLookup = categoryLookup[trimmed.toLowerCase()];
+  if (fromLookup) return fromLookup;
+
+  const matchedCategory = categoryOptions.find(
+    (category) => category.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (matchedCategory) return matchedCategory;
+
+  if (/^[a-f0-9]{24}$/i.test(trimmed)) return "";
+
+  return trimmed;
+};
+
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery();
-  // Simply pass items as they come from backend
-  const normalizedItems = useMemo(() => items || [], [items]);
   const { data: restaurantData } = useGetRestaurantProfileQuery();
   
   // Get user role
@@ -105,11 +262,26 @@ const Menu = () => {
   }, [getRawErrorText]);
 
   const sortUniqueCategories = useCallback((categories = []) => {
+    const getCategoryLabel = (categoryValue) => {
+      if (typeof categoryValue === "string") return categoryValue.trim();
+      if (typeof categoryValue === "number") return String(categoryValue).trim();
+      if (!categoryValue || typeof categoryValue !== "object") return "";
+
+      const candidate =
+        categoryValue.name ||
+        categoryValue.category ||
+        categoryValue.categoryName ||
+        categoryValue.label ||
+        categoryValue.title ||
+        "";
+
+      return String(candidate).trim();
+    };
+
     return Array.from(
       new Set(
         categories
-          .filter((category) => typeof category === "string")
-          .map((category) => category.trim())
+          .map(getCategoryLabel)
           .filter(Boolean)
       )
     ).sort((a, b) => a.localeCompare(b));
@@ -119,6 +291,82 @@ const Menu = () => {
     const incomingCategories = restaurantData?.restaurant?.categories || [];
     setRestaurantCategories(sortUniqueCategories(incomingCategories));
   }, [restaurantData, sortUniqueCategories]);
+
+  const categoryLookup = useMemo(
+    () => buildCategoryLookup(restaurantData?.restaurant?.categories || []),
+    [restaurantData]
+  );
+
+  const normalizedItems = useMemo(() => {
+    const list = Array.isArray(items) ? items : [];
+
+    return list.map((item) => {
+      const normalizedType = normalizeFoodType(
+        item?.type ??
+          item?.foodType ??
+          item?.food_type ??
+          item?.foodtype ??
+          item?.foodTypeName ??
+          item?.food_type_name ??
+          item?.details?.type ??
+          item?.details?.foodType ??
+          ""
+      );
+
+      return {
+        ...item,
+        type: normalizedType || "veg",
+        category: resolveCategoryValue(item, categoryLookup, restaurantCategories),
+      };
+    });
+  }, [items, categoryLookup, restaurantCategories]);
+
+  const rawItemsById = useMemo(() => {
+    const map = new Map();
+    const list = Array.isArray(items) ? items : [];
+
+    list.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+
+    return map;
+  }, [items]);
+
+  const buildEditItem = useCallback(
+    (displayItem) => {
+      const rawItem = rawItemsById.get(displayItem?._id) || {};
+
+      return {
+        ...rawItem,
+        ...displayItem,
+        category:
+          displayItem?.category ||
+          rawItem?.category ||
+          rawItem?.categoryName ||
+          rawItem?.categoryLabel ||
+          rawItem?.category_label ||
+          rawItem?.menuCategory ||
+          rawItem?.productCategory ||
+          rawItem?.details?.category ||
+          rawItem?.meta?.category ||
+          "",
+        type:
+          displayItem?.type ||
+          rawItem?.type ||
+          rawItem?.foodType ||
+          rawItem?.food_type ||
+          rawItem?.foodtype ||
+          rawItem?.foodTypeName ||
+          rawItem?.food_type_name ||
+          rawItem?.details?.type ||
+          rawItem?.details?.foodType ||
+          "veg",
+      };
+    },
+    [rawItemsById]
+  );
 
   const normalizeCategoryLabel = useCallback((value = "") => {
     const cleanedValue = value
@@ -509,7 +757,7 @@ const prepareFormData = (formData, file) => {
                 <MenuItemCard
                   key={item._id}
                   item={item}
-                  onEdit={() => setEditingItem(item)}
+                  onEdit={() => setEditingItem(buildEditItem(item))}
                   onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
                   onView={() => setViewingItem(item)}
                   isAdmin={isAdmin}

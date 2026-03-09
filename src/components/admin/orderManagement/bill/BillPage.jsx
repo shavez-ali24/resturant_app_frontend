@@ -503,19 +503,16 @@ const BillPage = ({
             {/* Customer & Order Info */}
             <div className="mb-4 text-sm grid grid-cols-2 gap-x-4">
               <p>
-                <strong>Order ID:</strong> {(order?._id || order?.orderId || "").slice(-6)}
+                <strong>Customer:</strong> {order?.customerName || "Guest"}
+              </p>
+              <p>
+                <strong>Phone:</strong> {order?.customerPhone || "N/A"}
               </p>
               {order?.tableId && (
                 <p>
                   <strong>Table:</strong> {order.tableId}
                 </p>
               )}
-              <p>
-                <strong>Customer:</strong> {order?.customerName || "Guest"}
-              </p>
-              <p>
-                <strong>Phone:</strong> {order?.customerPhone || "N/A"}
-              </p>
               <p>
                 <strong>Time:</strong>{" "}
                 {new Date(order?.createdAt).toLocaleTimeString([], {

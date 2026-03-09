@@ -25,18 +25,21 @@ const LoginPage = () => {
 
     try {
       const res = await login({ email, password }).unwrap();
+      const resolvedRole = String(res?.user?.role || res?.role || "")
+        .trim()
+        .toLowerCase();
+      const userRole = resolvedRole === "staff" ? "staff" : "admin";
 
       // Store in localStorage
       localStorage.setItem("token", res.token);
       localStorage.setItem("userName", res.user?.name || res.name || "Admin");
       localStorage.setItem("userEmail", res.user?.email || res.email || email);
-      localStorage.setItem("userRole", res.user?.role || "admin");
+      localStorage.setItem("userRole", userRole);
       localStorage.setItem("restaurantName", res.user?.restaurantName || res.restaurantName || "");
       localStorage.setItem("qrCode", res.user?.qrCode || res.qrCode || "");
       localStorage.setItem("userPassword", password);
 
       // Redirect based on role - staff goes to orders, admin goes to dashboard
-      const userRole = res.user?.role || "admin";
       if (userRole === "staff") {
         navigate("/admin/orders", { replace: true });
       } else {

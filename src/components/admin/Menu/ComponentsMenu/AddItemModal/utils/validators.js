@@ -1,9 +1,13 @@
 export const validateForm = (addFormData, comboItems) => {
   const errors = {};
+  const normalizedName = String(addFormData?.name || "").trim();
+  const productNamePattern = /^[A-Za-z]+(?:\s+[A-Za-z]+)*$/;
 
   // Basic validation
-  if (!addFormData.name?.trim()) {
+  if (!normalizedName) {
     errors.name = "Product name is required";
+  } else if (!productNamePattern.test(normalizedName)) {
+    errors.name = "Product name can contain only letters and spaces";
   }
 
   if (!addFormData.category) {

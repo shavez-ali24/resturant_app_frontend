@@ -1,5 +1,15 @@
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_KB } from "../../../Lib/constants";
 
+const sanitizeProductNameInput = (value) =>
+  String(value || "")
+    .replace(/[^A-Za-z\s]/g, "")
+    .replace(/^(\s*)([a-z])/, (_, spaces, char) => `${spaces}${char.toUpperCase()}`);
+
+const normalizeProductName = (value) =>
+  sanitizeProductNameInput(value)
+    .replace(/\s+/g, " ")
+    .trim();
+
 export const handleAddFormChange = (e, addFormData, setAddFormData, formErrors, setFormErrors, backendError, setBackendError) => {
   const { name, value, type, checked } = e.target;
 
@@ -84,6 +94,15 @@ export const handleAddFormChange = (e, addFormData, setAddFormData, formErrors, 
     setAddFormData((prev) => ({
       ...prev,
       [name]: cleaned,
+    }));
+    return;
+  }
+
+  // Handle product name field
+  if (name === "name") {
+    setAddFormData((prev) => ({
+      ...prev,
+      name: sanitizeProductNameInput(value),
     }));
     return;
   }
@@ -186,7 +205,8 @@ export const handleSubmit = async (
   setBackendError, 
   setIsAddingItem, 
   onSubmit, 
-  onClose
+  onClose,
+  scrollToFirstError
 ) => {
   e.preventDefault();
 
@@ -197,6 +217,9 @@ export const handleSubmit = async (
   if (Object.keys(errors).length > 0) {
     // console.log("Form validation errors:", errors);
     setFormErrors(errors);
+    if (typeof scrollToFirstError === "function") {
+      scrollToFirstError(errors);
+    }
     return;
   }
 
@@ -207,7 +230,7 @@ export const handleSubmit = async (
   setIsAddingItem(true);
   try {
     const formDataToSend = {
-      name: addFormData.name?.trim(),
+      name: normalizeProductName(addFormData.name),
       description: addFormData.description?.trim() || "",
       pricingType: addFormData.pricingType,
       type: addFormData.type,

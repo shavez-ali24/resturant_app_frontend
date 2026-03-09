@@ -24,6 +24,96 @@ import {
 
 const ADD_CATEGORY_VALUE = "__add_category__";
 
+const extractTextCandidate = (value, priorityKeys = []) => {
+  if (value === undefined || value === null) return "";
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = extractTextCandidate(entry, priorityKeys);
+      if (resolved) return resolved;
+    }
+    return "";
+  }
+
+  if (typeof value === "object") {
+    for (const key of priorityKeys) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const resolved = extractTextCandidate(value[key], priorityKeys);
+        if (resolved) return resolved;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const resolved = extractTextCandidate(nestedValue, priorityKeys);
+      if (resolved) return resolved;
+    }
+  }
+
+  return "";
+};
+
+const resolveCategoryText = (value) =>
+  extractTextCandidate(value, [
+    "name",
+    "categoryName",
+    "categoryLabel",
+    "category_label",
+    "category_name",
+    "label",
+    "title",
+    "value",
+    "category",
+    "slug",
+    "id",
+    "_id",
+  ]);
+
+const normalizeFoodTypeValue = (value = "") => {
+  const rawValue = extractTextCandidate(value, [
+    "type",
+    "foodType",
+    "food_type",
+    "foodtype",
+    "foodTypeName",
+    "food_type_name",
+    "name",
+    "label",
+    "value",
+  ]);
+
+  const normalized = String(rawValue || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+
+  if (
+    normalized === "veg" ||
+    normalized === "vegetarian" ||
+    normalized === "vegitarian"
+  ) {
+    return "veg";
+  }
+
+  if (
+    normalized === "nonveg" ||
+    normalized === "non-veg" ||
+    normalized === "non-vegetarian" ||
+    normalized === "nonvegetarian"
+  ) {
+    return "non-veg";
+  }
+
+  if (normalized === "mixed" || normalized === "mix" || normalized === "both") {
+    return "mixed";
+  }
+
+  return "";
+};
+
 const normalizeCategory = (value = "") => {
   const normalized = value
     .trim()
@@ -62,10 +152,59 @@ const CategoryTypeSelectors = ({
     setOptimisticCategories(Array.isArray(restaurantCategories) ? restaurantCategories : []);
   }, [restaurantCategories]);
 
+  const selectedCategoryValue = useMemo(
+    () => resolveCategoryText(category),
+    [category]
+  );
+
+  const selectedTypeValue = useMemo(
+    () => normalizeFoodTypeValue(type),
+    [type]
+  );
+
+  useEffect(() => {
+    if (typeof setFormData !== "function") return;
+
+    const normalizedCategory = String(selectedCategoryValue || "").trim();
+    const normalizedType = String(selectedTypeValue || "").trim();
+
+    setFormData((prev) => {
+      const currentCategory = resolveCategoryText(prev?.category);
+      const currentType = normalizeFoodTypeValue(prev?.type);
+
+      const nextCategory = normalizedCategory || currentCategory || "";
+      const nextType = normalizedType || currentType || "";
+
+      if (
+        String(currentCategory || "").trim() === nextCategory &&
+        String(currentType || "").trim() === nextType
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        category: nextCategory,
+        type: nextType,
+      };
+    });
+  }, [selectedCategoryValue, selectedTypeValue, setFormData]);
+
   const categoryOptions = useMemo(() => {
-    const unique = Array.from(new Set(optimisticCategories.filter(Boolean)));
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [optimisticCategories]);
+    const unique = new Set(
+      optimisticCategories
+        .filter(Boolean)
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    );
+
+    const selectedCategory = String(selectedCategoryValue || "").trim();
+    if (selectedCategory) {
+      unique.add(selectedCategory);
+    }
+
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [optimisticCategories, selectedCategoryValue]);
 
   const clearFieldError = (field) => {
     if (errors[field] && setFormErrors) {
@@ -302,14 +441,14 @@ const CategoryTypeSelectors = ({
   return (
     <>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <div>
+        <div data-field="category">
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
           Category *
         </label>
         <Select
           open={isCategoryDropdownOpen}
           onOpenChange={setIsCategoryDropdownOpen}
-          value={category || ""}
+          value={selectedCategoryValue || ""}
           onValueChange={(val) => {
             if (val === ADD_CATEGORY_VALUE) {
               setShowAddCategoryInput(true);
@@ -477,7 +616,7 @@ const CategoryTypeSelectors = ({
                   type="button"
                   onClick={handleAddCategorySubmit}
                   disabled={isSavingCategory || !!activeCategoryAction}
-                  className="h-10 rounded-lg bg-orange-500 px-3 text-sm font-semibold text-white hover:bg-orange-600"
+                  className="h-10 rounded-lg !bg-orange-500 px-3 text-sm font-semibold !text-white hover:!bg-orange-600 dark:!bg-orange-500 dark:hover:!bg-orange-400"
                 >
                   {isSavingCategory ? (
                     <span className="flex items-center gap-1.5">
@@ -520,12 +659,12 @@ const CategoryTypeSelectors = ({
         )}
         </div>
 
-        <div>
+        <div data-field="type">
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">
             Food Type *
           </label>
           <Select
-            value={type || ""}
+            value={selectedTypeValue || ""}
             onValueChange={(val) => {
               setFormData((prev) => ({ ...prev, type: val }));
               clearFieldError("type");

@@ -16,6 +16,8 @@ import { AnimatePresence, motion } from "framer-motion";
 const NAME_INPUT_PATTERN = /^[A-Za-z\s]*$/;
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
+const capitalizeFirstLetter = (value) =>
+  String(value || "").replace(/^(\s*)([a-z])/, (_, spaces, char) => `${spaces}${char.toUpperCase()}`);
 
 export default function OrderFormModal({
   showModal,
@@ -289,7 +291,7 @@ export default function OrderFormModal({
                   onChange={(e) => {
                     const { value } = e.target;
                     if (value.length <= 15 && NAME_INPUT_PATTERN.test(value)) {
-                      setCustomerName(value);
+                      setCustomerName(capitalizeFirstLetter(value));
                     }
                   }}
                   maxLength={15}
@@ -327,17 +329,34 @@ export default function OrderFormModal({
                 {/* Table Selection - Only for Eat Here */}
                 {orderType === "Eat Here" && (
                   <div className="animate-fade-in">
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                    <label
+                      className={`mb-2 block text-sm font-medium ${
+                        isDarkMode ? "text-slate-200" : "text-gray-700"
+                      }`}
+                    >
                       Select Table *
                     </label>
                     <Select value={tableId} onValueChange={setTableId}>
                       <SelectTrigger
-                        className="h-11 w-full rounded-xl border border-primary bg-white p-3.5 font-medium text-gray-800 shadow-sm transition-all duration-200 hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary"
+                        className={`h-11 w-full rounded-xl border p-3.5 font-medium shadow-sm transition-all duration-200 focus:ring-2 ${
+                          isDarkMode
+                            ? "border-orange-500 bg-slate-900 text-slate-100 hover:border-orange-400 focus:border-orange-400 focus:ring-orange-400/30"
+                            : "border-primary bg-white text-gray-800 hover:border-primary focus:border-primary focus:ring-primary"
+                        }`}
                       >
-                        <SelectValue placeholder="Choose your table" className="text-gray-400" />
+                        <SelectValue
+                          placeholder="Choose your table"
+                          className={isDarkMode ? "text-slate-400" : "text-gray-400"}
+                        />
                       </SelectTrigger>
 
-                      <SelectContent className="max-h-60 rounded-xl border border-primary bg-white shadow-xl">
+                      <SelectContent
+                        className={`max-h-60 rounded-xl border shadow-xl ${
+                          isDarkMode
+                            ? "border-orange-500 bg-slate-900 text-slate-100"
+                            : "border-primary bg-white"
+                        }`}
+                      >
                         <SelectGroup>
                           {Array.from(
                             { length: restaurantData?.restaurant?.tableNumbers || 0 }, 
@@ -345,7 +364,11 @@ export default function OrderFormModal({
                               <SelectItem
                                 key={i + 1}
                                 value={`T${i + 1}`}
-                                className="cursor-pointer border-b border-orange-100 px-4 py-3 font-medium text-gray-700 transition-colors duration-150 last:border-b-0 hover:bg-primary hover:text-white focus:bg-primary focus:text-white"
+                                className={`cursor-pointer border-b px-4 py-3 font-medium transition-colors duration-150 last:border-b-0 ${
+                                  isDarkMode
+                                    ? "border-slate-700 text-slate-200 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white"
+                                    : "border-orange-100 text-gray-700 hover:bg-primary hover:text-white focus:bg-primary focus:text-white"
+                                }`}
                               >
                                 <span className="flex items-center gap-2">
                                   Table {i + 1}

@@ -13,7 +13,6 @@ export default function NotificationBell() {
   const MotionSpan = motion.span;
   const dispatch = useDispatch();
   const bellRef = useRef(null);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [latestOrders, setLatestOrders] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const knownOrderIds = useRef(new Set());
@@ -45,6 +44,13 @@ export default function NotificationBell() {
     return [];
   }, [ordersResponse]);
 
+  const pendingOrdersCount = useMemo(() => {
+    if (typeof ordersResponse?.totalOrders === "number") {
+      return ordersResponse.totalOrders;
+    }
+    return orders.length;
+  }, [ordersResponse, orders]);
+
   useEffect(() => {
     if (!orders.length) return;
 
@@ -73,24 +79,14 @@ export default function NotificationBell() {
         console.log("Sound error:", err);
       }
 
-      // Update notification count
-      setNotificationCount((prev) => prev + freshOrders.length);
-
-      // Add new orders to the top
-      setLatestOrders((prev) => {
-        const newOrders = [...freshOrders, ...prev];
-        // Remove duplicates by id
-        const uniqueOrders = Array.from(
-          new Map(newOrders.map(order => [order._id, order])).values()
-        );
-        return uniqueOrders.slice(0, 10); // Keep only latest 10
-      });
-
       // Mark these orders as known
       freshOrders.forEach((order) => {
         if (order._id) knownOrderIds.current.add(order._id);
       });
     }
+
+    // Keep dropdown aligned with latest pending orders.
+    setLatestOrders(recentOrders.slice(0, 10));
 
     const currentIds = new Set(recentOrders.map(o => o._id).filter(Boolean));
     knownOrderIds.current = new Set(
@@ -124,12 +120,7 @@ export default function NotificationBell() {
   }, []);
 
   const handleBellClick = () => {
-    const wasOpen = isDropdownOpen;
-    setIsDropdownOpen(!wasOpen);
-    
-    if (!wasOpen) {
-      setNotificationCount(0);
-    }
+    setIsDropdownOpen((prev) => !prev);
   };
 
   const handleViewBill = (order) => {
@@ -140,7 +131,6 @@ export default function NotificationBell() {
 
   const handleClearAll = () => {
     setLatestOrders([]);
-    setNotificationCount(0);
     knownOrderIds.current.clear();
     setIsDropdownOpen(false);
   };
@@ -148,6 +138,9 @@ export default function NotificationBell() {
   const handleManualRefresh = () => {
     refetch();
   };
+
+  const displayNotificationCount =
+    pendingOrdersCount > 99 ? "99+" : String(pendingOrdersCount);
 
   return (
     <div className="relative" ref={bellRef}>
@@ -163,18 +156,18 @@ export default function NotificationBell() {
         <Bell size={26} className="relative z-0" />
         
         {/* Notification counter badge */}
-        {notificationCount > 0 && (
+        {pendingOrdersCount > 0 && (
           <MotionSpan
-            key={notificationCount}
+            key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px] font-black leading-none shadow-md ring-2 ${
+            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[10px] font-black leading-none shadow-md ring-2 ${
               isDarkMode
-                ? "bg-orange-500 text-white ring-slate-900"
+                ? "bg-slate-100 text-orange-600 ring-slate-950"
                 : "bg-red-500 text-white ring-white"
             }`}
           >
-            {notificationCount > 9 ? "9+" : notificationCount}
+            {displayNotificationCount}
           </MotionSpan>
         )}
       </button>
@@ -219,7 +212,7 @@ export default function NotificationBell() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {notificationCount > 0 && (
+                  {pendingOrdersCount > 0 && (
                     <span
                       className={`rounded-full border px-3 py-1 text-sm font-bold ${
                         isDarkMode
@@ -227,7 +220,7 @@ export default function NotificationBell() {
                           : "border-orange-200 bg-white text-orange-700"
                       }`}
                     >
-                      {notificationCount} new
+                      {displayNotificationCount} pending
                     </span>
                   )}
                   {/* <button
@@ -274,13 +267,6 @@ export default function NotificationBell() {
                               }`}
                             >
                               Pending
-                            </span>
-                            <span
-                              className={`text-xs ${
-                                isDarkMode ? "text-slate-400" : "text-gray-500"
-                              }`}
-                            >
-                              #{order._id ? order._id.slice(-6).toUpperCase() : 'N/A'}
                             </span>
                           </div>
                           
