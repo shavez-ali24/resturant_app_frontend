@@ -1,14 +1,34 @@
 
+const normalizeStatusValue = (status) =>
+  String(status || "").trim().toLowerCase();
+
 export const getStatusBadge = (status) => {
-  switch (status) {
+  switch (normalizeStatusValue(status)) {
     case "pending":
       return "bg-yellow-100 text-yellow-800 ring-yellow-300 hover:bg-yellow-200 data-[state=open]:bg-yellow-200 dark:bg-yellow-200 dark:text-yellow-900 dark:ring-yellow-400";
+    case "preparing":
+      return "bg-teal-100 text-teal-800 ring-teal-300 hover:bg-teal-200 data-[state=open]:bg-teal-200 dark:bg-teal-200 dark:text-teal-900 dark:ring-teal-400";
     case "completed":
       return "bg-emerald-100 text-emerald-800 ring-emerald-300 hover:bg-emerald-200 data-[state=open]:bg-emerald-200 dark:bg-emerald-200 dark:text-emerald-900 dark:ring-emerald-400";
     case "cancelled":
       return "bg-rose-100 text-rose-800 ring-rose-300 hover:bg-rose-200 data-[state=open]:bg-rose-200 dark:bg-rose-200 dark:text-rose-900 dark:ring-rose-400";
     default:
       return "bg-slate-100 text-slate-700 ring-slate-300 hover:bg-slate-200 data-[state=open]:bg-slate-200 dark:bg-slate-200 dark:text-slate-900 dark:ring-slate-400";
+  }
+};
+
+export const getStatusRowClass = (status) => {
+  switch (normalizeStatusValue(status)) {
+    case "pending":
+      return "bg-transparent dark:bg-transparent";
+    case "preparing":
+      return "bg-transparent dark:bg-transparent";
+    case "completed":
+      return "bg-transparent dark:bg-transparent";
+    case "cancelled":
+      return "bg-transparent dark:bg-transparent";
+    default:
+      return "bg-white/95 dark:bg-slate-900/95";
   }
 };
 

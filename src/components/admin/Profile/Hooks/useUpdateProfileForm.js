@@ -1,6 +1,37 @@
 import { useState, useCallback } from "react";
 import { useUpdateRestaurantProfileMutation } from "@/redux/adminRedux/adminAPI";
 
+const normalizeCategoryInput = (value = "") =>
+    String(value || "")
+        .replace(/-+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+const formatCategoryLabel = (value = "") => {
+    const normalized = normalizeCategoryInput(value);
+    if (!normalized) return "";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+const getCategoryKey = (value = "") =>
+    normalizeCategoryInput(value).toLowerCase();
+
+const uniqueCategories = (values = []) => {
+    const safeValues = Array.isArray(values) ? values : [];
+    const seen = new Set();
+    const result = [];
+
+    safeValues.forEach((value) => {
+        const label = formatCategoryLabel(value);
+        const key = getCategoryKey(label);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        result.push(label);
+    });
+
+    return result;
+};
+
 export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClose) => { // Added onClose parameter
     // Redux Mutation
     const [updateRestaurantProfile, { isLoading: isSubmitting }] = useUpdateRestaurantProfileMutation();
@@ -21,7 +52,9 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         publicId: initialData.logo?.public_id || "",
     });
 
-    const [categories, setCategories] = useState(initialData.categories || []);
+    const [categories, setCategories] = useState(() =>
+        uniqueCategories(initialData?.categories || [])
+    );
     const [currentCategoryInput, setCurrentCategoryInput] = useState("");
     const [file, setFile] = useState(null);
     const [fileError, setFileError] = useState("");
@@ -35,7 +68,8 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const [categorySuggestions, setCategorySuggestions] = useState(() => {
         try {
             const saved = localStorage.getItem("restaurantCategories");
-            return saved ? JSON.parse(saved) : [];
+            const parsed = saved ? JSON.parse(saved) : [];
+            return uniqueCategories(parsed);
         } catch (e) {
             console.error("Error parsing categories from localStorage:", e);
             return [];
@@ -141,24 +175,31 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const handleCategoryKeyDown = (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            const value = currentCategoryInput.trim().replace(/-+$/, "");
+            const formattedValue = formatCategoryLabel(currentCategoryInput);
 
-            if (!value) return;
+            if (!formattedValue) return;
 
-            const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+            setCategories((prev) => {
+                const exists = prev.some(
+                    (category) =>
+                        getCategoryKey(category) === getCategoryKey(formattedValue)
+                );
+                if (exists) return prev;
+                return [...prev, formattedValue];
+            });
 
-            if (!categories.includes(capitalizedValue)) {
-                setCategories((prev) => [...prev, capitalizedValue]);
+            setCategorySuggestions((prev) => {
+                const updatedSuggestions = uniqueCategories([
+                    ...prev,
+                    formattedValue,
+                ]);
+                localStorage.setItem(
+                    "restaurantCategories",
+                    JSON.stringify(updatedSuggestions)
+                );
+                return updatedSuggestions;
+            });
 
-                if (!categorySuggestions.includes(capitalizedValue)) {
-                    const updatedSuggestions = [...categorySuggestions, capitalizedValue];
-                    setCategorySuggestions(updatedSuggestions);
-                    localStorage.setItem(
-                        "restaurantCategories",
-                        JSON.stringify(updatedSuggestions)
-                    );
-                }
-            }
             setCurrentCategoryInput("");
         }
     };

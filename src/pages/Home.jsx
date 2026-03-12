@@ -37,6 +37,12 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const normalizeCategoryValue = (value) =>
+    String(value || "")
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
 
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
@@ -88,6 +94,8 @@ export default function Home() {
     );
   }
 
+  const normalizedActiveCategory = normalizeCategoryValue(activeCategory);
+
   const filteredMenu = menu.filter((item) => {
     const itemName = item?.name?.toLowerCase() || "";
     const itemDesc = item?.description?.toLowerCase() || "";
@@ -102,7 +110,12 @@ export default function Home() {
     if (filters.nonVeg && !filters.veg && !filters.mixed && item.type !== "non-veg") return false;
     if (filters.mixed && item.type !== "mixed") return false;
     if (filters.combo && item.pricingType !== "combo") return false;
-    if (activeCategory && item.category !== activeCategory) return false;
+    if (
+      normalizedActiveCategory &&
+      normalizeCategoryValue(item.category) !== normalizedActiveCategory
+    ) {
+      return false;
+    }
 
     return true;
   });
@@ -113,7 +126,11 @@ export default function Home() {
   };
 
   const handleCategoryClick = (category) => {
-    setActiveCategory((prev) => (prev === category ? null : category));
+    const normalizedNext = normalizeCategoryValue(category);
+    setActiveCategory((prev) => {
+      const normalizedPrev = normalizeCategoryValue(prev);
+      return normalizedPrev === normalizedNext ? null : category;
+    });
   };
 
   return (

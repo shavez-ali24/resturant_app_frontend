@@ -185,6 +185,21 @@ const resolveCategoryValue = (item = {}, categoryLookup = {}, categoryOptions = 
   );
   if (matchedCategory) return matchedCategory;
 
+  const normalizedCandidate = trimmed
+    .replace(/-+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalizedCandidate) {
+    const normalizedKey = normalizedCandidate.toLowerCase();
+    const fromNormalized = categoryLookup[normalizedKey];
+    if (fromNormalized) return fromNormalized;
+
+    const matchedNormalized = categoryOptions.find(
+      (category) => category.toLowerCase() === normalizedKey
+    );
+    if (matchedNormalized) return matchedNormalized;
+  }
+
   if (/^[a-f0-9]{24}$/i.test(trimmed)) return "";
 
   return trimmed;
@@ -369,15 +384,19 @@ const Menu = () => {
   );
 
   const normalizeCategoryLabel = useCallback((value = "") => {
-    const cleanedValue = value
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
+    const cleanedValue = String(value || "")
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
     if (!cleanedValue) return "";
     return cleanedValue.charAt(0).toUpperCase() + cleanedValue.slice(1);
   }, []);
+
+  const normalizeCategoryKey = useCallback(
+    (value = "") => normalizeCategoryLabel(value).toLowerCase(),
+    [normalizeCategoryLabel]
+  );
 
   const persistRestaurantCategories = useCallback(
     async (updatedCategories, successMessage) => {
@@ -415,9 +434,7 @@ const Menu = () => {
       }
 
       const duplicate = restaurantCategories.find(
-        (cat) =>
-          typeof cat === "string" &&
-          cat.toLowerCase() === categoryName.toLowerCase()
+        (cat) => normalizeCategoryKey(cat) === normalizeCategoryKey(categoryName)
       );
 
       if (duplicate) {
@@ -433,6 +450,7 @@ const Menu = () => {
       return { ok: true, category: categoryName };
     },
     [
+      normalizeCategoryKey,
       normalizeCategoryLabel,
       persistRestaurantCategories,
       restaurantCategories,
@@ -443,7 +461,8 @@ const Menu = () => {
     async (currentCategoryName, rawUpdatedCategoryName) => {
       const currentCategory = restaurantCategories.find(
         (category) =>
-          category.toLowerCase() === String(currentCategoryName || "").toLowerCase()
+          normalizeCategoryKey(category) ===
+          normalizeCategoryKey(currentCategoryName)
       );
 
       if (!currentCategory) {
@@ -455,12 +474,17 @@ const Menu = () => {
         return { ok: false, message: "Please enter a valid category name." };
       }
 
-      if (currentCategory.toLowerCase() === updatedCategory.toLowerCase()) {
+      if (
+        normalizeCategoryKey(currentCategory) ===
+        normalizeCategoryKey(updatedCategory)
+      ) {
         return { ok: true, category: currentCategory, unchanged: true };
       }
 
       const duplicate = restaurantCategories.find(
-        (category) => category.toLowerCase() === updatedCategory.toLowerCase()
+        (category) =>
+          normalizeCategoryKey(category) ===
+          normalizeCategoryKey(updatedCategory)
       );
 
       if (duplicate) {
@@ -482,14 +506,20 @@ const Menu = () => {
       if (!updateResult.ok) return updateResult;
       return { ok: true, oldCategory: currentCategory, category: updatedCategory };
     },
-    [normalizeCategoryLabel, persistRestaurantCategories, restaurantCategories]
+    [
+      normalizeCategoryKey,
+      normalizeCategoryLabel,
+      persistRestaurantCategories,
+      restaurantCategories,
+    ]
   );
 
   const handleDeleteRestaurantCategory = useCallback(
     async (categoryNameToDelete) => {
       const targetCategory = restaurantCategories.find(
         (category) =>
-          category.toLowerCase() === String(categoryNameToDelete || "").toLowerCase()
+          normalizeCategoryKey(category) ===
+          normalizeCategoryKey(categoryNameToDelete)
       );
 
       if (!targetCategory) {
@@ -508,7 +538,7 @@ const Menu = () => {
       if (!updateResult.ok) return updateResult;
       return { ok: true, deletedCategory: targetCategory };
     },
-    [persistRestaurantCategories, restaurantCategories]
+    [normalizeCategoryKey, persistRestaurantCategories, restaurantCategories]
   );
 
   useEffect(() => setCurrentPage(1), [filters]);

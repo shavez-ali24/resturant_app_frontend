@@ -8,6 +8,7 @@ import {
   getOrderTypeBadgeClass,
   getOrderTypeKey,
   getOrderTypeLabel,
+  getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
 
@@ -47,7 +48,11 @@ const OrderRow = ({
   const tableLabel = formatOrderTableId(order.tableId);
 
   return (
-    <tr className="border-b border-orange-100 transition hover:bg-orange-50/70 dark:border-slate-700 dark:hover:bg-slate-800/40">
+    <tr
+      className={`border-b border-orange-100 transition-colors hover:brightness-95 dark:border-slate-700 dark:hover:brightness-110 ${getStatusRowClass(
+        order.status
+      )}`}
+    >
       {/* Date Column */}
       <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
         {order.formattedDate || "N/A"}

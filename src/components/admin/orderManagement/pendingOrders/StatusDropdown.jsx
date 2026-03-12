@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"; 
 import { getStatusBadge } from "../commonOrderFile/utils";
-import { ClipboardCheck, Hourglass, X } from "lucide-react";
+import { ClipboardCheck, Hourglass, Timer, X } from "lucide-react";
 
 const StatusDropdown = ({ order, updateOrder }) => {
   const getStatusItemClass = (status) => {
@@ -17,6 +17,8 @@ const StatusDropdown = ({ order, updateOrder }) => {
         return "bg-transparent text-yellow-700 hover:bg-yellow-100 hover:text-yellow-900 data-[highlighted]:bg-yellow-100 data-[highlighted]:text-yellow-900 data-[state=checked]:bg-yellow-200 data-[state=checked]:text-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-500/25 dark:hover:text-yellow-100 dark:data-[highlighted]:bg-yellow-500/30 dark:data-[highlighted]:text-yellow-50 dark:data-[state=checked]:bg-yellow-500/35 dark:data-[state=checked]:text-yellow-50";
       case "completed":
         return "bg-transparent text-emerald-700 hover:bg-emerald-100 hover:text-emerald-900 data-[highlighted]:bg-emerald-100 data-[highlighted]:text-emerald-900 data-[state=checked]:bg-emerald-200 data-[state=checked]:text-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-500/25 dark:hover:text-emerald-100 dark:data-[highlighted]:bg-emerald-500/30 dark:data-[highlighted]:text-emerald-50 dark:data-[state=checked]:bg-emerald-500/35 dark:data-[state=checked]:text-emerald-50";
+      case "preparing":
+        return "bg-transparent text-teal-700 hover:bg-teal-100 hover:text-teal-900 data-[highlighted]:bg-teal-100 data-[highlighted]:text-teal-900 data-[state=checked]:bg-teal-200 data-[state=checked]:text-teal-900 dark:text-teal-300 dark:hover:bg-teal-500/25 dark:hover:text-teal-100 dark:data-[highlighted]:bg-teal-500/30 dark:data-[highlighted]:text-teal-50 dark:data-[state=checked]:bg-teal-500/35 dark:data-[state=checked]:text-teal-50";
       case "cancelled":
         return "bg-transparent text-rose-700 hover:bg-rose-100 hover:text-rose-900 data-[highlighted]:bg-rose-100 data-[highlighted]:text-rose-900 data-[state=checked]:bg-rose-200 data-[state=checked]:text-rose-900 dark:text-rose-300 dark:hover:bg-rose-500/25 dark:hover:text-rose-100 dark:data-[highlighted]:bg-rose-500/30 dark:data-[highlighted]:text-rose-50 dark:data-[state=checked]:bg-rose-500/35 dark:data-[state=checked]:text-rose-50";
       default:
@@ -34,7 +36,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
       <SelectTrigger
-        className={`h-10 w-full rounded-xl border border-transparent px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-9 md:w-[130px] ${getStatusBadge(
+        className={`h-10 w-full min-w-[140px] rounded-xl border border-transparent px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-9 md:w-[150px] ${getStatusBadge(
           order.status
         )}`}
       >
@@ -52,6 +54,16 @@ const StatusDropdown = ({ order, updateOrder }) => {
           >
             <div className="flex items-center gap-2">
               <span><Hourglass size={16} /></span> Pending
+            </div>
+          </SelectItem>
+
+          {/* Item: Preparing */}
+          <SelectItem
+            value="preparing"
+            className={`cursor-pointer rounded-lg py-2 text-xs font-medium transition-colors ${getStatusItemClass("preparing")}`}
+          >
+            <div className="flex items-center gap-2">
+              <span><Timer size={16} /></span> Preparing
             </div>
           </SelectItem>
 

@@ -1345,6 +1345,8 @@ export default function Header({
                               isDarkMode
                                 ? String(order.status || "").toLowerCase() === "pending"
                                   ? "border-amber-500/50 bg-amber-500/15 text-amber-200 ring-amber-500/30"
+                                  : String(order.status || "").toLowerCase() === "preparing"
+                                  ? "border-teal-500/50 bg-teal-500/15 text-teal-200 ring-teal-500/30"
                                   : String(order.status || "").toLowerCase() === "completed"
                                   ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
                                   : String(order.status || "").toLowerCase() === "cancelled"
@@ -1352,6 +1354,8 @@ export default function Header({
                                   : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
                                 : String(order.status || "").toLowerCase() === "pending"
                                 ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 ring-amber-200/80"
+                                : String(order.status || "").toLowerCase() === "preparing"
+                                ? "border-teal-200 bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 ring-teal-200/70"
                                 : String(order.status || "").toLowerCase() === "completed"
                                 ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
                                 : String(order.status || "").toLowerCase() === "cancelled"
@@ -1363,6 +1367,8 @@ export default function Header({
                               className={`h-1.5 w-1.5 rounded-full ${
                                 String(order.status || "").toLowerCase() === "pending"
                                   ? "bg-amber-600"
+                                  : String(order.status || "").toLowerCase() === "preparing"
+                                  ? "bg-teal-600"
                                   : String(order.status || "").toLowerCase() === "completed"
                                   ? "bg-green-600"
                                   : String(order.status || "").toLowerCase() === "cancelled"

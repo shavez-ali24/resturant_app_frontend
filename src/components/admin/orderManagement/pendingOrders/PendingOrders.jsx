@@ -53,6 +53,7 @@ const Orders = () => {
     }
   );
   const itemsPerPage = 10;
+  const combinedFetchLimit = itemsPerPage * 25;
   const autoRefreshMinutes = useMemo(() => {
     if (autoRefresh === "OFF") return 0;
     const mins = parseInt(autoRefresh, 10);
@@ -62,16 +63,36 @@ const Orders = () => {
 
   // --- RTK Query Hook with API parameters ---
   const {
-    data: ordersResponse = {},
-    isLoading: ordersLoading,
-    isError: ordersError,
-    error: ordersErrorObj,
-    refetch: refetchOrders,
+    data: pendingOrdersResponse = {},
+    isLoading: pendingLoading,
+    isError: pendingError,
+    error: pendingErrorObj,
+    refetch: refetchPendingOrders,
   } = useGetOrdersQuery(
     {
       status: "pending",
-      page: currentPage,
-      limit: itemsPerPage,
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval: pollingIntervalMs,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
+
+  const {
+    data: preparingOrdersResponse = {},
+    isLoading: preparingLoading,
+    isError: preparingError,
+    error: preparingErrorObj,
+    refetch: refetchPreparingOrders,
+  } = useGetOrdersQuery(
+    {
+      status: "preparing",
+      page: 1,
+      limit: combinedFetchLimit,
       range: "all",
     },
     {
@@ -205,28 +226,65 @@ const Orders = () => {
   const tables = extractTablesFromRestaurant();
 
   // --- Extract data from API response ---
-  const orders = useMemo(
-    () => (Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : []),
-    [ordersResponse?.orders]
+  const pendingOrders = useMemo(
+    () =>
+      Array.isArray(pendingOrdersResponse?.orders)
+        ? pendingOrdersResponse.orders
+        : [],
+    [pendingOrdersResponse?.orders]
   );
-  const totalPages = ordersResponse?.totalPages || 1;
-  const loading = ordersLoading || restaurantLoading;
-  const error = (ordersError || restaurantError)
-    ? getFriendlyOrderError(ordersErrorObj || restaurantError, "fetch")
+  const preparingOrders = useMemo(
+    () =>
+      Array.isArray(preparingOrdersResponse?.orders)
+        ? preparingOrdersResponse.orders
+        : [],
+    [preparingOrdersResponse?.orders]
+  );
+  const combinedOrders = useMemo(() => {
+    const orderMap = new Map();
+    [...pendingOrders, ...preparingOrders].forEach((order) => {
+      const key = order?._id || order?.id || order?.orderId || order?.createdAt;
+      if (!key) return;
+      orderMap.set(key, order);
+    });
+
+    return Array.from(orderMap.values()).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }, [pendingOrders, preparingOrders]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(combinedOrders.length / itemsPerPage)
+  );
+  const orders = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return combinedOrders.slice(start, start + itemsPerPage);
+  }, [combinedOrders, currentPage, itemsPerPage]);
+  const loading = pendingLoading || preparingLoading || restaurantLoading;
+  const error =
+    pendingError || preparingError || restaurantError
+      ? getFriendlyOrderError(
+          pendingErrorObj || preparingErrorObj || restaurantError,
+          "fetch"
+        )
     : null;
 
   // Update bill modal live
   useEffect(() => {
-    if (orderForBillModal && orders.length) {
-      const updated = orders.find((o) => o._id === orderForBillModal._id);
+    if (orderForBillModal && combinedOrders.length) {
+      const updated = combinedOrders.find(
+        (o) => o._id === orderForBillModal._id
+      );
       setOrderForBillModal(updated ?? null);
     }
-  }, [orders, orderForBillModal]);
+  }, [combinedOrders, orderForBillModal]);
 
   // Manual Refresh
   const handleManualRefresh = async () => {
     try {
-      await refetchOrders();
+      await refetchPendingOrders();
+      await refetchPreparingOrders();
       await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
       notify("Orders & Restaurant data refreshed", "success");
     } catch (err) {
@@ -249,7 +307,8 @@ const Orders = () => {
       }).unwrap();
       
       notify("Order updated successfully!", "success");
-      refetchOrders();
+      refetchPendingOrders();
+      refetchPreparingOrders();
       setEditingOrder(null);
     } catch (err) {
       console.error("Update order error:", err);
@@ -262,7 +321,8 @@ const Orders = () => {
     try {
       await deleteOrderApi(orderId).unwrap();
       notify("Order deleted successfully!", "success");
-      refetchOrders();
+      refetchPendingOrders();
+      refetchPreparingOrders();
       setShowConfirmDelete(null);
     } catch (err) {
       notify(getFriendlyOrderError(err, "delete"), "error");
@@ -287,7 +347,8 @@ const Orders = () => {
     }
 
     notify(`Auto-refresh set to every ${value} min`, "success");
-    refetchOrders();
+    refetchPendingOrders();
+    refetchPreparingOrders();
     refetchRestaurant();
   };
 
@@ -300,6 +361,12 @@ const Orders = () => {
     () => getCompactPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">

@@ -41,6 +41,25 @@ const BillPage = ({
     const root = document.documentElement;
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
+  const [itemChecks, setItemChecks] = useState({});
+  const showItemChecks = ["pending", "preparing"].includes(
+    String(order?.status || "").toLowerCase()
+  );
+
+  const orderStorageKey =
+    order?._id || order?.orderId || order?.id || "";
+
+  const buildItemCheckKey = (item, index) => {
+    if (item?._id) return String(item._id);
+    const baseId =
+      item?.menuItemId ||
+      item?.menuItem?._id ||
+      item?.name ||
+      "item";
+    const variant = item?.variantName || item?.variant || "";
+    const customizations = item?.customizations || "";
+    return `${baseId}::${variant}::${customizations}::${index}`;
+  };
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -78,6 +97,34 @@ const BillPage = ({
       setAddress(order.address || "");
     }
   }, [order]);
+
+  useEffect(() => {
+    if (!orderStorageKey || typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(
+        `bill-item-checks:${orderStorageKey}`
+      );
+      setItemChecks(saved ? JSON.parse(saved) : {});
+    } catch (err) {
+      console.error("Error loading item checks:", err);
+      setItemChecks({});
+    }
+  }, [orderStorageKey]);
+
+  useEffect(() => {
+    if (!orderStorageKey || typeof window === "undefined") return;
+    localStorage.setItem(
+      `bill-item-checks:${orderStorageKey}`,
+      JSON.stringify(itemChecks)
+    );
+  }, [orderStorageKey, itemChecks]);
+
+  const toggleItemCheck = (itemKey) => {
+    setItemChecks((prev) => ({
+      ...prev,
+      [itemKey]: !prev[itemKey],
+    }));
+  };
 
   // Use backend data directly - already calculated with discounts
   const gstAmount = Number(order?.gstAmount || 0);
@@ -329,7 +376,14 @@ const BillPage = ({
     doc.write(`
       <html>
         <head>
-          <style>${styles}</style>
+          <style>
+            ${styles}
+            @media print {
+              .no-print {
+                display: none !important;
+              }
+            }
+          </style>
         </head>
         <body>
           ${billRef.current.innerHTML}
@@ -641,6 +695,9 @@ const BillPage = ({
                   <th className="py-2 px-2 text-center">Qty</th>
                   <th className="py-2 px-2 text-right">Price</th>
                   <th className="py-2 px-2 text-right">Total</th>
+                  {showItemChecks && (
+                    <th className="no-print py-2 px-2 text-center">Sent</th>
+                  )}
                   {isEditMode && <th className="py-2 px-2 text-center">Action</th>}
                 </tr>
               </thead>
@@ -648,6 +705,8 @@ const BillPage = ({
                 {(isEditMode ? localOrderData?.items : order?.items)?.map((item, i) => {
                   const itemPrice = Number(item.discountedPrice || item.price || 0);
                   const itemTotal = itemPrice * Number(item.quantity || 1);
+                  const itemKey = buildItemCheckKey(item, i);
+                  const isChecked = !!itemChecks[itemKey];
                   
                   return (
                     <tr key={i} className={isDarkMode ? "border-b border-slate-700" : "border-b border-gray-200"}>
@@ -731,6 +790,21 @@ const BillPage = ({
                       <td className="py-1.5 px-2 text-right font-medium">
                         ₹{itemTotal.toFixed(2)}
                       </td>
+                      {showItemChecks && (
+                        <td className="no-print py-1.5 px-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleItemCheck(itemKey)}
+                            className={`h-4 w-4 rounded border transition-colors cursor-pointer ${
+                              isDarkMode
+                                ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
+                                : "border-gray-300 text-orange-600 accent-orange-500"
+                            }`}
+                            aria-label={`Mark ${item.name} as sent`}
+                          />
+                        </td>
+                      )}
                       {isEditMode && (
                         <td className="py-1.5 px-2 text-center">
                           <button

@@ -57,7 +57,8 @@ export default function UpdateCategoriesForm({
             type="text"
             value={currentCategoryInput}
             onChange={(e) => {
-              setCurrentCategoryInput(e.target.value.replace(/ /g, "-"));
+              const nextValue = e.target.value.replace(/-+/g, " ");
+              setCurrentCategoryInput(nextValue);
             }}
             onKeyDown={handleCategoryKeyDown}
             list="category-suggestions"
@@ -73,7 +74,7 @@ export default function UpdateCategoriesForm({
         </datalist>
 
         <p className="mt-1.5 text-xs text-gray-500">
-          Spaces are auto-converted to hyphens.
+          Press Enter to add category
         </p>
       </div>
     </FormCard>

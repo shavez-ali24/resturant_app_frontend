@@ -7,11 +7,46 @@ export default function Category({
   onCategoryClick,
   activeCategory,
 }) {
-  // ✅ Remove duplicates by category name
-  const uniqueCategories = categories.filter(
-    (item, index, self) =>
-      index === self.findIndex((cat) => cat.category === item.category)
+  const normalizeCategoryValue = (value) =>
+    String(value || "")
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const normalizeCategoryItem = (item) => {
+    if (item === undefined || item === null) return null;
+    if (typeof item === "string" || typeof item === "number") {
+      const category = normalizeCategoryValue(item);
+      if (!category) return null;
+      return { category };
+    }
+    if (typeof item === "object") {
+      const label =
+        item.category ||
+        item.name ||
+        item.title ||
+        item.label ||
+        item.value;
+      const category = normalizeCategoryValue(label);
+      if (!category) return null;
+      return { ...item, category };
+    }
+    return null;
+  };
+
+  const normalizedCategories = categories
+    .map(normalizeCategoryItem)
+    .filter(Boolean);
+
+  const uniqueCategories = Array.from(
+    new Map(
+      normalizedCategories.map((item) => [
+        item.category.toLowerCase(),
+        item,
+      ])
+    ).values()
   );
+  const normalizedActiveCategory = normalizeCategoryValue(activeCategory).toLowerCase();
 
   return (
     <motion.div
@@ -48,7 +83,10 @@ export default function Category({
         <div className="client-category-track inline-flex items-center gap-2 py-1.5 pr-2">
             {/* Category chips */}
             {uniqueCategories.map((item, index) => {
-              const isActive = activeCategory === item.category;
+              const isActive =
+                normalizedActiveCategory &&
+                normalizeCategoryValue(item.category).toLowerCase() ===
+                  normalizedActiveCategory;
               return (
                 <button
                   key={index}

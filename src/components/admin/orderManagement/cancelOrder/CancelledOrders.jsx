@@ -30,7 +30,7 @@ import { getCompactPageNumbers } from "@/lib/pagination";
 const CancelledOrders = () => {
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 10;
+  const [ordersPerPage, setOrdersPerPage] = useState(10);
 
   const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery({
     status: "cancelled",
@@ -47,6 +47,11 @@ const CancelledOrders = () => {
     setCurrentPage(1);
   };
 
+  const handlePageSizeChange = (value) => {
+    setOrdersPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
@@ -54,25 +59,46 @@ const CancelledOrders = () => {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
-      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
+      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-col gap-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:flex-row sm:items-center sm:justify-between">
         <Heading title="Cancelled Orders" />
 
-        <Select value={dateRange} onValueChange={handleDateRangeChange}>
-          <SelectTrigger className="h-10 w-[145px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
-            <SelectValue placeholder="Time Range" />
-          </SelectTrigger>
-          <SelectContent className="min-w-[160px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
-            <SelectGroup>
-              <SelectItem value="2d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 2 Days</SelectItem>
-              <SelectItem value="7d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 7 Days</SelectItem>
-              <SelectItem value="15d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 15 Days</SelectItem>
-              <SelectItem value="30d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 30 Days</SelectItem>
-              <SelectItem value="6m" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 6 Months</SelectItem>
-              <SelectItem value="1y" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Last 1 Year</SelectItem>
-              <SelectItem value="all" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">All Time</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Select value={dateRange} onValueChange={handleDateRangeChange}>
+            <SelectTrigger className="h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-600 sm:w-[145px]">
+              <SelectValue placeholder="Time Range" />
+            </SelectTrigger>
+            <SelectContent className="min-w-[160px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+              <SelectGroup>
+                <SelectItem value="2d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 2 Days</SelectItem>
+                <SelectItem value="7d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 7 Days</SelectItem>
+                <SelectItem value="15d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 15 Days</SelectItem>
+                <SelectItem value="30d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 30 Days</SelectItem>
+                <SelectItem value="6m" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 6 Months</SelectItem>
+                <SelectItem value="1y" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 1 Year</SelectItem>
+                <SelectItem value="all" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">All Time</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Select value={String(ordersPerPage)} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-600 sm:w-[120px]">
+              <SelectValue placeholder="Per Page" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+              <SelectGroup>
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem
+                    key={size}
+                    value={String(size)}
+                    className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100"
+                  >
+                    {size} / Page
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">

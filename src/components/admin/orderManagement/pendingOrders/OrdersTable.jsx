@@ -12,6 +12,7 @@ import {
   getOrderTypeBadgeClass,
   getOrderTypeKey,
   getOrderTypeLabel,
+  getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
 
@@ -80,9 +81,9 @@ const OrdersTable = ({
       )}
 
       {/* Desktop / Tablet */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden md:block">
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
+          <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
@@ -182,7 +183,9 @@ const OrdersTable = ({
               return (
                 <div
                   key={order._id}
-                  className="w-full space-y-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-3.5"
+                  className={`w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
+                    order.status
+                  )}`}
                 >
                   <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                     <h3 className="font-bold text-gray-900 text-[15px] leading-tight">

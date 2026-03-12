@@ -115,15 +115,17 @@ const normalizeFoodTypeValue = (value = "") => {
 };
 
 const normalizeCategory = (value = "") => {
-  const normalized = value
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+  const normalized = String(value || "")
+    .replace(/-+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!normalized) return "";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
+
+const normalizeCategoryKey = (value = "") =>
+  normalizeCategory(value).toLowerCase();
 
 const CategoryTypeSelectors = ({
   category,
@@ -213,7 +215,7 @@ const CategoryTypeSelectors = ({
   };
 
   const isSameCategory = (firstValue = "", secondValue = "") =>
-    String(firstValue).toLowerCase() === String(secondValue).toLowerCase();
+    normalizeCategoryKey(firstValue) === normalizeCategoryKey(secondValue);
 
   const resetEditState = () => {
     setEditingCategory("");
@@ -232,8 +234,8 @@ const CategoryTypeSelectors = ({
       return;
     }
 
-    const duplicateCategory = categoryOptions.find(
-      (existing) => existing.toLowerCase() === normalizedCategory.toLowerCase()
+    const duplicateCategory = categoryOptions.find((existing) =>
+      isSameCategory(existing, normalizedCategory)
     );
 
     if (duplicateCategory) {
@@ -265,7 +267,7 @@ const CategoryTypeSelectors = ({
 
       setOptimisticCategories((prev) => {
         const alreadyExists = prev.some(
-          (existing) => existing.toLowerCase() === savedCategory.toLowerCase()
+          (existing) => isSameCategory(existing, savedCategory)
         );
         return alreadyExists ? prev : [...prev, savedCategory];
       });
