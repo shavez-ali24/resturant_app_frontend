@@ -1,8 +1,66 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useUpdateRestaurantProfileMutation } from "@/redux/adminRedux/adminAPI";
 
+const getCategoryText = (value) => {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string" || typeof value === "number") {
+        return String(value);
+    }
+    if (typeof value !== "object") return String(value);
+
+    const candidate =
+        value.name ||
+        value.category ||
+        value.categoryName ||
+        value.label ||
+        value.title ||
+        value.value ||
+        value.displayName;
+
+    if (candidate) return String(candidate);
+
+    const numericKeys = Object.keys(value).filter((key) => /^\d+$/.test(key));
+    if (numericKeys.length) {
+        numericKeys.sort((a, b) => Number(a) - Number(b));
+        return numericKeys.map((key) => value[key]).join("");
+    }
+
+    if (typeof value.toString === "function") {
+        const text = String(value);
+        if (text && text !== "[object Object]") return text;
+    }
+
+    return "";
+};
+
+const detectCategoryObjectKey = (category) => {
+    if (!category || typeof category !== "object") return "name";
+    const candidates = [
+        "name",
+        "category",
+        "categoryName",
+        "label",
+        "title",
+        "value",
+        "displayName",
+    ];
+    const match = candidates.find(
+        (key) => typeof category[key] === "string" && category[key].trim()
+    );
+    return match || "name";
+};
+
+const resolveCategoryMode = (values = []) => {
+    const list = Array.isArray(values) ? values : [];
+    const objectItem = list.find(
+        (item) => item && typeof item === "object" && !Array.isArray(item)
+    );
+    if (!objectItem) return { mode: "string", key: "name" };
+    return { mode: "object", key: detectCategoryObjectKey(objectItem) };
+};
+
 const normalizeCategoryInput = (value = "") =>
-    String(value || "")
+    getCategoryText(value)
         .replace(/-+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
@@ -52,8 +110,11 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         publicId: initialData.logo?.public_id || "",
     });
 
-    const [categories, setCategories] = useState(() =>
-        uniqueCategories(initialData?.categories || [])
+    const initialCategoryLabels = uniqueCategories(initialData?.categories || []);
+    const [categories, setCategories] = useState(() => initialCategoryLabels);
+    const initialCategoriesRef = useRef(initialCategoryLabels);
+    const [categoryMode] = useState(() =>
+        resolveCategoryMode(initialData?.categories || [])
     );
     const [currentCategoryInput, setCurrentCategoryInput] = useState("");
     const [file, setFile] = useState(null);
@@ -208,6 +269,13 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         setCategories((prev) => prev.filter((cat) => cat !== categoryToRemove));
     }, []);
 
+    const hasCategoryChanges = (current = [], initial = []) => {
+        if (current.length !== initial.length) return true;
+        return current.some(
+            (value, index) => getCategoryKey(value) !== getCategoryKey(initial[index])
+        );
+    };
+
     // --- Form Submission with Redux ---
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -247,13 +315,33 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 formDataToUpload.append("file", file);
             }
 
-            // Append categories array
-            categories.forEach((category) => {
-                formDataToUpload.append("categories", category);
-            });
-            
-            if (categories.length === 0) {
-                formDataToUpload.append("categories", ""); // To clear array on backend
+            const categoriesChanged = hasCategoryChanges(
+                categories,
+                initialCategoriesRef.current
+            );
+
+            if (categoryMode.mode === "object") {
+                if (categoriesChanged) {
+                    categories.forEach((category, index) => {
+                        formDataToUpload.append(
+                            `categories[${index}][${categoryMode.key}]`,
+                            category
+                        );
+                        formDataToUpload.append(
+                            `categories[${index}][displayOrder]`,
+                            index
+                        );
+                    });
+                }
+            } else {
+                // Append categories array as strings
+                categories.forEach((category) => {
+                    formDataToUpload.append("categories", category);
+                });
+
+                if (categories.length === 0) {
+                    formDataToUpload.append("categories", ""); // To clear array on backend
+                }
             }
 
             // Use Redux mutation

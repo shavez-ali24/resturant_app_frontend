@@ -23,7 +23,12 @@ export default function ProfileDetails({ profileData }) {
   const isStaff = userRole === "staff";
   const emailOfAdmin = localStorage.getItem("userEmail") || "";
   const userName = localStorage.getItem("userName") || "";
-  const restaurantName = profileData?.name?.trim() || "Restaurant";
+  const restaurantName =
+    (typeof profileData?.restaurantName === "string"
+      ? profileData.restaurantName.trim()
+      : "") ||
+    (typeof profileData?.name === "string" ? profileData.name.trim() : "") ||
+    "Restaurant";
   const restaurantSlug = restaurantName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -70,7 +75,11 @@ export default function ProfileDetails({ profileData }) {
           <ProfileField icon={<Image className="w-4 h-4" />} label="Name" value={userName} />
           <ProfileField icon={<Mail className="w-4 h-4" />} label="Email" value={emailOfAdmin} />
           <ProfileField icon={<Tag className="w-4 h-4" />} label="Role" value="Staff" />
-          <ProfileField icon={<Store className="w-4 h-4" />} label="Restaurant" value={profileData?.name} />
+          <ProfileField
+            icon={<Store className="w-4 h-4" />}
+            label="Restaurant"
+            value={profileData?.restaurantName || profileData?.name}
+          />
         </div>
       </div>
     );
@@ -89,7 +98,11 @@ export default function ProfileDetails({ profileData }) {
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <ProfileField icon={<Tag className="w-4 h-4" />} label="Restaurant Name" value={profileData?.name} />
+          <ProfileField
+            icon={<Tag className="w-4 h-4" />}
+            label="Restaurant Name"
+            value={profileData?.restaurantName || profileData?.name}
+          />
           <ProfileField icon={<Mail className="w-4 h-4" />} label="Email Address" value={emailOfAdmin} />
           <ProfileField icon={<Phone className="w-4 h-4" />} label="Phone Number" value={profileData?.phoneNumber} />
           <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />

@@ -1,6 +1,67 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "../../config";
 
+const normalizeIndexedText = (value) => {
+  if (!value || typeof value !== "object") return "";
+  const numericKeys = Object.keys(value).filter((key) => /^\d+$/.test(key));
+  if (!numericKeys.length) return "";
+  numericKeys.sort((a, b) => Number(a) - Number(b));
+  const chars = numericKeys
+    .map((key) => value[key])
+    .filter((char) => char !== undefined && char !== null)
+    .map((char) => String(char));
+  const text = chars.join("").trim();
+  return text || "";
+};
+
+const normalizeTextValue = (value) => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+  if (typeof value !== "object") return String(value).trim();
+
+  const candidate =
+    value.name ||
+    value.category ||
+    value.categoryName ||
+    value.label ||
+    value.title ||
+    value.value ||
+    value.displayName;
+
+  if (candidate) return String(candidate).trim();
+
+  const indexed = normalizeIndexedText(value);
+  if (indexed) return indexed;
+
+  if (typeof value.toString === "function") {
+    const text = String(value).trim();
+    if (text && text !== "[object Object]") return text;
+  }
+
+  return "";
+};
+
+const normalizeRestaurantProfile = (restaurant) => {
+  if (!restaurant || typeof restaurant !== "object") return restaurant;
+
+  const normalized = { ...restaurant };
+
+  if (normalized.name && typeof normalized.name !== "string") {
+    normalized.name = normalizeTextValue(normalized.name);
+  }
+
+  if (
+    normalized.restaurantName &&
+    typeof normalized.restaurantName !== "string"
+  ) {
+    normalized.restaurantName = normalizeTextValue(normalized.restaurantName);
+  }
+
+  return normalized;
+};
+
 const normalizeMenuItem = (it) => {
   if (!it || typeof it !== "object") return it;
   const copy = { ...it };
@@ -68,15 +129,18 @@ export const adminApi = createApi({
       transformResponse: (response) => {
         // Handle { success: true, data: ... } format
         if (response?.data) {
-          return { restaurant: response.data };
+          return { restaurant: normalizeRestaurantProfile(response.data) };
         }
         // Handle { restaurant: ... } format
         if (response?.restaurant) {
-          return response;
+          return {
+            ...response,
+            restaurant: normalizeRestaurantProfile(response.restaurant),
+          };
         }
         // Handle raw restaurant object
         if (response && response._id) {
-          return { restaurant: response };
+          return { restaurant: normalizeRestaurantProfile(response) };
         }
         return { restaurant: null };
       },

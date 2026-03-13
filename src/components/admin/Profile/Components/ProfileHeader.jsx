@@ -7,6 +7,10 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
     const navigate = useNavigate()
     const userRole = localStorage.getItem("userRole") || "";
     const isAdmin = userRole === "admin";
+    const safeRestaurantName =
+        typeof restaurantName === "string"
+            ? restaurantName
+            : String(restaurantName || "").trim();
     
     return (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-lg shadow-gray-100/50 dark:border-slate-700 dark:bg-slate-900 dark:shadow-slate-950/40">
@@ -21,7 +25,7 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
                             </div>
                         )}
                     </div>
-                    <h1 className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">{restaurantName || "My Restaurant"}</h1>
+                    <h1 className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">{safeRestaurantName || "My Restaurant"}</h1>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
                     {showStaffButton && isAdmin && (

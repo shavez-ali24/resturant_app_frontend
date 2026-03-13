@@ -35,6 +35,17 @@ export function NavUser({ user, isDarkMode = false }) {
     skip: !token,
   });
 
+  const restaurantLabel = (() => {
+    const raw =
+      restaurantData?.restaurant?.restaurantName ||
+      restaurantData?.data?.restaurant?.restaurantName;
+    if (typeof raw === "string") return raw;
+    const fallback = user?.name || "Restaurant";
+    if (raw === null || raw === undefined) return fallback;
+    const text = String(raw).trim();
+    return text || fallback;
+  })();
+
   useEffect(() => {
     if (restaurantData) {
       const logoObj =
@@ -113,9 +124,7 @@ export function NavUser({ user, isDarkMode = false }) {
               )}
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className={`truncate font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
-                  {restaurantData?.restaurant?.restaurantName ||
-                    restaurantData?.data?.restaurant?.restaurantName ||
-                    user.name}
+                  {restaurantLabel}
                 </span>
 
                 <span className={`truncate text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
@@ -173,9 +182,7 @@ export function NavUser({ user, isDarkMode = false }) {
                 </div>
                 <div className="flex-1">
                   <span className={`truncate font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
-                    {restaurantData?.restaurant?.restaurantName ||
-                      restaurantData?.data?.restaurant?.restaurantName ||
-                      user.name}
+                    {restaurantLabel}
                   </span>
 
                   <p className={`mt-0.5 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>View Profile</p>

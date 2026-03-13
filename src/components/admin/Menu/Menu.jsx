@@ -149,6 +149,49 @@ const buildCategoryLookup = (categories = []) => {
   return lookup;
 };
 
+const detectCategoryObjectKey = (category) => {
+  if (!category || typeof category !== "object") return "name";
+  const candidates = [
+    "name",
+    "category",
+    "categoryName",
+    "label",
+    "title",
+    "value",
+    "displayName",
+  ];
+  const match = candidates.find(
+    (key) => typeof category[key] === "string" && category[key].trim()
+  );
+  return match || "name";
+};
+
+const resolveCategoryMode = (values = []) => {
+  const list = Array.isArray(values) ? values : [];
+  const objectItem = list.find(
+    (item) => item && typeof item === "object" && !Array.isArray(item)
+  );
+  if (!objectItem) return { mode: "string", key: "name" };
+  return { mode: "object", key: detectCategoryObjectKey(objectItem) };
+};
+
+const appendCategoriesToFormData = (fd, categories, mode) => {
+  if (mode?.mode === "object") {
+    categories.forEach((category, index) => {
+      fd.append(`categories[${index}][${mode.key}]`, category);
+      fd.append(`categories[${index}][displayOrder]`, index);
+    });
+    return;
+  }
+
+  if (categories.length === 0) {
+    fd.append("categories", "");
+    return;
+  }
+
+  categories.forEach((category) => fd.append("categories", category));
+};
+
 const resolveCategoryValue = (item = {}, categoryLookup = {}, categoryOptions = []) => {
   const rawCategory =
     item?.category ??
@@ -312,6 +355,11 @@ const Menu = () => {
     [restaurantData]
   );
 
+  const categoryMode = useMemo(
+    () => resolveCategoryMode(restaurantData?.restaurant?.categories || []),
+    [restaurantData]
+  );
+
   const normalizedItems = useMemo(() => {
     const list = Array.isArray(items) ? items : [];
 
@@ -401,15 +449,15 @@ const Menu = () => {
   const persistRestaurantCategories = useCallback(
     async (updatedCategories, successMessage) => {
       const normalizedCategories = sortUniqueCategories(updatedCategories);
-      const fd = new FormData();
 
-      if (normalizedCategories.length === 0) {
-        fd.append("categories", "");
-      } else {
-        normalizedCategories.forEach((category) =>
-          fd.append("categories", category)
-        );
+      if (categoryMode?.mode === "object" && normalizedCategories.length === 0) {
+        const message = "At least one category is required.";
+        notify(message, "error");
+        return { ok: false, message };
       }
+
+      const fd = new FormData();
+      appendCategoriesToFormData(fd, normalizedCategories, categoryMode);
 
       try {
         await updateRestaurantProfile(fd).unwrap();
@@ -423,7 +471,7 @@ const Menu = () => {
         return { ok: false, message };
       }
     },
-    [getRawErrorText, notify, sortUniqueCategories, updateRestaurantProfile]
+    [categoryMode, getRawErrorText, notify, sortUniqueCategories, updateRestaurantProfile]
   );
 
   const handleAddRestaurantCategory = useCallback(

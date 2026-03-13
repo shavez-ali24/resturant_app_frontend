@@ -50,7 +50,10 @@ export function SiteHeader({
     }
 
     if (profileData.restaurant?.name) {
-      name = profileData.restaurant.name;
+      name =
+        typeof profileData.restaurant.name === "string"
+          ? profileData.restaurant.name
+          : String(profileData.restaurant.name || "").trim();
     }
 
     setIsOpen(status ?? false);

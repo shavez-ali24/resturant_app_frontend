@@ -35,7 +35,7 @@ const Profile = () => {
         <ProfileHeader
           onUpdateClick={() => setIsUpdateModalOpen(true)}
           showStaffButton={isAdmin}
-          restaurantName={resData?.name}
+          restaurantName={resData?.restaurantName || resData?.name}
           restaurantLogo={resData?.logo?.url}
           showUpdateButton={isAdmin}
         />
