@@ -1,5 +1,94 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useUpdateRestaurantProfileMutation } from "@/redux/adminRedux/adminAPI";
+
+const getCategoryText = (value) => {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string" || typeof value === "number") {
+        return String(value);
+    }
+    if (typeof value !== "object") return String(value);
+
+    const candidate =
+        value.name ||
+        value.category ||
+        value.categoryName ||
+        value.label ||
+        value.title ||
+        value.value ||
+        value.displayName;
+
+    if (candidate) return String(candidate);
+
+    const numericKeys = Object.keys(value).filter((key) => /^\d+$/.test(key));
+    if (numericKeys.length) {
+        numericKeys.sort((a, b) => Number(a) - Number(b));
+        return numericKeys.map((key) => value[key]).join("");
+    }
+
+    if (typeof value.toString === "function") {
+        const text = String(value);
+        if (text && text !== "[object Object]") return text;
+    }
+
+    return "";
+};
+
+const detectCategoryObjectKey = (category) => {
+    if (!category || typeof category !== "object") return "name";
+    const candidates = [
+        "name",
+        "category",
+        "categoryName",
+        "label",
+        "title",
+        "value",
+        "displayName",
+    ];
+    const match = candidates.find(
+        (key) => typeof category[key] === "string" && category[key].trim()
+    );
+    return match || "name";
+};
+
+const resolveCategoryMode = (values = []) => {
+    const list = Array.isArray(values) ? values : [];
+    const objectItem = list.find(
+        (item) => item && typeof item === "object" && !Array.isArray(item)
+    );
+    if (!objectItem) return { mode: "string", key: "name" };
+    return { mode: "object", key: detectCategoryObjectKey(objectItem) };
+};
+
+const normalizeCategoryInput = (value = "") =>
+    getCategoryText(value)
+        .replace(/-+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+const formatCategoryLabel = (value = "") => {
+    const normalized = normalizeCategoryInput(value);
+    if (!normalized) return "";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+const getCategoryKey = (value = "") =>
+    normalizeCategoryInput(value).toLowerCase();
+
+const uniqueCategories = (values = []) => {
+    const safeValues = Array.isArray(values) ? values : [];
+    const seen = new Set();
+    const result = [];
+
+    safeValues.forEach((value) => {
+        const label = formatCategoryLabel(value);
+        const key = getCategoryKey(label);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        result.push(label);
+    });
+
+    return result;
+};
 
 export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClose) => { // Added onClose parameter
     // Redux Mutation
@@ -17,10 +106,16 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             delivery: initialData.orderModes?.delivery ?? true,
         },
         gstRate: initialData.gstRate || 0,
+        deliveryCharges: initialData.deliveryCharges || 0,
         publicId: initialData.logo?.public_id || "",
     });
 
-    const [categories, setCategories] = useState(initialData.categories || []);
+    const initialCategoryLabels = uniqueCategories(initialData?.categories || []);
+    const [categories, setCategories] = useState(() => initialCategoryLabels);
+    const initialCategoriesRef = useRef(initialCategoryLabels);
+    const [categoryMode] = useState(() =>
+        resolveCategoryMode(initialData?.categories || [])
+    );
     const [currentCategoryInput, setCurrentCategoryInput] = useState("");
     const [file, setFile] = useState(null);
     const [fileError, setFileError] = useState("");
@@ -34,7 +129,8 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const [categorySuggestions, setCategorySuggestions] = useState(() => {
         try {
             const saved = localStorage.getItem("restaurantCategories");
-            return saved ? JSON.parse(saved) : [];
+            const parsed = saved ? JSON.parse(saved) : [];
+            return uniqueCategories(parsed);
         } catch (e) {
             console.error("Error parsing categories from localStorage:", e);
             return [];
@@ -62,6 +158,8 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             processedValue = value
                 .replace(/[^0-9.]/g, "")
                 .replace(/(\..*?)\..*/g, "$1");
+        } else if (name === "deliveryCharges") {
+            processedValue = value.replace(/[^0-9]/g, "");
         }
 
         setFormData((prev) => ({ ...prev, [name]: processedValue }));
@@ -138,24 +236,31 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const handleCategoryKeyDown = (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            const value = currentCategoryInput.trim().replace(/-+$/, "");
+            const formattedValue = formatCategoryLabel(currentCategoryInput);
 
-            if (!value) return;
+            if (!formattedValue) return;
 
-            const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+            setCategories((prev) => {
+                const exists = prev.some(
+                    (category) =>
+                        getCategoryKey(category) === getCategoryKey(formattedValue)
+                );
+                if (exists) return prev;
+                return [...prev, formattedValue];
+            });
 
-            if (!categories.includes(capitalizedValue)) {
-                setCategories((prev) => [...prev, capitalizedValue]);
+            setCategorySuggestions((prev) => {
+                const updatedSuggestions = uniqueCategories([
+                    ...prev,
+                    formattedValue,
+                ]);
+                localStorage.setItem(
+                    "restaurantCategories",
+                    JSON.stringify(updatedSuggestions)
+                );
+                return updatedSuggestions;
+            });
 
-                if (!categorySuggestions.includes(capitalizedValue)) {
-                    const updatedSuggestions = [...categorySuggestions, capitalizedValue];
-                    setCategorySuggestions(updatedSuggestions);
-                    localStorage.setItem(
-                        "restaurantCategories",
-                        JSON.stringify(updatedSuggestions)
-                    );
-                }
-            }
             setCurrentCategoryInput("");
         }
     };
@@ -163,6 +268,13 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const handleRemoveCategory = useCallback((categoryToRemove) => {
         setCategories((prev) => prev.filter((cat) => cat !== categoryToRemove));
     }, []);
+
+    const hasCategoryChanges = (current = [], initial = []) => {
+        if (current.length !== initial.length) return true;
+        return current.some(
+            (value, index) => getCategoryKey(value) !== getCategoryKey(initial[index])
+        );
+    };
 
     // --- Form Submission with Redux ---
     const handleSubmit = async (e) => {
@@ -203,13 +315,33 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 formDataToUpload.append("file", file);
             }
 
-            // Append categories array
-            categories.forEach((category) => {
-                formDataToUpload.append("categories", category);
-            });
-            
-            if (categories.length === 0) {
-                formDataToUpload.append("categories", ""); // To clear array on backend
+            const categoriesChanged = hasCategoryChanges(
+                categories,
+                initialCategoriesRef.current
+            );
+
+            if (categoryMode.mode === "object") {
+                if (categoriesChanged) {
+                    categories.forEach((category, index) => {
+                        formDataToUpload.append(
+                            `categories[${index}][${categoryMode.key}]`,
+                            category
+                        );
+                        formDataToUpload.append(
+                            `categories[${index}][displayOrder]`,
+                            index
+                        );
+                    });
+                }
+            } else {
+                // Append categories array as strings
+                categories.forEach((category) => {
+                    formDataToUpload.append("categories", category);
+                });
+
+                if (categories.length === 0) {
+                    formDataToUpload.append("categories", ""); // To clear array on backend
+                }
             }
 
             // Use Redux mutation

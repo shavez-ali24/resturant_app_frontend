@@ -1,119 +1,50 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-
+import React, { useState } from "react";
 import ProfileHeader from "./components/ProfileHeader";
 import ProfileDetails from "./components/ProfileDetails";
 import { UpdateProfileModal } from "./components/UpdateProfileModal";
 import { LoadingSpinner } from "./Components/commanProfile/LoadingSpinner";
 import { ErrorMessage } from "./Components/commanProfile/ErrorMessage";
-import NotificationModal from "./Components/commanProfile/NotificationModal";
-
+import { useNotify } from "../common/NotificationModal";
 import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
 
 const Profile = () => {
   const [token] = useState(() => localStorage.getItem("token") || "");
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [notification, setNotification] = useState({
-    show: false,
-    type: "",
-    message: ""
-  });
+  const notify = useNotify();
+  const userRole = localStorage.getItem("userRole") || "";
+  const isAdmin = userRole === "admin";
 
-  // -----------------------------
-  // 🔥 DATA DIRECTLY FROM REDUX (RTK QUERY)
-  // -----------------------------
-  const {
-    data: restaurant,
-    isLoading: loading,
-    isError: error,
-    refetch,
-  } = useGetRestaurantProfileQuery();
+  const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantProfileQuery();
+  // console.log("Fetched restaurant profile data:", restaurant);
 
-  // -----------------------------
-  // CLOSE NOTIFICATION
-  // -----------------------------
-  const closeNotification = () => {
-    setNotification({ show: false, type: "", message: "" });
-  };
-
-  // -----------------------------
-  // AUTO-CLOSE NOTIFICATION
-  // -----------------------------
-  useEffect(() => {
-    if (notification.show) {
-      const timer = setTimeout(() => {
-        closeNotification();
-      }, 3000); // Close after 3 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [notification.show]);
-
-  // -----------------------------
-  // UPDATE SUCCESS HANDLER
-  // -----------------------------
   const handleUpdateSuccess = () => {
     setIsUpdateModalOpen(false);
-    
-    // Show success notification
-    setNotification({
-      show: true,
-      type: "success",
-      message: "Profile updated successfully!"
-    });
-    
-    refetch(); // redux data refresh
+    notify("Profile updated successfully!", "success");
+    refetch();
   };
 
-  // -----------------------------
-  // LOADING & ERROR UI (UI same)
-  // -----------------------------
   if (loading) return <LoadingSpinner />;
-  if (error)
-    return <ErrorMessage error={"Failed to load restaurant profile"} />;
+  if (error) return <ErrorMessage error={error?.data?.message || error?.message || "Failed to load profile"} />;
 
-  const resData = restaurant?.restaurant; // shortcut
+  const resData = restaurant?.data || restaurant?.restaurant;
 
   return (
-    <>
-      <div>
-        {/* Notification Modal */}
-        <AnimatePresence>
-          {notification.show && (
-            <NotificationModal
-              type={notification.type}
-              message={notification.message}
-              onClose={closeNotification}
-            />
-          )}
-        </AnimatePresence>
-
-        <div className="mx-auto p-10 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
-          <ProfileHeader
-            loading={loading}
-            error={error ? "Failed to load name" : null}
-            onUpdateClick={() => setIsUpdateModalOpen(true)}
-          />
-
-          <ProfileDetails profileData={resData} />
-        </div>
-      </div>
-
-      {/* ----------------------------- */}
-      {/* UPDATE MODAL */}
-      {/* ----------------------------- */}
-      <AnimatePresence>
-        {isUpdateModalOpen && (
-          <UpdateProfileModal
-            initialData={resData}
-            token={token}
-            onClose={() => setIsUpdateModalOpen(false)}
-            onUpdateSuccess={handleUpdateSuccess}
-          />
+    <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-3 dark:bg-none dark:bg-slate-950 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-4">
+        <ProfileHeader
+          onUpdateClick={() => setIsUpdateModalOpen(true)}
+          showStaffButton={isAdmin}
+          restaurantName={resData?.restaurantName || resData?.name}
+          restaurantLogo={resData?.logo?.url}
+          showUpdateButton={isAdmin}
+        />
+        <ProfileDetails profileData={resData} />
+        {isUpdateModalOpen && isAdmin && (
+          <UpdateProfileModal initialData={resData} token={token} onClose={() => setIsUpdateModalOpen(false)} onUpdateSuccess={handleUpdateSuccess} />
         )}
-      </AnimatePresence>
-    </>
+      </div>
+    </div>
   );
 };
 

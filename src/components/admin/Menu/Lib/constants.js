@@ -14,13 +14,14 @@ export const defaultAddFormState = {
   pricingType: "single",
   price: "",
   variantRates: {
-    quarter: "",
-    half: "",
-    full: "",
+    quarter: { price: "", discount: { type: "flat", value: "", active: false } },
+    half: { price: "", discount: { type: "flat", value: "", active: false } },
+    full: { price: "", discount: { type: "flat", value: "", active: false } },
   },
   category: "",
   type: "",
   available: true,
+  discount: { type: "flat", value: "", active: false },
 };
 
 export const modalOverlayVariant = {

@@ -18,12 +18,14 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
-export function NavMain({ items }) {
+export function NavMain({ items, isDarkMode = false }) {
   const location = useLocation();
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-xs font-semibold text-black-400 uppercase tracking-wider">
+      <SidebarGroupLabel className={`text-xs font-semibold uppercase tracking-wider ${
+        isDarkMode ? "text-orange-300" : "text-orange-700"
+      }`}>
         ADMIN
       </SidebarGroupLabel>
       <SidebarMenu className="mt-2">
@@ -43,15 +45,21 @@ export function NavMain({ items }) {
         className={`
           flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded transition-all duration-200 group 
           ${isActive
-            ? "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm " /* ACTIVE (stay this color) */
-            : "text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-300 hover:text-orange-900" /* NORMAL */
+            ? isDarkMode
+              ? "bg-slate-800 text-slate-100 shadow-sm"
+              : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm "
+            : isDarkMode
+              ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
+              : "text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
           }
         `}
       >
         <item.icon
           className={`
             mr-3 w-4 h-4 transition-colors duration-200 
-            ${isActive ? "text-gray-900" : "text-gray-500 group-hover:text-orange-700"}
+            ${isActive
+              ? isDarkMode ? "text-orange-300" : "text-gray-900"
+              : isDarkMode ? "text-slate-400 group-hover:text-orange-300" : "text-gray-500 group-hover:text-orange-700"}
           `}
         />
 
@@ -60,8 +68,14 @@ export function NavMain({ items }) {
         {item.items?.length && (
           <ChevronRight
             className={`
-              w-4 h-4 text-gray-500 transition-transform duration-200 
-              ${isActive ? "rotate-90 text-gray-800" : "group-data-[state=open]:rotate-90"}
+              w-4 h-4 transition-transform duration-200 
+              ${isActive
+                ? isDarkMode
+                  ? "rotate-90 text-orange-300"
+                  : "rotate-90 text-gray-800"
+                : isDarkMode
+                  ? "text-slate-400 group-data-[state=open]:rotate-90"
+                  : "text-gray-500 group-data-[state=open]:rotate-90"}
             `}
           />
         )}
@@ -82,8 +96,12 @@ export function NavMain({ items }) {
   className={`
     block px-3 py-1 text-sm rounded transition-colors duration-200
     ${isSubActive
-      ? "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
-      : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-300 hover:text-orange-900"
+      ? isDarkMode
+        ? "bg-slate-800 text-slate-100 shadow-sm"
+        : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
+      : isDarkMode
+        ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
+        : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
     }
   `}
 >

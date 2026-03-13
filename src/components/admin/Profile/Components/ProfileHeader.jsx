@@ -1,21 +1,52 @@
 import React from 'react'
 import { Button } from "../../../ui/button"
-import Heading from '../../common/Heading'
-import { LoadingSpinner } from './commanProfile/LoadingSpinner'
+import { useNavigate } from 'react-router-dom'
+import { Users, Settings, Store } from 'lucide-react'
 
-export default function ProfileHeader({ restaurantName, error, onUpdateClick }) {
+export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdateClick, showStaffButton, showUpdateButton }) {
+    const navigate = useNavigate()
+    const userRole = localStorage.getItem("userRole") || "";
+    const isAdmin = userRole === "admin";
+    const safeRestaurantName =
+        typeof restaurantName === "string"
+            ? restaurantName
+            : String(restaurantName || "").trim();
+    
     return (
-        <div className="mb-8 flex justify-between items-center">
-            <div>
-                <Heading title={restaurantName} />
-                {error && (
-                    <p className="text-sm text-red-600 mt-2">{error}</p>
-                )}
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-lg shadow-gray-100/50 dark:border-slate-700 dark:bg-slate-900 dark:shadow-slate-950/40">
+            <div className="h-auto min-h-14 bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg overflow-hidden border-2 border-white shadow-sm bg-white flex-shrink-0">
+                        {restaurantLogo ? (
+                            <img src={restaurantLogo} alt="Logo" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-150">
+                                <Store className="w-5 h-5 text-orange-500" />
+                            </div>
+                        )}
+                    </div>
+                    <h1 className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">{safeRestaurantName || "My Restaurant"}</h1>
+                </div>
+                <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
+                    {showStaffButton && isAdmin && (
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/admin/staff')}
+                          className="border-white/50 bg-transparent text-sm text-white hover:bg-white/20 dark:border-white/40 dark:text-white dark:hover:bg-white/20"
+                        >
+                            <Users className="w-4 h-4 mr-1" /> Staff
+                        </Button>
+                    )}
+                    {showUpdateButton && (
+                        <Button
+                          onClick={onUpdateClick}
+                          className="bg-white text-sm text-orange-600 hover:bg-gray-100 dark:border dark:border-slate-600 dark:bg-slate-900 dark:text-orange-300 dark:hover:bg-slate-800"
+                        >
+                            <Settings className="w-4 h-4 mr-1" /> Edit
+                        </Button>
+                    )}
+                </div>
             </div>
-            <div>
-                <Button onClick={onUpdateClick}>
-                    Update Profile
-                </Button>
-            </div>
-        </div>)
+        </div>
+    )
 }

@@ -1,6 +1,6 @@
 // src/components/admin/orderManagement/CustomizationsModal.jsx
 import React from "react";
-import { X } from "lucide-react";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 
 const CustomizationsModal = ({ order, onClose }) => {
   if (!order || !order.items) return null;
@@ -23,26 +23,23 @@ const CustomizationsModal = ({ order, onClose }) => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
       onClick={handleBackdropClick}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-orange-400 to-orange-500 p-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4">
           <div>
-            <h2 className="text-xl font-bold text-white">Order Customizations</h2>
-            <p className="text-white/80 text-sm mt-1">
-              Order #{order._id?.slice(-6) || "N/A"} • {order.customerName}
-            </p>
+            <h2 className="text-xl font-bold text-gray-900">Order Customizations</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-200 transition"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
           >
-            <X size={24} />
+            <XCircleIcon className="h-6 w-6" />
           </button>
         </div>
 
@@ -71,14 +68,14 @@ const CustomizationsModal = ({ order, onClose }) => {
                     className="border border-gray-200 rounded-xl overflow-hidden shadow-sm transition"
                   >
                     {/* Item Header */}
-                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 border-b">
+                    <div className="border-b bg-gradient-to-r from-orange-50/70 to-white p-3">
                       <div className="flex justify-between items-center">
                         <h4 className="font-bold text-gray-800 text-lg">
                           {item.itemName}
                         </h4>
                         <div className="flex items-center gap-2">
                           {item.variant && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                            <span className="rounded border border-orange-200 bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
                               {item.variant}
                             </span>
                           )}
@@ -110,7 +107,7 @@ const CustomizationsModal = ({ order, onClose }) => {
               </div>
 
               {/* Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-sm font-semibold text-gray-600">Order Details</h4>
@@ -133,10 +130,10 @@ const CustomizationsModal = ({ order, onClose }) => {
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-gray-200 p-4 flex justify-end">
+        <div className="flex justify-end border-t border-orange-100 p-4">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-medium"
+            className="h-11 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
           >
             Close
           </button>

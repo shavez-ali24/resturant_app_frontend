@@ -14,6 +14,24 @@ const initialState = {
   }
 };
 
+// Helper function to get correct price based on pricing type
+const getCartItemPrice = (cartItem) => {
+  // Prefer explicit cart snapshot price (usually discounted/final)
+  if (cartItem?.price !== undefined && cartItem?.price !== null && cartItem?.price !== "") {
+    const explicitPrice = Number(cartItem.price);
+    if (!Number.isNaN(explicitPrice)) {
+      return explicitPrice;
+    }
+  }
+  if (cartItem.pricingType === "combo") {
+    return Number(cartItem.comboPrice) || 0;
+  }
+  if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
+    return Number(cartItem.variantRates[cartItem.variantKey].price) || 0;
+  }
+  return 0;
+};
+
 const clientSlice = createSlice({
   name: 'client',
   initialState,
@@ -34,16 +52,44 @@ const clientSlice = createSlice({
       state.error = null;
     },
 
-    // Cart reducers
     addToCart: (state, action) => {
-      const { id, item, price } = action.payload;
-      const resolvedPrice = price ?? item?.price ?? 0;
+      const { id, item, price, quantity = 1 } = action.payload;
+      
+      // Extract price from multiple possible locations with priority
+      let resolvedPrice = 0;
+      
+      // Priority 1: Explicit price parameter
+      if (price !== undefined && price !== null) {
+        resolvedPrice = Number(price);
+      }
+      // Priority 2: Price from item object
+      else if (item?.price !== undefined && item?.price !== null) {
+        resolvedPrice = Number(item.price);
+      }
+      // Priority 3: Combo price for combo items
+      else if (item?.pricingType === "combo" && item?.comboPrice !== undefined) {
+        resolvedPrice = Number(item.comboPrice);
+      }
+      // Priority 4: Variant price
+      else if (item?.variantKey && item?.variantRates?.[item.variantKey]?.price) {
+        resolvedPrice = Number(item.variantRates[item.variantKey].price);
+      }
+      // Priority 5: Original price
+      else if (item?.originalPrice !== undefined) {
+        resolvedPrice = Number(item.originalPrice);
+      }
+      
+      // Ensure it's a valid number
+      if (isNaN(resolvedPrice)) resolvedPrice = 0;
 
       if (state.cart.items[id]) {
         // Item already exists - increment quantity
-        state.cart.items[id].quantity += 1;
-        // Preserve existing customizations - only update if a non-empty customizations is explicitly provided
-        // This prevents overwriting customizations when incrementing quantity
+        state.cart.items[id].quantity += quantity;
+        // Update price if provided (for price changes)
+        if (resolvedPrice > 0) {
+          state.cart.items[id].price = resolvedPrice;
+        }
+        // Preserve existing customizations
         if (item.customizations !== undefined) {
           const newCustomization = typeof item.customizations === 'string' 
             ? item.customizations.trim() 
@@ -52,23 +98,23 @@ const clientSlice = createSlice({
             state.cart.items[id].customizations = newCustomization;
           }
         }
-        // If no customizations provided or empty string, keep the existing customizations
       } else {
         // New item - add to cart
         state.cart.items[id] = {
           ...item,
-          price: resolvedPrice,
-          quantity: 1,
+          price: resolvedPrice, // Store the resolved price
+          quantity: quantity,
           customizations: item.customizations || "",
         };
       }
 
+      // Update totals with proper price calculation
       state.cart.totalItems = Object.values(state.cart.items).reduce(
         (total, cartItem) => total + cartItem.quantity,
         0
       );
       state.cart.totalAmount = Object.values(state.cart.items).reduce(
-        (total, cartItem) => total + cartItem.price * cartItem.quantity,
+        (total, cartItem) => total + (getCartItemPrice(cartItem) * cartItem.quantity),
         0
       );
     },
@@ -78,8 +124,10 @@ const clientSlice = createSlice({
 
       if (state.cart.items[id]) {
         if (state.cart.items[id].quantity > 1) {
+          // Decrement by 1
           state.cart.items[id].quantity -= 1;
         } else {
+          // Remove item completely when quantity is 1
           delete state.cart.items[id];
         }
 
@@ -87,22 +135,7 @@ const clientSlice = createSlice({
           (total, item) => total + item.quantity, 0
         );
         state.cart.totalAmount = Object.values(state.cart.items).reduce(
-          (total, item) => total + (item.price * item.quantity), 0
-        );
-      }
-    },
-
-    incrementQuantity: (state, action) => {
-      const id = action.payload;
-
-      if (state.cart.items[id]) {
-        state.cart.items[id].quantity += 1;
-
-        state.cart.totalItems = Object.values(state.cart.items).reduce(
-          (total, item) => total + item.quantity, 0
-        );
-        state.cart.totalAmount = Object.values(state.cart.items).reduce(
-          (total, item) => total + (item.price * item.quantity), 0
+          (total, item) => total + (getCartItemPrice(item) * item.quantity), 0
         );
       }
     },
@@ -135,7 +168,6 @@ export const {
   clearError,
   addToCart,
   removeFromCart,
-  incrementQuantity,
   updateCartItem,
   clearCart,
 } = clientSlice.actions;

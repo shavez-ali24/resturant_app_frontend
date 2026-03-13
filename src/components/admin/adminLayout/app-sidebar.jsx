@@ -18,12 +18,26 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
-import logo from "@/assets/tapNOrder.webp";
+import logo from "@/assets/tapNbite.png";
+// import logo from "@/assets/loader.gif";
+
 import { useSidebar } from "@/components/ui/sidebar";
 
-export function AppSidebar({ ...props }) {
+export function AppSidebar({ isDarkMode = false, ...props }) {
   const { toggleSidebar } = useSidebar();
   const location = useLocation();
+  const sidebarShellClass = isDarkMode
+    ? "border-r border-slate-700/70 bg-slate-950 [&_[data-sidebar=sidebar]]:bg-slate-950"
+    : "";
+  const sidebarSectionClass = isDarkMode
+    ? "bg-slate-950"
+    : "bg-gradient-to-r from-orange-50 to-orange-100";
+
+  // Get user role from localStorage
+  const userRole = localStorage.getItem("userRole") || "";
+  const isAdmin = userRole === "admin";
+  const isStaff = userRole === "staff";
+  const homeRoute = isStaff ? "/admin/orders" : "/admin";
 
   const userData = {
     name: localStorage.getItem("userName") || "User",
@@ -31,72 +45,99 @@ export function AppSidebar({ ...props }) {
     avatar: localStorage.getItem("userAvatar") || "",
   };
 
-  const data = {
-    user: userData,
-    navMain: [
+  // Define navigation items based on role
+  const navMain = [
+    {
+      title: "Order Management",
+      url: "#",
+      icon: ListOrdered,
+      isActive: true,
+      roles: ["admin", "staff"],
+      items: [
+        { title: "Pending Orders", url: "/admin/orders" },
+        { title: "Completed Orders", url: "/admin/completedorder" },
+        { title: "Cancelled Orders", url: "/admin/cancelledorder" },
+      ],
+    },
+    ...(isAdmin || isStaff
+      ? [
+          {
+            title: "Menu Management",
+            url: "#",
+            icon: SquareMenu,
+            isActive: true,
+            roles: ["admin", "staff"],
+            items: [{ title: "Menu", url: "/admin/menu" }],
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            title: "Observability",
+            url: "#",
+            icon: ChartNoAxesCombined,
+            isActive: true,
+            roles: ["admin"],
+            items: [
+              { title: "Revenue", url: "/admin/revenue" },
+              { title: "Sales", url: "/admin/sales" },
+            ],
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            title: "Inventory Management",
+            url: "#",
+            icon: SquareMenu,
+            isActive: true,
+            roles: ["admin"],
+            items: [{ title: "coming soon", url: "/admin/comingsoon" }],
+          },
+        ]
+      : []),
+    {
+      title: "Profile",
+      url: "/admin/profile",
+      icon: User,
+      isActive: location.pathname === "/admin/profile",
+      roles: ["admin", "staff"],
+      items: [],
+    },
+  ];
 
-      {
-        title: "Order Management",
-        url: "#",
-        icon: ListOrdered,
-        isActive: true,
-        items: [
-          { title: "Pending Orders", url: "/admin/orders" },
-          { title: "Completed Orders", url: "/admin/completedorder" },
-          { title: "Cancelled Orders", url: "/admin/cancelledorder" },
-        ],
-      },
-      {
-        title: "Menu Management",
-        url: "#",
-        icon: SquareMenu,
-        isActive: true,
-        items: [
-          { title: "Menu", url: "/admin/menu" },
-         
-        ],
-      },
-      {
-        title: "Observability",
-        url: "#",
-        icon: ChartNoAxesCombined,
-        isActive: true,
-        items: [
-          { title: "Revenue", url: "/admin/revenue" },
-
-          { title: "Sales", url: "/admin/sales" },
-        ],
-      },
-      {
-        title: "Profile",
-        url: "/admin/profile",
-        icon: User,
-        isActive: location.pathname === "/admin/profile",
-        items: [],
-      }
-    ],
-  };
+  // Filter items based on user role
+  const filteredNavMain = navMain.filter(
+    (section) => section.roles.includes(userRole) && section.items.length > 0
+  );
 
   React.useEffect(() => {
     if (window.innerWidth < 1024) {
       toggleSidebar(false);
     }
-  }, [location.pathname]);
+  }, [location.pathname, toggleSidebar]);
 
   return (
-    
     <Sidebar
-      className="overflow-y-auto  !h-[calc(100svh-var(--header-height))] "
+      className={`overflow-y-auto !h-[calc(100svh-var(--header-height))] ${sidebarShellClass}`}
       {...props}
     >
       {/* Header */}
-      <SidebarHeader className=" px-4 py-3  bg-gradient-to-r from-orange-50 to-orange-100 ">
+      <SidebarHeader className={`px-14 py-3 ${sidebarSectionClass}`}>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="mt-0 sm:mt-20 bg-gradient-to-r from-orange-50 to-orange-100">
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className={`mt-0 sm:mt-20 ${sidebarSectionClass}`}
+            >
               <Link
-                to="/admin"
-                onClick={() => window.innerWidth < 1024 && toggleSidebar(false)}
+                to={homeRoute}
+                onClick={() =>
+                  window.innerWidth < 1024 && toggleSidebar(false)
+                }
               >
                 <img src={logo} alt="Logo" className="h-12 w-auto " />
               </Link>
@@ -104,28 +145,23 @@ export function AppSidebar({ ...props }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-     <SidebarContent className="bg-gradient-to-r from-orange-50 to-orange-100">
-  <NavMain
-    className="bg-gradient-to-r from-orange-50 to-orange-100"
-    items={data.navMain
-      .map((section) => ({
-        ...section,
-        items: section.items.map((item) => ({
-          ...item,
-          onClick: () => window.innerWidth < 1024 && toggleSidebar(false),
-        })),
-      }))
-      .filter((item) => item.items.length > 0)}
-    itemClassName="hover:bg-orange-200/70 rounded-lg transition-colors duration-200"
-  />
-</SidebarContent>
-
-
-
+      <SidebarContent className={sidebarSectionClass}>
+        <NavMain
+          isDarkMode={isDarkMode}
+          items={filteredNavMain.map((section) => ({
+            ...section,
+            items: section.items.map((item) => ({
+              ...item,
+              onClick: () =>
+                window.innerWidth < 1024 && toggleSidebar(false),
+            })),
+          }))}
+        />
+      </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className=" bg-gradient-to-r from-orange-50 to-orange-100">
-        <NavUser user={data.user} />
+      <SidebarFooter className={sidebarSectionClass}>
+        <NavUser user={userData} isDarkMode={isDarkMode} />
       </SidebarFooter>
     </Sidebar>
   );

@@ -2,11 +2,18 @@ import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { House, Pointer, SquarePen, Trash, Truck, Utensils, Eye, Ban , Home } from "lucide-react";
+import { SquarePen, Trash, Truck, Utensils, Eye, Ban, House } from "lucide-react";
+import {
+  formatOrderTableId,
+  getOrderTypeBadgeClass,
+  getOrderTypeKey,
+  getOrderTypeLabel,
+  getStatusRowClass,
+  isEatHereOrder,
+} from "../commonOrderFile/utils";
 
 const OrderRow = ({
   order,
-  orderNum,
   setEditingOrder,
   setShowConfirmDelete,
   updateOrder,
@@ -23,71 +30,53 @@ const OrderRow = ({
   const customizationCount = order.items ? 
     order.items.filter(item => item.customizations && item.customizations.trim() !== "").length : 0;
 
-  // Order Type Badge Helper (same styling as EditOrderModal but only display)
-  const getOrderTypeDisplay = (type) => {
-    switch(type?.toLowerCase()) {
-      case "eat here":
-        return {
-          bg: "bg-green-100",
-          text: "text-green-700",
-          ring: "ring-green-200",
-          icon: <Utensils size={16} />
-        };
-      case "take away":
-        return {
-          bg: "bg-blue-100",
-          text: "text-blue-700",
-          ring: "ring-blue-200",
-          icon: <Home size={16} />
-        };
+  const getOrderTypeIcon = (type) => {
+    switch (getOrderTypeKey(type)) {
+      case "eat_here":
+        return <Utensils size={16} />;
+      case "take_away":
+        return <House size={16} />;
       case "delivery":
-        return {
-          bg: "bg-orange-100",
-          text: "text-orange-700",
-          ring: "ring-orange-200",
-          icon: <Truck size={16} />
-        };
+        return <Truck size={16} />;
       default:
-        return {
-          bg: "bg-gray-100",
-          text: "text-gray-700",
-          ring: "ring-gray-200",
-          icon: <Utensils size={16} />
-        };
+        return <Utensils size={16} />;
     }
   };
 
-  const orderTypeStyle = getOrderTypeDisplay(order.orderType);
+  const orderTypeLabel = getOrderTypeLabel(order.orderType);
+  const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
+  const tableLabel = formatOrderTableId(order.tableId);
 
   return (
-    <tr className="hover:bg-orange-50 border transition">
+    <tr
+      className={`border-b border-orange-100 transition-colors hover:brightness-95 dark:border-slate-700 dark:hover:brightness-110 ${getStatusRowClass(
+        order.status
+      )}`}
+    >
       {/* Date Column */}
-      <td className="text-center border text-gray-700">
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
         {order.formattedDate || "N/A"}
       </td>
 
       {/* Time Column */}
-      <td className="text-center border text-gray-700">
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
         {order.formattedTime || "N/A"}
       </td>
 
-      {/* Order ID */}
-      <td className="text-center border font-medium text-gray-800">{orderNum}</td>
-
       {/* Customer */}
-      <td className="text-center border text-gray-700">{order.customerName}</td>
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerName}</td>
 
       {/* Phone */}
-      <td className="text-center border text-gray-700">{order.customerPhone}</td>
+      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerPhone}</td>
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
-      <td className="flex items-center justify-center py-2.5">
-        <div className={`inline-flex items-center justify-center h-9 px-3 rounded-lg font-medium shadow-sm ring-1 ring-black/5 transition-all ${orderTypeStyle.bg} ${orderTypeStyle.text} ${orderTypeStyle.ring}`}>
-          <div className="flex items-center gap-2">
-            {orderTypeStyle.icon}
-            <span>{order.orderType || "Select Type"}</span>
-            {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
-              <span className="ml-1">: {order.tableId}</span>
+      <td className="px-1 py-2 text-center border dark:border-slate-700">
+        <div className={`inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
+          <div className="flex items-center gap-1.5">
+            {getOrderTypeIcon(order.orderType)}
+            <span>{orderTypeLabel}</span>
+            {isEatHereOrder(order.orderType) && tableLabel && (
+              <span className="ml-0.5">: {tableLabel}</span>
             )}
           </div>
         </div>
@@ -97,7 +86,7 @@ const OrderRow = ({
       <td className="text-center border py-2">
         <button
           onClick={() => dispatch(showBill(order))}
-          className="px-4 py-2 rounded-lg bg-orange-100 border border-orange-300 hover:bg-orange-200 transition"
+          className="rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
         >
           <span className="flex justify-center items-center gap-1">
             View Items & Bill
@@ -111,19 +100,20 @@ const OrderRow = ({
           {hasCustomizations ? (
             <button
               onClick={() => onCustomizationsClick(order)}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600 transition font-medium flex items-center justify-center gap-2 shadow-sm hover:shadow-md mx-auto group relative"
+              className="mx-auto flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
               title={`${customizationCount} item(s) have customizations`}
             >
-              <Eye size={16} />
+              <Eye size={14} />
+              Note
               {customizationCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold ml-1">
                   {customizationCount}
                 </span>
               )}
             </button>
           ) : (
-            <span className="text-gray-400 italic text-sm" title="No customizations">
-              <Ban size={18} className="mx-auto opacity-50 text-orange-700" />
+            <span className="text-gray-400 italic text-xs" title="No customizations">
+              <Ban size={16} className="mx-auto opacity-50 text-orange-700" />
             </span>
           )}
         </td>
@@ -135,27 +125,31 @@ const OrderRow = ({
       {tableType === "pending" && (
         <>
           <td className="border">
+            {/* Status dropdown - shown for both admin and staff */}
             <div className="flex justify-center items-center w-full">
               <StatusDropdown order={order} updateOrder={updateOrder} />
             </div>
           </td>
 
-          <td className="text-center border">
-            <button
-              onClick={() => setEditingOrder(order)}
-              className="px-3 py-2 text-blue-700 hover:bg-blue-100"
-              title="Edit order"
-            >
-              <SquarePen size={20} />
-            </button>
+          {/* Edit and Delete buttons - shown for both admin and staff */}
+          <td className="text-center border py-2">
+            <div className="flex items-center justify-center gap-1">
+              <button
+                onClick={() => setEditingOrder(order)}
+                className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100"
+                title="Edit order"
+              >
+                <SquarePen size={16} />
+              </button>
 
-            <button
-              onClick={() => setShowConfirmDelete(order)}
-              className="px-3 py-2 text-red-700 hover:bg-red-100"
-              title="Delete order"
-            >
-              <Trash size={20} />
-            </button>
+              <button
+                onClick={() => setShowConfirmDelete(order)}
+                className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100"
+                title="Delete order"
+              >
+                <Trash size={16} />
+              </button>
+            </div>
           </td>
         </>
       )}

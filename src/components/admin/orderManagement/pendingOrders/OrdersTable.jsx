@@ -3,10 +3,18 @@ import React, { useState } from "react";
 import OrderRow from "./OrderRow";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { Utensils, House, Truck, Pointer } from "lucide-react";
+import { Utensils, House, Truck } from "lucide-react";
 import StatusDropdown from "./StatusDropdown";
 import CustomizationsModal from "./CustomizationsModal";
 import { Eye } from "lucide-react";
+import {
+  formatOrderTableId,
+  getOrderTypeBadgeClass,
+  getOrderTypeKey,
+  getOrderTypeLabel,
+  getStatusRowClass,
+  isEatHereOrder,
+} from "../commonOrderFile/utils";
 
 // Utility function to format date
 const formatDate = (dateString) => {
@@ -58,11 +66,11 @@ const OrdersTable = ({
   };
 
   return (
-    <div className="shadow-sm">
+    <div className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
       {/* Customizations Modal */}
       {selectedCustomizations && (
         <div 
-          className="fixed inset-0 z-50" 
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]" 
           onClick={handleModalClose}
         >
           <CustomizationsModal
@@ -75,44 +83,43 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden md:block">
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-orange-300 to-orange-500 text-gray-800 uppercase tracking-wide text-xs">
+          <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
-              <th className="text-center border p-2">Date</th>
-              <th className="text-center border p-2">Time</th>
-              <th className="text-center p-3 border">Order ID</th>
-              <th className="text-center p-3 border">Customer</th>
-              <th className="text-center p-3 border">Phone</th>
-              <th className="text-center p-3 border">Order Type</th>
-              <th className="text-center p-3 border">Items</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Customer</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Type</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Items</th>
               {tableType === "pending" && (
-      <th className="text-center p-3 border">Note</th>
-    )}
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Note</th>
+              )}
 
               {tableType === "pending" && (
                 <>
-                  <th className="text-center p-3 border">Status</th>
-                  <th className="text-center p-3 border">Actions</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Status</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Actions</th>
                 </>
               )}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-orange-100 bg-white/95 dark:divide-slate-700 dark:bg-slate-900/95">
             {loading ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-gray-500">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-gray-500 dark:text-slate-300">
                   Loading...
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-red-500">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-red-500 dark:text-red-400">
                   {error}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="text-center py-6 text-gray-400 italic">
+                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center italic text-gray-400 dark:text-slate-400">
                   No orders yet
                 </td>
               </tr>
@@ -126,7 +133,6 @@ const OrdersTable = ({
                     formattedTime: formatTime(order.createdAt),
                   }}
                   index={index}
-                  orderNum={order._id.slice(-6)}
                   setEditingOrder={setEditingOrder}
                   setShowConfirmDelete={setShowConfirmDelete}
                   setOrderForBillModal={setOrderForBillModal}
@@ -141,135 +147,138 @@ const OrdersTable = ({
       </div>
 
       {/* Mobile View */}
-     
-{/* Mobile View */}
-<div className="block md:hidden p-4">
-  {loading ? (
-    <p className="text-center py-6 text-gray-500">Loading...</p>
-  ) : error ? (
-    <p className="text-center py-6 text-red-500">{error}</p>
-  ) : orders.length === 0 ? (
-    <p className="text-center py-6 text-gray-400 italic">No orders yet</p>
-  ) : (
-    <div className="space-y-4">
-      {orders.map((order) => {
-        // Order Type styling helper for mobile
-        const getOrderTypeStyle = (type) => {
-          switch(type?.toLowerCase()) {
-            case "eat here":
-              return "bg-green-100 text-green-700 ring-green-200";
-            case "take away":
-              return "bg-blue-100 text-blue-700 ring-blue-200";
-            case "delivery":
-              return "bg-orange-100 text-orange-700 ring-orange-200";
-            default:
-              return "bg-gray-100 text-gray-700 ring-gray-200";
-          }
-        };
+      <div className="block md:hidden px-2 sm:px-3">
+        {loading ? (
+          <p className="py-6 text-center text-gray-500 dark:text-slate-300">Loading...</p>
+        ) : error ? (
+          <p className="py-6 text-center text-red-500 dark:text-red-400">{error}</p>
+        ) : orders.length === 0 ? (
+          <p className="py-6 text-center italic text-gray-400 dark:text-slate-400">No orders yet</p>
+        ) : (
+          <div className="space-y-3.5 pb-2">
+            {orders.map((order) => {
+              const getOrderTypeIcon = (type) => {
+                switch (getOrderTypeKey(type)) {
+                  case "eat_here":
+                    return <Utensils size={14} />;
+                  case "take_away":
+                    return <House size={14} />;
+                  case "delivery":
+                    return <Truck size={14} />;
+                  default:
+                    return <Utensils size={14} />;
+                }
+              };
+              const orderTypeLabel = getOrderTypeLabel(order.orderType);
+              const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
+              const tableLabel = formatOrderTableId(order.tableId);
 
-        const getOrderTypeIcon = (type) => {
-          switch(type?.toLowerCase()) {
-            case "eat here":
-              return <Utensils size={16} />;
-            case "take away":
-              return <House size={16} />;
-            case "delivery":
-              return <Truck size={16} />;
-            default:
-              return <Utensils size={16} />;
-          }
-        };
+              const hasCustomizations =
+                tableType === "pending" &&
+                order.items &&
+                order.items.some(
+                  (item) => item.customizations && item.customizations.trim() !== ""
+                );
 
-        return (
-          <div
-            key={order._id}
-            className="bg-white rounded-xl shadow-md border border-gray-200 p-4 space-y-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-gray-900">
-                Order #{order._id.slice(-6)}
-              </h3>
-              <span className="text-sm text-gray-500">
-                {formatDate(order.createdAt)} {formatTime(order.createdAt)}
-              </span>
-            </div>
+              return (
+                <div
+                  key={order._id}
+                  className={`w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
+                    order.status
+                  )}`}
+                >
+                  <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
+                    <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
+                      Order
+                    </h3>
+                    <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      {formatDate(order.createdAt)} | {formatTime(order.createdAt)}
+                    </span>
+                  </div>
 
-            <p className="text-gray-700">
-              <span className="font-medium">Customer:</span> {order.customerName}
-            </p>
+                  <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                      <span className="font-medium text-gray-600 dark:text-slate-300">Customer:</span>
+                      <p className="mt-0.5 break-words text-gray-800 dark:text-slate-100">{order.customerName || "N/A"}</p>
+                    </div>
+                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                      <span className="font-medium text-gray-600 dark:text-slate-300">Phone:</span>
+                      <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">{order.customerPhone || "N/A"}</p>
+                    </div>
+                  </div>
 
-            <p className="text-gray-700">
-              <span className="font-medium">Phone:</span> {order.customerPhone}
-            </p>
+                  <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center">
+                    <span className="shrink-0 text-sm font-medium text-gray-600 dark:text-slate-300">Type:</span>
+                    <div
+                      className={`inline-flex h-9 w-fit items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
+                    >
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        {getOrderTypeIcon(order.orderType)}
+                        <span>{orderTypeLabel}</span>
+                        {isEatHereOrder(order.orderType) && tableLabel && (
+                          <span className="ml-0.5">: {tableLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Order Type in Mobile - Updated to match OrderRow styling */}
-            <div className="flex flex-col gap-1">
-              <span className="font-medium text-gray-700">Order Type:</span>
-              <div className={`inline-flex items-center px-3 py-2 rounded-lg font-medium shadow-sm ring-1 ring-black/5 ${getOrderTypeStyle(order.orderType)}`}>
-                <div className="flex items-center gap-2">
-                  {getOrderTypeIcon(order.orderType)}
-                  <span>{order.orderType}</span>
-                  {order.orderType?.toLowerCase() === "eat here" && order.tableId && (
-                    <span className="ml-1">:{order.tableId}</span>
+                  <div className="grid grid-cols-1 gap-2">
+                    {tableType === "pending" && (
+                      hasCustomizations ? (
+                        <button
+                          onClick={() => (onCustomizationsClick || handleCustomizationsClick)(order)}
+                          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-medium text-white transition hover:from-orange-600 hover:to-orange-700"
+                        >
+                          <Eye size={16} />
+                          Note
+                        </button>
+                      ) : (
+                        <div className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm italic text-gray-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          No Note
+                        </div>
+                      )
+                    )}
+
+                    <button
+                      onClick={() => dispatch(showBill(order))}
+                      className="flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                    >
+                      View Items & Bill
+                    </button>
+                  </div>
+
+                  {tableType === "pending" && (
+                    <>
+                      <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Status</span>
+                        <div className="w-full min-[360px]:w-auto">
+                          <StatusDropdown order={order} updateOrder={updateOrder} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setEditingOrder(order)}
+                          className="h-10 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => setShowConfirmDelete(order)}
+                          className="h-10 w-full rounded-xl bg-red-50 px-4 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* C/S Button for Mobile (ONLY PENDING) */}
-            {tableType === "pending" &&
-            order.items &&
-            order.items.some(
-              (item) => item.customizations && item.customizations.trim() !== ""
-            ) ? (
-              <button
-                onClick={() => (onCustomizationsClick || handleCustomizationsClick)(order)}
-                className="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition text-sm font-medium flex items-center gap-2"
-              >
-                <Eye size={16} />
-                Note
-              </button>
-            ) : tableType === "pending" ? (
-              <span className="text-sm text-gray-400 italic">No Note</span>
-            ) : null}
-
-            <button
-              onClick={() => dispatch(showBill(order))}
-              className="rounded-lg bg-orange-100 border border-orange-300 hover:bg-orange-200 transition font-medium flex items-center justify-center gap-1 py-2 w-40"
-            >
-              View Items <Pointer size={16} />
-            </button>
-
-            {tableType === "pending" && (
-              <>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="font-medium">Status:</span>
-                  <StatusDropdown order={order} updateOrder={updateOrder} />
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <button
-                    onClick={() => setEditingOrder(order)}
-                    className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => setShowConfirmDelete(order)}
-                    className="px-3 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
-  )}
-</div>
+        )}
+      </div>
     </div>
   );
 };

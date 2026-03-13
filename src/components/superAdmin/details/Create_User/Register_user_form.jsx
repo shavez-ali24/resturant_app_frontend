@@ -1,14 +1,13 @@
 // src/components/superAdmin/RegisterUserForm.jsx
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Form } from "@/components/ui/form"
 import { Loader2 } from "lucide-react"
-import { NotificationModal } from "../../common/notificationModal"
+import { useNotify } from "../../common/notificationModal"
 import { PersonalInfoSection } from "./Personal_info_section"
 import { RestaurantInfoSection } from "./Restaurant-info-section"
 import { RoleSection } from "./Role_section"
@@ -36,9 +35,9 @@ const registerSchema = z.object({
   path: ["domain"]
 })
 
-export function RegisterUserForm() {
+export function RegisterUserForm({ onSuccess, hideHeading = false, compact = false }) {
   const [register, { isLoading }] = useRegisterUserMutation();
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+  const notify = useNotify();
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -48,97 +47,82 @@ export function RegisterUserForm() {
       password: "",
       role: "",
       domain: "",
-      restaurantName: ""
-    }
-  })
+      restaurantName: "",
+    },
+  });
 
-  const selectedRole = form.watch("role")
+  // Watch role field to show/hide restaurant fields
+  const watchedRole = form.watch("role");
 
-  const showNotification = (message, type = "success") => {
-    setNotification({ show: true, message, type })
-  }
-
-  const closeNotification = () => {
-    setNotification({ show: false, message: "", type: "" })
-  }
-
-  const onSubmit = async (values) => {
+  const onSubmit = async (data) => {
     try {
-      const data = await register(values).unwrap();
-
-      // Show appropriate success message based on role
-      let successMessage = "";
-      switch (values.role) {
-        case "admin":
-          successMessage = `Admin ${data.user.name} has been created with restaurant ${data.restaurant?.restaurantName}`;
-          break;
-        case "staff":
-          successMessage = `Staff ${data.user.name} has been registered successfully`;
-          break;
-        case "superadmin":
-          successMessage = `Superadmin ${data.user.name} has been created successfully`;
-          break;
-        case "user":
-          successMessage = `User ${data.user.name} has been created successfully`;
-          break;
-        default:
-          successMessage = `User ${data.user.name} has been created successfully`;
+      // Clean up data based on role - remove unnecessary fields
+      const cleanedData = { ...data };
+      
+      // For non-admin roles, remove domain and restaurantName
+      if (data.role !== "admin") {
+        delete cleanedData.domain;
+        delete cleanedData.restaurantName;
       }
-
-      showNotification(successMessage, "success")
-      form.reset()
+      
+      await register(cleanedData).unwrap();
+      notify("User created successfully!", "success");
+      form.reset();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
-      // Handle duplicate domain error
-      if (error.data?.message && error.data.message.includes('domain')) {
-        form.setError('domain', {
-          type: 'manual',
-          message: 'Domain already exists. Please choose a different one.'
-        })
-      }
-      showNotification(error.data?.message || 'Registration failed', "error")
+      notify(error?.data?.message || error?.message || "Registration failed", "error");
     }
-  }
+  };
+
+  const handleRoleChange = (value) => {
+    form.setValue("role", value);
+  };
+
+  const containerClassName = compact ? "w-full" : "mx-auto w-full max-w-2xl";
+  const formClassName = compact
+    ? "space-y-4 rounded-xl border border-orange-100 bg-orange-50/40 p-3 sm:p-4"
+    : "space-y-8 rounded-2xl border border-orange-100 bg-orange-50/40 p-4 sm:p-6";
 
   return (
-    <>
-      <NotificationModal notification={notification} onClose={closeNotification} />
-      
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Register New User</h2>
-          <p className="text-gray-600 mt-2">Create a new user account with role selection</p>
-        </div>
+      <div className={containerClassName}>
+        {!hideHeading && (
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Register New User</h2>
+            <p className="text-gray-600 mt-2">Create a new user account with role selection</p>
+          </div>
+        )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <PersonalInfoSection form={form} />
-            <RoleSection form={form} />
+          <form onSubmit={form.handleSubmit(onSubmit)} className={formClassName}>
+            <PersonalInfoSection form={form} compact={compact} />
+            <RoleSection form={form} onRoleChange={handleRoleChange} compact={compact} />
             
             {/* Show restaurant fields only when admin role is selected */}
-            {selectedRole === "admin" && (
-              <RestaurantInfoSection form={form} />
+            {watchedRole === "admin" && (
+              <RestaurantInfoSection form={form} compact={compact} />
             )}
 
             <div className="flex justify-center">
               <Button 
                 type="submit" 
-                className="w-auto min-w-[200px]" 
+                className="w-auto min-w-[200px] rounded-xl border border-orange-600 bg-gradient-to-r from-orange-500 to-orange-600 font-semibold text-white hover:from-orange-600 hover:to-orange-700" 
                 disabled={isLoading} 
-                size="lg"
+                size={compact ? "default" : "lg"}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating {selectedRole || "User"}...
+                    Creating {watchedRole || "User"}...
                   </>
                 ) : (
-                  `Register ${selectedRole || "User"}`
+                  `Register ${watchedRole || "User"}`
                 )}
               </Button>
             </div>
           </form>
         </Form>
       </div>
-    </>
   )
 }

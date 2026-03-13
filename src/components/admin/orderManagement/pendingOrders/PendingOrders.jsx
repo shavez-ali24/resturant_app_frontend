@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
 import { SlRefresh } from "react-icons/sl";
 
@@ -14,11 +14,13 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { getCompactPageNumbers } from "@/lib/pagination";
 
 import OrdersTable from "./OrdersTable";
 import EditOrderModal from "./EditOrderModal";
@@ -44,26 +46,61 @@ const Orders = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(
-    () => localStorage.getItem("autoRefresh") || "OFF"
+    () => {
+      const saved = localStorage.getItem("autoRefresh");
+      return ["OFF", "1", "2", "5"].includes(saved) ? saved : "OFF";
+    }
   );
-  const autoRefIntervalId = useRef(null);
   const itemsPerPage = 10;
+  const combinedFetchLimit = itemsPerPage * 25;
+  const autoRefreshMinutes = useMemo(() => {
+    if (autoRefresh === "OFF") return 0;
+    const mins = parseInt(autoRefresh, 10);
+    return Number.isNaN(mins) ? 0 : mins;
+  }, [autoRefresh]);
+  const pollingIntervalMs = autoRefreshMinutes > 0 ? autoRefreshMinutes * 60 * 1000 : 0;
 
   // --- RTK Query Hook with API parameters ---
   const {
-    data: ordersResponse = {},
-    isLoading: ordersLoading,
-    isError: ordersError,
-    error: ordersErrorObj,
-    refetch: refetchOrders,
-  } = useGetOrdersQuery({
-    status: "pending",
-    page: currentPage,
-    limit: itemsPerPage,
-    range: "all",
-  });
+    data: pendingOrdersResponse = {},
+    isLoading: pendingLoading,
+    isError: pendingError,
+    error: pendingErrorObj,
+    refetch: refetchPendingOrders,
+  } = useGetOrdersQuery(
+    {
+      status: "pending",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval: pollingIntervalMs,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
+
+  const {
+    data: preparingOrdersResponse = {},
+    isLoading: preparingLoading,
+    isError: preparingError,
+    error: preparingErrorObj,
+    refetch: refetchPreparingOrders,
+  } = useGetOrdersQuery(
+    {
+      status: "preparing",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval: pollingIntervalMs,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
 
   const { data: menuItems = [] } = useGetMenuQuery();
   
@@ -73,10 +110,80 @@ const Orders = () => {
     isLoading: restaurantLoading,
     error: restaurantError,
     refetch: refetchRestaurant
-  } = useGetRestaurantProfileQuery();
+  } = useGetRestaurantProfileQuery(undefined, {
+    pollingInterval: pollingIntervalMs,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
   
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
+
+  const getRawErrorText = (errorObj) => {
+    if (!errorObj) return "";
+    if (typeof errorObj === "string") return errorObj;
+    if (typeof errorObj?.data === "string") return errorObj.data;
+    return (
+      errorObj?.data?.message ||
+      errorObj?.error ||
+      errorObj?.message ||
+      ""
+    );
+  };
+
+  const getFriendlyOrderError = (errorObj, context = "general") => {
+    const status = errorObj?.status || errorObj?.originalStatus;
+    const rawMessage = getRawErrorText(errorObj).toLowerCase();
+
+    if (status === 401) {
+      return "Session expired. Please login again.";
+    }
+    if (status === 403) {
+      return "You do not have permission for this action.";
+    }
+    if (status === 404) {
+      return context === "update" || context === "delete"
+        ? "Order not found. Please refresh and try again."
+        : "Orders not found right now. Please refresh.";
+    }
+    if (status === 429) {
+      return "Too many requests. Please wait a moment and try again.";
+    }
+    if (status >= 500) {
+      return "Server issue detected. Please try again in a moment.";
+    }
+
+    if (
+      rawMessage.includes("network") ||
+      rawMessage.includes("failed to fetch") ||
+      rawMessage.includes("timeout")
+    ) {
+      return "Network issue. Please check internet connection and retry.";
+    }
+
+    if (
+      rawMessage.includes("validation") ||
+      rawMessage.includes("invalid") ||
+      rawMessage.includes("required")
+    ) {
+      return "Please check order details and try again.";
+    }
+
+    if (context === "refresh") {
+      return "Unable to refresh pending orders right now.";
+    }
+    if (context === "update") {
+      return "Unable to update order right now.";
+    }
+    if (context === "delete") {
+      return "Unable to delete order right now.";
+    }
+    if (context === "fetch") {
+      return "Unable to load pending orders right now.";
+    }
+
+    return "Something went wrong. Please try again.";
+  };
 
   // ✅ FIXED: Extract tables from restaurant profile
   // Aapke API response ke format ke hisab se adjust karna
@@ -119,50 +226,71 @@ const Orders = () => {
   const tables = extractTablesFromRestaurant();
 
   // --- Extract data from API response ---
-  const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
-  const totalOrders = ordersResponse?.totalOrders || 0;
-  const totalPages = ordersResponse?.totalPages || 1;
-  const loading = ordersLoading || restaurantLoading;
-  const error = ordersError ? ordersErrorObj : null;
+  const pendingOrders = useMemo(
+    () =>
+      Array.isArray(pendingOrdersResponse?.orders)
+        ? pendingOrdersResponse.orders
+        : [],
+    [pendingOrdersResponse?.orders]
+  );
+  const preparingOrders = useMemo(
+    () =>
+      Array.isArray(preparingOrdersResponse?.orders)
+        ? preparingOrdersResponse.orders
+        : [],
+    [preparingOrdersResponse?.orders]
+  );
+  const combinedOrders = useMemo(() => {
+    const orderMap = new Map();
+    [...pendingOrders, ...preparingOrders].forEach((order) => {
+      const key = order?._id || order?.id || order?.orderId || order?.createdAt;
+      if (!key) return;
+      orderMap.set(key, order);
+    });
 
-  // Debug logs
-  useEffect(() => {
-    if (restaurantData) {
-      // console.log("Full Restaurant API Response:", restaurantData);
-      // console.log("Restaurant Object:", restaurantData.restaurant || restaurantData);
-      // console.log("Tables extracted:", tables);
-      // console.log("Table count:", tables.length);
-      
-      // Aapke API response ke structure ko check karein
-      const restaurant = restaurantData.restaurant || restaurantData;
-      // console.log("Available keys in restaurant:", Object.keys(restaurant));
-      // console.log("tableNumbers field:", restaurant.tableNumbers);
-    }
-  }, [restaurantData, tables]);
+    return Array.from(orderMap.values()).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }, [pendingOrders, preparingOrders]);
 
-  // Update lastUpdated timestamp
-  useEffect(() => {
-    if (ordersResponse.orders) setLastUpdated(new Date());
-  }, [ordersResponse]);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(combinedOrders.length / itemsPerPage)
+  );
+  const orders = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return combinedOrders.slice(start, start + itemsPerPage);
+  }, [combinedOrders, currentPage, itemsPerPage]);
+  const loading = pendingLoading || preparingLoading || restaurantLoading;
+  const error =
+    pendingError || preparingError || restaurantError
+      ? getFriendlyOrderError(
+          pendingErrorObj || preparingErrorObj || restaurantError,
+          "fetch"
+        )
+    : null;
 
   // Update bill modal live
   useEffect(() => {
-    if (orderForBillModal && orders.length) {
-      const updated = orders.find((o) => o._id === orderForBillModal._id);
+    if (orderForBillModal && combinedOrders.length) {
+      const updated = combinedOrders.find(
+        (o) => o._id === orderForBillModal._id
+      );
       setOrderForBillModal(updated ?? null);
     }
-  }, [orders, orderForBillModal]);
+  }, [combinedOrders, orderForBillModal]);
 
   // Manual Refresh
-  const handleManualRefresh = useCallback(async () => {
+  const handleManualRefresh = async () => {
     try {
-      await refetchOrders();
+      await refetchPendingOrders();
+      await refetchPreparingOrders();
       await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
       notify("Orders & Restaurant data refreshed", "success");
     } catch (err) {
-      notify("Failed to refresh", "error");
+      notify(getFriendlyOrderError(err, "refresh"), "error");
     }
-  }, [refetchOrders, refetchRestaurant, notify]);
+  };
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -179,12 +307,12 @@ const Orders = () => {
       }).unwrap();
       
       notify("Order updated successfully!", "success");
-      refetchOrders();
+      refetchPendingOrders();
+      refetchPreparingOrders();
       setEditingOrder(null);
     } catch (err) {
       console.error("Update order error:", err);
-      const msg = err?.data?.message || "Failed to update order";
-      notify(msg, "error");
+      notify(getFriendlyOrderError(err, "update"), "error");
     }
   };
 
@@ -193,11 +321,11 @@ const Orders = () => {
     try {
       await deleteOrderApi(orderId).unwrap();
       notify("Order deleted successfully!", "success");
-      refetchOrders();
+      refetchPendingOrders();
+      refetchPreparingOrders();
       setShowConfirmDelete(null);
     } catch (err) {
-      const msg = err?.data?.message || "Failed to delete order";
-      notify(msg, "error");
+      notify(getFriendlyOrderError(err, "delete"), "error");
     }
   };
 
@@ -209,135 +337,67 @@ const Orders = () => {
   };
 
   // --- Auto Refresh ---
-  const stopAutoRefresh = useCallback(() => {
-    if (autoRefIntervalId.current) {
-      clearInterval(autoRefIntervalId.current);
-      autoRefIntervalId.current = null;
-    }
-    setAutoRefresh("OFF");
-    localStorage.setItem("autoRefresh", "OFF");
-    notify("Auto-refresh turned off", "info");
-  }, [notify]);
+  const handleAutoRefreshChange = (value) => {
+    setAutoRefresh(value);
+    localStorage.setItem("autoRefresh", value);
 
-  const startAutoRefresh = useCallback(
-    (minutes) => {
-      if (autoRefIntervalId.current) clearInterval(autoRefIntervalId.current);
-
-      const id = setInterval(() => {
-        refetchOrders();
-        refetchRestaurant(); // ✅ Restaurant data bhi refresh karein
-      }, minutes * 60 * 1000);
-
-      autoRefIntervalId.current = id;
-      setAutoRefresh(`${minutes}`);
-      localStorage.setItem("autoRefresh", `${minutes}`);
-      notify(`Auto-refresh set to every ${minutes} min`, "success");
-    },
-    [refetchOrders, refetchRestaurant, notify]
-  );
-
-  useEffect(() => {
-    const saved = localStorage.getItem("autoRefresh");
-    if (saved && saved !== "OFF") {
-      const mins = parseInt(saved, 10);
-      if (!isNaN(mins) && mins > 0) startAutoRefresh(mins);
+    if (value === "OFF") {
+      notify("Auto-refresh turned off", "info");
+      return;
     }
 
-    return () => {
-      if (autoRefIntervalId.current) clearInterval(autoRefIntervalId.current);
-    };
-  }, [startAutoRefresh]);
+    notify(`Auto-refresh set to every ${value} min`, "success");
+    refetchPendingOrders();
+    refetchPreparingOrders();
+    refetchRestaurant();
+  };
 
   // Handle page change
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
   };
 
-  // Generate page numbers with ellipsis logic
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pageNumbers = useMemo(
+    () => getCompactPageNumbers(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-
-    pageNumbers.push(1);
-
-    let startPage = Math.max(2, currentPage - 1);
-    let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-    if (currentPage <= 3) {
-      startPage = 2;
-      endPage = 4;
-    } else if (currentPage >= totalPages - 2) {
-      startPage = totalPages - 3;
-      endPage = totalPages - 1;
-    }
-
-    if (startPage > 2) {
-      pageNumbers.push('ellipsis-left');
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-
-    if (endPage < totalPages - 1) {
-      pageNumbers.push('ellipsis-right');
-    }
-
-    if (totalPages > 1) {
-      pageNumbers.push(totalPages);
-    }
-
-    return pageNumbers;
-  };
-
-  // Handle backdrop click for modals
-  const handleBackdropClick = (e, closeFunction) => {
-    if (e.target === e.currentTarget) {
-      closeFunction();
-    }
-  };
+  }, [currentPage, totalPages]);
 
   return (
-    <div className="min-h-screen py-6 sm:px-4 lg:px-4 bg-gradient-to-r from-orange-50/30 to-orange-100/40">
+    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
-      <div className="flex flex-row items-center justify-between p-3 sm:p-4 mb-4 gap-3">
+      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
         <Heading title="Pending Orders" />
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleManualRefresh}
-            className="p-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition flex items-center gap-2"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
           >
-            <SlRefresh />
-            <span className="hidden sm:inline text-sm">Refresh</span>
+            <SlRefresh size={16} />
+            <span className="hidden text-xs sm:inline">Refresh</span>
           </button>
 
           {/* Auto Refresh */}
           <Select
             value={autoRefresh}
-            onValueChange={(value) => {
-              if (value === "OFF") {
-                stopAutoRefresh();
-              } else {
-                const mins = parseInt(value, 10);
-                if (!isNaN(mins)) startAutoRefresh(mins);
-              }
-            }}
+            onValueChange={handleAutoRefreshChange}
           >
-            <SelectTrigger className="h-9 w-[140px] rounded-lg border-orange-600 bg-orange-100 px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-gray-300 text-orange-700">
+            <SelectTrigger className="h-10 w-[130px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
               <SelectValue placeholder="Auto Refresh" />
             </SelectTrigger>
 
-            <SelectContent className="bg-orange-50 border-orange-300 shadow-xl rounded-xl p-1 min-w-[140px] cursor-pointer ">
+            <SelectContent className="min-w-[130px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
               <SelectGroup>
-                <SelectItem value="OFF" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Off</SelectItem>
-                <SelectItem value="1" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 1 min</SelectItem>
-                <SelectItem value="2" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 2 min</SelectItem>
-                <SelectItem value="5" className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700">Every 5 min</SelectItem>
+                <SelectItem value="OFF" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Off</SelectItem>
+                <SelectItem value="1" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 1 min</SelectItem>
+                <SelectItem value="2" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 2 min</SelectItem>
+                <SelectItem value="5" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 5 min</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -345,7 +405,8 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <OrdersTable
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:mt-4">
+        <OrdersTable
         orders={orders}
         loading={loading}
         error={error}
@@ -356,12 +417,14 @@ const Orders = () => {
         tableType="pending"
         onCustomizationsClick={handleCustomizationsClick}
       />
+      </div>
 
       {/* Server-side Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination>
-            <PaginationContent>
+        <div className="flex flex-shrink-0 justify-center px-2 py-2">
+          <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Pagination className="min-w-max">
+              <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
@@ -369,27 +432,34 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage > 1) handlePageChange(currentPage - 1);
                   }}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }`}
                 />
               </PaginationItem>
 
-              {getPageNumbers().map((pageNum, index) => {
-                if (pageNum === 'ellipsis-left' || pageNum === 'ellipsis-right') {
+              {pageNumbers.map((pageNum, index) => {
+                if (typeof pageNum === "string") {
                   return (
-                    <PaginationItem key={`ellipsis-${index}`}>
-                      <span className="px-3 py-2">...</span>
+                    <PaginationItem key={`${pageNum}-${index}`}>
+                      <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
                     </PaginationItem>
                   );
                 }
 
                 return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      href="#"
-                      isActive={currentPage === pageNum}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(pageNum);
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === pageNum}
+                        className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
+                          currentPage === pageNum
+                            ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
+                            : "bg-white text-gray-700 hover:bg-orange-50"
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(pageNum);
                       }}
                     >
                       {pageNum}
@@ -405,11 +475,14 @@ const Orders = () => {
                     e.preventDefault();
                     if (currentPage < totalPages) handlePageChange(currentPage + 1);
                   }}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
+                    currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+                  }`}
                 />
               </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       )}
 
@@ -438,6 +511,7 @@ const Orders = () => {
           editingOrder={editingOrder}
           setEditingOrder={setEditingOrder}
           updateOrder={updateOrder}
+          getFriendlyErrorMessage={getFriendlyOrderError}
           menuItems={menuItems}
           tables={tables} // ✅ Passing tables from restaurant profile
         />

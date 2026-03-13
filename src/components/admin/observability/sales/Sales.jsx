@@ -51,6 +51,7 @@ import {
 } from "@/redux/adminRedux/adminAPI";
 import Heading from "../../common/Heading";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNotify } from "../../common/NotificationModal";
 
 // Helper functions
 const formatCurrency = (amount) => {
@@ -77,7 +78,7 @@ const formatDate = (dateString) => {
       day: "numeric",
       month: "short",
     });
-  } catch (error) {
+  } catch {
     return dateString;
   }
 };
@@ -91,9 +92,37 @@ const formatFullDate = (dateString) => {
       month: "short",
       year: "numeric"
     });
-  } catch (error) {
+  } catch {
     return dateString;
   }
+};
+
+const renderDistributionLabel = (
+  { cx, cy, midAngle, outerRadius, percent, name },
+  minPercent = 0.05
+) => {
+  if (percent < minPercent) return null;
+
+  const radian = Math.PI / 180;
+  const radius = outerRadius + 12;
+  const x = cx + radius * Math.cos(-midAngle * radian);
+  const y = cy + radius * Math.sin(-midAngle * radian);
+  const textAnchor = x > cx ? "start" : "end";
+  const labelText = `${name}: ${Math.round(percent * 100)}%`;
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#fb923c"
+      textAnchor={textAnchor}
+      dominantBaseline="central"
+      fontSize={11}
+      fontWeight={700}
+    >
+      {labelText}
+    </text>
+  );
 };
 
 const timeRangeOptions = [
@@ -113,6 +142,11 @@ const ORANGE_COLORS = [
   '#92400e', '#78350f', '#451a03', '#7c2d12'
 ];
 
+const analyticsTabsListClass =
+  "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)] dark:border-slate-600 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.2),0_10px_24px_-18px_rgba(2,6,23,0.9)]";
+const analyticsTabsTriggerClass =
+  "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current";
+
 export default function TopSellingAnalytics() {
   const [activeTab, setActiveTab] = useState("products");
   const [timeRange, setTimeRange] = useState("7d");
@@ -120,6 +154,8 @@ export default function TopSellingAnalytics() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isCustomRange, setIsCustomRange] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const notify = useNotify();
   
   const dropdownRef = useRef(null);
 
@@ -218,10 +254,45 @@ export default function TopSellingAnalytics() {
     setTimeRange("7d"); // Reset to default
   };
 
-  const handleRefresh = () => {
-    refetchProducts();
-    refetchCategories();
+  const getRefreshErrorMessage = (err) =>
+    err?.data?.message || err?.error || err?.message || "Unable to refresh sales analytics.";
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const [productsResult, categoriesResult] = await Promise.all([
+        refetchProducts(),
+        refetchCategories(),
+      ]);
+
+      if (productsResult?.error || categoriesResult?.error) {
+        notify(
+          getRefreshErrorMessage(productsResult?.error || categoriesResult?.error),
+          "error"
+        );
+        return;
+      }
+
+      notify("Sales analytics refreshed successfully.", "success");
+    } catch (err) {
+      notify(getRefreshErrorMessage(err), "error");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
+
+  const secondaryButtonClass =
+    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800";
+  const primaryButtonClass =
+    "inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
+  const selectTriggerClass =
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
+  const selectContentClass = "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950";
+  const selectItemClass =
+    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-orange-200";
+  const inputClass =
+    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
 
   // Memoized data transformations
   const productsData = useMemo(() => {
@@ -347,7 +418,7 @@ export default function TopSellingAnalytics() {
   // Loading skeleton
   if (productsLoading || categoriesLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50/30 to-amber-50/20 p-4 sm:p-6">
+      <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
         <div className="mb-6">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-12 w-full max-w-md" />
@@ -366,7 +437,7 @@ export default function TopSellingAnalytics() {
                   productsData?.error || categoriesData?.error;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/30 to-amber-50/20 p-4 sm:p-6">
+    <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -380,16 +451,16 @@ export default function TopSellingAnalytics() {
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Time Range Selector */}
             <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-orange-100 border-orange-300 text-orange-700">
-                <Calendar className="w-4 h-4 mr-2 text-orange-600" />
+              <SelectTrigger className={selectTriggerClass}>
+                <Calendar className="w-4 h-4 mr-2 text-orange-500" />
                 <SelectValue placeholder="Select Range" />
               </SelectTrigger>
-              <SelectContent className="bg-orange-50 border-orange-200">
+              <SelectContent className={selectContentClass}>
                 {timeRangeOptions.map((option) => (
                   <SelectItem 
                     key={option.value} 
                     value={option.value}
-                    className="data-[highlighted]:bg-orange-200 cursor-pointer text-orange-700"
+                    className={selectItemClass}
                   >
                     {option.label}
                   </SelectItem>
@@ -401,10 +472,10 @@ export default function TopSellingAnalytics() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-200 w-full sm:w-auto justify-center font-medium
+                className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
                   ${showDatePicker || isCustomRange
-                    ? 'bg-orange-100 text-orange-700 border-orange-600 shadow-inner' 
-                    : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 hover:border-orange-400'}`}
+                    ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
+                    : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300'}`}
               >
                 <CalendarDays className="w-4 h-4" />
                 <span>Custom Range</span>
@@ -417,7 +488,7 @@ export default function TopSellingAnalytics() {
               </button>
               
               {showDatePicker && (
-                <div className="absolute right-0 top-12 z-20 w-full sm:w-80 bg-white rounded-xl border border-orange-300 shadow-xl p-4">
+                <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80">
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800 text-center border-b border-orange-100 pb-2">Select Custom Date Range</h4>
                     
@@ -426,7 +497,7 @@ export default function TopSellingAnalytics() {
                         <label className="text-sm font-medium text-gray-700">From Date</label>
                         <input 
                           type="date" 
-                          className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                          className={inputClass}
                           value={fromDate} 
                           onChange={e => setFromDate(e.target.value)} 
                           max={toDate}
@@ -436,7 +507,7 @@ export default function TopSellingAnalytics() {
                         <label className="text-sm font-medium text-gray-700">To Date</label>
                         <input 
                           type="date" 
-                          className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                          className={inputClass}
                           value={toDate} 
                           onChange={e => setToDate(e.target.value)} 
                           min={fromDate}
@@ -477,7 +548,7 @@ export default function TopSellingAnalytics() {
                               handleResetDate();
                             }
                           }} 
-                          className="px-2.5 py-1.5 text-sm text-gray-600 hover:bg-orange-100 rounded-md transition-colors"
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
                         >
                           Cancel
                         </button>
@@ -485,7 +556,7 @@ export default function TopSellingAnalytics() {
                         <button 
                           onClick={handleCustomApply} 
                           disabled={!fromDate || !toDate}
-                          className="px-3 py-1.5 text-xs bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                          className={primaryButtonClass}
                         >
                           Apply
                         </button>
@@ -499,10 +570,11 @@ export default function TopSellingAnalytics() {
 
             <button
               onClick={handleRefresh}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 border border-orange-300 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors font-medium"
+              disabled={isRefreshing}
+              className={secondaryButtonClass}
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
             </button>
           </div>
         </div>
@@ -510,7 +582,7 @@ export default function TopSellingAnalytics() {
 
       {/* Error Display */}
       {hasError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
             <div>
@@ -532,7 +604,7 @@ export default function TopSellingAnalytics() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         {/* Total Days Card */}
-        <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-orange-50 to-white">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-xl">
@@ -562,7 +634,7 @@ export default function TopSellingAnalytics() {
         </Card>
 
         {/* Time Range Card */}
-        <Card className="border border-amber-200 shadow-sm bg-gradient-to-br from-amber-50 to-white">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-amber-100 to-amber-200 rounded-xl">
@@ -590,8 +662,8 @@ export default function TopSellingAnalytics() {
 
       {/* Main Content */}
       <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <Card className="border border-orange-200 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-orange-50 to-white border-b border-orange-200 p-4">
+        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
+          <CardHeader className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-lg font-semibold text-gray-800">
@@ -603,17 +675,17 @@ export default function TopSellingAnalytics() {
               </div>
               
               <div className="flex items-center gap-4">
-                <TabsList className="bg-orange-100 p-1 rounded-xl">
+                <TabsList className={analyticsTabsListClass}>
                   <TabsTrigger 
                     value="products" 
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
+                    className={analyticsTabsTriggerClass}
                   >
                     <Package className="w-4 h-4 mr-2" />
                     Products
                   </TabsTrigger>
                   <TabsTrigger 
                     value="categories" 
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
+                    className={analyticsTabsTriggerClass}
                   >
                     <Tag className="w-4 h-4 mr-2" />
                     Categories
@@ -703,17 +775,14 @@ export default function TopSellingAnalytics() {
                       <CardContent>
                         <div className="h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 18, right: 40, left: 40, bottom: 18 }}>
                               <Pie
                                 data={getAggregatedProducts}
-                                cx="60%"
+                                cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }) => {
-                                  if (percent < 0.05) return '';
-                                  return `${name}: ${(percent * 100).toFixed(0)}%`;
-                                }}
-                                outerRadius={80}
+                                label={(props) => renderDistributionLabel(props, 0.06)}
+                                outerRadius={72}
                                 fill="#f97316"
                                 dataKey="revenue"
                               >
@@ -779,9 +848,9 @@ export default function TopSellingAnalytics() {
                               <tr key={index} className="hover:bg-orange-50/30">
                                 <td className="py-3 px-4 border-r border-orange-100">
                                   <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300' :
-                                      index === 1 ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300' :
+                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
+                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
+                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
                                       'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
                                     }`}>
                                     #{index + 1}
@@ -819,18 +888,21 @@ export default function TopSellingAnalytics() {
                   </Card>
                 </div>
               ) : (
-                <div className="h-64 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border-2 border-dashed border-orange-300 p-6">
-                  <div className="text-5xl mb-4">📦</div>
+                <div className="h-64 flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <Package className="h-6 w-6" />
+                  </div>
                   <p className="text-gray-800 font-bold text-lg mb-2">No Product Data Found</p>
                   <p className="text-gray-600 text-center mb-4">
                     No completed orders found for the selected time period.
                   </p>
                   <button
                     onClick={handleRefresh}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 border border-orange-300 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors font-medium"
+                    disabled={isRefreshing}
+                    className={secondaryButtonClass}
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh Data
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing ? "Refreshing..." : "Refresh Data"}
                   </button>
                 </div>
               )}
@@ -914,10 +986,7 @@ export default function TopSellingAnalytics() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }) => {
-                                  if (percent < 0.05) return '';
-                                  return `${name}: ${(percent * 100).toFixed(0)}%`;
-                                }}
+                                label={(props) => renderDistributionLabel(props, 0.05)}
                                 outerRadius={80}
                                 fill="#f97316"
                                 dataKey="revenue"
@@ -984,9 +1053,9 @@ export default function TopSellingAnalytics() {
                               <tr key={index} className="hover:bg-orange-50/30">
                                 <td className="py-3 px-4 border-r border-orange-100">
                                   <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300' :
-                                      index === 1 ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300' :
+                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
+                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
+                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
                                       'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
                                     }`}>
                                     #{index + 1}
@@ -1024,18 +1093,21 @@ export default function TopSellingAnalytics() {
                   </Card>
                 </div>
               ) : (
-                <div className="h-64 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border-2 border-dashed border-orange-300 p-6">
-                  <div className="text-5xl mb-4">🏷️</div>
+                <div className="h-64 flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <Tag className="h-6 w-6" />
+                  </div>
                   <p className="text-gray-800 font-bold text-lg mb-2">No Category Data Found</p>
                   <p className="text-gray-600 text-center mb-4">
                     No completed orders found for the selected time period.
                   </p>
                   <button
                     onClick={handleRefresh}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 border border-orange-300 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors font-medium"
+                    disabled={isRefreshing}
+                    className={secondaryButtonClass}
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh Data
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing ? "Refreshing..." : "Refresh Data"}
                   </button>
                 </div>
               )}

@@ -1,29 +1,29 @@
 // src/components/admin/orderManagement/DeleteModal.jsx
 import React from "react";
-import { X, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 
 const DeleteModal = ({ order, onCancel, onDelete }) => {
   if (!order) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"   onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={onCancel}>
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4 dark:border-slate-700 dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
           <div className="flex items-center space-x-3">
-            <AlertTriangle className="text-white" size={24} />
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm">
+              <AlertTriangle size={20} />
+            </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Delete Order</h2>
-              <p className="text-white/80 text-sm mt-1">
-                Order #{order._id?.slice(-6) || "N/A"}
-              </p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Delete Order</h2>
             </div>
           </div>
           <button
             onClick={onCancel}
-            className="text-white hover:text-gray-200 transition"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-orange-300"
           >
-            <X size={24} />
+            <XCircleIcon className="h-6 w-6" />
           </button>
         </div>
 
@@ -40,7 +40,7 @@ const DeleteModal = ({ order, onCancel, onDelete }) => {
           </div>
 
           {/* Order Summary */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+          <div className="mb-6 rounded-xl border border-orange-100 bg-orange-50/60 p-4">
             <h4 className="font-semibold text-gray-800 mb-2">Order Details:</h4>
             <div className="space-y-2">
               <p className="text-sm text-gray-700">
@@ -72,13 +72,13 @@ const DeleteModal = ({ order, onCancel, onDelete }) => {
           <div className="flex justify-end space-x-3">
             <button
               onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              className="h-11 rounded-xl border border-orange-200 bg-white px-6 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
             >
               Cancel
             </button>
             <button
               onClick={onDelete}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium flex items-center space-x-2"
+              className="flex h-11 items-center space-x-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:from-red-600 hover:to-red-600"
             >
               <AlertTriangle size={18} />
               <span>Delete Order</span>

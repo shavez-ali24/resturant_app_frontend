@@ -26,8 +26,8 @@ class FingerprintService {
     const visitorId = result.visitorId;
 
     // Log fingerprint to console
-    console.log('Fingerprint (newly generated):', visitorId);
-    console.log('Full fingerprint result:', result);
+    // console.log('Fingerprint (newly generated):', visitorId);
+    // console.log('Full fingerprint result:', result);
 
     // 3️⃣ Persist everywhere
     localStorage.setItem(FINGERPRINT_KEY, visitorId);

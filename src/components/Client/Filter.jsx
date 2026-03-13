@@ -1,43 +1,60 @@
 import { motion } from "framer-motion";
 
-export default function Filter({ filters, onChange }) {
+export default function Filter({
+  filters = { veg: false, nonVeg: false, mixed: false, combo: false },
+  onChange = () => {},
+  isDarkMode = false,
+}) {
   const currentMode =
-    filters.veg && !filters.nonVeg
+    filters.veg && !filters.nonVeg && !filters.mixed
       ? "veg"
-      : filters.nonVeg && !filters.veg
+      : filters.nonVeg && !filters.veg && !filters.mixed
       ? "nonVeg"
+      : filters.mixed
+      ? "mixed"
       : "all";
 
   const setMode = (mode) => {
     if (mode === "veg") {
       onChange("veg", true);
       onChange("nonVeg", false);
+      onChange("mixed", false);
     } else if (mode === "nonVeg") {
       onChange("veg", false);
       onChange("nonVeg", true);
+      onChange("mixed", false);
+    } else if (mode === "mixed") {
+      onChange("veg", false);
+      onChange("nonVeg", false);
+      onChange("mixed", true);
     } else {
       onChange("veg", false);
       onChange("nonVeg", false);
+      onChange("mixed", false);
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="w-full flex items-center py-2 justify-end backdrop-blur-xl border-gray-200 px-2 pt-2"
+      transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      className="mx-2 mb-2 flex w-auto items-center justify-between px-1.5 py-1.5"
     >
-      {/* Veg / Non-Veg Toggle */}
-      <div className="flex items-center text-gray-800 text-xs sm:text-sm md:text-base">
-        <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1 shadow-sm">
+      {/* Veg / Non-Veg / Mixed Toggle - Left */}
+      <div className={`flex min-w-0 items-center text-xs sm:text-sm md:text-base ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
+        <div className={`inline-flex items-center gap-0.5 rounded-full p-0.5 shadow-sm ${isDarkMode ? "bg-slate-900/90 border border-slate-600" : "bg-white"}`}>
           <button
             type="button"
             onClick={() => setMode("all")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "all"
-                ? "bg-white text-gray-900 shadow"
-                : "text-gray-500 hover:text-gray-700"
+                ? isDarkMode
+                  ? "bg-orange-500/20 text-orange-200 shadow-sm"
+                  : "bg-orange-100 text-orange-800 shadow-sm"
+                : isDarkMode
+                ? "text-orange-300 hover:bg-slate-800 hover:text-orange-200"
+                : "text-orange-500 hover:bg-orange-50 hover:text-orange-700"
             }`}
           >
             All
@@ -45,10 +62,14 @@ export default function Filter({ filters, onChange }) {
           <button
             type="button"
             onClick={() => setMode("veg")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "veg"
-                ? "bg-green-500 text-white shadow"
-                : "text-green-700 hover:bg-green-50"
+                ? isDarkMode
+                  ? "bg-green-600 text-white shadow"
+                  : "bg-green-500 text-white shadow"
+                : isDarkMode
+                ? "text-green-300 hover:bg-slate-800"
+                : "text-green-700 hover:bg-green-50/80"
             }`}
           >
             Veg
@@ -56,16 +77,50 @@ export default function Filter({ filters, onChange }) {
           <button
             type="button"
             onClick={() => setMode("nonVeg")}
-            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition ${
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "nonVeg"
-                ? "bg-red-500 text-white shadow"
-                : "text-red-700 hover:bg-red-50"
+                ? isDarkMode
+                  ? "bg-red-600 text-white shadow"
+                  : "bg-red-500 text-white shadow"
+                : isDarkMode
+                ? "text-red-300 hover:bg-slate-800"
+                : "text-red-700 hover:bg-red-50/80"
             }`}
           >
             Non-Veg
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("mixed")}
+            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
+              currentMode === "mixed"
+                ? isDarkMode
+                  ? "bg-orange-600 text-white shadow"
+                  : "bg-orange-500 text-white shadow"
+                : isDarkMode
+                ? "text-orange-300 hover:bg-slate-800"
+                : "text-orange-700 hover:bg-orange-50/90"
+            }`}
+          >
+            Mixed
+          </button>
         </div>
       </div>
+
+      {/* Combo Toggle - Right */}
+      <button
+        type="button"
+        onClick={() => onChange("combo", !filters.combo)}
+        className={`ml-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
+          filters.combo
+            ? "bg-primary text-white shadow-md"
+            : isDarkMode
+            ? "border border-slate-600 bg-slate-900 text-orange-200 shadow-sm hover:bg-slate-800"
+            : "bg-white text-orange-700 shadow-sm hover:bg-orange-50"
+        }`}
+      >
+        Combo
+      </button>
     </motion.div>
   );
 }

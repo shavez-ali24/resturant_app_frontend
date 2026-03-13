@@ -6,12 +6,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange }) {
     return (
-        <FormCard title="Financials"  customIndex={2}>
-            <div className="space-y-4 rounded-xl border border-gray-200 p-4 bg-gray-50">
+        <FormCard title="Financials" customIndex={4}>
+            <div className="space-y-4 rounded-xl border border-orange-200 p-4 bg-orange-50/30">
+                {/* Delivery Charges */}
+                <FormField
+                    label="Delivery Charges (₹)"
+                    name="deliveryCharges"
+                    type="text"
+                    value={formData.deliveryCharges || 0}
+                    onChange={handleChange}
+                    placeholder="e.g. 50"
+                />
+
                 <div className="flex items-center justify-between">
                     <label
                         htmlFor="gst-toggle"
-                        className="text-gray-700 font-semibold"
+                        className="text-sm text-gray-700 font-semibold"
                     >
                         Enable GST
                     </label>
@@ -40,7 +50,7 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
                             transition={{ duration: 0.3 }}
                             className="space-y-4 overflow-hidden"
                         >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     label="GST Number"
                                     name="gstNumber"

@@ -1,129 +1,157 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useUpdateProfileForm } from '../Hooks/useUpdateProfileForm';
-import { modalOverlayVariant, modalContentVariant } from '../Lib/motionVariants';
-import UpdateCoreProfileForm from './UpdateCoreProfileForm';
-import UpdateCategoriesForm from './UpdateCategoriesForm';
-import UpdateOrderModeForm from './UpdateOrderModeForm';
-import UpdateFinancialsForm from './UpdateFinancialsForm';
-import UpdateBrandingForm from './UpdateBrandingForm';
-import UpdateFormActions from './UpdateFormActions';
+"use client";
+import React, { useEffect } from "react";
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
+import { Building2 } from "lucide-react";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 
-export const UpdateProfileModal = ({ initialData, token, onClose, onUpdateSuccess }) => {
-    // Add ESC key handler
-    useEffect(() => {
-        const handleEscKey = (event) => {
-            if (event.key === 'Escape') {
-                onClose();
-            }
-        };
+import { useUpdateProfileForm } from "../Hooks/useUpdateProfileForm";
+import {
+  modalOverlayVariant,
+  modalContentVariant,
+  chipVariant,
+} from "../Lib/motionVariants";
 
-        window.addEventListener('keydown', handleEscKey);
-        
-        // Cleanup
-        return () => {
-            window.removeEventListener('keydown', handleEscKey);
-        };
-    }, [onClose]);
+import UpdateCoreProfileForm from "./UpdateCoreProfileForm";
+import UpdateCategoriesForm from "./UpdateCategoriesForm";
+import UpdateOrderModeForm from "./UpdateOrderModeForm";
+import UpdateFinancialsForm from "./UpdateFinancialsForm";
+import UpdateBrandingForm from "./UpdateBrandingForm";
+import UpdateFormActions from "./UpdateFormActions";
 
-    const {
-        formData, categories, currentCategoryInput, setCurrentCategoryInput,
-        file, fileError, isSubmitting, notification, categorySuggestions,
-        activeModesCount, atLeastOneModeActive, handleChange, handleGstToggle,
-        handleOrderModeToggle, handleFileChange, handleCategoryKeyDown,
-        handleRemoveCategory, handleSubmit, closeNotification
-    } = useUpdateProfileForm(initialData, token, onUpdateSuccess, onClose);
+export const UpdateProfileModal = ({
+  initialData,
+  token,
+  onClose,
+  onUpdateSuccess,
+}) => {
+  // ESC KEY CLOSE
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                variants={modalOverlayVariant}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-                onClick={onClose}
-            >
-                {/* Main Form Modal */}
-                <motion.div
-                    variants={modalContentVariant}
-                    className="relative mt-10 bg-gray-50 rounded-xl shadow-2xl w-full max-w-3xl mx-auto max-h-[80vh] overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
+    window.addEventListener("keydown", handleEscKey);
+
+    // BODY SCROLL LOCK
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleEscKey);
+      document.body.style.overflow = "auto";
+    };
+  }, [onClose]);
+
+  const {
+    formData,
+    categories,
+    currentCategoryInput,
+    setCurrentCategoryInput,
+    file,
+    fileError,
+    isSubmitting,
+    categorySuggestions,
+    activeModesCount,
+    atLeastOneModeActive,
+    handleChange,
+    handleGstToggle,
+    handleOrderModeToggle,
+    handleFileChange,
+    handleCategoryKeyDown,
+    handleRemoveCategory,
+    handleSubmit,
+  } = useUpdateProfileForm(initialData, token, onUpdateSuccess, onClose);
+
+  // ⛔ IMPORTANT: render only after DOM ready
+  if (typeof window === "undefined") return null;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        variants={modalOverlayVariant}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-2 backdrop-blur-[2px] sm:p-4"
+      >
+        <motion.div
+          variants={modalContentVariant}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
+        >
+          <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 dark:border-slate-700 dark:bg-slate-900/95 sm:max-h-[88vh]">
+            <div className="p-4 sm:p-6 md:p-7">
+              <div className="mb-5 flex items-center gap-3 border-b border-orange-200 pb-4 dark:border-slate-700">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm">
+                  <Building2 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                    Update Restaurant Profile
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-slate-300">
+                    Keep profile details accurate for customers and staff.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-orange-300"
+                  aria-label="Close profile modal"
                 >
-                    <div className="w-full p-4 md:p-8 space-y-6">
-                        {/* Modal Header */}
-                        <div className="flex justify-between items-center pb-4 border-b border-gray-300">
-                            <h2 className="text-2xl font-bold text-gray-800">
-                                Update Restaurant Profile
-                            </h2>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-200"
-                                aria-label="Close modal"
-                            >
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    className="h-6 w-6" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    stroke="currentColor"
-                                >
-                                    <path 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        strokeWidth={2} 
-                                        d="M6 18L18 6M6 6l12 12" 
-                                    />
-                                </svg>
-                            </button>
-                        </div>
+                  <XCircleIcon className="h-6 w-6" />
+                </button>
+              </div>
 
-                        <motion.form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Form sections */}
-                            <UpdateCoreProfileForm
-                                formData={formData}
-                                handleChange={handleChange}
-                            />
+              <motion.form onSubmit={handleSubmit} className="mt-5 space-y-5">
+                <UpdateCoreProfileForm
+                  formData={formData}
+                  handleChange={handleChange}
+                />
 
-                            <UpdateCategoriesForm
-                                categories={categories}
-                                currentCategoryInput={currentCategoryInput}
-                                setCurrentCategoryInput={setCurrentCategoryInput}
-                                handleCategoryKeyDown={handleCategoryKeyDown}
-                                handleRemoveCategory={handleRemoveCategory}
-                                categorySuggestions={categorySuggestions}
-                            />
+                <UpdateCategoriesForm
+                  categories={categories}
+                  currentCategoryInput={currentCategoryInput}
+                  setCurrentCategoryInput={setCurrentCategoryInput}
+                  handleCategoryKeyDown={handleCategoryKeyDown}
+                  handleRemoveCategory={handleRemoveCategory}
+                  categorySuggestions={categorySuggestions}
+                  chipVariant={chipVariant}
+                />
 
-                            <UpdateOrderModeForm
-                                formData={formData}
-                                handleOrderModeToggle={handleOrderModeToggle}
-                                activeModesCount={activeModesCount}
-                                atLeastOneModeActive={atLeastOneModeActive}
-                            />
+                <UpdateOrderModeForm
+                  formData={formData}
+                  handleOrderModeToggle={handleOrderModeToggle}
+                  activeModesCount={activeModesCount}
+                  atLeastOneModeActive={atLeastOneModeActive}
+                />
 
-                            <UpdateFinancialsForm
-                                formData={formData}
-                                handleChange={handleChange}
-                                handleGstToggle={handleGstToggle}
-                            />
+                <UpdateFinancialsForm
+                  formData={formData}
+                  handleChange={handleChange}
+                  handleGstToggle={handleGstToggle}
+                />
 
-                            <UpdateBrandingForm
-                                file={file}
-                                fileError={fileError}
-                                handleFileChange={handleFileChange}
-                            />
+                <UpdateBrandingForm
+                  file={file}
+                  fileError={fileError}
+                  handleFileChange={handleFileChange}
+                  currentLogo={initialData?.logo?.url || ""}
+                />
 
-                            {/* Form buttons */}
-                            <UpdateFormActions
-                                isSubmitting={isSubmitting}
-                                fileError={fileError}
-                                onClose={onClose}
-                            />
-                        </motion.form>
-                    </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
-    );
+                <UpdateFormActions
+                  isSubmitting={isSubmitting}
+                  fileError={fileError}
+                  onClose={onClose}
+                />
+              </motion.form>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
+  );
 };

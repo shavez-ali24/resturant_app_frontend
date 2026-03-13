@@ -2,7 +2,11 @@ import { useSelector, useDispatch } from "react-redux";
 import BillPage from "./BillPage";
 import { hideBill } from "@/redux/adminRedux/billSlice";
 
-export default function BillModal() {
+export default function BillModal({ 
+  menuItems = [], 
+  tables = [],
+  updateOrder 
+}) {
   const dispatch = useDispatch();
 
   const { open, selectedOrder, restaurantDetails } = useSelector(
@@ -12,11 +16,14 @@ export default function BillModal() {
   if (!open || !selectedOrder) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
       <BillPage
         order={selectedOrder}
         restaurantDetails={restaurantDetails}
-        onClose={() => dispatch(hideBill())} 
+        onClose={() => dispatch(hideBill())}
+        menuItems={menuItems}
+        tables={tables}
+        updateOrder={updateOrder}
       />
     </div>
   );
