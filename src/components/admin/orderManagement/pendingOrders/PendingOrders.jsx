@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
 import { SlRefresh } from "react-icons/sl";
 
@@ -46,6 +46,8 @@ const Orders = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
+  const [isRefreshCoolingDown, setIsRefreshCoolingDown] = useState(false);
+  const refreshCooldownRef = useRef(null);
   const [autoRefresh, setAutoRefresh] = useState(
     () => {
       const saved = localStorage.getItem("autoRefresh");
@@ -291,6 +293,21 @@ const Orders = () => {
       notify(getFriendlyOrderError(err, "refresh"), "error");
     }
   };
+  const handleDebouncedRefresh = () => {
+    if (isRefreshCoolingDown) return;
+
+    setIsRefreshCoolingDown(true);
+    handleManualRefresh();
+
+    if (refreshCooldownRef.current) {
+      clearTimeout(refreshCooldownRef.current);
+    }
+
+    refreshCooldownRef.current = setTimeout(() => {
+      setIsRefreshCoolingDown(false);
+      refreshCooldownRef.current = null;
+    }, 2000);
+  };
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -368,6 +385,14 @@ const Orders = () => {
     }
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    return () => {
+      if (refreshCooldownRef.current) {
+        clearTimeout(refreshCooldownRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
@@ -376,8 +401,11 @@ const Orders = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleManualRefresh}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+            onClick={handleDebouncedRefresh}
+            disabled={isRefreshCoolingDown}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-white ${
+              isRefreshCoolingDown ? "pointer-events-none" : ""
+            }`}
           >
             <SlRefresh size={16} />
             <span className="hidden text-xs sm:inline">Refresh</span>
