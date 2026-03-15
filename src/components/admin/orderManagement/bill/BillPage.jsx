@@ -716,9 +716,6 @@ const BillPage = ({
                           {item.variant && (
                             <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>({item.variant})</div>
                           )}
-                          {item.customizations && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{item.customizations}</div>
-                          )}
                           {item.comboItems && (
                             <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                               Combo: {item.comboItems.length} items

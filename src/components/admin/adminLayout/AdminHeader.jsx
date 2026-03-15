@@ -1,12 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { Outlet } from "react-router-dom";
-import { AppSidebar } from "@/components/admin/adminLayout/app-sidebar";
-import { SiteHeader } from "@/components/admin/adminLayout/site-header";
+const AppSidebar = lazy(() =>
+  import("@/components/admin/adminLayout/app-sidebar").then((module) => ({
+    default: module.AppSidebar,
+  }))
+);
+const SiteHeader = lazy(() =>
+  import("@/components/admin/adminLayout/site-header").then((module) => ({
+    default: module.SiteHeader,
+  }))
+);
 // import { SiteHeader } from "@/components/admin/adminLayout/SiteHeader/SiteHeader";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import BillModal from "../orderManagement/bill/BillModal";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setRestaurantDetails } from "@/redux/adminRedux/billSlice";
 import { 
   useGetRestaurantProfileQuery, 
@@ -14,11 +21,14 @@ import {
   useUpdateOrderMutation
 } from "@/redux/adminRedux/adminAPI";
 
+const BillModal = lazy(() => import("../orderManagement/bill/BillModal"));
+
 export default function AdminHeader({
   isDarkMode = false,
   onToggleDarkMode = () => {},
 }) {
   const dispatch = useDispatch();
+  const isBillOpen = useSelector((state) => state.bill?.open);
   
   // Fetch restaurant profile (includes tables)
   const { 
@@ -29,7 +39,9 @@ export default function AdminHeader({
   // console.log("Restaurant Data:", restaurantData);
   
   // Fetch menu items
-  const { data: menuItems } = useGetMenuQuery();
+  const { data: menuItems } = useGetMenuQuery(undefined, {
+    skip: !isBillOpen,
+  });
   
   // Update order mutation
   const [updateOrder] = useUpdateOrderMutation();
@@ -77,13 +89,25 @@ export default function AdminHeader({
   return (
     <div className={`h-screen overflow-hidden ${isDarkMode ? "bg-slate-950 text-slate-100" : ""}`}>
       <SidebarProvider className="flex flex-col h-full">
-        <SiteHeader
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={onToggleDarkMode}
-        />
+        <Suspense
+          fallback={
+            <div className="h-16 w-full border-b border-orange-200 bg-white/80" />
+          }
+        >
+          <SiteHeader
+            isDarkMode={isDarkMode}
+            onToggleDarkMode={onToggleDarkMode}
+          />
+        </Suspense>
 
         <div className="flex flex-1 overflow-hidden">
-          <AppSidebar isDarkMode={isDarkMode} />
+          <Suspense
+            fallback={
+              <div className="hidden h-full w-64 border-r border-orange-100 bg-orange-50/40 lg:block" />
+            }
+          >
+            <AppSidebar isDarkMode={isDarkMode} />
+          </Suspense>
 
           <SidebarInset className="flex flex-1 overflow-hidden">
             {/* 👇 ONLY THIS PART SCROLLS */}
@@ -100,11 +124,15 @@ export default function AdminHeader({
               )}
 
               <Outlet />
-              <BillModal 
-                menuItems={menuItems || []}
-                tables={tables}
-                updateOrder={updateOrder}
-              />
+              {isBillOpen && (
+                <Suspense fallback={null}>
+                  <BillModal
+                    menuItems={menuItems || []}
+                    tables={tables}
+                    updateOrder={updateOrder}
+                  />
+                </Suspense>
+              )}
             </div>
           </SidebarInset>
         </div>

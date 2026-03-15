@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
-import logo from "@/assets/tapNbite.png";
+import logo from "@/assets/tapNbite-176x96.png";
 
 export function SuperAdminSidebar({ ...props }) {
   const { toggleSidebar } = useSidebar();
@@ -126,7 +126,14 @@ export function SuperAdminSidebar({ ...props }) {
                 onClick={handleSidebarInteraction}
                 className="flex w-full items-center justify-center"
               >
-                <img src={logo} alt="Tap N Bite Logo" className="h-11 w-auto sm:h-12" />
+                <img
+                  src={logo}
+                  alt="Tap N Bite Logo"
+                  width="88"
+                  height="48"
+                  decoding="async"
+                  className="h-11 w-auto sm:h-12"
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

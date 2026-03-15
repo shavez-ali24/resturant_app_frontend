@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
-import { SlRefresh } from "react-icons/sl";
 
 import {
   Select,
@@ -22,12 +21,13 @@ import {
 } from "@/components/ui/pagination";
 import { getCompactPageNumbers } from "@/lib/pagination";
 
-import OrdersTable from "./OrdersTable";
-import EditOrderModal from "./EditOrderModal";
-import DeleteModal from "./DeleteModal";
-import ItemsModal from "../commonOrderFile/ItemsModal";
-import CustomizationsModal from "./CustomizationsModal";
 import Heading from "../../common/Heading";
+
+const OrdersTable = lazy(() => import("./OrdersTable"));
+const EditOrderModal = lazy(() => import("./EditOrderModal"));
+const DeleteModal = lazy(() => import("./DeleteModal"));
+const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
+const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
 
 import {
   useGetOrdersQuery,
@@ -39,6 +39,25 @@ import {
 
 const Orders = () => {
   const { notify } = useNotification();
+
+  const RefreshIcon = ({ size = 16, className = "" }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <polyline points="21 3 21 9 15 9" />
+    </svg>
+  );
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -407,7 +426,7 @@ const Orders = () => {
               isRefreshCoolingDown ? "pointer-events-none" : ""
             }`}
           >
-            <SlRefresh size={16} />
+            <RefreshIcon size={16} />
             <span className="hidden text-xs sm:inline">Refresh</span>
           </button>
 
@@ -434,22 +453,33 @@ const Orders = () => {
 
       {/* Orders Table */}
       <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:mt-4">
-        <OrdersTable
-        orders={orders}
-        loading={loading}
-        error={error}
-        setEditingOrder={setEditingOrder}
-        setShowConfirmDelete={setShowConfirmDelete}
-        setOrderForBillModal={setOrderForBillModal}
-        updateOrder={updateOrder}
-        tableType="pending"
-        onCustomizationsClick={handleCustomizationsClick}
-      />
+        <Suspense
+          fallback={
+            <div className="min-h-[420px] md:min-h-[520px] p-4">
+              <div className="h-6 w-40 rounded bg-orange-100/80 dark:bg-slate-800/80" />
+              <div className="mt-4 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+            </div>
+          }
+        >
+          <OrdersTable
+            orders={orders}
+            loading={loading}
+            error={error}
+            setEditingOrder={setEditingOrder}
+            setShowConfirmDelete={setShowConfirmDelete}
+            setOrderForBillModal={setOrderForBillModal}
+            updateOrder={updateOrder}
+            tableType="pending"
+            onCustomizationsClick={handleCustomizationsClick}
+          />
+        </Suspense>
       </div>
 
       {/* Server-side Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-shrink-0 justify-center px-2 py-2">
+      <div className="flex flex-shrink-0 justify-center px-2 py-2 min-h-[44px]">
+        {totalPages > 1 && (
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
               <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
@@ -511,48 +541,50 @@ const Orders = () => {
               </PaginationContent>
             </Pagination>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modals */}
       
-      {/* Customizations Modal */}
-      {selectedOrderForCustomizations && (
-        <CustomizationsModal
-          order={selectedOrderForCustomizations}
-          onClose={() => setSelectedOrderForCustomizations(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {/* Customizations Modal */}
+        {selectedOrderForCustomizations && (
+          <CustomizationsModal
+            order={selectedOrderForCustomizations}
+            onClose={() => setSelectedOrderForCustomizations(null)}
+          />
+        )}
 
-      {/* Items Modal */}
-      {orderForBillModal && (
-        <ItemsModal
-          order={orderForBillModal}
-          restaurantDetails={restaurantData}
-          onClose={() => setOrderForBillModal(null)}
-        />
-      )}
+        {/* Items Modal */}
+        {orderForBillModal && (
+          <ItemsModal
+            order={orderForBillModal}
+            restaurantDetails={restaurantData}
+            onClose={() => setOrderForBillModal(null)}
+          />
+        )}
 
-      {/* Edit Order Modal */}
-      {editingOrder && (
-        <EditOrderModal
-          editingOrder={editingOrder}
-          setEditingOrder={setEditingOrder}
-          updateOrder={updateOrder}
-          getFriendlyErrorMessage={getFriendlyOrderError}
-          menuItems={menuItems}
-          tables={tables} // ✅ Passing tables from restaurant profile
-        />
-      )}
+        {/* Edit Order Modal */}
+        {editingOrder && (
+          <EditOrderModal
+            editingOrder={editingOrder}
+            setEditingOrder={setEditingOrder}
+            updateOrder={updateOrder}
+            getFriendlyErrorMessage={getFriendlyOrderError}
+            menuItems={menuItems}
+            tables={tables} // ✅ Passing tables from restaurant profile
+          />
+        )}
 
-      {/* Delete Modal */}
-      {showConfirmDelete && (
-        <DeleteModal
-          order={showConfirmDelete}
-          onCancel={() => setShowConfirmDelete(null)}
-          onDelete={() => deleteOrder(showConfirmDelete._id)}
-        />
-      )}
+        {/* Delete Modal */}
+        {showConfirmDelete && (
+          <DeleteModal
+            order={showConfirmDelete}
+            onCancel={() => setShowConfirmDelete(null)}
+            onDelete={() => deleteOrder(showConfirmDelete._id)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

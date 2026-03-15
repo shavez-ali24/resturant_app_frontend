@@ -30,12 +30,12 @@ export default function Home() {
     error: restaurantError,
   } = useGetRestaurantQuery();
 
-  const [showLoader, setShowLoader] = useState(true);
   const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
   const [, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   const normalizeCategoryValue = (value) =>
     String(value || "")
@@ -76,6 +76,7 @@ export default function Home() {
         />
       </div>
     );
+
 
   const restaurant = restaurantData?.restaurant || restaurantData || {};
   const menu =

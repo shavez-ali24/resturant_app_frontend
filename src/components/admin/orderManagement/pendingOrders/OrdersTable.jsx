@@ -1,12 +1,12 @@
 // src/components/admin/orderManagement/OrdersTable.jsx
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
 import OrderRow from "./OrderRow";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
 import { Utensils, House, Truck } from "lucide-react";
-import StatusDropdown from "./StatusDropdown";
-import CustomizationsModal from "./CustomizationsModal";
-import { Eye } from "lucide-react";
+const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
+const PendingOrderMobileNote = lazy(() => import("./PendingOrderMobileNote"));
+const PendingOrderMobileControls = lazy(() => import("./PendingOrderMobileControls"));
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
@@ -52,6 +52,9 @@ const OrdersTable = ({
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizations, setSelectedCustomizations] = useState(null);
+  const columnCount = tableType === "pending" ? 10 : 8;
+  const skeletonRows = Array.from({ length: 8 });
+  const mobileSkeletons = Array.from({ length: 4 });
 
   // Function to handle customizations button click
   const handleCustomizationsClick = (customizations) => {
@@ -66,17 +69,19 @@ const OrdersTable = ({
   };
 
   return (
-    <div className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
+    <div className="min-h-[460px] md:min-h-[560px] rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
       {/* Customizations Modal */}
       {selectedCustomizations && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]" 
+        <div
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]"
           onClick={handleModalClose}
         >
-          <CustomizationsModal
-            customizations={selectedCustomizations}
-            onClose={handleModalClose}
-          />
+          <Suspense fallback={null}>
+            <CustomizationsModal
+              customizations={selectedCustomizations}
+              onClose={handleModalClose}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -106,20 +111,27 @@ const OrdersTable = ({
 
           <tbody className="divide-y divide-orange-100 bg-white/95 dark:divide-slate-700 dark:bg-slate-900/95">
             {loading ? (
-              <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-gray-500 dark:text-slate-300">
-                  Loading...
-                </td>
-              </tr>
+              skeletonRows.map((_, rowIndex) => (
+                <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
+                  {Array.from({ length: columnCount }).map((__, colIndex) => (
+                    <td
+                      key={`skeleton-cell-${rowIndex}-${colIndex}`}
+                      className="border border-orange-100 px-2 py-3 dark:border-slate-700"
+                    >
+                      <div className="h-4 w-full rounded bg-orange-100/80 dark:bg-slate-800/80" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : error ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-red-500 dark:text-red-400">
+                <td colSpan={columnCount} className="py-6 text-center text-red-500 dark:text-red-400">
                   {error}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center italic text-gray-400 dark:text-slate-400">
+                <td colSpan={columnCount} className="py-6 text-center italic text-gray-500 dark:text-slate-300">
                   No orders yet
                 </td>
               </tr>
@@ -149,11 +161,32 @@ const OrdersTable = ({
       {/* Mobile View */}
       <div className="block md:hidden px-2 sm:px-3">
         {loading ? (
-          <p className="py-6 text-center text-gray-500 dark:text-slate-300">Loading...</p>
+          <div className="space-y-3.5 pb-2">
+            {mobileSkeletons.map((_, idx) => (
+              <div
+                key={`mobile-skeleton-${idx}`}
+                className="min-h-[240px] w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-24 rounded bg-orange-100/80 dark:bg-slate-800/80" />
+                  <div className="h-5 w-28 rounded-full bg-orange-100/80 dark:bg-slate-800/80" />
+                </div>
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
+                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
+                </div>
+                <div className="h-9 w-44 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <p className="py-6 text-center text-red-500 dark:text-red-400">{error}</p>
         ) : orders.length === 0 ? (
-          <p className="py-6 text-center italic text-gray-400 dark:text-slate-400">No orders yet</p>
+          <p className="py-6 text-center italic text-gray-500 dark:text-slate-300">No orders yet</p>
         ) : (
           <div className="space-y-3.5 pb-2">
             {orders.map((order) => {
@@ -173,17 +206,13 @@ const OrdersTable = ({
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
               const tableLabel = formatOrderTableId(order.tableId);
 
-              const hasCustomizations =
-                tableType === "pending" &&
-                order.items &&
-                order.items.some(
-                  (item) => item.customizations && item.customizations.trim() !== ""
-                );
+              const handlePendingCustomizationsClick =
+                onCustomizationsClick || handleCustomizationsClick;
 
               return (
                 <div
                   key={order._id}
-                  className={`w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
+                  className={`min-h-[240px] w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
                     order.status
                   )}`}
                 >
@@ -224,19 +253,12 @@ const OrdersTable = ({
 
                   <div className="grid grid-cols-1 gap-2">
                     {tableType === "pending" && (
-                      hasCustomizations ? (
-                        <button
-                          onClick={() => (onCustomizationsClick || handleCustomizationsClick)(order)}
-                          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-medium text-white transition hover:from-orange-600 hover:to-orange-700"
-                        >
-                          <Eye size={16} />
-                          Note
-                        </button>
-                      ) : (
-                        <div className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm italic text-gray-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                          No Note
-                        </div>
-                      )
+                      <Suspense fallback={null}>
+                        <PendingOrderMobileNote
+                          order={order}
+                          onCustomizationsClick={handlePendingCustomizationsClick}
+                        />
+                      </Suspense>
                     )}
 
                     <button
@@ -248,30 +270,14 @@ const OrdersTable = ({
                   </div>
 
                   {tableType === "pending" && (
-                    <>
-                      <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Status</span>
-                        <div className="w-full min-[360px]:w-auto">
-                          <StatusDropdown order={order} updateOrder={updateOrder} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setEditingOrder(order)}
-                          className="h-10 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => setShowConfirmDelete(order)}
-                          className="h-10 w-full rounded-xl bg-red-50 px-4 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
+                    <Suspense fallback={null}>
+                      <PendingOrderMobileControls
+                        order={order}
+                        updateOrder={updateOrder}
+                        setEditingOrder={setEditingOrder}
+                        setShowConfirmDelete={setShowConfirmDelete}
+                      />
+                    </Suspense>
                   )}
                 </div>
               );

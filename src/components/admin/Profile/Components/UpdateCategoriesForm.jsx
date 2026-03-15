@@ -9,6 +9,7 @@ export default function UpdateCategoriesForm({
   currentCategoryInput,
   setCurrentCategoryInput,
   handleCategoryKeyDown,
+  handleAddCategory,
   handleRemoveCategory,
   categorySuggestions,
 }) {
@@ -65,6 +66,28 @@ export default function UpdateCategoriesForm({
             className="min-w-[160px] flex-1 bg-transparent p-1.5 text-sm text-gray-700 placeholder:text-gray-400 outline-none"
             placeholder="Type category and press Enter"
           />
+          <button
+            type="button"
+            onClick={handleAddCategory}
+            disabled={!currentCategoryInput.trim()}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
+            aria-label="Add category"
+            title="Add category"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </button>
         </div>
 
         <datalist id="category-suggestions">
@@ -74,7 +97,8 @@ export default function UpdateCategoriesForm({
         </datalist>
 
         <p className="mt-1.5 text-xs text-gray-500">
-          Press Enter to add category
+          <span className="hidden sm:inline">Press Enter to add category</span>
+          <span className="sm:hidden">Tap the check to add category</span>
         </p>
       </div>
     </FormCard>

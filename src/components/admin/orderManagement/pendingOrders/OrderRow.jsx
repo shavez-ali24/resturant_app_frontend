@@ -1,8 +1,7 @@
-import React from "react";
-import StatusDropdown from "./StatusDropdown";
+import React, { Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { SquarePen, Trash, Truck, Utensils, Eye, Ban, House } from "lucide-react";
+import { Truck, Utensils, House } from "lucide-react";
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
@@ -11,6 +10,16 @@ import {
   getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
+
+const PendingOrderRowActions = lazy(() => import("./PendingOrderRowActions"));
+
+const PendingOrderRowActionsFallback = () => (
+  <>
+    <td className="border py-2" aria-hidden="true" />
+    <td className="border py-2" aria-hidden="true" />
+    <td className="border py-2" aria-hidden="true" />
+  </>
+);
 
 const OrderRow = ({
   order,
@@ -21,14 +30,6 @@ const OrderRow = ({
   onCustomizationsClick,
 }) => {
   const dispatch = useDispatch();
-
-  // Check if any item in the order has customizations
-  const hasCustomizations = order.items && 
-    order.items.some(item => item.customizations && item.customizations.trim() !== "");
-
-  // Count how many items have customizations
-  const customizationCount = order.items ? 
-    order.items.filter(item => item.customizations && item.customizations.trim() !== "").length : 0;
 
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
@@ -96,62 +97,15 @@ const OrderRow = ({
 
       {/* C/S Column - Show only for pending orders */}
       {tableType === "pending" && (
-        <td className="text-center border py-2">
-          {hasCustomizations ? (
-            <button
-              onClick={() => onCustomizationsClick(order)}
-              className="mx-auto flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
-              title={`${customizationCount} item(s) have customizations`}
-            >
-              <Eye size={14} />
-              Note
-              {customizationCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold ml-1">
-                  {customizationCount}
-                </span>
-              )}
-            </button>
-          ) : (
-            <span className="text-gray-400 italic text-xs" title="No customizations">
-              <Ban size={16} className="mx-auto opacity-50 text-orange-700" />
-            </span>
-          )}
-        </td>
-      )}
-
-      {/* For other table types (completed, etc.), don't show C/S column */}
-
-      {/* Pending Table Actions - Show only for pending orders */}
-      {tableType === "pending" && (
-        <>
-          <td className="border">
-            {/* Status dropdown - shown for both admin and staff */}
-            <div className="flex justify-center items-center w-full">
-              <StatusDropdown order={order} updateOrder={updateOrder} />
-            </div>
-          </td>
-
-          {/* Edit and Delete buttons - shown for both admin and staff */}
-          <td className="text-center border py-2">
-            <div className="flex items-center justify-center gap-1">
-              <button
-                onClick={() => setEditingOrder(order)}
-                className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100"
-                title="Edit order"
-              >
-                <SquarePen size={16} />
-              </button>
-
-              <button
-                onClick={() => setShowConfirmDelete(order)}
-                className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100"
-                title="Delete order"
-              >
-                <Trash size={16} />
-              </button>
-            </div>
-          </td>
-        </>
+        <Suspense fallback={<PendingOrderRowActionsFallback />}>
+          <PendingOrderRowActions
+            order={order}
+            setEditingOrder={setEditingOrder}
+            setShowConfirmDelete={setShowConfirmDelete}
+            updateOrder={updateOrder}
+            onCustomizationsClick={onCustomizationsClick}
+          />
+        </Suspense>
       )}
     </tr>
   );

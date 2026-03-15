@@ -17,6 +17,7 @@ export default function NotificationBell() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const knownOrderIds = useRef(new Set());
   const notificationSound = useMemo(() => new Audio(audio), []);
+  const [audioEnabled, setAudioEnabled] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -71,12 +72,16 @@ export default function NotificationBell() {
 
 
     if (freshOrders.length > 0) {
-      // Play sound for new orders
-      try {
-        notificationSound.currentTime = 0;
-        notificationSound.play()
-      } catch (err) {
-        console.log("Sound error:", err);
+      if (audioEnabled) {
+        try {
+          notificationSound.currentTime = 0;
+          const playPromise = notificationSound.play();
+          if (playPromise?.catch) {
+            playPromise.catch(() => {});
+          }
+        } catch (err) {
+          // Intentionally ignore autoplay errors.
+        }
       }
 
       // Mark these orders as known
@@ -93,7 +98,7 @@ export default function NotificationBell() {
       [...knownOrderIds.current].filter(id => currentIds.has(id))
     );
 
-  }, [orders, notificationSound]);
+  }, [orders, notificationSound, audioEnabled]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -103,6 +108,19 @@ export default function NotificationBell() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const enableAudio = () => setAudioEnabled(true);
+    window.addEventListener("click", enableAudio, { once: true });
+    window.addEventListener("keydown", enableAudio, { once: true });
+    window.addEventListener("touchstart", enableAudio, { once: true });
+    return () => {
+      window.removeEventListener("click", enableAudio);
+      window.removeEventListener("keydown", enableAudio);
+      window.removeEventListener("touchstart", enableAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -161,10 +179,10 @@ export default function NotificationBell() {
             key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[10px] font-black leading-none shadow-md ring-2 ${
+            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[11px] font-black leading-none shadow-md ring-2 ${
               isDarkMode
                 ? "bg-slate-100 text-orange-600 ring-slate-950"
-                : "bg-red-500 text-white ring-white"
+                : "bg-red-700 text-white ring-white"
             }`}
           >
             {displayNotificationCount}
@@ -289,7 +307,7 @@ export default function NotificationBell() {
                             )}
                             <p
                               className={`text-xs ${
-                                isDarkMode ? "text-slate-500" : "text-gray-400"
+                                isDarkMode ? "text-slate-400" : "text-gray-600"
                               }`}
                             >
                               {order.createdAt ? (

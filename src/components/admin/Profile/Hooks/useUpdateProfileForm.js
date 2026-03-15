@@ -233,36 +233,39 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     };
 
     // Category Handlers
+    const addCategoryFromInput = () => {
+        const formattedValue = formatCategoryLabel(currentCategoryInput);
+
+        if (!formattedValue) return;
+
+        setCategories((prev) => {
+            const exists = prev.some(
+                (category) =>
+                    getCategoryKey(category) === getCategoryKey(formattedValue)
+            );
+            if (exists) return prev;
+            return [...prev, formattedValue];
+        });
+
+        setCategorySuggestions((prev) => {
+            const updatedSuggestions = uniqueCategories([
+                ...prev,
+                formattedValue,
+            ]);
+            localStorage.setItem(
+                "restaurantCategories",
+                JSON.stringify(updatedSuggestions)
+            );
+            return updatedSuggestions;
+        });
+
+        setCurrentCategoryInput("");
+    };
+
     const handleCategoryKeyDown = (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            const formattedValue = formatCategoryLabel(currentCategoryInput);
-
-            if (!formattedValue) return;
-
-            setCategories((prev) => {
-                const exists = prev.some(
-                    (category) =>
-                        getCategoryKey(category) === getCategoryKey(formattedValue)
-                );
-                if (exists) return prev;
-                return [...prev, formattedValue];
-            });
-
-            setCategorySuggestions((prev) => {
-                const updatedSuggestions = uniqueCategories([
-                    ...prev,
-                    formattedValue,
-                ]);
-                localStorage.setItem(
-                    "restaurantCategories",
-                    JSON.stringify(updatedSuggestions)
-                );
-                return updatedSuggestions;
-            });
-
-            setCurrentCategoryInput("");
-        }
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        addCategoryFromInput();
     };
 
     const handleRemoveCategory = useCallback((categoryToRemove) => {
@@ -387,6 +390,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         handleOrderModeToggle, 
         handleFileChange, 
         handleCategoryKeyDown,
+        handleAddCategory: addCategoryFromInput,
         handleRemoveCategory, 
         handleSubmit, 
         closeNotification,

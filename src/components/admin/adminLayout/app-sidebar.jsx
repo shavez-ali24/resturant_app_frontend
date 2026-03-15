@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
-import logo from "@/assets/tapNbite.png";
+import logo from "@/assets/tapNbite-176x96.png";
 // import logo from "@/assets/loader.gif";
 
 import { useSidebar } from "@/components/ui/sidebar";
@@ -139,7 +139,14 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
                   window.innerWidth < 1024 && toggleSidebar(false)
                 }
               >
-                <img src={logo} alt="Logo" className="h-12 w-auto " />
+                <img
+                  src={logo}
+                  alt="Logo"
+                  width="88"
+                  height="48"
+                  decoding="async"
+                  className="h-12 w-auto"
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

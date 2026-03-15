@@ -18,4 +18,24 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    target: "es2018",
+    minify: "esbuild",
+    sourcemap: false,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-dom")) return "react-dom";
+          if (id.includes("react-router-dom")) return "react-router";
+          if (id.includes("react")) return "react";
+          return "vendor";
+        },
+      },
+    },
+  },
+  esbuild: {
+    drop: ["console", "debugger"],
+  },
 });

@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { PanelRightClose, Store, AlertTriangle, CheckCircle, Moon, Sun } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
-import NotificationBell from "../Bell/NotificationBell";
 import { useNotification } from "../Bell/NotificationContext";
 import {
   useGetRestaurantProfileQuery,
   useToggleRestaurantMutation,
 } from "@/redux/adminRedux/adminAPI";
+
+const NotificationBell = lazy(() => import("../Bell/NotificationBell"));
 
 export function SiteHeader({
   isDarkMode = false,
@@ -33,6 +34,27 @@ export function SiteHeader({
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
+  const [showBell, setShowBell] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let idleId;
+    const enableBell = () => setShowBell(true);
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(enableBell, { timeout: 800 });
+    } else {
+      idleId = window.setTimeout(enableBell, 600);
+    }
+
+    return () => {
+      if ("cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      } else {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!profileData) return;
@@ -152,7 +174,7 @@ export function SiteHeader({
                 >
                   <div className="flex flex-col">
                     <span className={`text-xs font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>Restaurant</span>
-                    <span className={`text-sm font-semibold ${isOpen ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-red-400' : 'text-red-600')}`}>
+                    <span className={`text-sm font-semibold ${isOpen ? (isDarkMode ? 'text-emerald-300' : 'text-emerald-800') : (isDarkMode ? 'text-rose-300' : 'text-rose-700')}`}>
                       {isOpen === true ? 'OPEN' : isOpen === false ? 'CLOSED' : '...'}
                     </span>
                   </div>
@@ -207,7 +229,31 @@ export function SiteHeader({
             </Button>
 
             {/* Notifications */}
-            <NotificationBell />
+            {showBell ? (
+              <Suspense
+                fallback={
+                  <div
+                    className={`h-10 w-10 rounded-full border shadow-sm ${
+                      isDarkMode
+                        ? "border-slate-700 bg-slate-900"
+                        : "border-orange-200 bg-white"
+                    }`}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                <NotificationBell />
+              </Suspense>
+            ) : (
+              <div
+                className={`h-10 w-10 rounded-full border shadow-sm ${
+                  isDarkMode
+                    ? "border-slate-700 bg-slate-900"
+                    : "border-orange-200 bg-white"
+                }`}
+                aria-hidden="true"
+              />
+            )}
           </div>
         </div>
       </header>

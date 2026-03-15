@@ -4,7 +4,7 @@ import { useGetMenuQuery } from "../../redux/clientRedux/clientAPI";
 const HelperData = () => {
   const { data, isLoading: loading, error } = useGetMenuQuery();
 
-  if (loading) return <p>Loading menu...</p>;
+  if (loading) return null;
   if (error) return <p>Error: {error?.data?.message || error?.message || 'An error occurred'}</p>;
 
   const menu = Array.isArray(data) ? data : Array.isArray(data?.menu) ? data.menu : [];

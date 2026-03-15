@@ -59,6 +59,7 @@ export const UpdateProfileModal = ({
     handleOrderModeToggle,
     handleFileChange,
     handleCategoryKeyDown,
+    handleAddCategory,
     handleRemoveCategory,
     handleSubmit,
   } = useUpdateProfileForm(initialData, token, onUpdateSuccess, onClose);
@@ -116,6 +117,7 @@ export const UpdateProfileModal = ({
                   currentCategoryInput={currentCategoryInput}
                   setCurrentCategoryInput={setCurrentCategoryInput}
                   handleCategoryKeyDown={handleCategoryKeyDown}
+                  handleAddCategory={handleAddCategory}
                   handleRemoveCategory={handleRemoveCategory}
                   categorySuggestions={categorySuggestions}
                   chipVariant={chipVariant}

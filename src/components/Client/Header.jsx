@@ -1263,11 +1263,7 @@ export default function Header({
           {/* Orders List */}
           <div className="h-[calc(100%-80px)] flex-1 overflow-y-auto">
             <div className="space-y-4 p-4">
-              {ordersLoading && currentPage === 1 ? (
-                <div className="text-center py-8">
-                  <p className={isDarkMode ? "text-slate-300" : "text-gray-500"}>Loading orders...</p>
-                </div>
-              ) : allOrders.length === 0 ? (
+              {ordersLoading && currentPage === 1 ? null : allOrders.length === 0 ? (
                 <div className="text-center py-8">
                   <FiShoppingCart className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? "text-slate-500" : "text-gray-300"}`} />
                   <p className={isDarkMode ? "text-slate-300" : "text-gray-500"}>No orders yet</p>
