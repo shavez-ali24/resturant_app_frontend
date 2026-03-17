@@ -342,6 +342,15 @@ const Orders = () => {
         updatedData 
       }).unwrap();
       
+      const nextStatus = String(updatedData?.status || "").toLowerCase();
+      if (
+        typeof window !== "undefined" &&
+        nextStatus &&
+        !["pending", "preparing"].includes(nextStatus)
+      ) {
+        localStorage.removeItem(`bill-item-checks:${orderIdString}`);
+      }
+
       notify("Order updated successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();

@@ -158,6 +158,15 @@ export const adminApi = createApi({
       invalidatesTags: ["Restaurant"],
     }),
 
+    reorderCategories: builder.mutation({
+      query: (orderedCategoryNames) => ({
+        url: "/restaurant/reorder-categories",
+        method: "POST",
+        body: { orderedCategoryNames },
+      }),
+      invalidatesTags: ["Restaurant"],
+    }),
+
     // done 
     toggleRestaurant: builder.mutation({
       query: ({ isOpen }) => ({
@@ -322,6 +331,16 @@ export const adminApi = createApi({
       invalidatesTags: ["Menu"],
     }),
 
+    // done
+    reorderMenuItems: builder.mutation({
+      query: (orderedMenuItemIds) => ({
+        url: "/menu/reorder-menuitems",
+        method: "POST",
+        body: { orderedMenuItemIds },
+      }),
+      invalidatesTags: ["Menu"],
+    }),
+
     // done 
     getTopSellingProducts: builder.query({
       query: ({ range = "7d", from, to }) => {
@@ -399,6 +418,7 @@ export const {
   useLoginMutation,
   useGetRestaurantProfileQuery,
   useUpdateRestaurantProfileMutation,
+  useReorderCategoriesMutation,
   useGetOrdersQuery,
   useUpdateOrderMutation,
   useDeleteOrderMutation,
@@ -407,6 +427,7 @@ export const {
   useCreateMenuItemMutation,
   useUpdateMenuItemMutation,
   useDeleteMenuItemMutation,
+  useReorderMenuItemsMutation,
   useToggleRestaurantMutation,
   useGetTopSellingProductsQuery,
   useGetTopSellingCategoriesQuery,

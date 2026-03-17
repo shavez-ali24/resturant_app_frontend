@@ -44,6 +44,12 @@ export const validateEditForm = (formData, imageFile, comboItems) => {
         if (formData.discount.type === "percentage" && discountValue > 100) {
           errors.discount = "Percentage discount cannot exceed 100%";
         }
+        if (formData.discount.type === "flat") {
+          const priceValue = parseFloat(formData.price || "0");
+          if (!isNaN(priceValue) && priceValue > 0 && discountValue > priceValue) {
+            errors.discount = "Discount amount cannot be greater than price";
+          }
+        }
       }
     }
   }
@@ -73,6 +79,12 @@ export const validateEditForm = (formData, imageFile, comboItems) => {
             if (value.discount.type === "percentage" && discountValue > 100) {
               variantErrors[`${key}Discount`] = "Percentage discount cannot exceed 100%";
             }
+            if (value.discount.type === "flat") {
+              const priceValue = parseFloat(value.price || "0");
+              if (!isNaN(priceValue) && priceValue > 0 && discountValue > priceValue) {
+                variantErrors[`${key}Discount`] = "Discount amount cannot be greater than price";
+              }
+            }
           }
         }
       });
@@ -93,6 +105,26 @@ export const validateEditForm = (formData, imageFile, comboItems) => {
     
     if (comboItems.length === 0) {
       errors.comboItems = "At least one combo item is required";
+    }
+
+    if (formData.discount?.active) {
+      if (formData.discount?.value === undefined || formData.discount?.value === "") {
+        errors.discount = "Discount value is required when discount is active";
+      } else {
+        const discountValue = parseInt(formData.discount.value);
+        if (isNaN(discountValue) || discountValue <= 0) {
+          errors.discount = "Discount must be a valid positive number";
+        }
+        if (formData.discount.type === "percentage" && discountValue > 100) {
+          errors.discount = "Percentage discount cannot exceed 100%";
+        }
+        if (formData.discount.type === "flat") {
+          const comboPriceValue = parseFloat(formData.comboPrice || "0");
+          if (!isNaN(comboPriceValue) && comboPriceValue > 0 && discountValue > comboPriceValue) {
+            errors.discount = "Discount amount cannot be greater than combo price";
+          }
+        }
+      }
     }
   }
   

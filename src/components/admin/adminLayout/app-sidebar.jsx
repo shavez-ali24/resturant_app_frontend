@@ -24,8 +24,9 @@ import logo from "@/assets/tapNbite-176x96.png";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ isDarkMode = false, ...props }) {
-  const { toggleSidebar } = useSidebar();
+  const { isMobile, open, setOpen, openMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
+  const previousPathRef = React.useRef(location.pathname);
   const sidebarShellClass = isDarkMode
     ? "border-r border-slate-700/70 bg-slate-950 [&_[data-sidebar=sidebar]]:bg-slate-950"
     : "";
@@ -113,11 +114,31 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     (section) => section.roles.includes(userRole) && section.items.length > 0
   );
 
-  React.useEffect(() => {
+  const closeSidebarForViewport = React.useCallback(() => {
+    if (typeof window === "undefined") return;
     if (window.innerWidth < 1024) {
-      toggleSidebar(false);
+      if (isMobile) {
+        setOpenMobile(false);
+      } else {
+        setOpen(false);
+      }
     }
-  }, [location.pathname, toggleSidebar]);
+  }, [isMobile, setOpen, setOpenMobile]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prevPath = previousPathRef.current;
+    if (prevPath === location.pathname) return;
+    previousPathRef.current = location.pathname;
+
+    if (window.innerWidth < 1024) {
+      if (isMobile) {
+        setOpenMobile(false);
+      } else {
+        setOpen(false);
+      }
+    }
+  }, [location.pathname, isMobile, setOpen, setOpenMobile]);
 
   return (
     <Sidebar
@@ -135,9 +156,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
             >
               <Link
                 to={homeRoute}
-                onClick={() =>
-                  window.innerWidth < 1024 && toggleSidebar(false)
-                }
+                onClick={closeSidebarForViewport}
               >
                 <img
                   src={logo}
@@ -159,8 +178,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
             ...section,
             items: section.items.map((item) => ({
               ...item,
-              onClick: () =>
-                window.innerWidth < 1024 && toggleSidebar(false),
+              onClick: closeSidebarForViewport,
             })),
           }))}
         />

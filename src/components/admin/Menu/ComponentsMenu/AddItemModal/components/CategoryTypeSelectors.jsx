@@ -720,7 +720,7 @@ const CategoryTypeSelectors = ({
                     <span className="font-semibold text-gray-800">
                       "{deleteConfirmCategory}"
                     </span>
-                    ? This action cannot be undone.
+                    ? All items under this category will be deleted. This action cannot be undone.
                   </p>
                 </div>
               </div>

@@ -114,8 +114,40 @@ export default function FoodListing({
   onQuantityChange,
   isRestaurantOpen = true,
   isDarkMode = false,
+  categoryOrder = [],
 }) {
+  const normalizeCategoryKey = (value) =>
+    String(value || "")
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+
   const groupedMenu = groupByCategory(menu || []);
+  const groupedKeys = Object.keys(groupedMenu);
+  const groupedKeyByNormalized = new Map();
+
+  groupedKeys.forEach((key) => {
+    const normalized = normalizeCategoryKey(key);
+    if (!groupedKeyByNormalized.has(normalized)) {
+      groupedKeyByNormalized.set(normalized, key);
+    }
+  });
+
+  const orderedCategoryKeys = [];
+  (Array.isArray(categoryOrder) ? categoryOrder : []).forEach((cat) => {
+    const label = typeof cat === "object" && cat !== null ? cat.name || cat.category : cat;
+    const normalized = normalizeCategoryKey(label);
+    const resolved = groupedKeyByNormalized.get(normalized);
+    if (resolved) {
+      orderedCategoryKeys.push(resolved);
+      groupedKeyByNormalized.delete(normalized);
+    }
+  });
+
+  if (groupedKeyByNormalized.size) {
+    orderedCategoryKeys.push(...groupedKeyByNormalized.values());
+  }
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client.cart.items || {});
   const [descModal, setDescModal] = useState({ open: false, item: null });
@@ -245,7 +277,7 @@ export default function FoodListing({
 
   return (
     <div className={`flex flex-col px-2 pb-24 pt-2 sm:px-3 ${isDarkMode ? "bg-slate-950" : "bg-white"}`}>
-      {Object.keys(groupedMenu).map((category) => {
+      {orderedCategoryKeys.map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
           itemsInCategory.length === 1
@@ -299,11 +331,29 @@ export default function FoodListing({
             {/* ✅ Category Header */}
             <div className="flex items-center gap-2 pt-1">
               <div className="relative h-2.5 w-2.5">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 animate-pulse"></div>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 animate-ping"></div>
-                <div className="relative h-2.5 w-2.5 rounded-full bg-orange-600/95 ring-1 ring-orange-300"></div>
+                <div
+                  className={`absolute inset-0 rounded-full animate-pulse ${
+                    isDarkMode
+                      ? "bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 shadow-[0_0_10px_rgba(251,146,60,0.9)]"
+                      : "bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700"
+                  }`}
+                ></div>
+                <div
+                  className={`absolute inset-0 rounded-full animate-ping ${
+                    isDarkMode
+                      ? "bg-gradient-to-r from-orange-200 via-orange-300 to-orange-400 opacity-70"
+                      : "bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"
+                  }`}
+                ></div>
+                <div
+                  className={`relative h-2.5 w-2.5 rounded-full ${
+                    isDarkMode
+                      ? "bg-orange-400 ring-1 ring-orange-300/80 shadow-[0_0_6px_rgba(251,146,60,0.95)]"
+                      : "bg-orange-600/95 ring-1 ring-orange-300"
+                  }`}
+                ></div>
               </div>
-              <h2 className="text-base font-semibold tracking-wide text-gray-800">
+              <h2 className={`text-base font-semibold tracking-wide ${isDarkMode ? "text-orange-50" : "text-gray-800"}`}>
                 {category}
               </h2>
               <div 
@@ -388,19 +438,19 @@ export default function FoodListing({
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-green-700 text-green-700"
+                                className="border-2 border-current text-green-700"
                               />
                             ) : item.type === "non-veg" ? (
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-red-600 text-red-600"
+                                className="border-2 border-current text-red-600"
                               />
                             ) : (
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-orange-600 text-orange-600"
+                                className="border-2 border-current text-orange-600"
                               />
                             )}
                           </div>
@@ -647,7 +697,7 @@ export default function FoodListing({
                                             );
                                           }}
                                           disabled={!isRestaurantOpen || !canAdd}
-                                          className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                          className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                           +
                                         </Button>
@@ -681,7 +731,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Add
                                     </Button>
@@ -775,19 +825,19 @@ export default function FoodListing({
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-green-700 text-green-700"
+                            className="border-2 border-current text-green-700"
                           />
                         ) : item.type === "non-veg" ? (
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-red-600 text-red-600"
+                            className="border-2 border-current text-red-600"
                           />
                         ) : (
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-orange-600 text-orange-600"
+                            className="border-2 border-current text-orange-600"
                           />
                         )}
                       </div>
@@ -1046,7 +1096,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
                                     </Button>
@@ -1080,7 +1130,7 @@ export default function FoodListing({
                                     );
                                   }}
                                   disabled={!isRestaurantOpen || !canAdd}
-                                  className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Add
                                 </Button>
@@ -1148,19 +1198,19 @@ export default function FoodListing({
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-green-700 text-green-700"
+                    className="border-2 border-current text-green-700"
                   />
                 ) : descModal.item.type === "non-veg" ? (
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-red-600 text-red-600"
+                    className="border-2 border-current text-red-600"
                   />
                 ) : (
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-orange-600 text-orange-600"
+                    className="border-2 border-current text-orange-600"
                   />
                 )}
               </div>

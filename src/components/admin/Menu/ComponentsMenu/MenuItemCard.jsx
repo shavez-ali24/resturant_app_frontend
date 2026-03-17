@@ -7,9 +7,18 @@ import {
   Tag,
   CheckCircle,
   XCircle,
+  GripVertical,
 } from "lucide-react";
 
-const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) => {
+const MenuItemCard = ({
+  item = {},
+  onEdit,
+  onDelete,
+  onView,
+  isAdmin = true,
+  dragHandleProps,
+  isDragging = false,
+}) => {
   const MotionDiv = motion.div;
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
@@ -156,7 +165,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className={`group relative h-full w-full self-stretch min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 dark:shadow-slate-950/40 ${
         showMenu ? "z-40" : "z-10"
-      }`}
+      } ${isDragging ? "ring-2 ring-orange-400/70 opacity-90" : ""}`}
     >
       <div className="flex h-full flex-col sm:flex-row">
         {/* Image */}
@@ -216,7 +225,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
           )}
 
           <div className="space-y-2 pr-10 sm:space-y-1.5">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-center gap-3">
               <div
                 className={`flex h-5 w-5 shrink-0 items-center justify-center border ${
                   safeItem.type === "veg"
@@ -224,7 +233,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
                     : safeItem.type === "non-veg"
                     ? "border-red-600 bg-red-100"
                     : "border-yellow-600 bg-yellow-100"
-                }`}
+                  }`}
               >
                 <div
                   className={`h-2 w-2 rounded-full ${
@@ -240,6 +249,18 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
               <h3 className="min-w-0 flex-1 truncate text-base font-bold leading-5 text-gray-900 dark:text-slate-100 sm:text-sm sm:leading-4">
                 {safeItem.name || "Unnamed Item"}
               </h3>
+
+              {isAdmin && dragHandleProps && (
+                <button
+                  type="button"
+                  {...dragHandleProps}
+                  className="inline-flex h-6 w-6 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-600 dark:bg-slate-900/90 dark:text-orange-300"
+                  aria-label="Drag to reorder"
+                  title="Drag to reorder"
+                >
+                  <GripVertical size={14} />
+                </button>
+              )}
             </div>
 
             <p className="line-clamp-3 break-words text-xs leading-5 text-gray-500 dark:text-slate-300 sm:line-clamp-1 sm:leading-4">
@@ -248,7 +269,7 @@ const MenuItemCard = ({ item = {}, onEdit, onDelete, onView, isAdmin = true }) =
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex max-w-full items-center gap-1 rounded-md border border-orange-200 bg-orange-100/85 px-2 py-1 dark:border-slate-600 dark:bg-slate-800 sm:py-0.5">
-                <Tag size={11} className="shrink-0 text-orange-700" />
+                <Tag size={11} className="shrink-0 text-orange-700 dark:text-orange-300" />
                 <span className="max-w-[180px] truncate text-[11px] font-medium text-orange-800 dark:text-orange-200 sm:text-xs">
                   {safeItem.category || "N/A"}
                 </span>

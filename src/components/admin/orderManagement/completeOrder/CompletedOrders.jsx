@@ -32,12 +32,21 @@ const CompletedOrders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
 
-  const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery({
-    status: "completed",
-    range: dateRange,
-    page: currentPage,
-    limit: ordersPerPage,
-  });
+  const resolvedRange = dateRange === "1d" ? "24h" : dateRange;
+
+  const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery(
+    {
+      status: "completed",
+      range: resolvedRange,
+      page: currentPage,
+      limit: ordersPerPage,
+    },
+    {
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
 
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalPages = ordersResponse?.totalPages || 1;
@@ -69,6 +78,7 @@ const CompletedOrders = () => {
             </SelectTrigger>
             <SelectContent className="rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
               <SelectGroup>
+                <SelectItem value="24h" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 24 Hours</SelectItem>
                 <SelectItem value="2d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 2 Days</SelectItem>
                 <SelectItem value="7d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 7 Days</SelectItem>
                 <SelectItem value="15d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 15 Days</SelectItem>

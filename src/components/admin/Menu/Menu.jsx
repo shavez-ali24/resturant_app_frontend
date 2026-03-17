@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CirclePlus } from "lucide-react";
+import { CirclePlus, GripVertical, X } from "lucide-react";
 import Heading from "../common/Heading";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
 import MenuItemCard from "./ComponentsMenu/MenuItemCard";
@@ -29,6 +29,8 @@ import {
   useCreateMenuItemMutation,
   useGetRestaurantProfileQuery,
   useUpdateRestaurantProfileMutation,
+  useReorderMenuItemsMutation,
+  useReorderCategoriesMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
 const extractTextCandidate = (value, priorityKeys = []) => {
@@ -259,8 +261,21 @@ const Menu = () => {
   const [createMenuItem] = useCreateMenuItemMutation();
   const [updateMenuItem] = useUpdateMenuItemMutation();
   const [deleteMenuItem] = useDeleteMenuItemMutation();
+  const [reorderMenuItems] = useReorderMenuItemsMutation();
   const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
+  const [reorderCategories] = useReorderCategoriesMutation();
   const [restaurantCategories, setRestaurantCategories] = useState([]);
+  const [menuOrder, setMenuOrder] = useState([]);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const menuOrderRef = useRef([]);
+  const dragStartOrderRef = useRef([]);
+  const menuReorderTimerRef = useRef(null);
+  const menuReorderPendingRef = useRef([]);
+  const pointerDragRef = useRef({ pointerId: null });
 
   const [filters, setFilters] = useState({
     search: "",
@@ -336,13 +351,18 @@ const Menu = () => {
       return String(candidate).trim();
     };
 
-    return Array.from(
-      new Set(
-        categories
-          .map(getCategoryLabel)
-          .filter(Boolean)
-      )
-    ).sort((a, b) => a.localeCompare(b));
+    const seen = new Set();
+    const ordered = [];
+    categories
+      .map(getCategoryLabel)
+      .filter(Boolean)
+      .forEach((label) => {
+        const key = label.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        ordered.push(label);
+      });
+    return ordered;
   }, []);
 
   useEffect(() => {
@@ -383,6 +403,46 @@ const Menu = () => {
       };
     });
   }, [items, categoryLookup, restaurantCategories]);
+
+  const itemsById = useMemo(() => {
+    const map = new Map();
+    normalizedItems.forEach((item) => {
+      if (item?._id) map.set(item._id, item);
+    });
+    return map;
+  }, [normalizedItems]);
+
+  useEffect(() => {
+    if (!normalizedItems.length) {
+      setMenuOrder([]);
+      return;
+    }
+
+    const currentIds = normalizedItems
+      .map((item) => item?._id)
+      .filter(Boolean);
+
+    setMenuOrder((prev) => {
+      if (!prev.length) return currentIds;
+      const prevSet = new Set(prev);
+      const cleanedPrev = prev.filter((id) => currentIds.includes(id));
+      const missing = currentIds.filter((id) => !prevSet.has(id));
+      if (cleanedPrev.length !== prev.length || missing.length) {
+        return [...cleanedPrev, ...missing];
+      }
+      if (prev.length !== currentIds.length) return currentIds;
+      return prev;
+    });
+  }, [normalizedItems]);
+
+  useEffect(() => {
+    menuOrderRef.current = menuOrder;
+  }, [menuOrder]);
+
+  const orderedItems = useMemo(() => {
+    if (!menuOrder.length) return normalizedItems;
+    return menuOrder.map((id) => itemsById.get(id)).filter(Boolean);
+  }, [itemsById, menuOrder, normalizedItems]);
 
   const rawItemsById = useMemo(() => {
     const map = new Map();
@@ -574,26 +634,188 @@ const Menu = () => {
         return { ok: false, message: "Category not found." };
       }
 
+      if (!isAdmin) {
+        return { ok: false, message: "Only admins can delete categories." };
+      }
+
+      const targetKey = normalizeCategoryKey(targetCategory);
+      const itemsToDelete = normalizedItems.filter(
+        (item) => normalizeCategoryKey(item?.category) === targetKey
+      );
+
+      let deletedItemsCount = 0;
+      if (itemsToDelete.length) {
+        try {
+          await Promise.all(
+            itemsToDelete.map((item) => deleteMenuItem(item._id).unwrap())
+          );
+          deletedItemsCount = itemsToDelete.length;
+        } catch (error) {
+          const message = getFriendlyMenuError(error, "delete");
+          notify(message, "error");
+          return { ok: false, message };
+        }
+      }
+
       const updatedCategories = restaurantCategories.filter(
         (category) => category !== targetCategory
       );
 
       const updateResult = await persistRestaurantCategories(
         updatedCategories,
-        `Category "${targetCategory}" deleted.`
+        deletedItemsCount
+          ? `Category "${targetCategory}" deleted with ${deletedItemsCount} items.`
+          : `Category "${targetCategory}" deleted.`
       );
 
       if (!updateResult.ok) return updateResult;
+      if (deletedItemsCount > 0) {
+        refetch();
+      }
       return { ok: true, deletedCategory: targetCategory };
     },
-    [normalizeCategoryKey, persistRestaurantCategories, restaurantCategories]
+    [
+      deleteMenuItem,
+      getFriendlyMenuError,
+      isAdmin,
+      normalizeCategoryKey,
+      normalizedItems,
+      notify,
+      persistRestaurantCategories,
+      refetch,
+      restaurantCategories,
+    ]
   );
+
+  const [categoryDragging, setCategoryDragging] = useState(null);
+  const [categoryDragOver, setCategoryDragOver] = useState(null);
+  const [isCategoryReordering, setIsCategoryReordering] = useState(false);
+  const categoryPointerRef = useRef({ pointerId: null });
+  const categoryStartRef = useRef([]);
+  const categoryReorderTimerRef = useRef(null);
+  const categoryReorderPendingRef = useRef([]);
+
+  useEffect(() => {
+    return () => {
+      if (menuReorderTimerRef.current) {
+        clearTimeout(menuReorderTimerRef.current);
+      }
+      if (categoryReorderTimerRef.current) {
+        clearTimeout(categoryReorderTimerRef.current);
+      }
+    };
+  }, []);
+
+  const moveCategory = useCallback(
+    (list, fromCategory, toCategory) => {
+      const fromKey = normalizeCategoryKey(fromCategory);
+      const toKey = normalizeCategoryKey(toCategory);
+      const fromIndex = list.findIndex(
+        (cat) => normalizeCategoryKey(cat) === fromKey
+      );
+      const toIndex = list.findIndex(
+        (cat) => normalizeCategoryKey(cat) === toKey
+      );
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+        return list;
+      }
+      const updated = [...list];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    },
+    [normalizeCategoryKey]
+  );
+
+  const handleCategoryPointerDown = useCallback(
+    (event, category) => {
+      if (!isAdmin || isCategoryReordering) return;
+      event.preventDefault();
+      event.stopPropagation();
+      categoryPointerRef.current.pointerId = event.pointerId;
+      categoryStartRef.current = restaurantCategories;
+      setCategoryDragging(category);
+      setCategoryDragOver(category);
+      if (typeof event.currentTarget?.setPointerCapture === "function") {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+    },
+    [isAdmin, isCategoryReordering, restaurantCategories]
+  );
+
+  useEffect(() => {
+    if (!categoryDragging) return;
+
+    const handlePointerMove = (event) => {
+      if (categoryPointerRef.current.pointerId !== event.pointerId) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const chip = target?.closest?.("[data-category-chip]");
+      const overCategory = chip?.getAttribute?.("data-category-chip");
+      if (!overCategory || overCategory === categoryDragging) return;
+      setCategoryDragOver(overCategory);
+      setRestaurantCategories((prev) =>
+        moveCategory(prev, categoryDragging, overCategory)
+      );
+    };
+
+    const handlePointerEnd = async (event) => {
+      if (categoryPointerRef.current.pointerId !== event.pointerId) return;
+      categoryPointerRef.current.pointerId = null;
+      setCategoryDragging(null);
+      setCategoryDragOver(null);
+
+      if (!restaurantCategories.length) return;
+      categoryReorderPendingRef.current = restaurantCategories;
+      if (categoryReorderTimerRef.current) {
+        clearTimeout(categoryReorderTimerRef.current);
+      }
+      categoryReorderTimerRef.current = setTimeout(async () => {
+        const orderToSave = categoryReorderPendingRef.current;
+        setIsCategoryReordering(true);
+        try {
+          const result = await reorderCategories(orderToSave).unwrap();
+          const nextCategories = Array.isArray(result?.categories)
+            ? result.categories.map((cat) => cat?.name).filter(Boolean)
+            : orderToSave;
+          if (nextCategories.length) {
+            setRestaurantCategories(nextCategories);
+          }
+          notify("Category order updated.", "success");
+        } catch (error) {
+          notify(getFriendlyMenuError(error, "update"), "error");
+          if (categoryStartRef.current?.length) {
+            setRestaurantCategories(categoryStartRef.current);
+          }
+        } finally {
+          setIsCategoryReordering(false);
+          categoryReorderTimerRef.current = null;
+        }
+      }, 1000);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [
+    categoryDragging,
+    moveCategory,
+    getFriendlyMenuError,
+    notify,
+    reorderCategories,
+    restaurantCategories,
+  ]);
 
   useEffect(() => setCurrentPage(1), [filters]);
 
   const filteredItems = useMemo(() => {
     const searchLower = filters.search.toLowerCase();
-    return normalizedItems.filter((item) => {
+    return orderedItems.filter((item) => {
       return (
         (!searchLower ||
           item?.name?.toLowerCase().includes(searchLower) ||
@@ -605,7 +827,127 @@ const Menu = () => {
           String(!!item.available) === filters.available)
       );
     });
-  }, [normalizedItems, filters]);
+  }, [orderedItems, filters]);
+
+  const moveMenuItem = useCallback((list, fromId, toId) => {
+    if (fromId === toId) return list;
+    const fromIndex = list.indexOf(fromId);
+    const toIndex = list.indexOf(toId);
+    if (fromIndex === -1 || toIndex === -1) return list;
+    const updated = [...list];
+    updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, fromId);
+    return updated;
+  }, []);
+
+  const handleDragStart = useCallback(
+    (event, itemId) => {
+      if (!isAdmin || isReordering) return;
+      if (event.pointerType && event.pointerType !== "mouse") return;
+      event.stopPropagation();
+      dragStartOrderRef.current = menuOrderRef.current;
+      setDraggingId(itemId);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", itemId);
+    },
+    [isAdmin, isReordering]
+  );
+
+  const handleDragOver = useCallback(
+    (event, overId) => {
+      if (!draggingId || draggingId === overId) return;
+      event.preventDefault();
+      setDragOverId(overId);
+      setMenuOrder((prev) => moveMenuItem(prev, draggingId, overId));
+    },
+    [draggingId, moveMenuItem]
+  );
+
+  const handlePointerDragStart = useCallback(
+    (event, itemId) => {
+      if (!isAdmin || isReordering) return;
+      if (event.pointerType === "mouse") return;
+      event.preventDefault();
+      event.stopPropagation();
+      pointerDragRef.current.pointerId = event.pointerId;
+      dragStartOrderRef.current = menuOrderRef.current;
+      setDraggingId(itemId);
+      setDragOverId(itemId);
+      setIsPointerDragging(true);
+      if (typeof event.currentTarget?.setPointerCapture === "function") {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+    },
+    [isAdmin, isReordering]
+  );
+
+  const scheduleMenuReorder = useCallback(
+    (finalOrder) => {
+      if (!finalOrder?.length) return;
+      menuReorderPendingRef.current = finalOrder;
+      if (menuReorderTimerRef.current) {
+        clearTimeout(menuReorderTimerRef.current);
+      }
+      menuReorderTimerRef.current = setTimeout(async () => {
+        const orderToSave = menuReorderPendingRef.current;
+        setIsReordering(true);
+        try {
+          await reorderMenuItems(orderToSave).unwrap();
+          notify("Menu order updated.", "success");
+          refetch();
+        } catch (error) {
+          notify(getFriendlyMenuError(error, "update"), "error");
+          if (dragStartOrderRef.current?.length) {
+            setMenuOrder(dragStartOrderRef.current);
+          }
+        } finally {
+          setIsReordering(false);
+          menuReorderTimerRef.current = null;
+        }
+      }, 1000);
+    },
+    [getFriendlyMenuError, notify, reorderMenuItems, refetch]
+  );
+
+  const finalizeReorder = useCallback(() => {
+    if (!draggingId) return;
+    setDraggingId(null);
+    setDragOverId(null);
+    setIsPointerDragging(false);
+    const finalOrder = menuOrderRef.current;
+    scheduleMenuReorder(finalOrder);
+  }, [draggingId, scheduleMenuReorder]);
+
+  useEffect(() => {
+    if (!isPointerDragging) return;
+
+    const handlePointerMove = (event) => {
+      if (pointerDragRef.current.pointerId !== event.pointerId) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const card = target?.closest?.("[data-menu-id]");
+      const overId = card?.getAttribute?.("data-menu-id");
+      if (!overId || overId === draggingId) return;
+      setDragOverId(overId);
+      setMenuOrder((prev) => moveMenuItem(prev, draggingId, overId));
+    };
+
+    const handlePointerEnd = (event) => {
+      if (pointerDragRef.current.pointerId !== event.pointerId) return;
+      pointerDragRef.current.pointerId = null;
+      setIsPointerDragging(false);
+      finalizeReorder();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [draggingId, finalizeReorder, isPointerDragging, moveMenuItem]);
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
@@ -793,14 +1135,27 @@ const prepareFormData = (formData, file) => {
             <Heading title="Menu Management" />
           </div>
           {isAdmin && (
-            <Button
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:h-11 sm:gap-2 sm:px-4"
-              onClick={() => setIsAddModalOpen(true)}
-            >
-              <CirclePlus size={16} />
-              <span className="hidden min-[390px]:inline">Add Item</span>
-              <span className="inline min-[390px]:hidden">Add</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-colors sm:h-11 sm:gap-2 sm:px-4 ${
+                  isCategoryManagerOpen
+                    ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                    : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
+                }`}
+              >
+                Manage Category
+              </Button>
+              <Button
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:h-11 sm:gap-2 sm:px-4"
+                onClick={() => setIsAddModalOpen(true)}
+              >
+                <CirclePlus size={16} />
+                <span className="hidden min-[390px]:inline">Add Item</span>
+                <span className="inline min-[390px]:hidden">Add</span>
+              </Button>
+            </div>
           )}
         </div>
 
@@ -812,6 +1167,66 @@ const prepareFormData = (formData, file) => {
             onResetNotify={handleFilterResetNotification}
           />
         </div>
+
+        {isAdmin && isCategoryManagerOpen && restaurantCategories.length > 1 && (
+          <div className="mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
+                  Manage Categories
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCategoryManagerOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300"
+                aria-label="Close category manager"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {isCategoryManagerOpen && (
+            <div className="mt-3 grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-4 sm:pr-0 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+              {restaurantCategories.map((category) => {
+                const isActive = categoryDragOver === category;
+                return (
+                  <div
+                    key={category}
+                    data-category-chip={category}
+                    className={`group relative w-full max-w-none overflow-hidden rounded-md border px-2 py-1.5 shadow-sm transition ${
+                      isActive
+                        ? "border-orange-400 bg-orange-50 shadow-md"
+                        : "border-orange-200 bg-white hover:border-orange-300 hover:shadow-md"
+                    } dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-slate-500`}
+                  >
+                    <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
+                    <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
+
+                    <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
+                      <button
+                        type="button"
+                        onPointerDown={(event) => handleCategoryPointerDown(event, category)}
+                        className="order-1 inline-flex h-6 w-6 shrink-0 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/90 dark:text-orange-300 sm:order-2 sm:ml-auto"
+                        aria-label={`Drag ${category}`}
+                        title="Drag to reorder"
+                      >
+                        <GripVertical size={12} />
+                      </button>
+                      <div className="order-2 min-w-0 flex-1 pr-3 sm:order-1">
+                        <div className="truncate text-[13px] font-semibold text-gray-900 dark:text-slate-100">
+                          {category}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mb-5 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm sm:mb-6 sm:gap-3">
           <h2 className="text-lg font-bold text-gray-800 sm:text-xl">Total Items</h2>
@@ -831,16 +1246,41 @@ const prepareFormData = (formData, file) => {
         ) : (
           <>
             <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-              {currentItems.map((item) => (
-                <MenuItemCard
-                  key={item._id}
-                  item={item}
-                  onEdit={() => setEditingItem(buildEditItem(item))}
-                  onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
-                  onView={() => setViewingItem(item)}
-                  isAdmin={isAdmin}
-                />
-              ))}
+              {currentItems.map((item) => {
+                const canReorder = isAdmin && !isReordering && filteredItems.length > 1;
+                const dragHandleProps = canReorder
+                  ? {
+                      draggable: true,
+                      onDragStart: (event) => handleDragStart(event, item._id),
+                      onDragEnd: finalizeReorder,
+                      onPointerDown: (event) => handlePointerDragStart(event, item._id),
+                      onMouseDown: (event) => event.stopPropagation(),
+                    }
+                  : null;
+
+                return (
+                  <div
+                    key={item._id}
+                    data-menu-id={item._id}
+                    onDragOver={(event) => handleDragOver(event, item._id)}
+                    onDrop={(event) => event.preventDefault()}
+                    onDragLeave={() => setDragOverId(null)}
+                    className={`rounded-2xl transition ${
+                      dragOverId === item._id ? "ring-2 ring-orange-300/70" : ""
+                    }`}
+                  >
+                    <MenuItemCard
+                      item={item}
+                      onEdit={() => setEditingItem(buildEditItem(item))}
+                      onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
+                      onView={() => setViewingItem(item)}
+                      isAdmin={isAdmin}
+                      dragHandleProps={dragHandleProps}
+                      isDragging={draggingId === item._id}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             {totalPages > 1 && (

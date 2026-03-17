@@ -6,6 +6,7 @@ export default function Category({
   title = "Category",
   onCategoryClick,
   activeCategory,
+  categoryImages = {},
 }) {
   const normalizeCategoryValue = (value) =>
     String(value || "")
@@ -68,10 +69,10 @@ export default function Category({
         <button
           type="button"
           onClick={() => onCategoryClick?.(null)}
-          className={`h-7 flex-shrink-0 rounded-full border px-3 text-xs font-semibold transition-all ${
+          className={`h-7 flex-shrink-0 rounded-full px-3 text-xs font-semibold transition-all ${
             activeCategory === null
-              ? "border-primary bg-primary text-white shadow-sm"
-              : "border-orange-200 bg-white text-orange-700 hover:bg-orange-50"
+              ? "client-add-button text-white"
+              : "client-add-button-outline"
           }`}
         >
           All
@@ -87,6 +88,13 @@ export default function Category({
                 normalizedActiveCategory &&
                 normalizeCategoryValue(item.category).toLowerCase() ===
                   normalizedActiveCategory;
+              const normalizedKey = normalizeCategoryValue(item.category).toLowerCase();
+              const fallbackImage = categoryImages?.[normalizedKey];
+              const resolvedImage =
+                item?.image?.url ||
+                item?.image?.secure_url ||
+                (typeof item?.image === "string" ? item.image : "") ||
+                fallbackImage;
               return (
                 <button
                   key={index}
@@ -98,11 +106,11 @@ export default function Category({
                       : ""
                   }`}
                 >
-                  {item?.image?.url ? (
+                  {resolvedImage ? (
                     <>
                       <img
                         className="client-category-image"
-                        src={item.image.url}
+                        src={resolvedImage}
                         alt={item?.category}
                         loading="lazy"
                         decoding="async"

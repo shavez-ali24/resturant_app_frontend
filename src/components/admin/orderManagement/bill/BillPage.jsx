@@ -100,6 +100,11 @@ const BillPage = ({
 
   useEffect(() => {
     if (!orderStorageKey || typeof window === "undefined") return;
+    if (!showItemChecks) {
+      localStorage.removeItem(`bill-item-checks:${orderStorageKey}`);
+      setItemChecks({});
+      return;
+    }
     try {
       const saved = localStorage.getItem(
         `bill-item-checks:${orderStorageKey}`
@@ -109,15 +114,19 @@ const BillPage = ({
       console.error("Error loading item checks:", err);
       setItemChecks({});
     }
-  }, [orderStorageKey]);
+  }, [orderStorageKey, showItemChecks]);
 
   useEffect(() => {
     if (!orderStorageKey || typeof window === "undefined") return;
+    if (!showItemChecks) {
+      localStorage.removeItem(`bill-item-checks:${orderStorageKey}`);
+      return;
+    }
     localStorage.setItem(
       `bill-item-checks:${orderStorageKey}`,
       JSON.stringify(itemChecks)
     );
-  }, [orderStorageKey, itemChecks]);
+  }, [orderStorageKey, itemChecks, showItemChecks]);
 
   const toggleItemCheck = (itemKey) => {
     setItemChecks((prev) => ({

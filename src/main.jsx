@@ -42,7 +42,7 @@ const RouteFallback = () => {
     <div className="flex min-h-screen items-center justify-center bg-white text-gray-600">
       <div className="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50/40 px-4 py-3 shadow-sm">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-        <span className="text-sm font-semibold tracking-wide">Loading...</span>
+        <span className="text-sm font-semibold tracking-wide">TapnBite Loading...</span>
       </div>
     </div>
   );
