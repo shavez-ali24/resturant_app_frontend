@@ -8,6 +8,14 @@ import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
 
 const POLLING_INTERVAL = 60000; // 60 seconds for notifications
 
+const extractOrders = (response) => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response.orders)) return response.orders;
+  if (Array.isArray(response.data)) return response.data;
+  return [];
+};
+
 export default function NotificationBell() {
   const MotionDiv = motion.div;
   const MotionSpan = motion.span;
@@ -25,7 +33,7 @@ export default function NotificationBell() {
   });
 
   // ✅ RTK Query with polling for PENDING orders only
-  const { data: ordersResponse = {}, refetch } = useGetOrdersQuery({
+  const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery({
     status: "pending",
     page: 1,
     limit: 20, // Get more orders for notifications
@@ -33,24 +41,47 @@ export default function NotificationBell() {
   }, {
     pollingInterval: POLLING_INTERVAL,
   });
+  const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery({
+    status: "preparing",
+    page: 1,
+    limit: 20,
+    range: "all"
+  }, {
+    pollingInterval: POLLING_INTERVAL,
+  });
 
   
+  const pendingOrders = useMemo(
+    () => extractOrders(pendingResponse),
+    [pendingResponse]
+  );
+  const preparingOrders = useMemo(
+    () => extractOrders(preparingResponse),
+    [preparingResponse]
+  );
+
   const orders = useMemo(() => {
-    if (!ordersResponse) return [];
-    
-    if (Array.isArray(ordersResponse)) return ordersResponse;
-    if (Array.isArray(ordersResponse.orders)) return ordersResponse.orders;
-    if (Array.isArray(ordersResponse.data)) return ordersResponse.data;
-    
-    return [];
-  }, [ordersResponse]);
+    const combined = [...pendingOrders, ...preparingOrders];
+    if (!combined.length) return [];
+    const seen = new Set();
+    const deduped = [];
+    combined.forEach((order) => {
+      const id = order?._id || order?.id || order?.orderId;
+      if (id) {
+        if (seen.has(id)) return;
+        seen.add(id);
+      }
+      deduped.push(order);
+    });
+    return deduped;
+  }, [pendingOrders, preparingOrders]);
 
   const pendingOrdersCount = useMemo(() => {
-    if (typeof ordersResponse?.totalOrders === "number") {
-      return ordersResponse.totalOrders;
+    if (typeof pendingResponse?.totalOrders === "number") {
+      return pendingResponse.totalOrders;
     }
-    return orders.length;
-  }, [ordersResponse, orders]);
+    return pendingOrders.length;
+  }, [pendingResponse, pendingOrders]);
 
   useEffect(() => {
     if (!orders.length) return;
@@ -154,7 +185,8 @@ export default function NotificationBell() {
   };
 
   const handleManualRefresh = () => {
-    refetch();
+    refetchPending();
+    refetchPreparing();
   };
 
   const displayNotificationCount =
@@ -276,15 +308,49 @@ export default function NotificationBell() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                isDarkMode
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : "bg-green-100 text-green-800"
+                                String(order.status || "").toLowerCase() === "preparing"
+                                  ? isDarkMode
+                                    ? "bg-teal-500/20 text-teal-200"
+                                    : "bg-teal-100 text-teal-800"
+                                  : isDarkMode
+                                    ? "bg-emerald-500/20 text-emerald-300"
+                                    : "bg-green-100 text-green-800"
                               }`}
                             >
-                              Pending
+                              {String(order.status || "").toLowerCase() === "preparing"
+                                ? "Preparing"
+                                : "Pending"}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                (() => {
+                                  const raw = String(order.orderType || "").trim().toLowerCase();
+                                  const compact = raw.replace(/\s+/g, "");
+                                  if (raw === "delivery") {
+                                    return isDarkMode
+                                      ? "bg-orange-500/15 text-orange-200"
+                                      : "bg-orange-100 text-orange-700";
+                                  }
+                                  if (compact === "takeaway") {
+                                    return isDarkMode
+                                      ? "bg-blue-500/15 text-blue-200"
+                                      : "bg-blue-100 text-blue-700";
+                                  }
+                                  if (compact === "eathere") {
+                                    return isDarkMode
+                                      ? "bg-emerald-500/15 text-emerald-200"
+                                      : "bg-emerald-100 text-emerald-700";
+                                  }
+                                  return isDarkMode
+                                    ? "bg-slate-700/70 text-slate-200"
+                                    : "bg-slate-100 text-slate-700";
+                                })()
+                              }`}
+                            >
+                              {order.orderType || "Unknown"}
                             </span>
                           </div>
                           
@@ -294,17 +360,15 @@ export default function NotificationBell() {
                                 isDarkMode ? "text-slate-100" : "text-gray-900"
                               }`}
                             >
-                              ₹{order.totalAmount || 0}
+                              {order.customerName || "Guest"}
                             </p>
-                            {order.items && (
-                              <p
-                                className={`line-clamp-1 text-sm ${
-                                  isDarkMode ? "text-slate-300" : "text-gray-600"
-                                }`}
-                              >
-                                {order.items.map(item => item.name).join(', ')}
-                              </p>
-                            )}
+                            <p
+                              className={`text-sm ${
+                                isDarkMode ? "text-slate-300" : "text-gray-600"
+                              }`}
+                            >
+                              {order.customerPhone || "No phone"}
+                            </p>
                             <p
                               className={`text-xs ${
                                 isDarkMode ? "text-slate-400" : "text-gray-600"

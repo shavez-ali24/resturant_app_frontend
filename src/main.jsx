@@ -35,14 +35,49 @@ const RouteFallback = () => {
   const isAdminRoute =
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/super-admin");
+  const isDarkMode = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const savedAdminTheme = localStorage.getItem("admin-theme");
+      if (savedAdminTheme) return savedAdminTheme === "dark";
+    } catch (_) {
+      // ignore storage access issues
+    }
+    const root = document.documentElement;
+    const body = document.body;
+    return (
+      root.classList.contains("admin-dark") ||
+      root.classList.contains("dark") ||
+      body.classList.contains("admin-dark") ||
+      body.classList.contains("dark")
+    );
+  })();
 
   if (!isAdminRoute) return null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white text-gray-600">
-      <div className="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50/40 px-4 py-3 shadow-sm">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-        <span className="text-sm font-semibold tracking-wide">TapnBite Loading...</span>
+    <div
+      className={`flex min-h-screen items-center justify-center ${
+        isDarkMode ? "bg-slate-950 text-slate-200" : "bg-white text-gray-600"
+      }`}
+    >
+      <div
+        className={`flex items-center gap-3 rounded-xl border px-4 py-3 shadow-sm ${
+          isDarkMode
+            ? "border-slate-700 bg-slate-900/80"
+            : "border-orange-100 bg-orange-50/40"
+        }`}
+      >
+        <span
+          className={`h-4 w-4 animate-spin rounded-full border-2 ${
+            isDarkMode
+              ? "border-orange-300 border-t-transparent"
+              : "border-orange-500 border-t-transparent"
+          }`}
+        />
+        <span className="text-sm font-semibold tracking-wide">
+          TapnBite Loading...
+        </span>
       </div>
     </div>
   );

@@ -201,8 +201,9 @@ function FilterControls({
 }
 
 // Main
-export default function MenuFilter({ onFilterChange, categories, value, onResetNotify }) {
+export default function MenuFilter({ onFilterChange, categories, value, onResetNotify, layout = "auto" }) {
   const isControlled = value != null && typeof onFilterChange === "function";
+  const isPanelLayout = layout === "panel";
 
   const [uncontrolledFilters, setUncontrolledFilters] = useState(initialFilters);
   const filters = isControlled ? value : uncontrolledFilters;
@@ -260,6 +261,22 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
     { value: "all", label: "All Categories" },
     ...(categories || []).map((cat) => ({ value: cat, label: cat })),
   ];
+
+  if (isPanelLayout) {
+    return (
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
+        <FilterControls
+          filters={filters}
+          openDropdown={openDropdown}
+          handleSearchChange={handleSearchChange}
+          handleToggleDropdown={handleToggleDropdown}
+          handleSelectFilter={handleSelectFilter}
+          handleResetFilters={handleResetFilters}
+          categoryOptions={categoryOptions}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

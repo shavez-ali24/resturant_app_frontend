@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CirclePlus, GripVertical, X } from "lucide-react";
+import { CirclePlus, GripVertical, SlidersHorizontal, X } from "lucide-react";
 import Heading from "../common/Heading";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
 import MenuItemCard from "./ComponentsMenu/MenuItemCard";
@@ -271,6 +271,7 @@ const Menu = () => {
   const [isReordering, setIsReordering] = useState(false);
   const [isPointerDragging, setIsPointerDragging] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const menuOrderRef = useRef([]);
   const dragStartOrderRef = useRef([]);
   const menuReorderTimerRef = useRef(null);
@@ -1130,12 +1131,36 @@ const prepareFormData = (formData, file) => {
       </AnimatePresence>
 
       <div className="mx-auto max-w-7xl pb-4">
-        <div className="mb-4 flex items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:gap-3 sm:p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-nowrap sm:gap-3 sm:p-4">
           <div className="min-w-0 flex-1">
-            <Heading title="Menu Management" />
+            <div className="flex w-full items-center justify-between gap-2">
+              <Heading title="Menu Management" />
+              {isAdmin && (
+                <Button
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:hidden"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <CirclePlus size={14} />
+                  Add
+                </Button>
+              )}
+            </div>
           </div>
-          {isAdmin && (
-            <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
+            <Button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-colors sm:h-11 sm:gap-2 sm:px-4 ${
+                isFilterOpen
+                  ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                  : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
+              }`}
+            >
+              <SlidersHorizontal size={16} />
+              <span className="hidden min-[390px]:inline">Filters</span>
+              <span className="inline min-[390px]:hidden">Filter</span>
+            </Button>
+            {isAdmin && (
               <Button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
@@ -1147,26 +1172,31 @@ const prepareFormData = (formData, file) => {
               >
                 Manage Category
               </Button>
+            )}
+            {isAdmin && (
               <Button
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:h-11 sm:gap-2 sm:px-4"
+                className="hidden h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:inline-flex sm:h-11 sm:gap-2 sm:px-4"
                 onClick={() => setIsAddModalOpen(true)}
               >
                 <CirclePlus size={16} />
                 <span className="hidden min-[390px]:inline">Add Item</span>
                 <span className="inline min-[390px]:hidden">Add</span>
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
-          <MenuFilter
-            value={filters}
-            onFilterChange={(v) => setFilters({ ...filters, ...v })}
-            categories={restaurantCategories}
-            onResetNotify={handleFilterResetNotification}
-          />
-        </div>
+        {isFilterOpen && (
+          <div className="mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
+            <MenuFilter
+              value={filters}
+              onFilterChange={(v) => setFilters({ ...filters, ...v })}
+              categories={restaurantCategories}
+              onResetNotify={handleFilterResetNotification}
+              layout="panel"
+            />
+          </div>
+        )}
 
         {isAdmin && isCategoryManagerOpen && restaurantCategories.length > 1 && (
           <div className="mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
@@ -1227,13 +1257,6 @@ const prepareFormData = (formData, file) => {
             )}
           </div>
         )}
-
-        <div className="mb-5 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm sm:mb-6 sm:gap-3">
-          <h2 className="text-lg font-bold text-gray-800 sm:text-xl">Total Items</h2>
-          <span className="inline-flex min-w-[44px] justify-center rounded-full bg-orange-100 px-3 py-1 text-sm font-extrabold text-orange-700">
-            {filteredItems.length}
-          </span>
-        </div>
 
         {isLoading ? (
           <div className="rounded-2xl border border-dashed border-orange-200 bg-white/90 py-12 text-center text-sm text-gray-600 sm:text-base">

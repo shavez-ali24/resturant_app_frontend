@@ -155,9 +155,12 @@ export default function TopSellingAnalytics() {
   const [toDate, setToDate] = useState("");
   const [isCustomRange, setIsCustomRange] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshQueued, setIsRefreshQueued] = useState(false);
   const notify = useNotify();
   
   const dropdownRef = useRef(null);
+  const refreshDebounceRef = useRef(null);
+  const isRefreshingRef = useRef(false);
 
   // Close date picker when clicking outside
   useEffect(() => {
@@ -170,6 +173,14 @@ export default function TopSellingAnalytics() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current);
+      }
     };
   }, []);
 
@@ -257,8 +268,9 @@ export default function TopSellingAnalytics() {
   const getRefreshErrorMessage = (err) =>
     err?.data?.message || err?.error || err?.message || "Unable to refresh sales analytics.";
 
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
+  const runRefresh = async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setIsRefreshing(true);
     try {
       const [productsResult, categoriesResult] = await Promise.all([
@@ -278,8 +290,22 @@ export default function TopSellingAnalytics() {
     } catch (err) {
       notify(getRefreshErrorMessage(err), "error");
     } finally {
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    if (isRefreshingRef.current) return;
+    if (refreshDebounceRef.current) {
+      clearTimeout(refreshDebounceRef.current);
+    }
+    setIsRefreshQueued(true);
+    refreshDebounceRef.current = setTimeout(() => {
+      refreshDebounceRef.current = null;
+      setIsRefreshQueued(false);
+      runRefresh();
+    }, 500);
   };
 
   const secondaryButtonClass =
@@ -570,7 +596,7 @@ export default function TopSellingAnalytics() {
 
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isRefreshQueued}
               className={secondaryButtonClass}
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -898,7 +924,7 @@ export default function TopSellingAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={secondaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -1103,7 +1129,7 @@ export default function TopSellingAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={secondaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />

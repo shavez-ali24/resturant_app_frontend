@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
-import { X, Clock, MapPin, Phone, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, Clock, MapPin, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useSelector, useDispatch } from "react-redux";
 import {
   removeFromCart,
@@ -48,6 +50,12 @@ export default function Header({
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isCartBarBump, setIsCartBarBump] = useState(false);
   const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
+  const prevOrderStatusRef = useRef(new Map());
+  const hasBootstrappedOrdersRef = useRef(false);
+  const [isPendingPollingActive, setIsPendingPollingActive] = useState(false);
+  const pendingTriggeredRef = useRef(new Set());
+  const pollingTimeoutRef = useRef(null);
+  const pollingUntilRef = useRef(0);
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
@@ -115,6 +123,29 @@ export default function Header({
 
     prevCartCountRef.current = cartCount;
   }, [cartCount]);
+
+  const startPendingPollingWindow = useCallback((durationMs = 120000) => {
+    const now = Date.now();
+    pollingUntilRef.current = now + durationMs;
+    setIsPendingPollingActive(true);
+
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+    }
+
+    pollingTimeoutRef.current = setTimeout(() => {
+      setIsPendingPollingActive(false);
+      pollingTimeoutRef.current = null;
+    }, durationMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Function: Latest order से current cart के लिए estimate बनाएं
   const estimateFromLatestOrder = (latestOrder, currentCartItems) => {
@@ -415,7 +446,10 @@ export default function Header({
   // Fetch orders by fingerprint with pagination
   const { data: ordersData, isLoading: ordersLoading, refetch } = useGetOrdersByFingerprintQuery(
     { fingerPrint, page: currentPage },
-    { skip: !fingerPrint }
+    {
+      skip: !fingerPrint,
+      pollingInterval: isPendingPollingActive ? 15000 : 0,
+    }
   );
 
   // Update orders when new data is fetched
@@ -485,6 +519,71 @@ export default function Header({
       setHasMore(true);
     }
   }, [fingerPrint]);
+
+  useEffect(() => {
+    prevOrderStatusRef.current = new Map();
+    hasBootstrappedOrdersRef.current = false;
+    pendingTriggeredRef.current = new Set();
+    pollingUntilRef.current = 0;
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+    setIsPendingPollingActive(false);
+  }, [fingerPrint]);
+
+  // Start 2-minute polling window when an order hits "pending"
+  useEffect(() => {
+    if (!Array.isArray(allOrders) || allOrders.length === 0) {
+      if (!hasBootstrappedOrdersRef.current) return;
+      prevOrderStatusRef.current = new Map();
+      pendingTriggeredRef.current = new Set();
+      return;
+    }
+
+    const previousStatuses = prevOrderStatusRef.current;
+    const nextStatuses = new Map();
+    const pendingTriggered = pendingTriggeredRef.current;
+    const activeOrderIds = new Set();
+    let shouldStartPendingPolling = false;
+
+    allOrders.forEach((order) => {
+      const orderId = order?._id || order?.id || order?.orderId;
+      if (!orderId) return;
+      activeOrderIds.add(orderId);
+      const status = String(order?.status || "").trim().toLowerCase();
+      nextStatuses.set(orderId, status);
+
+      const wasPending = previousStatuses.get(orderId) === "pending";
+      const isPending = status === "pending";
+
+      if (isPending) {
+        if (!pendingTriggered.has(orderId)) {
+          pendingTriggered.add(orderId);
+          shouldStartPendingPolling = true;
+        }
+      } else if (wasPending) {
+        pendingTriggered.delete(orderId);
+      }
+
+    });
+
+    pendingTriggered.forEach((id) => {
+      if (!activeOrderIds.has(id)) {
+        pendingTriggered.delete(id);
+      }
+    });
+
+    if (shouldStartPendingPolling) {
+      startPendingPollingWindow(120000);
+    }
+
+    prevOrderStatusRef.current = nextStatuses;
+    if (!hasBootstrappedOrdersRef.current) {
+      hasBootstrappedOrdersRef.current = true;
+    }
+  }, [allOrders, isDarkMode, startPendingPollingWindow]);
+
 
   const handleLoadMore = () => {
     if (hasMore && !ordersLoading) {
@@ -1243,7 +1342,7 @@ export default function Header({
         <AnimatePresence>
           {isCartOpen && (
           <motion.div
-            className={`fixed top-0 right-0 z-50 h-full w-[87%] max-w-sm border-l shadow-2xl ${isDarkMode ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"}`}
+            className={`fixed top-0 right-0 z-50 flex h-full w-[87%] max-w-sm flex-col border-l shadow-2xl ${isDarkMode ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"}`}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -1261,8 +1360,8 @@ export default function Header({
           </div>
 
           {/* Orders List */}
-          <div className="h-[calc(100%-80px)] flex-1 overflow-y-auto">
-            <div className="space-y-4 p-4">
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-4 p-4 transition">
               {ordersLoading && currentPage === 1 ? null : allOrders.length === 0 ? (
                 <div className="text-center py-8">
                   <FiShoppingCart className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? "text-slate-500" : "text-gray-300"}`} />
@@ -1461,12 +1560,14 @@ export default function Header({
                         ₹{order.totalAmount?.toFixed(2) || "0.00"}
                       </span>
                     </div>
+
                   </div>
                   ))}
                 </>
               )}
             </div>
           </div>
+
           </motion.div>
         )}
         </AnimatePresence>

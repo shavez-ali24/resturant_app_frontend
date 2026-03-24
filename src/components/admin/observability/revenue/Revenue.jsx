@@ -146,7 +146,10 @@ export default function RevenueAnalytics() {
   const [activeTab, setActiveTab] = useState("chart")
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshQueued, setIsRefreshQueued] = useState(false)
   const dropdownRef = useRef(null)
+  const refreshDebounceRef = useRef(null)
+  const isRefreshingRef = useRef(false)
   const notify = useNotify()
   
   // Get domain
@@ -217,6 +220,14 @@ export default function RevenueAnalytics() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current)
+      }
+    }
+  }, [])
+
   // Calculate metrics
   const totalRevenue = analyticsData?.totalRevenue || 0
   const totalOrders = analyticsData?.totalOrders || 0
@@ -276,8 +287,9 @@ export default function RevenueAnalytics() {
   const getRefreshErrorMessage = (err) =>
     err?.data?.message || err?.error || err?.message || "Unable to refresh revenue analytics."
 
-  const handleRefresh = async () => {
-    if (isRefreshing) return
+  const runRefresh = async () => {
+    if (isRefreshingRef.current) return
+    isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
       const result = await refetch()
@@ -289,8 +301,22 @@ export default function RevenueAnalytics() {
     } catch (err) {
       notify(getRefreshErrorMessage(err), "error")
     } finally {
+      isRefreshingRef.current = false
       setIsRefreshing(false)
     }
+  }
+
+  const handleRefresh = () => {
+    if (isRefreshingRef.current) return
+    if (refreshDebounceRef.current) {
+      clearTimeout(refreshDebounceRef.current)
+    }
+    setIsRefreshQueued(true)
+    refreshDebounceRef.current = setTimeout(() => {
+      refreshDebounceRef.current = null
+      setIsRefreshQueued(false)
+      runRefresh()
+    }, 500)
   }
 
   const secondaryButtonClass =
@@ -318,7 +344,7 @@ export default function RevenueAnalytics() {
           <div className="flex gap-2">
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isRefreshQueued}
               className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -532,7 +558,7 @@ export default function RevenueAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={primaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -767,7 +793,7 @@ export default function RevenueAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={primaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />

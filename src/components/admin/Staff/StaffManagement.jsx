@@ -383,7 +383,7 @@ const StaffManagement = () => {
       <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-500 hover:to-orange-600">
+            <TableRow className="bg-[linear-gradient(90deg,#f97316,#ea580c)] hover:bg-[linear-gradient(90deg,#f97316,#ea580c)]">
               <TableHead className="font-semibold text-white">Name</TableHead>
               <TableHead className="font-semibold text-white">Email</TableHead>
               <TableHead className="font-semibold text-white">Role</TableHead>
