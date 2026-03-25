@@ -336,34 +336,21 @@ export default function RevenueAnalytics() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex flex-row lg:flex-row lg:items-center justify-between gap-4 mb-4">
-          <div>
-            <Heading title="Revenue Analytics" />
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing || isRefreshQueued}
-              className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="mb-6 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium text-gray-700">Time Range:</span>
-              <span className="text-orange-600 font-semibold">
-                {getDisplayRangeText()}
-              </span>
+        <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <Heading title="Revenue Analytics" />
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium text-gray-700">Time Range:</span>
+                <span className="text-orange-600 font-semibold">
+                  {getDisplayRangeText()}
+                </span>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
@@ -447,8 +434,19 @@ export default function RevenueAnalytics() {
                 )}
               </div>
             </div>
+
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isRefreshQueued}
+                className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
 
       {/* Stats Cards - 2 Cards Only (Removed Avg Order Value) */}
@@ -673,22 +671,21 @@ export default function RevenueAnalytics() {
             {/* Table Tab */}
             <TabsContent value="table" className="mt-0">
               <div className="overflow-hidden rounded-xl border border-orange-200">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-orange-50/70">
-                      <TableRow>
-                        <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
-                          Date
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-right border-r border-orange-200">
-                          Orders
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-right">
-                          Revenue
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <Table containerClassName="max-h-[540px] overflow-x-auto overflow-y-auto">
+                  <TableHeader className="sticky top-0 z-10 bg-orange-50/70">
+                    <TableRow>
+                      <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
+                        Date
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right border-r border-orange-200">
+                        Orders
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right">
+                        Revenue
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                       {isLoading ? (
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
@@ -742,9 +739,8 @@ export default function RevenueAnalytics() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
+                  </TableBody>
+                </Table>
                 
                 {/* Table Footer */}
                 {tableData.length > 0 && (

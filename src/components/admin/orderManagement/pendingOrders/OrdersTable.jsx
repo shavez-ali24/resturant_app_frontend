@@ -49,10 +49,15 @@ const OrdersTable = ({
   updateOrder,
   tableType,
   onCustomizationsClick,
+  latestOrderId,
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizations, setSelectedCustomizations] = useState(null);
-  const columnCount = tableType === "pending" ? 10 : 8;
+  const [seenBillOrderId, setSeenBillOrderId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("billViewedOrderId") || "";
+  });
+  const columnCount = tableType === "pending" ? 8 : 6;
   const skeletonRows = Array.from({ length: 8 });
   const mobileSkeletons = Array.from({ length: 4 });
 
@@ -66,6 +71,22 @@ const OrdersTable = ({
   // Modal background click handler
   const handleModalClose = () => {
     setSelectedCustomizations(null);
+  };
+
+  const getOrderId = (order) =>
+    order?._id || order?.id || order?.orderId || order?.createdAt || "";
+  const latestId = latestOrderId ? String(latestOrderId) : "";
+  const isLatestUnseen = (order) => {
+    if (!latestId) return false;
+    const id = String(getOrderId(order) || "");
+    return id && id === latestId && id !== seenBillOrderId;
+  };
+  const markLatestSeen = (order) => {
+    if (typeof window === "undefined") return;
+    const id = String(getOrderId(order) || "");
+    if (!id || id !== latestId) return;
+    localStorage.setItem("billViewedOrderId", id);
+    setSeenBillOrderId(id);
   };
 
   return (
@@ -90,7 +111,9 @@ const OrdersTable = ({
         <table className="min-w-full">
           <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+              {tableType !== "pending" && (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+              )}
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Customer</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
@@ -151,6 +174,8 @@ const OrdersTable = ({
                   updateOrder={updateOrder}
                   tableType={tableType}
                   onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
+                  showBillAttention={isLatestUnseen(order)}
+                  onBillOpen={() => markLatestSeen(order)}
                 />
               ))
             )}
@@ -221,7 +246,9 @@ const OrdersTable = ({
                       Order
                     </h3>
                     <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {formatDate(order.createdAt)} | {formatTime(order.createdAt)}
+                      {tableType === "pending"
+                        ? formatTime(order.createdAt)
+                        : `${formatDate(order.createdAt)} | ${formatTime(order.createdAt)}`}
                     </span>
                   </div>
 
@@ -239,7 +266,7 @@ const OrdersTable = ({
                   <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center">
                     <span className="shrink-0 text-sm font-medium text-gray-600 dark:text-slate-300">Type:</span>
                     <div
-                      className={`inline-flex h-9 w-fit items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
+                      className={`inline-flex h-9 w-40 items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
                     >
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         {getOrderTypeIcon(order.orderType)}
@@ -262,8 +289,11 @@ const OrdersTable = ({
                     )}
 
                     <button
-                      onClick={() => dispatch(showBill(order))}
-                      className="flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        markLatestSeen(order);
+                        dispatch(showBill(order));
+                      }}
+                      className={`flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${isLatestUnseen(order) ? "bill-border-animate" : ""}`}
                     >
                       View Items & Bill
                     </button>

@@ -482,6 +482,12 @@ const Orders = () => {
             updateOrder={updateOrder}
             tableType="pending"
             onCustomizationsClick={handleCustomizationsClick}
+            latestOrderId={
+              combinedOrders[0]?._id ||
+              combinedOrders[0]?.id ||
+              combinedOrders[0]?.orderId ||
+              combinedOrders[0]?.createdAt
+            }
           />
         </Suspense>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Clock, MapPin, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
@@ -50,12 +50,6 @@ export default function Header({
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isCartBarBump, setIsCartBarBump] = useState(false);
   const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
-  const prevOrderStatusRef = useRef(new Map());
-  const hasBootstrappedOrdersRef = useRef(false);
-  const [isPendingPollingActive, setIsPendingPollingActive] = useState(false);
-  const pendingTriggeredRef = useRef(new Set());
-  const pollingTimeoutRef = useRef(null);
-  const pollingUntilRef = useRef(0);
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
@@ -123,29 +117,6 @@ export default function Header({
 
     prevCartCountRef.current = cartCount;
   }, [cartCount]);
-
-  const startPendingPollingWindow = useCallback((durationMs = 120000) => {
-    const now = Date.now();
-    pollingUntilRef.current = now + durationMs;
-    setIsPendingPollingActive(true);
-
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-    }
-
-    pollingTimeoutRef.current = setTimeout(() => {
-      setIsPendingPollingActive(false);
-      pollingTimeoutRef.current = null;
-    }, durationMs);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (pollingTimeoutRef.current) {
-        clearTimeout(pollingTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Function: Latest order से current cart के लिए estimate बनाएं
   const estimateFromLatestOrder = (latestOrder, currentCartItems) => {
@@ -448,7 +419,9 @@ export default function Header({
     { fingerPrint, page: currentPage },
     {
       skip: !fingerPrint,
-      pollingInterval: isPendingPollingActive ? 15000 : 0,
+      refetchOnMountOrArgChange: false,
+      refetchOnFocus: false,
+      refetchOnReconnect: false,
     }
   );
 
@@ -519,70 +492,6 @@ export default function Header({
       setHasMore(true);
     }
   }, [fingerPrint]);
-
-  useEffect(() => {
-    prevOrderStatusRef.current = new Map();
-    hasBootstrappedOrdersRef.current = false;
-    pendingTriggeredRef.current = new Set();
-    pollingUntilRef.current = 0;
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-      pollingTimeoutRef.current = null;
-    }
-    setIsPendingPollingActive(false);
-  }, [fingerPrint]);
-
-  // Start 2-minute polling window when an order hits "pending"
-  useEffect(() => {
-    if (!Array.isArray(allOrders) || allOrders.length === 0) {
-      if (!hasBootstrappedOrdersRef.current) return;
-      prevOrderStatusRef.current = new Map();
-      pendingTriggeredRef.current = new Set();
-      return;
-    }
-
-    const previousStatuses = prevOrderStatusRef.current;
-    const nextStatuses = new Map();
-    const pendingTriggered = pendingTriggeredRef.current;
-    const activeOrderIds = new Set();
-    let shouldStartPendingPolling = false;
-
-    allOrders.forEach((order) => {
-      const orderId = order?._id || order?.id || order?.orderId;
-      if (!orderId) return;
-      activeOrderIds.add(orderId);
-      const status = String(order?.status || "").trim().toLowerCase();
-      nextStatuses.set(orderId, status);
-
-      const wasPending = previousStatuses.get(orderId) === "pending";
-      const isPending = status === "pending";
-
-      if (isPending) {
-        if (!pendingTriggered.has(orderId)) {
-          pendingTriggered.add(orderId);
-          shouldStartPendingPolling = true;
-        }
-      } else if (wasPending) {
-        pendingTriggered.delete(orderId);
-      }
-
-    });
-
-    pendingTriggered.forEach((id) => {
-      if (!activeOrderIds.has(id)) {
-        pendingTriggered.delete(id);
-      }
-    });
-
-    if (shouldStartPendingPolling) {
-      startPendingPollingWindow(120000);
-    }
-
-    prevOrderStatusRef.current = nextStatuses;
-    if (!hasBootstrappedOrdersRef.current) {
-      hasBootstrappedOrdersRef.current = true;
-    }
-  }, [allOrders, isDarkMode, startPendingPollingWindow]);
 
 
   const handleLoadMore = () => {

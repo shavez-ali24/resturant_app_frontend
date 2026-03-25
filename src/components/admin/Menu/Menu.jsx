@@ -1130,7 +1130,7 @@ const prepareFormData = (formData, file) => {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto max-w-7xl pb-4">
+      <div className="w-full pb-4 px-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-nowrap sm:gap-3 sm:p-4">
           <div className="min-w-0 flex-1">
             <div className="flex w-full items-center justify-between gap-2">
@@ -1268,7 +1268,7 @@ const prepareFormData = (formData, file) => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
               {currentItems.map((item) => {
                 const canReorder = isAdmin && !isReordering && filteredItems.length > 1;
                 const dragHandleProps = canReorder

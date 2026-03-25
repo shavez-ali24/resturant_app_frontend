@@ -28,6 +28,8 @@ const OrderRow = ({
   updateOrder,
   tableType,
   onCustomizationsClick,
+  showBillAttention,
+  onBillOpen,
 }) => {
   const dispatch = useDispatch();
 
@@ -55,9 +57,11 @@ const OrderRow = ({
       )}`}
     >
       {/* Date Column */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
-        {order.formattedDate || "N/A"}
-      </td>
+      {tableType !== "pending" && (
+        <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+          {order.formattedDate || "N/A"}
+        </td>
+      )}
 
       {/* Time Column */}
       <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
@@ -72,7 +76,7 @@ const OrderRow = ({
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
       <td className="px-1 py-2 text-center border dark:border-slate-700">
-        <div className={`inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
+        <div className={`mx-auto inline-flex h-9 w-40 items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
           <div className="flex items-center gap-1.5">
             {getOrderTypeIcon(order.orderType)}
             <span>{orderTypeLabel}</span>
@@ -86,8 +90,11 @@ const OrderRow = ({
       {/* View Items / Bill */}
       <td className="text-center border py-2">
         <button
-          onClick={() => dispatch(showBill(order))}
-          className="rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+          onClick={() => {
+            if (onBillOpen) onBillOpen();
+            dispatch(showBill(order));
+          }}
+          className={`rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 ${showBillAttention ? "bill-border-animate" : ""}`}
         >
           <span className="flex justify-center items-center gap-1">
             View Items & Bill

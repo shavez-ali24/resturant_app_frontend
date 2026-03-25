@@ -196,14 +196,17 @@ export default function NotificationBell() {
     <div className="relative" ref={bellRef}>
       <button
         onClick={handleBellClick}
-        className={`relative overflow-visible rounded-full p-2 transition-colors duration-200 ${
+        className={`relative flex h-9 w-9 items-center justify-center overflow-visible rounded-full transition-colors duration-200 ${
           isDarkMode
-            ? "border border-slate-700 bg-slate-900 text-orange-300 hover:bg-slate-800 hover:text-orange-200"
-            : "bg-orange-50 text-orange-600 hover:bg-orange-50 hover:text-orange-600"
+            ? "border border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800 hover:text-orange-200"
+            : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-600"
         }`}
         title="Order Notifications"
       >
-        <Bell size={26} className="relative z-0" />
+        <Bell
+          size={18}
+          className={`relative z-0 ${isDarkMode ? "text-orange-300" : "text-orange-600"}`}
+        />
         
         {/* Notification counter badge */}
         {pendingOrdersCount > 0 && (
