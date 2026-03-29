@@ -135,13 +135,40 @@ const BillPage = ({
     }));
   };
 
-  // Use backend data directly - already calculated with discounts
-  const gstAmount = Number(order?.gstAmount || 0);
-  const deliveryCharges = (order?.orderType === "Delivery") ? Number(order?.deliveryCharges || 0) : 0;
-  const grandTotal = Number(order?.totalAmount || 0);
+  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
 
-  // For item display, use discountedPrice if available (already calculated by backend)
-  const displaySubtotal = grandTotal - gstAmount - deliveryCharges;
+  // Use backend data directly - already calculated with discounts
+  const gstAmount = Number(activeOrder?.gstAmount || 0);
+  const deliveryCharges =
+    activeOrder?.orderType === "Delivery"
+      ? Number(activeOrder?.deliveryCharges || 0)
+      : 0;
+
+  const itemsSubtotal = recalcTotal(activeOrder?.items || []);
+  const backendSubtotal = Number(activeOrder?.subtotal);
+  const hasBackendSubtotal =
+    Number.isFinite(backendSubtotal) && backendSubtotal > 0;
+
+  // Subtotal should respect backend when provided; otherwise fallback to items sum
+  const displaySubtotal = isEditMode
+    ? itemsSubtotal
+    : (hasBackendSubtotal ? backendSubtotal : itemsSubtotal);
+
+  const computedGrandTotal = displaySubtotal + gstAmount + deliveryCharges;
+  const backendGrandTotal = Number(activeOrder?.totalAmount || 0);
+  let displayGrandTotal = computedGrandTotal;
+
+  if (!isEditMode && backendGrandTotal) {
+    const diff = Math.abs(backendGrandTotal - computedGrandTotal);
+    if (diff <= 0.01) {
+      displayGrandTotal = backendGrandTotal;
+    } else if (Math.abs(backendGrandTotal - displaySubtotal) <= 0.01) {
+      // Backend total excludes GST/delivery, so show computed total
+      displayGrandTotal = computedGrandTotal;
+    } else {
+      displayGrandTotal = backendGrandTotal;
+    }
+  }
 
   const restaurantName =
     restaurantDetails?.restaurantName ||
@@ -893,7 +920,7 @@ const BillPage = ({
 
               <div className="flex justify-between font-bold border-t pt-2 mt-2">
                 <span>Grand Total</span>
-                <span>₹{grandTotal.toFixed(2)}</span>
+                <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
             </div>
 

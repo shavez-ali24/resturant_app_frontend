@@ -5,6 +5,13 @@ import { FormField } from './commanProfile/FormField'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange }) {
+    const gstNumberError = formData.gstEnabled && !String(formData.gstNumber || "").trim()
+        ? "GST number is required."
+        : "";
+    const gstRateValue = formData.gstRate;
+    const gstRateMissing = formData.gstEnabled && (gstRateValue === "" || gstRateValue === null || gstRateValue === undefined || Number(gstRateValue) <= 0);
+    const gstRateError = gstRateMissing ? "GST rate is required." : "";
+
     return (
         <FormCard title="Financials" customIndex={4}>
             <div className="space-y-4 rounded-xl border border-orange-200 p-4 bg-orange-50/30">
@@ -56,6 +63,7 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
                                     name="gstNumber"
                                     value={formData.gstNumber}
                                     onChange={handleChange}
+                                    error={gstNumberError}
                                     placeholder="e.g. 22AAAAA0000A1Z5"
                                 />
                                 <FormField
@@ -64,6 +72,7 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
                                     type="text" // Keep as text to allow decimal
                                     value={formData.gstRate}
                                     onChange={handleChange}
+                                    error={gstRateError}
                                     placeholder="e.g. 5"
                                 />
                             </div>

@@ -145,6 +145,19 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         setNotification({ show: false, message: "", type: "" });
     };
 
+    const scrollToSelector = (selector) => {
+        if (typeof document === "undefined") return;
+        const target = document.querySelector(selector);
+        if (!target) return;
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof target.focus === "function") {
+            setTimeout(() => target.focus({ preventScroll: true }), 200);
+        }
+    };
+
+    const scrollToField = (name) => scrollToSelector(`[name="${name}"]`);
+    const scrollToId = (id) => scrollToSelector(`#${id}`);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         let processedValue = value;
@@ -296,7 +309,23 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         const { eathere, takeaway, delivery } = formData.orderModes;
         if (!eathere && !takeaway && !delivery) {
             showNotification("At least one order mode must be enabled.", "error");
+            scrollToId("eathere-toggle");
             return;
+        }
+
+        if (formData.gstEnabled) {
+            const gstNumber = String(formData.gstNumber || "").trim();
+            const gstRateValue = Number(formData.gstRate);
+            if (!gstNumber) {
+                showNotification("GST number is required when GST is enabled.", "error");
+                scrollToField("gstNumber");
+                return;
+            }
+            if (!gstRateValue) {
+                showNotification("GST rate is required when GST is enabled.", "error");
+                scrollToField("gstRate");
+                return;
+            }
         }
 
         try {

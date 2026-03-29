@@ -8,6 +8,7 @@ import { store } from "./redux/store";
 import PrivateRoute from "./components/admin/adminLayout/PrivateRoute";
 import DynamicFavicon from "./DynamicFavicon";
 import { NotificationProvider } from "./components/admin/common/NotificationModal";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const Home = lazy(() => import("./pages/Home"));
@@ -100,12 +101,13 @@ const AdminOnlyRoute = ({ children }) => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
-    <NotificationProvider>
-      <BrowserRouter>
-        <DynamicFavicon />
+    <ErrorBoundary>
+      <NotificationProvider>
+        <BrowserRouter>
+          <DynamicFavicon />
 
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
@@ -180,9 +182,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
             {/* 404 Error */}
             <Route path="*" element={<ErrorPage />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </NotificationProvider>
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </NotificationProvider>
+    </ErrorBoundary>
   </Provider>
 );

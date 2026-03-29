@@ -134,11 +134,11 @@ export default function Category({
                     </>
                   ) : (
                     <span
-                      className={`inline-flex h-full w-full items-center justify-center px-2 text-sm font-semibold ${
+                      className={`inline-flex h-full w-full items-center justify-center px-2 text-[12px] font-semibold leading-tight text-center ${
                         isActive ? "bg-primary text-white" : "bg-white text-gray-700"
                       }`}
                     >
-                      {item?.category}
+                      <span className="w-full truncate">{item?.category}</span>
                     </span>
                   )}
                 </button>

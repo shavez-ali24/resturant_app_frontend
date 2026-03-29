@@ -21,19 +21,8 @@ export default defineConfig({
   build: {
     target: "es2018",
     minify: "esbuild",
-    sourcemap: false,
+    sourcemap: true,
     cssCodeSplit: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("react-dom")) return "react-dom";
-          if (id.includes("react-router-dom")) return "react-router";
-          if (id.includes("react")) return "react";
-          return "vendor";
-        },
-      },
-    },
   },
   esbuild: {
     drop: ["console", "debugger"],
