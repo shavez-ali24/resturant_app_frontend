@@ -134,6 +134,12 @@
   animation: bill-border-pulse 1.6s ease-out infinite;
 }
 
+.menu-no-anim,
+.menu-no-anim * {
+  animation: none !important;
+  transition: none !important;
+}
+
 @supports (-webkit-touch-callout: none) {
   .client-category-scroll {
     overflow-x: auto;

@@ -18,8 +18,10 @@ const MenuItemCard = ({
   isAdmin = true,
   dragHandleProps,
   isDragging = false,
+  disableMotion = false,
 }) => {
   const MotionDiv = motion.div;
+  const CardWrapper = disableMotion ? "div" : MotionDiv;
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -157,12 +159,16 @@ const MenuItemCard = ({
   }, [showMenu]);
 
   return (
-    <MotionDiv
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+    <CardWrapper
+      {...(disableMotion
+        ? {}
+        : {
+            layout: true,
+            initial: { opacity: 0, y: 10 },
+            animate: { opacity: 1, y: 0 },
+            exit: { opacity: 0, y: -10 },
+            transition: { type: "spring", stiffness: 200, damping: 25 },
+          })}
       className={`group relative h-full w-full self-stretch min-w-0 overflow-visible rounded-2xl border border-orange-200 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_8px_24px_-18px_rgba(249,115,22,0.55)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_14px_30px_-18px_rgba(249,115,22,0.65)] dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 dark:shadow-slate-950/40 ${
         showMenu ? "z-40" : "z-10"
       } ${isDragging ? "ring-2 ring-orange-400/70 opacity-90" : ""}`}
@@ -195,15 +201,38 @@ const MenuItemCard = ({
               </button>
 
               {showMenu && (
-                <MotionDiv
-                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
-                >
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      onEdit();
+                disableMotion ? (
+                  <div className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onEdit();
+                      }}
+                      className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-orange-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      <Edit size={15} /> Edit Item
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onDelete();
+                      }}
+                      className="flex h-10 w-full items-center gap-2 border-t px-3 text-left text-sm text-red-600 hover:bg-red-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-red-500/20"
+                    >
+                      <Trash2 size={15} /> Delete
+                    </button>
+                  </div>
+                ) : (
+                  <MotionDiv
+                    initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className="absolute right-0 top-full z-[120] mt-1 w-40 rounded-xl border bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onEdit();
                     }}
                     className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-orange-50 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
@@ -216,10 +245,11 @@ const MenuItemCard = ({
                       onDelete();
                     }}
                     className="flex h-10 w-full items-center gap-2 border-t px-3 text-left text-sm text-red-600 hover:bg-red-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-red-500/20"
-                  >
-                    <Trash2 size={15} /> Delete
-                  </button>
-                </MotionDiv>
+                    >
+                      <Trash2 size={15} /> Delete
+                    </button>
+                  </MotionDiv>
+                )
               )}
             </div>
           )}
@@ -362,7 +392,7 @@ const MenuItemCard = ({
           </div>
         </div>
       </div>
-    </MotionDiv>
+    </CardWrapper>
   );
 };
 

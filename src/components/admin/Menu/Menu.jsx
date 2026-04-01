@@ -1131,7 +1131,7 @@ const prepareFormData = (formData, file) => {
       </AnimatePresence>
 
       <div className="w-full pb-4 px-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-nowrap sm:gap-3 sm:p-4">
+        <div className="menu-no-anim mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-nowrap sm:gap-3 sm:p-4">
           <div className="min-w-0 flex-1">
             <div className="flex w-full items-center justify-between gap-2">
               <Heading title="Menu Management" />
@@ -1150,7 +1150,7 @@ const prepareFormData = (formData, file) => {
             <Button
               type="button"
               onClick={() => setIsFilterOpen((prev) => !prev)}
-              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-colors sm:h-11 sm:gap-2 sm:px-4 ${
+              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:h-11 sm:gap-2 sm:px-4 ${
                 isFilterOpen
                   ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
                   : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
@@ -1164,7 +1164,7 @@ const prepareFormData = (formData, file) => {
               <Button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
-                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-colors sm:h-11 sm:gap-2 sm:px-4 ${
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:h-11 sm:gap-2 sm:px-4 ${
                   isCategoryManagerOpen
                     ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
                     : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
@@ -1187,7 +1187,7 @@ const prepareFormData = (formData, file) => {
         </div>
 
         {isFilterOpen && (
-          <div className="mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
+          <div className="menu-no-anim mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
             <MenuFilter
               value={filters}
               onFilterChange={(v) => setFilters({ ...filters, ...v })}
@@ -1199,7 +1199,7 @@ const prepareFormData = (formData, file) => {
         )}
 
         {isAdmin && isCategoryManagerOpen && restaurantCategories.length > 1 && (
-          <div className="mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
+          <div className="menu-no-anim mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
@@ -1300,6 +1300,7 @@ const prepareFormData = (formData, file) => {
                       isAdmin={isAdmin}
                       dragHandleProps={dragHandleProps}
                       isDragging={draggingId === item._id}
+                      disableMotion
                     />
                   </div>
                 );

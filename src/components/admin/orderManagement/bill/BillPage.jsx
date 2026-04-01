@@ -136,12 +136,32 @@ const BillPage = ({
   };
 
   const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+  const activeOrderTypeKey = getOrderTypeKey(activeOrder?.orderType);
+
+  const parseAmount = (value) => {
+    if (value == null) return 0;
+    if (typeof value === "number") return value;
+    const cleaned = String(value).replace(/[^\d.]/g, "");
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   // Use backend data directly - already calculated with discounts
   const gstAmount = Number(activeOrder?.gstAmount || 0);
+  const restaurantDeliveryCharge = parseAmount(restaurantDetails?.deliveryCharges);
+  const hasOrderDeliveryCharge =
+    activeOrder?.deliveryCharges !== undefined &&
+    activeOrder?.deliveryCharges !== null &&
+    String(activeOrder?.deliveryCharges).trim() !== "";
+  const orderDeliveryCharge = hasOrderDeliveryCharge
+    ? parseAmount(activeOrder?.deliveryCharges)
+    : 0;
+  const resolvedDeliveryCharge = hasOrderDeliveryCharge
+    ? orderDeliveryCharge
+    : restaurantDeliveryCharge;
   const deliveryCharges =
-    activeOrder?.orderType === "Delivery"
-      ? Number(activeOrder?.deliveryCharges || 0)
+    activeOrderTypeKey === "delivery"
+      ? resolvedDeliveryCharge
       : 0;
 
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
@@ -180,6 +200,42 @@ const BillPage = ({
     restaurantDetails?.gstEnabled && restaurantDetails.gstNumber
       ? restaurantDetails.gstNumber
       : null;
+  const displayAddress = isEditMode ? address : order?.address;
+  const forceLightBill = true;
+  const billThemeIsDark = isDarkMode && !forceLightBill;
+  const billSurfaceClass = billThemeIsDark
+    ? "bg-slate-950 text-slate-100"
+    : "bg-white text-gray-900";
+  const billPanelClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
+  const billBorderClass = billThemeIsDark ? "border-slate-700" : "border-gray-200";
+  const billTextClass = billThemeIsDark ? "text-slate-100" : "text-gray-900";
+  const billMutedTextClass = billThemeIsDark ? "text-slate-300" : "text-gray-700";
+  const billContentBgClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
+  const billInputClass = billThemeIsDark
+    ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+    : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200";
+  const billSelectContentClass = billThemeIsDark
+    ? "border-slate-700 bg-slate-950"
+    : "border-gray-200 bg-white";
+  const billSelectItemClass = billThemeIsDark
+    ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
+    : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900";
+  const billControlButtonClass = billThemeIsDark
+    ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
+    : "bg-gray-100 text-gray-700 hover:bg-gray-200";
+  const billCheckboxClass = billThemeIsDark
+    ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
+    : "border-gray-300 text-orange-600 accent-orange-500";
+
+  const getFinalQR = () => {
+    const rawQR = restaurantDetails?.qrCode || "";
+    const cleanedQR = rawQR.replace(/\s/g, "");
+    if (!cleanedQR) return "";
+    return cleanedQR.startsWith("data:image")
+      ? cleanedQR
+      : `data:image/png;base64,${cleanedQR}`;
+  };
+  const qrSrc = getFinalQR();
 
   // =============================
   // EDIT MODE FUNCTIONS
@@ -275,6 +331,11 @@ const BillPage = ({
   const handleOrderTypeChange = (orderType) => {
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
+    const defaultDeliveryCharge = parseAmount(
+      localOrderData?.deliveryCharges ??
+      order?.deliveryCharges ??
+      restaurantDetails?.deliveryCharges
+    );
     
     // Clear fields based on transition
     if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
@@ -286,7 +347,8 @@ const BillPage = ({
 
     setLocalOrderData(prev => ({
       ...prev,
-      orderType
+      orderType,
+      deliveryCharges: newType === "delivery" ? defaultDeliveryCharge : 0
     }));
   };
 
@@ -343,6 +405,10 @@ const BillPage = ({
 
       if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
+        payload.deliveryCharges =
+          parseAmount(localOrderData?.deliveryCharges) ||
+          parseAmount(restaurantDetails?.deliveryCharges) ||
+          0;
       }
 
       if (selectedOrderTypeKey === "take_away") {
@@ -418,6 +484,23 @@ const BillPage = ({
               .no-print {
                 display: none !important;
               }
+              body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .printable-bill,
+              .printable-bill * {
+                color: #000000 !important;
+                background: #ffffff !important;
+                border-color: #000000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+              }
+              .printable-bill {
+                background: #ffffff !important;
+              }
             }
           </style>
         </head>
@@ -473,7 +556,7 @@ const BillPage = ({
         className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] ${
           isDarkMode
             ? "border-slate-700 bg-slate-950 text-slate-100 shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
-            : "border-orange-100 bg-white/95"
+            : "border-orange-100 bg-white"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -577,21 +660,35 @@ const BillPage = ({
         )}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div ref={billRef} className="printable-bill">
+        <div className={`flex-1 overflow-y-auto p-6 ${billContentBgClass}`}>
+          <div ref={billRef} className={`printable-bill ${billSurfaceClass}`}>
 
             {/* Restaurant Header */}
-            <div className={`mb-4 border-b pb-4 text-center ${isDarkMode ? "border-slate-700" : ""}`}>
-              <h2 className="text-xl font-bold">{restaurantName}</h2>
-              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>{restaurantAddress}</p>
-              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Phone: {restaurantPhone}</p>
-              {restaurantGstin && (
-                <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>GSTIN: {restaurantGstin}</p>
-              )}
+            <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
+              <div className="grid grid-cols-[64px_1fr_64px] items-center gap-2">
+                <div className="flex justify-start">
+                  {qrSrc ? (
+                    <img
+                      src={qrSrc}
+                      alt="QR Code"
+                      className={`h-14 w-14 rounded-md border ${billBorderClass} object-contain`}
+                    />
+                  ) : null}
+                </div>
+                <div className="text-center">
+                  <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
+                  <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
+                  <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
+                  {restaurantGstin && (
+                    <p className={`text-sm ${billTextClass}`}>GSTIN: {restaurantGstin}</p>
+                  )}
+                </div>
+                <div />
+              </div>
             </div>
 
             {/* Customer & Order Info */}
-            <div className="mb-4 text-sm grid grid-cols-2 gap-x-4">
+            <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
               <p>
                 <strong>Customer:</strong> {order?.customerName || "Guest"}
               </p>
@@ -610,17 +707,15 @@ const BillPage = ({
                 })}
               </p>
               <p>
-                <strong>Type:</strong> {order?.orderType || "N/A"}
+                <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
               </p>
             </div>
 
-            {order?.orderType === "Delivery" && order?.address && (
-              <div className={`mb-4 rounded border p-3 text-sm ${
-                isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
-              }`}>
+            {activeOrderTypeKey === "delivery" && displayAddress && (
+              <div className={`mb-4 rounded border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
                 <strong>Delivery Address:</strong>
                 <br />
-                {order.address}
+                {displayAddress}
               </div>
             )}
 
@@ -629,7 +724,7 @@ const BillPage = ({
               <div className="mb-4 space-y-3">
                 {/* Order Type */}
                 <div>
-                  <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                  <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                     Order Type
                   </label>
                   <Select
@@ -642,9 +737,7 @@ const BillPage = ({
                         <span>{getOrderTypeLabel(localOrderData?.orderType)}</span>
                       </div>
                     </SelectTrigger>
-                    <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                      isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                    }`}>
+                    <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                       <SelectGroup>
                         <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
                           <div className="flex items-center gap-2">
@@ -669,27 +762,21 @@ const BillPage = ({
                 {/* Table Selection - Eat Here */}
                 {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (
                   <div>
-                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                    <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                       Select Table *
                     </label>
                     <Select value={selectedTableId} onValueChange={handleTableChange}>
-                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
-                        isDarkMode
-                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                      }`}>
+                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
-                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                        isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                      }`}>
+                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                         <SelectGroup>
                           {availableTables.map((table) => (
-                            <SelectItem key={table._id} value={table._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
-                              isDarkMode
-                                ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                                : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                            }`}>
+                            <SelectItem
+                              key={table._id}
+                              value={table._id}
+                              className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${billSelectItemClass}`}
+                            >
                               Table {table.tableNumber || table.number || table._id.slice(-4)}
                             </SelectItem>
                           ))}
@@ -702,18 +789,14 @@ const BillPage = ({
                 {/* Address - Delivery */}
                 {getOrderTypeKey(localOrderData?.orderType) === "delivery" && (
                   <div>
-                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                    <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                       Delivery Address *
                     </label>
                     <textarea
                       value={address}
                       onChange={handleAddressChange}
                       placeholder="Enter delivery address"
-                      className={`w-full resize-none rounded-xl border p-3 text-sm shadow-sm transition-all outline-none ${
-                        isDarkMode
-                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                          : "border-gray-300 bg-white hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                      }`}
+                      className={`w-full resize-none rounded-xl border p-3 text-sm shadow-sm transition-all outline-none ${billInputClass}`}
                       rows={2}
                     />
                   </div>
@@ -722,11 +805,9 @@ const BillPage = ({
             )}
 
             {/* Items Table */}
-            <table className={`mb-4 w-full border-y text-sm ${
-              isDarkMode ? "border-slate-700" : "border-gray-200"
-            }`}>
+            <table className={`mb-4 w-full border-y text-sm ${billBorderClass}`}>
               <thead>
-                <tr className={isDarkMode ? "bg-slate-900" : "bg-gray-50"}>
+                <tr className="bg-transparent">
                   <th className="py-2 px-2 text-left">Item</th>
                   <th className="py-2 px-2 text-center">Qty</th>
                   <th className="py-2 px-2 text-right">Price</th>
@@ -745,15 +826,15 @@ const BillPage = ({
                   const isChecked = !!itemChecks[itemKey];
                   
                   return (
-                    <tr key={i} className={isDarkMode ? "border-b border-slate-700" : "border-b border-gray-200"}>
+                    <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
                         <div>
                           {item.name}
                           {item.variant && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>({item.variant})</div>
+                            <div className={`text-xs ${billTextClass}`}>({item.variant})</div>
                           )}
                           {item.comboItems && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                            <div className={`text-xs ${billTextClass}`}>
                               Combo: {item.comboItems.length} items
                             </div>
                           )}
@@ -764,11 +845,7 @@ const BillPage = ({
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity - 1)}
-                              className={`rounded p-1 transition-colors ${
-                                isDarkMode
-                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
+                              className={`rounded p-1 transition-colors ${billControlButtonClass}`}
                               disabled={item.quantity <= 1}
                             >
                               <Minus size={12} />
@@ -776,11 +853,7 @@ const BillPage = ({
                             <span className="w-6 text-center">{item.quantity}</span>
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity + 1)}
-                              className={`rounded p-1 transition-colors ${
-                                isDarkMode
-                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
+                              className={`rounded p-1 transition-colors ${billControlButtonClass}`}
                             >
                               <Plus size={12} />
                             </button>
@@ -795,22 +868,16 @@ const BillPage = ({
                             value={item.variantName}
                             onValueChange={(v) => handleVariantChange(i, v)}
                           >
-                            <SelectTrigger className={`h-8 w-24 rounded-lg border text-xs font-medium shadow-sm transition-all outline-none ${
-                              isDarkMode
-                                ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                            }`}>
+                            <SelectTrigger className={`h-8 w-24 rounded-lg border text-xs font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                              isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                            }`}>
+                            <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                               {Object.entries(item.variants).map(([variant, price]) => (
-                                <SelectItem key={variant} value={variant} className={`cursor-pointer rounded-lg py-1 text-xs font-medium ${
-                                  isDarkMode
-                                    ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                                    : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                                }`}>
+                                <SelectItem
+                                  key={variant}
+                                  value={variant}
+                                  className={`cursor-pointer rounded-lg py-1 text-xs font-medium ${billSelectItemClass}`}
+                                >
                                   {variant}: ₹{price}
                                 </SelectItem>
                               ))}
@@ -829,11 +896,7 @@ const BillPage = ({
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => toggleItemCheck(itemKey)}
-                            className={`h-4 w-4 rounded border transition-colors cursor-pointer ${
-                              isDarkMode
-                                ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
-                                : "border-gray-300 text-orange-600 accent-orange-500"
-                            }`}
+                            className={`h-4 w-4 cursor-pointer rounded border transition-colors ${billCheckboxClass}`}
                             aria-label={`Mark ${item.name} as sent`}
                           />
                         </td>
@@ -858,30 +921,24 @@ const BillPage = ({
             {/* EDIT MODE: Add Item */}
             {isEditMode && (
               <div className="mb-4">
-                <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                   Add Item
                 </label>
                 <Select onValueChange={handleAddItem}>
-                  <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
-                    isDarkMode
-                      ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                  }`}>
+                  <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                     <SelectValue placeholder="Select item to add..." />
                   </SelectTrigger>
-                  <SelectContent className={`max-h-60 rounded-xl border p-1 shadow-xl ${
-                    isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                  }`}>
+                  <SelectContent className={`max-h-60 rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                     <SelectGroup>
                       {menuItems.map((item) => (
-                        <SelectItem key={item._id} value={item._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
-                          isDarkMode
-                            ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                            : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                        }`}>
+                        <SelectItem
+                          key={item._id}
+                          value={item._id}
+                          className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${billSelectItemClass}`}
+                        >
                           <div className="flex items-center justify-between">
                             <span>{item.name}</span>
-                            <span className={`ml-2 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                            <span className={`ml-2 text-xs ${billTextClass}`}>
                               {item.pricingType === "variant" 
                                 ? "Variant" 
                                 : `₹${item.price || 0}`}
@@ -896,9 +953,7 @@ const BillPage = ({
             )}
 
             {/* Totals - Use backend data directly */}
-            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${
-              isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
-            }`}>
+            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{displaySubtotal.toFixed(2)}</span>
@@ -911,22 +966,20 @@ const BillPage = ({
                 </div>
               )}
 
-              {deliveryCharges > 0 && (
+              {activeOrderTypeKey === "delivery" && (
                 <div className="flex justify-between">
                   <span>Delivery Charges</span>
                   <span>₹{deliveryCharges.toFixed(2)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between font-bold border-t pt-2 mt-2">
+              <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass}`}>
                 <span>Grand Total</span>
                 <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
             </div>
 
-            <p className={`mt-4 border-t pt-3 text-center text-xs ${
-              isDarkMode ? "border-slate-700 text-slate-400" : "text-gray-600"
-            }`}>
+            <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
               Thank you! Visit again!
             </p>
           </div>
