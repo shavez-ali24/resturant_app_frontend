@@ -15,6 +15,7 @@ import {
   getOrderTypeItemClass,
   getOrderTypeKey,
   getOrderTypeLabel,
+  recalcTotal,
 } from "../commonOrderFile/utils";
 
 const BillPage = ({ 
@@ -146,8 +147,6 @@ const BillPage = ({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  // Use backend data directly - already calculated with discounts
-  const gstAmount = Number(activeOrder?.gstAmount || 0);
   const restaurantDeliveryCharge = parseAmount(restaurantDetails?.deliveryCharges);
   const hasOrderDeliveryCharge =
     activeOrder?.deliveryCharges !== undefined &&
@@ -165,7 +164,7 @@ const BillPage = ({
       : 0;
 
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
-  const backendSubtotal = Number(activeOrder?.subtotal);
+  const backendSubtotal = parseAmount(activeOrder?.subtotal);
   const hasBackendSubtotal =
     Number.isFinite(backendSubtotal) && backendSubtotal > 0;
 
@@ -174,8 +173,22 @@ const BillPage = ({
     ? itemsSubtotal
     : (hasBackendSubtotal ? backendSubtotal : itemsSubtotal);
 
-  const computedGrandTotal = displaySubtotal + gstAmount + deliveryCharges;
-  const backendGrandTotal = Number(activeOrder?.totalAmount || 0);
+  const gstRate = parseAmount(
+    activeOrder?.gstRate ??
+    restaurantDetails?.gstRate ??
+    order?.gstRate ??
+    0
+  );
+  const backendGstAmount = parseAmount(activeOrder?.gstAmount);
+  const computedGstAmount = gstRate > 0
+    ? (displaySubtotal * gstRate) / 100
+    : 0;
+  const displayGstAmount = isEditMode
+    ? computedGstAmount
+    : (backendGstAmount || computedGstAmount);
+
+  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges;
+  const backendGrandTotal = parseAmount(activeOrder?.totalAmount || 0);
   let displayGrandTotal = computedGrandTotal;
 
   if (!isEditMode && backendGrandTotal) {
@@ -196,9 +209,15 @@ const BillPage = ({
     "Restaurant Name";
   const restaurantAddress = restaurantDetails?.address || "Restaurant Address";
   const restaurantPhone = restaurantDetails?.phoneNumber || "N/A";
+  const rawGstin =
+    restaurantDetails?.gstNumber ??
+    restaurantDetails?.gstin ??
+    restaurantDetails?.gstIN ??
+    "";
+  const normalizedGstin = String(rawGstin || "").trim();
   const restaurantGstin =
-    restaurantDetails?.gstEnabled && restaurantDetails.gstNumber
-      ? restaurantDetails.gstNumber
+    normalizedGstin && restaurantDetails?.gstEnabled !== false
+      ? normalizedGstin
       : null;
   const displayAddress = isEditMode ? address : order?.address;
   const forceLightBill = true;
@@ -835,18 +854,25 @@ const BillPage = ({
               </thead>
               <tbody>
                 {(isEditMode ? localOrderData?.items : order?.items)?.map((item, i) => {
-                  const itemPrice = Number(item.discountedPrice || item.price || 0);
-                  const itemTotal = itemPrice * Number(item.quantity || 1);
+                  const itemPrice = parseAmount(
+                    item.discountedPrice ??
+                    item.price ??
+                    item.menuItem?.price ??
+                    0
+                  );
+                  const itemQuantity = parseAmount(item.quantity ?? 1);
+                  const itemTotal = itemPrice * itemQuantity;
                   const itemKey = buildItemCheckKey(item, i);
                   const isChecked = !!itemChecks[itemKey];
+                  const itemVariant = item.variantName || item.variant;
                   
                   return (
                     <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
                         <div>
                           {item.name}
-                          {item.variant && (
-                            <div className={`text-xs ${billTextClass}`}>({item.variant})</div>
+                          {itemVariant && (
+                            <div className={`text-xs ${billTextClass}`}>({itemVariant})</div>
                           )}
                           {item.comboItems && (
                             <div className={`text-xs ${billTextClass}`}>
@@ -974,10 +1000,10 @@ const BillPage = ({
                 <span>₹{displaySubtotal.toFixed(2)}</span>
               </div>
 
-              {gstAmount > 0 && (
+              {displayGstAmount > 0 && (
                 <div className="flex justify-between">
-                  <span>GST {order?.gstRate ? `(${order.gstRate}%)` : ""}</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
+                  <span>GST {gstRate > 0 ? `(${gstRate}%)` : ""}</span>
+                  <span>₹{displayGstAmount.toFixed(2)}</span>
                 </div>
               )}
 

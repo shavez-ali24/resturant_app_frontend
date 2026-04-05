@@ -585,7 +585,7 @@ export default function FoodListing({
                                             >
                                               <span>{formatVariantLabel(key)}</span>
                                               
-                                              {/* ✅ सिर्फ final price (discount के बाद) */}
+                                           
                                               {(() => {
                                                 const finalPrice = hasVariantDiscount ? 
                                                   discountedVariantPrice : 
@@ -984,7 +984,7 @@ export default function FoodListing({
                                         >
                                           <span>{formatVariantLabel(key)}</span>
                                           
-                                          {/* ✅ सिर्फ final price (discount के बाद) */}
+                                        
                                           {(() => {
                                             const finalPrice = hasVariantDiscount ? 
                                               discountedVariantPrice : 

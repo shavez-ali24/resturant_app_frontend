@@ -32,8 +32,32 @@ export const getStatusRowClass = (status) => {
   }
 };
 
-export const recalcTotal = (items) => {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const toNumber = (value) => {
+  if (value == null) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value).replace(/[^\d.]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+export const recalcTotal = (items = []) => {
+  if (!Array.isArray(items)) return 0;
+
+  return items.reduce((sum, item) => {
+    const price = toNumber(
+      item?.price ??
+      item?.discountedPrice ??
+      item?.menuItem?.discountedPrice ??
+      item?.menuItem?.price ??
+      item?.variantPrice ??
+      0
+    );
+    const rawQty = item?.quantity;
+    const quantity = rawQty == null ? 1 : toNumber(rawQty);
+    const safeQty = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+
+    return sum + price * safeQty;
+  }, 0);
 };
 
 const normalizeOrderTypeValue = (value) =>
