@@ -43,11 +43,23 @@ export default function ProfileDetails({ profileData }) {
     "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm";
 
   const getFinalQR = () => {
-    const rawQR = profileData?.qrCode || "";
-    const cleanedQR = rawQR.replace(/\s/g, "");
-    return cleanedQR.startsWith("data:image")
-      ? cleanedQR
-      : `data:image/png;base64,${cleanedQR}`;
+    const rawQR =
+      (typeof profileData?.qrCode === "string" ||
+      typeof profileData?.qrCode === "number")
+        ? String(profileData?.qrCode)
+        : (
+            profileData?.qrCode?.url ||
+            profileData?.qrCode?.secure_url ||
+            profileData?.qrCode?.secureUrl ||
+            profileData?.qrCode?.path ||
+            profileData?.qrCode?.base64 ||
+            ""
+          );
+    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
+    if (!cleanedQR) return "";
+    if (cleanedQR.startsWith("data:image")) return cleanedQR;
+    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
+    return `data:image/png;base64,${cleanedQR}`;
   };
 
   const handleQRDownload = () => {
@@ -185,7 +197,7 @@ export default function ProfileDetails({ profileData }) {
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
-            {profileData?.qrCode ? (
+            {getFinalQR() ? (
               <div className="w-full text-center">
                 <img src={getFinalQR()} alt="QR Code" className="mx-auto mb-3 h-40 w-40 rounded-lg border border-orange-100 object-contain" />
                 <button

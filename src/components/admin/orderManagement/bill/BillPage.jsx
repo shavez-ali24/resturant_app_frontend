@@ -8,14 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../ui/select";
+} from "@/components/ui/select";
 import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass,
   getOrderTypeKey,
   getOrderTypeLabel,
-  recalcTotal,
 } from "../commonOrderFile/utils";
 
 const BillPage = ({ 
@@ -78,9 +77,10 @@ const BillPage = ({
   // Initialize local order data
   useEffect(() => {
     if (order) {
+      const orderItems = Array.isArray(order.items) ? order.items : [];
       const newLocalOrderData = {
         ...order,
-        items: order.items.map(item => ({
+        items: orderItems.map(item => ({
           ...item,
           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
           name: item.name || item.menuItem?.name || "",
@@ -228,12 +228,23 @@ const BillPage = ({
     : "border-gray-300 text-orange-600 accent-orange-500";
 
   const getFinalQR = () => {
-    const rawQR = restaurantDetails?.qrCode || "";
-    const cleanedQR = rawQR.replace(/\s/g, "");
+    const rawQR =
+      (typeof restaurantDetails?.qrCode === "string" ||
+      typeof restaurantDetails?.qrCode === "number")
+        ? String(restaurantDetails?.qrCode)
+        : (
+            restaurantDetails?.qrCode?.url ||
+            restaurantDetails?.qrCode?.secure_url ||
+            restaurantDetails?.qrCode?.secureUrl ||
+            restaurantDetails?.qrCode?.path ||
+            restaurantDetails?.qrCode?.base64 ||
+            ""
+          );
+    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
     if (!cleanedQR) return "";
-    return cleanedQR.startsWith("data:image")
-      ? cleanedQR
-      : `data:image/png;base64,${cleanedQR}`;
+    if (cleanedQR.startsWith("data:image")) return cleanedQR;
+    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
+    return `data:image/png;base64,${cleanedQR}`;
   };
   const qrSrc = getFinalQR();
 
@@ -243,6 +254,7 @@ const BillPage = ({
 
   // Add item
   const handleAddItem = (menuItemId) => {
+    if (!localOrderData) return;
     const selected = menuItems.find(m => m._id === menuItemId);
     if (!selected) return;
 
@@ -282,6 +294,7 @@ const BillPage = ({
 
   // Remove item
   const handleRemoveItem = (idx) => {
+    if (!localOrderData) return;
     if (localOrderData.items.length <= 1) {
       setError("Minimum 1 item required");
       return;
@@ -299,6 +312,7 @@ const BillPage = ({
 
   // Update quantity
   const handleQuantityChange = (idx, qty) => {
+    if (!localOrderData) return;
     const quantity = Math.max(1, parseInt(qty) || 1);
     const items = [...localOrderData.items];
     items[idx].quantity = quantity;
@@ -312,6 +326,7 @@ const BillPage = ({
 
   // Update variant
   const handleVariantChange = (idx, variant) => {
+    if (!localOrderData) return;
     const items = [...localOrderData.items];
     const item = items[idx];
 
@@ -329,6 +344,7 @@ const BillPage = ({
 
   // Order type change
   const handleOrderTypeChange = (orderType) => {
+    if (!localOrderData) return;
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
     const defaultDeliveryCharge = parseAmount(
@@ -416,7 +432,10 @@ const BillPage = ({
         payload.address = null;
       }
 
-      await updateOrder(localOrderData._id, payload);
+      await updateOrder({
+        orderId: localOrderData._id,
+        updatedData: payload,
+      }).unwrap();
       setIsEditMode(false);
     } catch (err) {
       console.error("Update Order Failed:", err);
@@ -428,10 +447,11 @@ const BillPage = ({
 
   // Cancel edit
   const handleCancelEdit = () => {
+    const orderItems = Array.isArray(order?.items) ? order.items : [];
     // Reset to original data
     const newLocalOrderData = {
       ...order,
-      items: order.items.map(item => ({
+      items: orderItems.map(item => ({
         ...item,
         menuItemId: item.menuItemId || item.menuItem?._id || item._id,
         name: item.name || item.menuItem?.name || "",
@@ -586,7 +606,7 @@ const BillPage = ({
             {isStaff && !isEditMode && (
               <button
                 onClick={() => setIsEditMode(true)}
-                className={`rounded-lg p-2 transition-colors ${
+                className={`relative rounded-lg p-2 transition-colors ${
                   isDarkMode
                     ? "text-orange-300 hover:bg-slate-800"
                     : "text-orange-700 hover:bg-orange-100"
@@ -665,25 +685,20 @@ const BillPage = ({
 
             {/* Restaurant Header */}
             <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
-              <div className="grid grid-cols-[64px_1fr_64px] items-center gap-2">
-                <div className="flex justify-start">
-                  {qrSrc ? (
-                    <img
-                      src={qrSrc}
-                      alt="QR Code"
-                      className={`h-14 w-14 rounded-md border ${billBorderClass} object-contain`}
-                    />
-                  ) : null}
-                </div>
-                <div className="text-center">
-                  <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
-                  <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
-                  <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
-                  {restaurantGstin && (
-                    <p className={`text-sm ${billTextClass}`}>GSTIN: {restaurantGstin}</p>
-                  )}
-                </div>
-                <div />
+              <div className="flex flex-col items-center text-center">
+                {qrSrc ? (
+                  <img
+                    src={qrSrc}
+                    alt="QR Code"
+                    className={`mb-2 h-12 w-12 rounded-md border ${billBorderClass} object-contain`}
+                  />
+                ) : null}
+                <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
+                <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
+                <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
+                {restaurantGstin && (
+                  <p className={`text-sm ${billTextClass}`}>GSTIN: {restaurantGstin}</p>
+                )}
               </div>
             </div>
 
@@ -980,7 +995,7 @@ const BillPage = ({
             </div>
 
             <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
-              Thank you! Visit again!
+             Hope to serve you again soon! 😊🍽️ 
             </p>
           </div>
         </div>

@@ -154,6 +154,8 @@ export default function TopSellingAnalytics() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isCustomRange, setIsCustomRange] = useState(false);
+  const [appliedFromDate, setAppliedFromDate] = useState("");
+  const [appliedToDate, setAppliedToDate] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshQueued, setIsRefreshQueued] = useState(false);
   const notify = useNotify();
@@ -197,6 +199,12 @@ export default function TopSellingAnalytics() {
   }, [showDatePicker, fromDate, toDate]);
 
   // Fetch data using RTK Query - pass custom dates when isCustomRange is true
+  const appliedFrom = appliedFromDate || fromDate;
+  const appliedTo = appliedToDate || toDate;
+
+  const isProductsTab = activeTab === "products";
+  const isCategoriesTab = activeTab === "categories";
+
   const { 
     data: productsResponse, 
     isLoading: productsLoading, 
@@ -204,7 +212,9 @@ export default function TopSellingAnalytics() {
     refetch: refetchProducts 
   } = useGetTopSellingProductsQuery({ 
     range: isCustomRange ? "custom" : timeRange,
-    ...(isCustomRange && { from: fromDate, to: toDate })
+    ...(isCustomRange && { from: appliedFrom, to: appliedTo })
+  }, {
+    skip: !isProductsTab
   });
   
   const { 
@@ -214,13 +224,15 @@ export default function TopSellingAnalytics() {
     refetch: refetchCategories 
   } = useGetTopSellingCategoriesQuery({ 
     range: isCustomRange ? "custom" : timeRange,
-    ...(isCustomRange && { from: fromDate, to: toDate })
+    ...(isCustomRange && { from: appliedFrom, to: appliedTo })
+  }, {
+    skip: !isCategoriesTab
   });
 
   // Get time range label
   const getTimeRangeLabel = () => {
-    if (isCustomRange && fromDate && toDate) {
-      return `Custom (${formatFullDate(fromDate)} - ${formatFullDate(toDate)})`;
+    if (isCustomRange && appliedFrom && appliedTo) {
+      return `Custom (${formatFullDate(appliedFrom)} - ${formatFullDate(appliedTo)})`;
     }
     return timeRangeOptions.find(opt => opt.value === timeRange)?.label || timeRange;
   };
@@ -236,8 +248,17 @@ export default function TopSellingAnalytics() {
         return;
       }
       
+      setAppliedFromDate(fromDate);
+      setAppliedToDate(toDate);
       setIsCustomRange(true);
       setShowDatePicker(false);
+      setTimeout(() => {
+        if (isProductsTab) {
+          refetchProducts();
+        } else if (isCategoriesTab) {
+          refetchCategories();
+        }
+      }, 0);
       // Don't reset timeRange dropdown - let it show the last selected preset
     }
   };
@@ -246,6 +267,8 @@ export default function TopSellingAnalytics() {
   const handleTimeRangeChange = (value) => {
     setTimeRange(value);
     setIsCustomRange(false);
+    setAppliedFromDate("");
+    setAppliedToDate("");
     setShowDatePicker(false);
   };
 
@@ -262,6 +285,8 @@ export default function TopSellingAnalytics() {
   // Clear custom range
   const handleClearCustomRange = () => {
     setIsCustomRange(false);
+    setAppliedFromDate("");
+    setAppliedToDate("");
     setTimeRange("7d"); // Reset to default
   };
 
@@ -273,16 +298,12 @@ export default function TopSellingAnalytics() {
     isRefreshingRef.current = true;
     setIsRefreshing(true);
     try {
-      const [productsResult, categoriesResult] = await Promise.all([
-        refetchProducts(),
-        refetchCategories(),
-      ]);
+      const result = isProductsTab
+        ? await refetchProducts()
+        : await refetchCategories();
 
-      if (productsResult?.error || categoriesResult?.error) {
-        notify(
-          getRefreshErrorMessage(productsResult?.error || categoriesResult?.error),
-          "error"
-        );
+      if (result?.error) {
+        notify(getRefreshErrorMessage(result?.error), "error");
         return;
       }
 
@@ -459,8 +480,15 @@ export default function TopSellingAnalytics() {
   }
 
   // Error state
-  const hasError = productsError || categoriesError || 
-                  productsData?.error || categoriesData?.error;
+  const activeError = isProductsTab
+    ? (productsError || productsData?.error)
+    : (categoriesError || categoriesData?.error);
+  const hasError = !!activeError;
+  const errorMessage =
+    activeError?.data?.message ||
+    activeError?.error ||
+    activeError?.message ||
+    "Please try refreshing the page";
 
   return (
     <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
@@ -616,11 +644,7 @@ export default function TopSellingAnalytics() {
                 Error loading analytics data
               </p>
               <p className="text-red-600 text-sm">
-                {productsError?.data?.message || 
-                 categoriesError?.data?.message || 
-                 productsData?.error || 
-                 categoriesData?.error || 
-                 "Please try refreshing the page"}
+                {errorMessage}
               </p>
             </div>
           </div>
