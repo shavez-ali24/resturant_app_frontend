@@ -111,8 +111,14 @@ const CompletedOrders = () => {
         </div>
       </div>
 
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
-        <OrdersTable orders={orders} loading={isLoading} error={isError} tableType="completed" />
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4">
+        <OrdersTable
+          orders={orders}
+          loading={isLoading}
+          error={isError}
+          tableType="completed"
+          containerVariant="plain"
+        />
       </div>
 
       {totalPages > 1 && (

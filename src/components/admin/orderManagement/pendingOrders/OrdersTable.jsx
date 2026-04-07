@@ -50,6 +50,7 @@ const OrdersTable = ({
   tableType,
   onCustomizationsClick,
   latestOrderId,
+  containerVariant = "card",
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizations, setSelectedCustomizations] = useState(null);
@@ -89,8 +90,13 @@ const OrdersTable = ({
     setSeenBillOrderId(id);
   };
 
+  const containerClassName =
+    containerVariant === "plain"
+      ? "min-h-[460px] md:min-h-[560px] rounded-2xl bg-transparent shadow-none"
+      : "min-h-[460px] md:min-h-[560px] rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none";
+
   return (
-    <div className="min-h-[460px] md:min-h-[560px] rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
+    <div className={containerClassName}>
       {/* Customizations Modal */}
       {selectedCustomizations && (
         <div

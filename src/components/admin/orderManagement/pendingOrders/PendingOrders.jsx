@@ -461,7 +461,7 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:mt-4">
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4 sm:mt-4">
         <Suspense
           fallback={
             <div className="min-h-[420px] md:min-h-[520px] p-4">
@@ -482,6 +482,7 @@ const Orders = () => {
             updateOrder={updateOrder}
             tableType="pending"
             onCustomizationsClick={handleCustomizationsClick}
+            containerVariant="plain"
             latestOrderId={
               combinedOrders[0]?._id ||
               combinedOrders[0]?.id ||

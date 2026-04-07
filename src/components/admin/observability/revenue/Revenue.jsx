@@ -798,57 +798,7 @@ export default function RevenueAnalytics() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Summary Cards */}
-                  {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-green-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-xl">
-                            <IndianRupee className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency(totalRevenue)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl">
-                            <Percent className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Total Discounts</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency(analyticsData?.totalDiscounts || 0)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-purple-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl">
-                            <ShoppingBag className="w-5 h-5 text-purple-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Net Revenue</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency((analyticsData?.totalRevenue || 0) - (analyticsData?.totalDiscounts || 0))}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div> */}
-
+              
                  
                 </div>
               )}
