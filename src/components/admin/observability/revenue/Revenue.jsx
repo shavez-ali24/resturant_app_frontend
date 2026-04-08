@@ -38,6 +38,17 @@ const formatCompactNumber = (number) => {
   return `₹${number}`
 }
 
+const getBackendDateParts = (value) => {
+  const raw = String(value || "").trim()
+  if (!raw) return { raw: "", date: "", time: "" }
+  const [datePart, timePart] = raw.split(" ")
+  return {
+    raw,
+    date: datePart || raw,
+    time: timePart || "",
+  }
+}
+
 const analyticsTabsListClass =
   "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)] dark:border-slate-600 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.2),0_10px_24px_-18px_rgba(2,6,23,0.9)]"
 const analyticsTabsTriggerClass =
@@ -45,72 +56,15 @@ const analyticsTabsTriggerClass =
 
 // Format date for chart X-axis
 const formatChartDate = (dateString, range) => {
-  try {
-    const date = new Date(dateString.replace(' ', 'T') + 'Z')
-    
-    // For custom range, always show full date
-    if (range === "custom") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "numeric",
-        month: "short",
-      })
-    }
-    
-    if (range === "all" || range === "1y" || range === "6m") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        month: "short",
-        year: range === "all" ? "numeric" : undefined,
-      })
-    }
-    
-    if (range === "7d" || range === "15d" || range === "30d") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "numeric",
-        month: "short",
-      })
-    }
-    
-    if (range === "1d") {
-      return date.toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    }
-    
-    return dateString
-  } catch (error) {
-    return dateString
-  }
+  const { raw, date, time } = getBackendDateParts(dateString)
+  if (!raw) return ""
+  if (range === "1d") return time || raw
+  return date || raw
 }
 
 // Format date for table
 const formatTableDate = (dateString, range) => {
-  try {
-    const date = new Date(dateString.replace(' ', 'T') + 'Z')
-    
-    if (range === "1d") {
-      return date.toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    }
-    
-    return date.toLocaleDateString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      day: "numeric",
-      month: "short",
-      year: range === "custom" || range === "all" ? "numeric" : undefined,
-    })
-  } catch (error) {
-    return dateString
-  }
+  return getBackendDateParts(dateString).raw
 }
 
 // Group data by date for long ranges
@@ -121,8 +75,8 @@ const groupChartDataByDate = (data, range) => {
   const grouped = {}
   
   data.forEach(item => {
-    const date = new Date(item.date.replace(' ', 'T') + 'Z')
-    const dateKey = date.toISOString().split('T')[0]
+    const dateKey = getBackendDateParts(item.date).date
+    if (!dateKey) return
     
     if (!grouped[dateKey]) {
       grouped[dateKey] = {
@@ -259,7 +213,7 @@ export default function RevenueAnalytics() {
     return chartData
       .map(item => ({
         ...item,
-        displayDate: formatTableDate(item.date + " 12:00", timeRange)
+        displayDate: formatTableDate(item.date, timeRange)
       }))
       .sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [chartData, timeRange])
