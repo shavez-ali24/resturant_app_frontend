@@ -38,7 +38,7 @@ export function RestaurantInfoSection({ form, compact = false }) {
             </div>
           </FormControl>
           <FormDescription className={descriptionClassName}>
-            This will be used to generate QR code: https://{form.watch('domain') || 'your-domain'}.yourdomain.com
+            This will be used to generate QR code: https://{form.watch('domain') || 'your-domain'}
           </FormDescription>
           <FormMessage />
         </FormItem>

@@ -1,26 +1,25 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CirclePlus, GripVertical, SlidersHorizontal, X } from "lucide-react";
-import Heading from "../common/Heading";
+import {
+  CirclePlus,
+  GripVertical,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Edit,
+  Trash2,
+  Search,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
-import MenuItemCard from "./ComponentsMenu/MenuItemCard";
 import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
 import AddItemModal from "./ComponentsMenu/AddItemModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
 import { useNotify } from "../common/NotificationModal";
-
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
-import { getCompactPageNumbers } from "@/lib/pagination";
 
 import {
   useGetMenuQuery,
@@ -250,6 +249,203 @@ const resolveCategoryValue = (item = {}, categoryLookup = {}, categoryOptions = 
   return trimmed;
 };
 
+const formatCurrency = (value) => {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return "";
+  return `₹${amount.toFixed(0)}`;
+};
+
+const getItemPriceLabel = (item = {}) => {
+  const pricingType = item?.pricingType || "single";
+
+  if (pricingType === "combo") {
+    return formatCurrency(item?.comboPrice ?? item?.price ?? 0);
+  }
+
+  if (pricingType === "variant") {
+    const variants = item?.variantRates || {};
+    const prices = ["quarter", "half", "full"]
+      .map((key) => Number(variants?.[key]?.price))
+      .filter((val) => !Number.isNaN(val));
+    if (prices.length) {
+      return `${formatCurrency(Math.min(...prices))}+`;
+    }
+    return "Varies";
+  }
+
+  return formatCurrency(item?.price ?? item?.comboPrice ?? 0);
+};
+
+const getDiscountedPriceDetails = (price, discount) => {
+  const basePrice = Number(price);
+  if (Number.isNaN(basePrice)) {
+    return { current: null, original: null, hasDiscount: false };
+  }
+
+  const discountValue = Number(discount?.value ?? 0);
+  const isActive = Boolean(discount?.active) && discountValue > 0;
+  if (!isActive) {
+    return { current: basePrice, original: null, hasDiscount: false };
+  }
+
+  const discountType = String(discount?.type || "flat").toLowerCase();
+  const discounted =
+    discountType === "percentage"
+      ? basePrice - (basePrice * discountValue) / 100
+      : basePrice - discountValue;
+
+  return {
+    current: Math.max(discounted, 0),
+    original: basePrice,
+    hasDiscount: true,
+  };
+};
+
+const getSinglePriceDetails = (item = {}) => {
+  if (item?.pricingType !== "single") return null;
+  return getDiscountedPriceDetails(item?.price, item?.discount);
+};
+
+const getVariantPriceDetails = (item = {}) => {
+  if (item?.pricingType !== "variant") return [];
+  const variants = item?.variantRates || {};
+  const entries = [
+    { key: "quarter", label: "Q" },
+    { key: "half", label: "H" },
+    { key: "full", label: "F" },
+  ];
+
+  return entries
+    .map((entry) => {
+      const rate = variants?.[entry.key];
+      if (!rate?.price && rate?.price !== 0) return null;
+      const details = getDiscountedPriceDetails(rate.price, rate.discount);
+      if (details.current == null) return null;
+      return {
+        key: entry.key,
+        label: entry.label,
+        ...details,
+      };
+    })
+    .filter(Boolean);
+};
+
+const FoodTypeIndicator = ({ type = "" }) => {
+  const normalized = String(type || "").toLowerCase();
+  const isVeg = normalized === "veg";
+  const isNonVeg = normalized === "non-veg";
+  const borderClass = isVeg
+    ? "border-green-600 bg-green-100"
+    : isNonVeg
+    ? "border-red-600 bg-red-100"
+    : "border-yellow-600 bg-yellow-100";
+  const dotClass = isVeg
+    ? "bg-green-600"
+    : isNonVeg
+    ? "bg-red-600"
+    : "bg-yellow-600";
+
+  return (
+    <span
+      className={`inline-flex h-4 w-4 items-center justify-center rounded-[3px] border ${borderClass}`}
+    >
+      <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+    </span>
+  );
+};
+
+const AvailabilityBadge = ({ available }) => (
+  <span
+    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+      available
+        ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-300"
+        : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
+    }`}
+  >
+    {available ? <CheckCircle size={12} /> : <XCircle size={12} />}
+    {available ? "In stock" : "Out of stock"}
+  </span>
+);
+
+const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
+  const isMixed = status === "mixed";
+  const isIn = status === "in";
+  const label = isMixed ? "Mixed" : isIn ? "In stock" : "Out of stock";
+  const [cooldown, setCooldown] = useState(false);
+  const cooldownRef = useRef(null);
+
+  const pillClass = isMixed
+    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+    : isIn
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+    : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200";
+  const trackClass = isMixed
+    ? "bg-amber-500 dark:bg-amber-400"
+    : isIn
+    ? "bg-green-600 dark:bg-emerald-400"
+    : "bg-red-600 dark:bg-rose-500";
+  const knobTranslate = isMixed
+    ? "translate-x-1.5"
+    : isIn
+    ? "translate-x-3"
+    : "translate-x-0";
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) {
+        clearTimeout(cooldownRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled || cooldown}
+      onClick={() => {
+        if (disabled || cooldown) return;
+        onToggle?.();
+        setCooldown(true);
+        if (cooldownRef.current) clearTimeout(cooldownRef.current);
+        cooldownRef.current = setTimeout(() => {
+          setCooldown(false);
+        }, 500);
+      }}
+      className={`inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold transition ${
+        disabled || cooldown
+          ? "cursor-not-allowed opacity-60"
+          : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      } ${pillClass}`}
+    >
+      <span className={`relative h-4 w-7 rounded-full ${trackClass}`}>
+        <span
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition ${knobTranslate}`}
+        />
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+};
+
+const TabButton = ({ active, onClick, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`relative px-3 pb-2 text-sm font-semibold transition ${
+      active
+        ? "text-orange-600"
+        : "text-gray-500 hover:text-gray-700 dark:text-slate-300 dark:hover:text-slate-100"
+    }`}
+  >
+    {children}
+    <span
+      className={`absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition ${
+        active ? "bg-orange-500" : "bg-transparent"
+      }`}
+    />
+  </button>
+);
+
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery();
   const { data: restaurantData } = useGetRestaurantProfileQuery();
@@ -272,6 +468,7 @@ const Menu = () => {
   const [isPointerDragging, setIsPointerDragging] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const menuOrderRef = useRef([]);
   const dragStartOrderRef = useRef([]);
   const menuReorderTimerRef = useRef(null);
@@ -284,6 +481,11 @@ const Menu = () => {
     type: "all",
     available: "all",
   });
+
+  const [activeTab, setActiveTab] = useState("editor");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [inventoryOpen, setInventoryOpen] = useState({});
+  const [availabilityOverrides, setAvailabilityOverrides] = useState({});
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -812,23 +1014,160 @@ const Menu = () => {
     restaurantCategories,
   ]);
 
-  useEffect(() => setCurrentPage(1), [filters]);
+  const getItemAvailability = useCallback(
+    (item) => {
+      if (!item?._id) return !!item?.available;
+      if (Object.prototype.hasOwnProperty.call(availabilityOverrides, item._id)) {
+        return availabilityOverrides[item._id];
+      }
+      return !!item?.available;
+    },
+    [availabilityOverrides]
+  );
 
   const filteredItems = useMemo(() => {
     const searchLower = filters.search.toLowerCase();
+    const categorySearchKeys = new Set();
+
+    if (searchLower) {
+      restaurantCategories.forEach((category) => {
+        const label = String(category || "").toLowerCase();
+        if (label.includes(searchLower)) {
+          categorySearchKeys.add(normalizeCategoryKey(category));
+        }
+      });
+    }
+
     return orderedItems.filter((item) => {
+      const isAvailable = getItemAvailability(item);
+      const categoryKey = normalizeCategoryKey(item?.category || "");
+      const matchesSearch =
+        !searchLower ||
+        item?.name?.toLowerCase().includes(searchLower) ||
+        item?.category?.toLowerCase().includes(searchLower) ||
+        categorySearchKeys.has(categoryKey);
       return (
-        (!searchLower ||
-          item?.name?.toLowerCase().includes(searchLower) ||
-          item?.category?.toLowerCase().includes(searchLower)) &&
+        matchesSearch &&
         (filters.category === "all" ||
           item.category?.toLowerCase() === filters.category.toLowerCase()) &&
         (filters.type === "all" || item.type === filters.type) &&
         (filters.available === "all" ||
-          String(!!item.available) === filters.available)
+          String(!!isAvailable) === filters.available)
       );
     });
-  }, [orderedItems, filters]);
+  }, [
+    orderedItems,
+    filters,
+    getItemAvailability,
+    restaurantCategories,
+    normalizeCategoryKey,
+  ]);
+
+  const categoryGroups = useMemo(() => {
+    const map = new Map();
+    const searchLower = filters.search.toLowerCase();
+
+    filteredItems.forEach((item) => {
+      const rawLabel = item?.category || "Uncategorized";
+      const label = String(rawLabel || "").trim() || "Uncategorized";
+      const key = normalizeCategoryKey(label);
+      if (!map.has(key)) {
+        map.set(key, { label, items: [] });
+      }
+      map.get(key).items.push(item);
+    });
+
+    const ordered = [];
+    const seen = new Set();
+
+    restaurantCategories.forEach((category) => {
+      const label = String(category || "").trim();
+      if (!label) return;
+      const key = normalizeCategoryKey(label);
+      const group = map.get(key);
+      const items = group?.items || [];
+      const matchesSearch = !searchLower || label.toLowerCase().includes(searchLower);
+      if (!items.length && searchLower && !matchesSearch) return;
+      ordered.push({ label, items });
+      seen.add(key);
+    });
+
+    map.forEach((value, key) => {
+      if (!seen.has(key)) ordered.push(value);
+    });
+
+    if (!ordered.length && map.size) {
+      return Array.from(map.values());
+    }
+
+    return ordered;
+  }, [filteredItems, normalizeCategoryKey, restaurantCategories]);
+
+  useEffect(() => {
+    if (!categoryGroups.length) {
+      if (selectedCategory) setSelectedCategory("");
+      return;
+    }
+    const selectedKey = normalizeCategoryKey(selectedCategory);
+    const exists = categoryGroups.some(
+      (category) => normalizeCategoryKey(category.label) === selectedKey
+    );
+    if (!exists) {
+      setSelectedCategory(categoryGroups[0].label);
+    }
+  }, [categoryGroups, normalizeCategoryKey, selectedCategory]);
+
+  useEffect(() => {
+    if (filters.category === "all") return;
+    const matched = categoryGroups.find(
+      (category) =>
+        normalizeCategoryKey(category.label) ===
+        normalizeCategoryKey(filters.category)
+    );
+    if (matched && matched.label !== selectedCategory) {
+      setSelectedCategory(matched.label);
+    }
+  }, [categoryGroups, filters.category, normalizeCategoryKey, selectedCategory]);
+
+  useEffect(() => {
+    if (!categoryGroups.length) return;
+    setInventoryOpen((prev) => {
+      const hasOpen = Object.values(prev).some(Boolean);
+      if (hasOpen) return prev;
+      const firstKey = normalizeCategoryKey(categoryGroups[0].label);
+      return { ...prev, [firstKey]: true };
+    });
+  }, [categoryGroups, normalizeCategoryKey]);
+
+  const menuEditorItems = useMemo(() => {
+    if (!selectedCategory) return filteredItems;
+    const selectedKey = normalizeCategoryKey(selectedCategory);
+    return filteredItems.filter(
+      (item) =>
+        normalizeCategoryKey(item?.category || "Uncategorized") === selectedKey
+    );
+  }, [filteredItems, normalizeCategoryKey, selectedCategory]);
+
+  const getCategoryStockState = useCallback(
+    (items = []) => {
+      if (!items.length) return "out";
+      const availableCount = items.reduce(
+        (count, item) => count + (getItemAvailability(item) ? 1 : 0),
+        0
+      );
+      if (availableCount === 0) return "out";
+      if (availableCount === items.length) return "in";
+      return "mixed";
+    },
+    [getItemAvailability]
+  );
+
+  const toggleInventoryCategory = useCallback((categoryKey) => {
+    setInventoryOpen((prev) => ({
+      ...prev,
+      [categoryKey]: !prev[categoryKey],
+    }));
+  }, []);
 
   const moveMenuItem = useCallback((list, fromId, toId) => {
     if (fromId === toId) return list;
@@ -949,20 +1288,6 @@ const Menu = () => {
       window.removeEventListener("pointercancel", handlePointerEnd);
     };
   }, [draggingId, finalizeReorder, isPointerDragging, moveMenuItem]);
-
-  const itemsPerPage = 12;
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const currentItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredItems.slice(start, start + itemsPerPage);
-  }, [filteredItems, currentPage]);
-
-  const pageNumbers = useMemo(
-    () => getCompactPageNumbers(currentPage, totalPages),
-    [currentPage, totalPages]
-  );
 
 // ✅ Fully fixed prepareFormData with robust discount handling
 const prepareFormData = (formData, file) => {
@@ -1092,9 +1417,94 @@ const prepareFormData = (formData, file) => {
     notify("Filters reset successfully.", "success");
   }, [notify]);
 
+  const handleSearchChange = useCallback((event) => {
+    const value = event.target.value;
+    setFilters((prev) => ({ ...prev, search: value }));
+  }, []);
+
+  const handleToggleItemAvailability = useCallback(
+    async (item) => {
+      if (!isAdmin || !item?._id) return;
+      const nextValue = !getItemAvailability(item);
+      setAvailabilityOverrides((prev) => ({
+        ...prev,
+        [item._id]: nextValue,
+      }));
+
+      try {
+        await updateMenuItem({
+          itemId: item._id,
+          updatedData: { available: nextValue },
+        }).unwrap();
+        notify(
+          `"${item?.name || "Item"}" marked ${
+            nextValue ? "in stock" : "out of stock"
+          }.`,
+          "success"
+        );
+      } catch (error) {
+        notify(getFriendlyMenuError(error, "update"), "error");
+        setAvailabilityOverrides((prev) => {
+          const copy = { ...prev };
+          delete copy[item._id];
+          return copy;
+        });
+      }
+    },
+    [getFriendlyMenuError, getItemAvailability, isAdmin, notify, updateMenuItem]
+  );
+
+  const handleToggleCategoryAvailability = useCallback(
+    async (categoryLabel, items = []) => {
+      if (!isAdmin || !items.length) return;
+      const currentState = getCategoryStockState(items);
+      const nextValue = currentState !== "in";
+
+      setAvailabilityOverrides((prev) => {
+        const copy = { ...prev };
+        items.forEach((item) => {
+          if (item?._id) copy[item._id] = nextValue;
+        });
+        return copy;
+      });
+
+      try {
+        await Promise.all(
+          items.map((item) =>
+            updateMenuItem({
+              itemId: item._id,
+              updatedData: { available: nextValue },
+            }).unwrap()
+          )
+        );
+        notify(
+          `"${categoryLabel}" marked ${
+            nextValue ? "in stock" : "out of stock"
+          }.`,
+          "success"
+        );
+      } catch (error) {
+        notify(getFriendlyMenuError(error, "update"), "error");
+        setAvailabilityOverrides((prev) => {
+          const copy = { ...prev };
+          items.forEach((item) => {
+            if (item?._id) delete copy[item._id];
+          });
+          return copy;
+        });
+      }
+    },
+    [getCategoryStockState, getFriendlyMenuError, isAdmin, notify, updateMenuItem]
+  );
+
   return (
-    <div className="relative min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 dark:bg-none dark:bg-slate-950 sm:px-4 sm:py-4 md:px-6">
-      <MenuItemViewModal item={viewingItem} isOpen={!!viewingItem} onClose={() => setViewingItem(null)} menu={normalizedItems} />
+    <div className="relative flex h-full min-h-0 flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 dark:bg-none dark:bg-slate-950 sm:px-4 sm:py-4 md:px-6">
+      <MenuItemViewModal
+        item={viewingItem}
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        menu={normalizedItems}
+      />
 
       <DeleteConfirmModal
         isOpen={!!deleteConfirm}
@@ -1115,13 +1525,13 @@ const prepareFormData = (formData, file) => {
       />
 
       <AnimatePresence>
-          {editingItem && (
+        {editingItem && (
           <EditItemModal
             isOpen={!!editingItem}
             item={editingItem}
             onClose={() => setEditingItem(null)}
             restaurantCategories={restaurantCategories}
-              menuItems={normalizedItems.filter(item => item._id !== editingItem._id)}
+            menuItems={normalizedItems.filter((item) => item._id !== editingItem._id)}
             onSubmit={handleUpdateItem}
             onAddCategory={handleAddRestaurantCategory}
             onRenameCategory={handleRenameRestaurantCategory}
@@ -1130,81 +1540,104 @@ const prepareFormData = (formData, file) => {
         )}
       </AnimatePresence>
 
-      <div className="w-full pb-4 px-4">
-        <div className="menu-no-anim mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-nowrap sm:gap-3 sm:p-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex w-full items-center justify-between gap-2">
-              <Heading title="Menu Management" />
-              {isAdmin && (
-                <Button
-                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:hidden"
-                  onClick={() => setIsAddModalOpen(true)}
-                >
-                  <CirclePlus size={14} />
-                  Add
-                </Button>
-              )}
+      <div className="flex w-full flex-1 min-h-0 flex-col pb-6 px-4">
+        <div className="menu-no-anim mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-lg font-bold text-gray-900 dark:text-slate-100">
+                Menu Management
+              </h2>
             </div>
-          </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
-            <Button
-              type="button"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:h-11 sm:gap-2 sm:px-4 ${
-                isFilterOpen
-                  ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
-                  : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
-              }`}
-            >
-              <SlidersHorizontal size={16} />
-              <span className="hidden min-[390px]:inline">Filters</span>
-              <span className="inline min-[390px]:hidden">Filter</span>
-            </Button>
-            {isAdmin && (
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <div className="relative hidden w-full flex-1 min-w-0 sm:block sm:min-w-[240px] sm:max-w-[420px]">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-400" />
+                <input
+                  type="search"
+                  value={filters.search}
+                  onChange={handleSearchChange}
+                  placeholder="Search items or categories..."
+                  className="h-12 w-full rounded-xl border border-orange-200 bg-white px-4 pl-10 text-xs text-gray-700 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSearchOpen((prev) => !prev)}
+                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300 sm:hidden"
+                aria-label="Toggle search"
+              >
+                <Search size={18} />
+              </button>
               <Button
                 type="button"
-                onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
-                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:h-11 sm:gap-2 sm:px-4 ${
-                  isCategoryManagerOpen
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className={`inline-flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:px-4 ${
+                  isFilterOpen
                     ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
-                    : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-700"
+                    : "border-orange-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-orange-700"
                 }`}
               >
-                Manage Category
+                <SlidersHorizontal size={14} />
+                <span className="hidden sm:inline">Filters</span>
               </Button>
-            )}
-            {isAdmin && (
-              <Button
-                className="hidden h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 sm:inline-flex sm:h-11 sm:gap-2 sm:px-4"
-                onClick={() => setIsAddModalOpen(true)}
-              >
-                <CirclePlus size={16} />
-                <span className="hidden min-[390px]:inline">Add Item</span>
-                <span className="inline min-[390px]:hidden">Add</span>
-              </Button>
-            )}
+            </div>
           </div>
-        </div>
+          {isMobileSearchOpen && (
+            <div className="mt-3 sm:hidden">
+              <div className="relative w-full">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-400" />
+                <input
+                  type="search"
+                  value={filters.search}
+                  onChange={handleSearchChange}
+                  placeholder="Search items or categories..."
+                  className="h-12 w-full rounded-xl border border-orange-200 bg-white px-4 pl-10 text-base text-gray-700 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                />
+              </div>
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-4 border-b border-orange-100 pb-1 dark:border-slate-800">
+            <TabButton
+              active={activeTab === "editor"}
+              onClick={() => setActiveTab("editor")}
+            >
+              Menu editor
+            </TabButton>
+            <TabButton
+              active={activeTab === "inventory"}
+              onClick={() => setActiveTab("inventory")}
+            >
+              Manage inventory
+            </TabButton>
+          </div>
 
-        {isFilterOpen && (
-          <div className="menu-no-anim mb-5 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:p-4">
-            <MenuFilter
-              value={filters}
-              onFilterChange={(v) => setFilters({ ...filters, ...v })}
-              categories={restaurantCategories}
-              onResetNotify={handleFilterResetNotification}
-              layout="panel"
-            />
-          </div>
-        )}
+          {isFilterOpen && (
+            <div className="mt-3 border-t border-orange-100 pt-3 dark:border-slate-800">
+              <MenuFilter
+                value={filters}
+                onFilterChange={(v) =>
+                  setFilters((prev) => ({ ...prev, ...v }))
+                }
+                categories={restaurantCategories}
+                onResetNotify={handleFilterResetNotification}
+                layout="panel"
+                showSearch={false}
+              />
+            </div>
+          )}
+        </div>
 
         {isAdmin && isCategoryManagerOpen && restaurantCategories.length > 1 && (
           <div className="menu-no-anim mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
-                  Manage Categories
-                </h3>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
+                    Manage Categories
+                  </h3>
+                  <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                    {restaurantCategories.length}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -1218,147 +1651,442 @@ const prepareFormData = (formData, file) => {
             </div>
 
             {isCategoryManagerOpen && (
-            <div className="mt-3 grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-4 sm:pr-0 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
-              {restaurantCategories.map((category) => {
-                const isActive = categoryDragOver === category;
-                return (
-                  <div
-                    key={category}
-                    data-category-chip={category}
-                    className={`group relative w-full max-w-none overflow-hidden rounded-md border px-2 py-1.5 shadow-sm transition ${
-                      isActive
-                        ? "border-orange-400 bg-orange-50 shadow-md"
-                        : "border-orange-200 bg-white hover:border-orange-300 hover:shadow-md"
-                    } dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-slate-500`}
-                  >
-                    <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
-                    <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
+              <div className="mt-3 grid grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 sm:pr-0 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+                {restaurantCategories.map((category) => {
+                  const isActive = categoryDragOver === category;
+                  return (
+                    <div
+                      key={category}
+                      data-category-chip={category}
+                      className={`group relative w-full max-w-none overflow-hidden rounded-md border px-2 py-1.5 shadow-sm transition ${
+                        isActive
+                          ? "border-orange-400 bg-orange-50 shadow-md"
+                          : "border-orange-200 bg-white hover:border-orange-300 hover:shadow-md"
+                      } dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-slate-500`}
+                    >
+                      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
+                      <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
 
-                    <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
-                      <button
-                        type="button"
-                        onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                        className="order-1 inline-flex h-6 w-6 shrink-0 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/90 dark:text-orange-300 sm:order-2 sm:ml-auto"
-                        aria-label={`Drag ${category}`}
-                        title="Drag to reorder"
-                      >
-                        <GripVertical size={12} />
-                      </button>
-                      <div className="order-2 min-w-0 flex-1 pr-3 sm:order-1">
-                        <div className="truncate text-[13px] font-semibold text-gray-900 dark:text-slate-100">
-                          {category}
+                      <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
+                        <button
+                          type="button"
+                          onPointerDown={(event) => handleCategoryPointerDown(event, category)}
+                          className="order-1 inline-flex h-6 w-6 shrink-0 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/90 dark:text-orange-300 sm:order-2 sm:ml-auto"
+                          aria-label={`Drag ${category}`}
+                          title="Drag to reorder"
+                        >
+                          <GripVertical size={12} />
+                        </button>
+                        <div className="order-2 min-w-0 flex-1 pr-3 sm:order-1">
+                          <div className="truncate text-[13px] font-semibold text-gray-900 dark:text-slate-100">
+                            {category}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {isLoading ? (
-          <div className="rounded-2xl border border-dashed border-orange-200 bg-white/90 py-12 text-center text-sm text-gray-600 sm:text-base">
-            Loading menu items...
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-orange-200 bg-white/90 py-12 text-center text-sm text-gray-600 sm:text-base">
-            No menu item found for current filters.
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
-              {currentItems.map((item) => {
-                const canReorder = isAdmin && !isReordering && filteredItems.length > 1;
-                const dragHandleProps = canReorder
-                  ? {
-                      draggable: true,
-                      onDragStart: (event) => handleDragStart(event, item._id),
-                      onDragEnd: finalizeReorder,
-                      onPointerDown: (event) => handlePointerDragStart(event, item._id),
-                      onMouseDown: (event) => event.stopPropagation(),
-                    }
-                  : null;
-
-                return (
-                  <div
-                    key={item._id}
-                    data-menu-id={item._id}
-                    onDragOver={(event) => handleDragOver(event, item._id)}
-                    onDrop={(event) => event.preventDefault()}
-                    onDragLeave={() => setDragOverId(null)}
-                    className={`rounded-2xl transition ${
-                      dragOverId === item._id ? "ring-2 ring-orange-300/70" : ""
-                    }`}
+        <div className="flex flex-1 min-h-0 flex-col">
+          {activeTab === "editor" ? (
+            <div className="grid h-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-1">
+              <div className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+              <div className="flex items-center justify-between border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                    Categories ({categoryGroups.length})
+                  </p>
+                </div>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
+                    className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300"
                   >
-                    <MenuItemCard
-                      item={item}
-                      onEdit={() => setEditingItem(buildEditItem(item))}
-                      onDelete={() => setDeleteConfirm({ id: item._id, name: item.name })}
-                      onView={() => setViewingItem(item)}
-                      isAdmin={isAdmin}
-                      dragHandleProps={dragHandleProps}
-                      isDragging={draggingId === item._id}
-                      disableMotion
-                    />
+                    {isCategoryManagerOpen ? "Close" : "Manage"}
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {isLoading && categoryGroups.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
+                    Loading categories...
                   </div>
-                );
-              })}
+                ) : (
+                  <>
+                    {categoryGroups.map((category) => {
+                      const categoryKey = normalizeCategoryKey(category.label);
+                      const isActive =
+                        normalizeCategoryKey(selectedCategory) === categoryKey;
+                      return (
+                        <button
+                          key={categoryKey}
+                          type="button"
+                          onClick={() => setSelectedCategory(category.label)}
+                          className={`group flex w-full items-center justify-between gap-3 border-l-4 px-4 py-3 text-left text-sm font-semibold transition ${
+                            isActive
+                              ? "border-orange-500 bg-orange-50/70 text-orange-700"
+                              : "border-transparent text-gray-700 hover:bg-orange-50/50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                          }`}
+                        >
+                          <span className="truncate">{category.label}</span>
+                          <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                            {category.items.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {categoryGroups.length === 0 && (
+                      <div className="px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
+                        No categories found yet.
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
-            {totalPages > 1 && (
-              <div className="mt-6 px-2">
-                <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <Pagination className="min-w-max cursor-pointer justify-center">
-                    <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                          className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
-                            currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                          }`}
-                        />
-                      </PaginationItem>
+              <div className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+                  <div>
+                    <p className="text-base font-semibold text-gray-900 dark:text-slate-100">
+                      {selectedCategory || "All items"}
+                      <span className="ml-2 text-sm font-medium text-gray-500 dark:text-slate-400">
+                        ({menuEditorItems.length})
+                      </span>
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-700 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                      >
+                        <CirclePlus size={14} />
+                        Add New Item
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-                      {pageNumbers.map((page, idx) => (
-                        <PaginationItem key={idx}>
-                          {typeof page === "string" ? (
-                            <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
-                          ) : (
-                            <PaginationLink
-                              isActive={currentPage === page}
-                              className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
-                                currentPage === page
-                                  ? "border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-600"
-                                  : "bg-white text-gray-700 hover:bg-orange-50"
-                              }`}
-                              onClick={() => setCurrentPage(page)}
-                            >
-                              {page}
-                            </PaginationLink>
-                          )}
-                        </PaginationItem>
-                      ))}
+                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
+                  {isLoading ? (
+                    <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                      Loading menu items...
+                    </div>
+                  ) : (
+                    <>
+                      {menuEditorItems.map((item) => {
+                        const isAvailable = getItemAvailability(item);
+                        const priceLabel = getItemPriceLabel(item);
+                        const variantDetails = getVariantPriceDetails(item);
+                        const singleDetails = getSinglePriceDetails(item);
+                        const comboPrice = item?.comboPrice ?? item?.price;
+                        const displayPrice = (() => {
+                          if (item?.pricingType === "variant" && variantDetails.length) {
+                            const minPrice = Math.min(
+                              ...variantDetails.map((variant) => variant.current)
+                            );
+                            return `${formatCurrency(minPrice)}+`;
+                          }
+                          if (item?.pricingType === "single" && singleDetails?.current != null) {
+                            return formatCurrency(singleDetails.current);
+                          }
+                          if (item?.pricingType === "combo" && comboPrice != null) {
+                            return formatCurrency(comboPrice);
+                          }
+                          return priceLabel;
+                        })();
+                        const canReorder =
+                          isAdmin && !isReordering && menuEditorItems.length > 1;
+                        const dragHandleProps = canReorder
+                          ? {
+                              draggable: true,
+                              onDragStart: (event) =>
+                                handleDragStart(event, item._id),
+                              onDragEnd: finalizeReorder,
+                              onPointerDown: (event) =>
+                                handlePointerDragStart(event, item._id),
+                              onMouseDown: (event) => event.stopPropagation(),
+                            }
+                          : null;
 
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                          className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
-                            currentPage === totalPages ? "pointer-events-none opacity-50" : ""
-                          }`}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        return (
+                          <div
+                            key={item._id}
+                            data-menu-id={item._id}
+                            onClick={() => setViewingItem(item)}
+                            onDragOver={(event) => handleDragOver(event, item._id)}
+                            onDrop={(event) => event.preventDefault()}
+                            onDragLeave={() => setDragOverId(null)}
+                            className={`group relative flex flex-col gap-3 px-4 py-3 pr-12 transition sm:flex-row sm:items-center sm:pr-4 ${
+                              dragOverId === item._id
+                                ? "bg-orange-50/70"
+                                : "hover:bg-orange-50/60 dark:hover:bg-slate-800/60"
+                            } cursor-pointer`}
+                          >
+                            {dragHandleProps && (
+                              <button
+                                type="button"
+                                {...dragHandleProps}
+                                onClick={(event) => event.stopPropagation()}
+                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300 sm:self-auto"
+                                aria-label="Drag to reorder"
+                                title="Drag to reorder"
+                              >
+                                <GripVertical size={14} />
+                              </button>
+                            )}
+
+                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800 sm:h-12 sm:w-12">
+                              <img
+                                src={
+                                  item?.image?.url ||
+                                  "https://via.placeholder.com/120x120?text=No+Image"
+                                }
+                                alt={item?.name || "Menu item"}
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <FoodTypeIndicator type={item?.type} />
+                                <span className="truncate text-sm font-semibold text-gray-900 dark:text-slate-100">
+                                  {item?.name || "Unnamed Item"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                                {item?.pricingType === "variant"
+                                  ? "Variant"
+                                  : item?.pricingType === "combo"
+                                  ? "Combo"
+                                  : "Single"}
+                                {item?.category ? ` • ${item.category}` : ""}
+                              </p>
+                            </div>
+
+                            <div className="flex w-full flex-col items-start gap-1 sm:w-auto sm:items-end">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                                  {displayPrice || "—"}
+                                </span>
+                                {singleDetails?.hasDiscount && singleDetails.original != null && (
+                                  <span className="text-xs text-gray-400 line-through">
+                                    {formatCurrency(singleDetails.original)}
+                                  </span>
+                                )}
+                                <AvailabilityBadge available={isAvailable} />
+                              </div>
+                              {item?.pricingType === "variant" && variantDetails.length ? (
+                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-gray-500 dark:text-slate-400">
+                                  {variantDetails.map((variant, index) => (
+                                    <span key={variant.key} className="inline-flex items-center gap-1">
+                                      <span>
+                                        {variant.label} {formatCurrency(variant.current)}
+                                      </span>
+                                      {variant.hasDiscount && variant.original != null && (
+                                        <span className="text-[10px] text-gray-400 line-through">
+                                          {formatCurrency(variant.original)}
+                                        </span>
+                                      )}
+                                      {index < variantDetails.length - 1 && (
+                                        <span className="px-1 text-gray-300">|</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-gray-500 dark:text-slate-400">
+                                  {item?.pricingType === "combo" && comboPrice != null ? (
+                                    <>Combo {formatCurrency(comboPrice)}</>
+                                  ) : item?.pricingType === "single" && singleDetails?.current != null ? (
+                                    <>
+                                      Single {formatCurrency(singleDetails.current)}
+                                      {singleDetails.hasDiscount && singleDetails.original != null && (
+                                        <span className="ml-1 text-[10px] text-gray-400 line-through">
+                                          {formatCurrency(singleDetails.original)}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    ""
+                                  )}
+                                </span>
+                              )}
+                            </div>
+
+                            {isAdmin && (
+                              <div
+                                className="absolute right-4 top-3 flex items-center gap-1 sm:static sm:ml-auto"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingItem(buildEditItem(item))}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                                  aria-label="Edit menu item"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDeleteConfirm({
+                                      id: item._id,
+                                      name: item.name,
+                                    })
+                                  }
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-800 dark:bg-slate-950 dark:text-red-300"
+                                  aria-label="Delete menu item"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {menuEditorItems.length === 0 && (
+                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                          No menu items found for this category.
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+              <div className="border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  Inventory
+                </p>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
+                {isLoading ? (
+                  <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                    Loading inventory...
+                  </div>
+                ) : (
+                  <>
+                    {categoryGroups.map((category) => {
+                      const categoryKey = normalizeCategoryKey(category.label);
+                      const isOpen = !!inventoryOpen[categoryKey];
+                      const stockState = getCategoryStockState(category.items);
+
+                      return (
+                        <div key={categoryKey} className="bg-white/95 dark:bg-slate-900/60">
+                          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleInventoryCategory(categoryKey)}
+                              className="flex items-center gap-2 text-left"
+                            >
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300">
+                                {isOpen ? (
+                                  <ChevronDown size={16} />
+                                ) : (
+                                  <ChevronRight size={16} />
+                                )}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                                {category.label}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-slate-400">
+                                ({category.items.length})
+                              </span>
+                            </button>
+
+                            <StockToggle
+                              status={
+                                stockState === "mixed"
+                                  ? "mixed"
+                                  : stockState === "in"
+                                  ? "in"
+                                  : "out"
+                              }
+                              onToggle={() =>
+                                handleToggleCategoryAvailability(
+                                  category.label,
+                                  category.items
+                                )
+                              }
+                              disabled={!isAdmin || category.items.length === 0}
+                            />
+                          </div>
+
+                          {isOpen && (
+                            <div className="border-t border-orange-100 bg-orange-50/40 dark:border-slate-800 dark:bg-slate-950/40">
+                              {category.items.length === 0 ? (
+                                <div className="px-11 py-3 text-sm text-gray-500 dark:text-slate-400">
+                                  No items inside this category yet.
+                                </div>
+                              ) : (
+                                category.items.map((item) => {
+                                  const isAvailable = getItemAvailability(item);
+                                  const priceLabel = getItemPriceLabel(item);
+                                  return (
+                                    <div
+                                      key={item._id}
+                                      className="flex flex-wrap items-center justify-between gap-3 px-11 py-2"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <FoodTypeIndicator type={item?.type} />
+                                          <span className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">
+                                            {item?.name || "Unnamed Item"}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                                        {priceLabel || "—"} • {item?.pricingType === "variant"
+                                          ? "Variant"
+                                          : item?.pricingType === "combo"
+                                          ? "Combo"
+                                          : "Single"}
+                                        </p>
+                                      </div>
+
+                                      <StockToggle
+                                        status={isAvailable ? "in" : "out"}
+                                        onToggle={() =>
+                                          handleToggleItemAvailability(item)
+                                        }
+                                        disabled={!isAdmin}
+                                      />
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {categoryGroups.length === 0 && (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                        No categories found for inventory yet.
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
+
 };
 
 export default Menu;

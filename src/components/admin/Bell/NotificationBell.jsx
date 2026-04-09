@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell } from "lucide-react";
 import audio from "@/assets/orderRing.mp3";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
+import { useNotification } from "./NotificationContext";
 
 const POLLING_INTERVAL = 60000; // 60 seconds for notifications
 
@@ -26,6 +27,7 @@ export default function NotificationBell() {
   const knownOrderIds = useRef(new Set());
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const { sseEvent } = useNotification();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -130,6 +132,13 @@ export default function NotificationBell() {
     );
 
   }, [orders, notificationSound, audioEnabled]);
+
+  useEffect(() => {
+    if (sseEvent?.type === "NEW_ORDER") {
+      refetchPending();
+      refetchPreparing();
+    }
+  }, [sseEvent, refetchPending, refetchPreparing]);
 
   useEffect(() => {
     const handler = (e) => {

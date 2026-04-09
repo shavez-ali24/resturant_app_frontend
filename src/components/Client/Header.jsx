@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/toaster";
 import OrderComplete from "@/components/Client/OrderComplete";
 import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
+import config from "@/config";
 
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
@@ -50,6 +51,8 @@ export default function Header({
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isCartBarBump, setIsCartBarBump] = useState(false);
   const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
+  const [orderStatusBanner, setOrderStatusBanner] = useState(null);
+  const orderStatusTimerRef = useRef(null);
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
@@ -92,6 +95,7 @@ export default function Header({
   const [currentPage, setCurrentPage] = useState(1);
   const [allOrders, setAllOrders] = useState([]);
   const [hasMore, setHasMore] = useState(true);
+  const isPreparingBanner = orderStatusBanner?.status === "preparing";
 
   const normalizeOrderType = (value) => {
     const type = String(value || "").trim().toLowerCase();
@@ -465,6 +469,63 @@ export default function Header({
     }
   }, [ordersData, currentPage]);
 
+  // SSE updates for order status changes (fingerPrint-based)
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    if (!fingerPrint || !config?.BASE_URL) return undefined;
+
+    const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
+    const sseUrl = `${baseUrl}/api/notifications?fingerPrint=${encodeURIComponent(
+      fingerPrint
+    )}`;
+
+    const source = new EventSource(sseUrl);
+
+    source.onmessage = (event) => {
+      if (!event?.data) return;
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (payload?.type === "ORDER_STATUS_CHANGED" && payload.data) {
+        const updatedOrder = payload.data;
+        const orderId =
+          updatedOrder?._id || updatedOrder?.id || updatedOrder?.orderId;
+        if (!orderId) return;
+
+        setAllOrders((prev) => {
+          const next = Array.isArray(prev) ? [...prev] : [];
+          const idx = next.findIndex(
+            (order) =>
+              (order?._id || order?.id || order?.orderId) === orderId
+          );
+
+          if (idx === -1) {
+            return [updatedOrder, ...next];
+          }
+
+          next[idx] = { ...next[idx], ...updatedOrder };
+          return next;
+        });
+
+        pulseOrdersIcon();
+        showOrderStatusBanner(updatedOrder);
+        refetch();
+      }
+    };
+
+    source.onerror = () => {
+      // EventSource auto-reconnects; no-op.
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [fingerPrint, refetch]);
+
   // Pre-fill form with latest order data when modal opens
   useEffect(() => {
     if (showModal && allOrders.length > 0) {
@@ -493,6 +554,14 @@ export default function Header({
     }
   }, [fingerPrint]);
 
+  useEffect(() => {
+    return () => {
+      if (orderStatusTimerRef.current) {
+        clearTimeout(orderStatusTimerRef.current);
+      }
+    };
+  }, []);
+
 
   const handleLoadMore = () => {
     if (hasMore && !ordersLoading) {
@@ -503,6 +572,21 @@ export default function Header({
   const pulseOrdersIcon = () => {
     setIsOrdersIconHighlighted(true);
     setTimeout(() => setIsOrdersIconHighlighted(false), 2200);
+  };
+
+  const showOrderStatusBanner = (order) => {
+    const rawStatus = order?.status ? String(order.status).toLowerCase() : "";
+    const isPreparing = rawStatus.includes("preparing");
+    if (!isPreparing) return;
+
+    const message = "Your order is preparing";
+    setOrderStatusBanner({ message, status: "preparing", ts: Date.now() });
+    if (orderStatusTimerRef.current) {
+      clearTimeout(orderStatusTimerRef.current);
+    }
+    orderStatusTimerRef.current = setTimeout(() => {
+      setOrderStatusBanner(null);
+    }, 3500);
   };
 
   const animateOrderRocketToOrders = () => {
@@ -1174,9 +1258,18 @@ export default function Header({
                   : "bg-orange-50 text-primary hover:bg-orange-100"
               }`}
             >
+              {isPreparingBanner && (
+                <span className="pointer-events-none absolute inset-0 rounded-full">
+                  <span
+                    className={`absolute inset-0 rounded-full border-2 ${
+                      isDarkMode ? "border-emerald-400/70" : "border-emerald-500/70"
+                    } animate-ping`}
+                  />
+                </span>
+              )}
               <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6" />
               {allOrders.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-white">
                   {allOrders.length}
                 </span>
               )}
@@ -1231,6 +1324,52 @@ export default function Header({
               </motion.div>
             )}
           </AnimatePresence>
+
+          <AnimatePresence>
+            {orderStatusBanner && (
+              <motion.div
+                key={orderStatusBanner?.ts}
+                initial={{ opacity: 0, x: 24, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 36, y: -2, scale: 0.98 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className={`fixed left-3 right-3 top-2 z-[70] rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:left-auto sm:right-4 sm:top-3 sm:w-[360px] ${
+                  isDarkMode
+                    ? "border-emerald-500/30 bg-slate-900/95 text-emerald-100 shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                    : "border-emerald-200 bg-white text-emerald-900"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                      isDarkMode
+                        ? "bg-emerald-500/20 text-emerald-200"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold leading-tight">{orderStatusBanner.message}</p>
+                    {/* <p className={`text-xs ${isDarkMode ? "text-emerald-200/80" : "text-emerald-700/70"}`}>
+                      We’ll notify you when it’s ready.
+                    </p> */}
+                  </div>
+                  <button
+                    onClick={() => setOrderStatusBanner(null)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                      isDarkMode
+                        ? "text-emerald-100/80 hover:bg-emerald-500/20"
+                        : "text-emerald-700 hover:bg-emerald-100"
+                    }`}
+                    aria-label="Close notification"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </header>
 
         {/* Sidebar overlay with backdrop blur */}
@@ -1278,15 +1417,19 @@ export default function Header({
                 </div>
               ) : (
                 <>
-                  {allOrders.slice(0, 1).map((order) => (
-                  <div
-                    key={order._id || order.id || order.orderId}
-                    className={`rounded-2xl border p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)] ${
-                      isDarkMode
-                        ? "border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ring-1 ring-slate-700"
-                        : "border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 ring-1 ring-orange-100"
-                    }`}
-                  >
+                  {allOrders.slice(0, 1).map((order) => {
+                    const orderTypeNormalized = String(order.orderType || "").trim().toLowerCase();
+                    const orderTypeLabel = normalizeOrderType(order.orderType) || order.orderType || "Unknown Type";
+
+                    return (
+                    <div
+                      key={order._id || order.id || order.orderId}
+                      className={`rounded-2xl border p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)] ${
+                        isDarkMode
+                          ? "border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ring-1 ring-slate-700"
+                          : "border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 ring-1 ring-orange-100"
+                      }`}
+                    >
                     {/* Customer + order meta */}
                     <div className={`mb-3 rounded-xl border p-3 shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${
                       isDarkMode
@@ -1313,34 +1456,34 @@ export default function Header({
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ${
                             isDarkMode
-                              ? order.orderType === "Delivery"
+                              ? orderTypeNormalized === "delivery"
                                 ? "border-orange-500/50 bg-orange-500/15 text-orange-200 ring-orange-500/30"
-                                : order.orderType === "Take Away"
+                                : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
                                 ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
-                                : order.orderType === "Eat Here"
+                                : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
                                 ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
                                 : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
-                              : order.orderType === "Delivery"
+                              : orderTypeNormalized === "delivery"
                               ? "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 ring-orange-200/70"
-                              : order.orderType === "Take Away"
+                              : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
                               ? "border-blue-200 bg-gradient-to-r from-blue-50 to-sky-100 text-blue-700 ring-blue-200/70"
-                              : order.orderType === "Eat Here"
+                              : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
                               ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
                               : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              order.orderType === "Delivery"
+                              orderTypeNormalized === "delivery"
                                 ? "bg-orange-500"
-                                : order.orderType === "Take Away"
+                                : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
                                 ? "bg-blue-500"
-                                : order.orderType === "Eat Here"
+                                : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
                                 ? "bg-green-500"
                                 : "bg-gray-500"
                             }`}
                           />
-                          <span>{order.orderType || "Unknown Type"}</span>
+                          <span>{orderTypeLabel}</span>
                         </span>
 
                         {order.status && (
@@ -1449,7 +1592,7 @@ export default function Header({
                     )}
 
                     {/* Delivery Charges (if delivery order) */}
-                    {order.orderType === "Delivery" && typeof order.deliveryCharges === "number" && (
+                    {orderTypeNormalized === "delivery" && typeof order.deliveryCharges === "number" && (
                       <div className="mt-1 flex items-center justify-between text-sm">
                         <span className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                           Delivery Charges:
@@ -1471,7 +1614,8 @@ export default function Header({
                     </div>
 
                   </div>
-                  ))}
+                    );
+                  })}
                 </>
               )}
             </div>

@@ -49,8 +49,7 @@ const BillPage = ({
   const orderStorageKey =
     order?._id || order?.orderId || order?.id || "";
 
-  const buildItemCheckKey = (item, index) => {
-    if (item?._id) return String(item._id);
+  const buildItemCheckBase = (item) => {
     const baseId =
       item?.menuItemId ||
       item?.menuItem?._id ||
@@ -58,8 +57,103 @@ const BillPage = ({
       "item";
     const variant = item?.variantName || item?.variant || "";
     const customizations = item?.customizations || "";
-    return `${baseId}::${variant}::${customizations}::${index}`;
+    return `${baseId}::${variant}::${customizations}`;
   };
+
+  const resolveItemCheckKey = (item, index) => {
+    if (item?.billItemKey) return String(item.billItemKey);
+    const baseKey = buildItemCheckBase(item);
+    if (index === undefined || index === null) return baseKey;
+    return `${baseKey}::${index}`;
+  };
+
+  const normalizeItemsWithBillKeys = (items = [], previousItems = []) => {
+    const previousQueues = new Map();
+    previousItems.forEach((item) => {
+      const baseKey = buildItemCheckBase(item);
+      if (!baseKey) return;
+      if (!previousQueues.has(baseKey)) previousQueues.set(baseKey, []);
+      const key =
+        item?.billItemKey ||
+        `${baseKey}::${previousQueues.get(baseKey).length + 1}`;
+      previousQueues.get(baseKey).push(key);
+    });
+
+    const used = new Set();
+    const counters = new Map();
+
+    return items.map((item) => {
+      const baseKey = buildItemCheckBase(item);
+      let key;
+
+      const queue = previousQueues.get(baseKey);
+      if (queue && queue.length) {
+        while (queue.length && used.has(queue[0])) queue.shift();
+        if (queue.length) key = queue.shift();
+      }
+
+      if (!key) {
+        const nextCount = (counters.get(baseKey) || 0) + 1;
+        counters.set(baseKey, nextCount);
+        key = `${baseKey}::${nextCount}`;
+      }
+
+      used.add(key);
+      return { ...item, billItemKey: key };
+    });
+  };
+
+  const getNextBillItemKey = (items, baseKey) => {
+    let max = 0;
+    items.forEach((item) => {
+      const key = item?.billItemKey;
+      if (!key || !key.startsWith(`${baseKey}::`)) return;
+      const parts = key.split("::");
+      const last = parts[parts.length - 1];
+      const num = Number(last);
+      if (Number.isFinite(num)) max = Math.max(max, num);
+    });
+    return `${baseKey}::${max + 1}`;
+  };
+
+  useEffect(() => {
+    if (!showItemChecks) return;
+    const activeItems = localOrderData?.items || order?.items || [];
+    if (!Array.isArray(activeItems) || activeItems.length === 0) return;
+
+    setItemChecks((prev) => {
+      if (!prev || typeof prev !== "object") return prev;
+      const next = {};
+      const existingKeys = Object.keys(prev);
+      let changed = false;
+
+      activeItems.forEach((item, index) => {
+        const baseKey = buildItemCheckBase(item);
+        const nextKey = resolveItemCheckKey(item, index);
+        if (!nextKey) return;
+
+        const candidateKeys = [
+          nextKey,
+          baseKey && index !== undefined ? `${baseKey}::${index}` : null,
+          baseKey,
+          item?._id ? String(item._id) : null,
+        ].filter(Boolean);
+
+        const matchedKey = candidateKeys.find((key) => prev[key] !== undefined);
+
+        if (matchedKey !== undefined) {
+          next[nextKey] = prev[matchedKey];
+          if (matchedKey !== nextKey) changed = true;
+        }
+      });
+
+      if (!changed && Object.keys(next).length === Object.keys(prev).length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [isEditMode, localOrderData?.items, order?.items, showItemChecks]);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -79,9 +173,8 @@ const BillPage = ({
   useEffect(() => {
     if (order) {
       const orderItems = Array.isArray(order.items) ? order.items : [];
-      const newLocalOrderData = {
-        ...order,
-        items: orderItems.map(item => ({
+      const normalizedItems = normalizeItemsWithBillKeys(
+        orderItems.map((item) => ({
           ...item,
           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
           name: item.name || item.menuItem?.name || "",
@@ -90,7 +183,13 @@ const BillPage = ({
           variantName: item.variant || item.variantName || null,
           variants: item.variants || item.menuItem?.variantRates || null,
           customizations: item.customizations || ""
-        }))
+        })),
+        localOrderData?.items || []
+      );
+
+      const newLocalOrderData = {
+        ...order,
+        items: normalizedItems,
       };
       
       setLocalOrderData(newLocalOrderData);
@@ -278,6 +377,12 @@ const BillPage = ({
     if (!selected) return;
 
     let newItem;
+    const baseKey = buildItemCheckBase({
+      menuItemId: selected._id,
+      variantName: selected.pricingType === "variant" ? Object.keys(selected.variantRates || {})[0] : null,
+      customizations: "",
+    }) || `${selected._id || selected.name || "item"}`;
+    const nextKey = getNextBillItemKey(localOrderData?.items || [], baseKey);
 
     if (selected.pricingType === "variant" && selected.variantRates) {
       const firstVariant = Object.keys(selected.variantRates)[0];
@@ -288,7 +393,8 @@ const BillPage = ({
         variantName: firstVariant,
         variants: selected.variantRates,
         price: selected.variantRates[firstVariant],
-        customizations: ""
+        customizations: "",
+        billItemKey: nextKey
       };
     } else {
       newItem = {
@@ -298,7 +404,8 @@ const BillPage = ({
         variantName: null,
         variants: null,
         price: selected.price,
-        customizations: ""
+        customizations: "",
+        billItemKey: nextKey
       };
     }
 
@@ -353,6 +460,7 @@ const BillPage = ({
 
     item.variantName = variant;
     item.price = item.variants[variant];
+    item.billItemKey = buildItemCheckBase(item) || item.billItemKey;
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -468,9 +576,8 @@ const BillPage = ({
   const handleCancelEdit = () => {
     const orderItems = Array.isArray(order?.items) ? order.items : [];
     // Reset to original data
-    const newLocalOrderData = {
-      ...order,
-      items: orderItems.map(item => ({
+    const normalizedItems = normalizeItemsWithBillKeys(
+      orderItems.map((item) => ({
         ...item,
         menuItemId: item.menuItemId || item.menuItem?._id || item._id,
         name: item.name || item.menuItem?.name || "",
@@ -479,7 +586,13 @@ const BillPage = ({
         variantName: item.variant || item.variantName || null,
         variants: item.variants || item.menuItem?.variantRates || null,
         customizations: item.customizations || ""
-      }))
+      })),
+      localOrderData?.items || []
+    );
+
+    const newLocalOrderData = {
+      ...order,
+      items: normalizedItems,
     };
     
     setLocalOrderData(newLocalOrderData);
@@ -853,7 +966,7 @@ const BillPage = ({
                 </tr>
               </thead>
               <tbody>
-                {(isEditMode ? localOrderData?.items : order?.items)?.map((item, i) => {
+                {(localOrderData?.items || order?.items || [])?.map((item, i) => {
                   const itemPrice = parseAmount(
                     item.discountedPrice ??
                     item.price ??
@@ -862,7 +975,7 @@ const BillPage = ({
                   );
                   const itemQuantity = parseAmount(item.quantity ?? 1);
                   const itemTotal = itemPrice * itemQuantity;
-                  const itemKey = buildItemCheckKey(item, i);
+                  const itemKey = resolveItemCheckKey(item, i);
                   const isChecked = !!itemChecks[itemKey];
                   const itemVariant = item.variantName || item.variant;
                   

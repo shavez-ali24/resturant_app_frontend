@@ -1,14 +1,5 @@
-import React, { useEffect, useState, useMemo, useRef, Suspense, lazy } from "react";
+import React, { useEffect, useState, useMemo, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
-
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import {
   Pagination,
@@ -38,26 +29,7 @@ import {
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
-  const { notify } = useNotification();
-
-  const RefreshIcon = ({ size = 16, className = "" }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <polyline points="21 3 21 9 15 9" />
-    </svg>
-  );
+  const { notify, sseEvent } = useNotification();
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,22 +37,18 @@ const Orders = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
-  const [isRefreshCoolingDown, setIsRefreshCoolingDown] = useState(false);
-  const refreshCooldownRef = useRef(null);
-  const [autoRefresh, setAutoRefresh] = useState(
-    () => {
-      const saved = localStorage.getItem("autoRefresh");
-      return ["OFF", "1", "2", "5"].includes(saved) ? saved : "OFF";
-    }
-  );
+  const [sseOrders, setSseOrders] = useState([]);
+  const [autoRefresh] = useState(() => {
+    const saved = localStorage.getItem("autoRefresh");
+    return ["1", "2", "5"].includes(saved) ? saved : "1";
+  });
   const itemsPerPage = 10;
   const combinedFetchLimit = itemsPerPage * 25;
   const autoRefreshMinutes = useMemo(() => {
-    if (autoRefresh === "OFF") return 0;
     const mins = parseInt(autoRefresh, 10);
-    return Number.isNaN(mins) ? 0 : mins;
+    return Number.isNaN(mins) ? 1 : mins;
   }, [autoRefresh]);
-  const pollingIntervalMs = autoRefreshMinutes > 0 ? autoRefreshMinutes * 60 * 1000 : 0;
+  const pollingIntervalMs = autoRefreshMinutes * 60 * 1000;
 
   // --- RTK Query Hook with API parameters ---
   const {
@@ -139,6 +107,33 @@ const Orders = () => {
   
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
+
+  useEffect(() => {
+    if (sseEvent?.type !== "NEW_ORDER" || !sseEvent?.data) return;
+    const incoming = sseEvent.data;
+    const incomingId = incoming?._id || incoming?.id || incoming?.orderId;
+    if (!incomingId) return;
+
+    const normalizedOrder = {
+      ...incoming,
+      _id: incoming?._id ? String(incoming._id) : String(incomingId),
+      createdAt: incoming?.createdAt || new Date().toISOString(),
+      status: incoming?.status || "pending",
+    };
+
+    setSseOrders((prev) => {
+      const exists = prev.some(
+        (order) => (order?._id || order?.id || order?.orderId) === incomingId
+      );
+      if (exists) return prev;
+      return [normalizedOrder, ...prev].slice(0, combinedFetchLimit);
+    });
+
+    setCurrentPage(1);
+    refetchPendingOrders();
+    refetchPreparingOrders();
+    refetchRestaurant();
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchRestaurant]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -263,7 +258,7 @@ const Orders = () => {
   );
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders].forEach((order) => {
+    [...sseOrders, ...pendingOrders, ...preparingOrders].forEach((order) => {
       const key = order?._id || order?.id || order?.orderId || order?.createdAt;
       if (!key) return;
       orderMap.set(key, order);
@@ -272,7 +267,7 @@ const Orders = () => {
     return Array.from(orderMap.values()).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
-  }, [pendingOrders, preparingOrders]);
+  }, [pendingOrders, preparingOrders, sseOrders]);
 
   const totalPages = Math.max(
     1,
@@ -301,32 +296,21 @@ const Orders = () => {
     }
   }, [combinedOrders, orderForBillModal]);
 
-  // Manual Refresh
-  const handleManualRefresh = async () => {
-    try {
-      await refetchPendingOrders();
-      await refetchPreparingOrders();
-      await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
-      notify("Orders & Restaurant data refreshed", "success");
-    } catch (err) {
-      notify(getFriendlyOrderError(err, "refresh"), "error");
-    }
-  };
-  const handleDebouncedRefresh = () => {
-    if (isRefreshCoolingDown) return;
-
-    setIsRefreshCoolingDown(true);
-    handleManualRefresh();
-
-    if (refreshCooldownRef.current) {
-      clearTimeout(refreshCooldownRef.current);
-    }
-
-    refreshCooldownRef.current = setTimeout(() => {
-      setIsRefreshCoolingDown(false);
-      refreshCooldownRef.current = null;
-    }, 2000);
-  };
+  useEffect(() => {
+    if (!sseOrders.length) return;
+    const fetchedIds = new Set(
+      [...pendingOrders, ...preparingOrders]
+        .map((order) => order?._id || order?.id || order?.orderId)
+        .filter(Boolean)
+    );
+    if (!fetchedIds.size) return;
+    setSseOrders((prev) =>
+      prev.filter((order) => {
+        const id = order?._id || order?.id || order?.orderId;
+        return id && !fetchedIds.has(id);
+      })
+    );
+  }, [pendingOrders, preparingOrders, sseOrders.length]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -381,22 +365,6 @@ const Orders = () => {
     }
   };
 
-  // --- Auto Refresh ---
-  const handleAutoRefreshChange = (value) => {
-    setAutoRefresh(value);
-    localStorage.setItem("autoRefresh", value);
-
-    if (value === "OFF") {
-      notify("Auto-refresh turned off", "info");
-      return;
-    }
-
-    notify(`Auto-refresh set to every ${value} min`, "success");
-    refetchPendingOrders();
-    refetchPreparingOrders();
-    refetchRestaurant();
-  };
-
   // Handle page change
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
@@ -413,51 +381,11 @@ const Orders = () => {
     }
   }, [currentPage, totalPages]);
 
-  useEffect(() => {
-    return () => {
-      if (refreshCooldownRef.current) {
-        clearTimeout(refreshCooldownRef.current);
-      }
-    };
-  }, []);
-
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
       <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
         <Heading title="Pending Orders" />
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDebouncedRefresh}
-            disabled={isRefreshCoolingDown}
-            className={`inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-white ${
-              isRefreshCoolingDown ? "pointer-events-none" : ""
-            }`}
-          >
-            <RefreshIcon size={16} />
-            <span className="hidden text-xs sm:inline">Refresh</span>
-          </button>
-
-          {/* Auto Refresh */}
-          <Select
-            value={autoRefresh}
-            onValueChange={handleAutoRefreshChange}
-          >
-            <SelectTrigger className="h-10 w-[130px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
-              <SelectValue placeholder="Auto Refresh" />
-            </SelectTrigger>
-
-            <SelectContent className="min-w-[130px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
-              <SelectGroup>
-                <SelectItem value="OFF" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Off</SelectItem>
-                <SelectItem value="1" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 1 min</SelectItem>
-                <SelectItem value="2" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 2 min</SelectItem>
-                <SelectItem value="5" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 5 min</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Orders Table */}

@@ -6,7 +6,10 @@ import React, {
   useCallback,
   Suspense,
   lazy,
+  useEffect,
+  useRef,
 } from "react";
+import config from "@/config";
 
 const NotificationContext = createContext();
 export const useNotification = () => useContext(NotificationContext);
@@ -17,6 +20,9 @@ const NotificationToasts = lazy(() => import("./NotificationToasts"));
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
+  const [sseEvent, setSseEvent] = useState(null);
+  const sseRef = useRef(null);
+  const lastEventIdRef = useRef(null);
 
   const removeNotification = (id) => {
     setNotifications((prev) => prev.filter((notification) => notification.id !== id));
@@ -34,8 +40,58 @@ export const NotificationProvider = ({ children }) => {
     setTimeout(() => removeNotification(id), 3000);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const token = localStorage.getItem("token");
+    if (!token || !config?.BASE_URL) return undefined;
+
+    const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
+    const sseUrl = `${baseUrl}/api/notifications?token=${encodeURIComponent(token)}`;
+
+    if (sseRef.current) {
+      sseRef.current.close();
+    }
+
+    const source = new EventSource(sseUrl);
+    sseRef.current = source;
+
+    source.onmessage = (event) => {
+      if (!event?.data) return;
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (!payload || payload.type === "CONNECTED") return;
+
+      const eventId =
+        payload?.data?._id ||
+        payload?.data?.id ||
+        payload?.data?.orderId ||
+        null;
+
+      if (eventId && lastEventIdRef.current === eventId) return;
+      if (eventId) lastEventIdRef.current = eventId;
+
+      setSseEvent({ ...payload, ts: Date.now() });
+    };
+
+    source.onerror = () => {
+      // EventSource auto-reconnects; no-op.
+    };
+
+    return () => {
+      source.close();
+      if (sseRef.current === source) {
+        sseRef.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <NotificationContext.Provider value={{ notify }}>
+    <NotificationContext.Provider value={{ notify, sseEvent }}>
       {children}
 
       {notifications.length > 0 && (

@@ -41,6 +41,9 @@ export default function ProfileDetails({ profileData }) {
   const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-orange-700 dark:text-orange-300";
   const iconBadgeClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm";
+  const categoryCount = Array.isArray(profileData?.categories)
+    ? profileData.categories.length
+    : 0;
 
   const getFinalQR = () => {
     const rawQR =
@@ -218,12 +221,17 @@ export default function ProfileDetails({ profileData }) {
 
         <div className={`${cardClass} lg:col-span-2`}>
           <div className={headerClass}>
-            <h2 className={titleRowClass}>
-              <span className={iconBadgeClass}>
-                <Layers3 className="h-4 w-4" />
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className={titleRowClass}>
+                <span className={iconBadgeClass}>
+                  <Layers3 className="h-4 w-4" />
+                </span>
+                Categories
+              </h2>
+              <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                {categoryCount}
               </span>
-              Categories
-            </h2>
+            </div>
           </div>
           <div className="p-4">
             <CategoryChips categories={profileData?.categories} />

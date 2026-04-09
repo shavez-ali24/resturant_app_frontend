@@ -140,24 +140,26 @@ function FilterControls({
   handleSelectFilter,
   handleResetFilters,
   categoryOptions,
-  isInModal = false
+  isInModal = false,
+  showSearch = true
 }) {
   return (
     <>
-    
-      <div className="relative flex-grow rounded-xl border border-orange-200 bg-white shadow-sm md:min-w-[250px]">
-        <label htmlFor="search" className="sr-only">Search</label>
-        <input
-          type="search"
-          name="search"
-          id="search"
-          value={filters.search}
-          onChange={handleSearchChange}
-          className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2 pl-10 text-sm outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-          placeholder="Search by name or category..."
-        />
-        <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-      </div>
+      {showSearch && (
+        <div className="relative flex-grow rounded-xl border border-orange-200 bg-white shadow-sm md:min-w-[250px]">
+          <label htmlFor="search" className="sr-only">Search</label>
+          <input
+            type="search"
+            name="search"
+            id="search"
+            value={filters.search}
+            onChange={handleSearchChange}
+            className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2 pl-10 text-sm outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            placeholder="Search by name or category..."
+          />
+          <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        </div>
+      )}
 
       <FilterDropdown
         label="Category"
@@ -201,7 +203,14 @@ function FilterControls({
 }
 
 // Main
-export default function MenuFilter({ onFilterChange, categories, value, onResetNotify, layout = "auto" }) {
+export default function MenuFilter({
+  onFilterChange,
+  categories,
+  value,
+  onResetNotify,
+  layout = "auto",
+  showSearch = true,
+}) {
   const isControlled = value != null && typeof onFilterChange === "function";
   const isPanelLayout = layout === "panel";
 
@@ -273,6 +282,7 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
           handleSelectFilter={handleSelectFilter}
           handleResetFilters={handleResetFilters}
           categoryOptions={categoryOptions}
+          showSearch={showSearch}
         />
       </div>
     );
@@ -289,6 +299,7 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
           handleSelectFilter={handleSelectFilter}
           handleResetFilters={handleResetFilters}
           categoryOptions={categoryOptions}
+          showSearch={showSearch}
         />
       </div>
 
@@ -314,6 +325,7 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
             handleResetFilters={handleResetFilters}
             categoryOptions={categoryOptions}
             isInModal={true}
+            showSearch={showSearch}
           />
           <button
             type="button"
