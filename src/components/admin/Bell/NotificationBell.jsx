@@ -27,21 +27,26 @@ export default function NotificationBell() {
   const knownOrderIds = useRef(new Set());
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const { sseEvent } = useNotification();
+  const { sseEvent, sseConnected } = useNotification();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
 
-  // ✅ RTK Query with polling for PENDING orders only
+  const pollingInterval = sseConnected ? 0 : POLLING_INTERVAL;
+  const refetchOnAction = !sseConnected;
+
+  // ✅ RTK Query with polling disabled when SSE is connected
   const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery({
     status: "pending",
     page: 1,
     limit: 20, // Get more orders for notifications
     range: "all"
   }, {
-    pollingInterval: POLLING_INTERVAL,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
   const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery({
     status: "preparing",
@@ -49,7 +54,9 @@ export default function NotificationBell() {
     limit: 20,
     range: "all"
   }, {
-    pollingInterval: POLLING_INTERVAL,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
 
   

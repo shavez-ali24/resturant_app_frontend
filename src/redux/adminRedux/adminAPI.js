@@ -89,17 +89,36 @@ const normalizeMenuItem = (it) => {
   return copy;
 };
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${config.BASE_URL}/api`,
+  prepareHeaders: (headers) => {
+    const token = localStorage.getItem("token");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    headers.set("Accept", "application/json");
+    return headers;
+  },
+});
+
+const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
+  const result = await baseQuery(args, api, extraOptions);
+  const status = result.error?.status || result.error?.originalStatus;
+
+  if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("adminInfo");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("user");
+    window.location.replace("/login");
+  }
+
+  return result;
+};
+
 export const adminApi = createApi({
   reducerPath: "adminApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${config.BASE_URL}/api`,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-      headers.set("Accept", "application/json");
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithAuthRedirect,
 
   tagTypes: [
     "Admin",

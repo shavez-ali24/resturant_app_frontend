@@ -29,7 +29,7 @@ import {
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
-  const { notify, sseEvent } = useNotification();
+  const { notify, sseEvent, sseConnected } = useNotification();
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,6 +51,9 @@ const Orders = () => {
   const pollingIntervalMs = autoRefreshMinutes * 60 * 1000;
 
   // --- RTK Query Hook with API parameters ---
+  const pollingInterval = sseConnected ? 0 : pollingIntervalMs;
+  const refetchOnAction = !sseConnected;
+
   const {
     data: pendingOrdersResponse = {},
     isLoading: pendingLoading,
@@ -65,9 +68,9 @@ const Orders = () => {
       range: "all",
     },
     {
-      pollingInterval: pollingIntervalMs,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
     }
   );
 
@@ -85,9 +88,9 @@ const Orders = () => {
       range: "all",
     },
     {
-      pollingInterval: pollingIntervalMs,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
     }
   );
 
@@ -100,9 +103,9 @@ const Orders = () => {
     error: restaurantError,
     refetch: refetchRestaurant
   } = useGetRestaurantProfileQuery(undefined, {
-    pollingInterval: pollingIntervalMs,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
   
   const [updateOrderApi] = useUpdateOrderMutation();

@@ -52,7 +52,6 @@ export default function Header({
   const [isCartBarBump, setIsCartBarBump] = useState(false);
   const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
   const [orderStatusBanner, setOrderStatusBanner] = useState(null);
-  const orderStatusTimerRef = useRef(null);
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
   const searchRef = useRef(null);
@@ -554,15 +553,6 @@ export default function Header({
     }
   }, [fingerPrint]);
 
-  useEffect(() => {
-    return () => {
-      if (orderStatusTimerRef.current) {
-        clearTimeout(orderStatusTimerRef.current);
-      }
-    };
-  }, []);
-
-
   const handleLoadMore = () => {
     if (hasMore && !ordersLoading) {
       setCurrentPage((prev) => prev + 1);
@@ -574,6 +564,15 @@ export default function Header({
     setTimeout(() => setIsOrdersIconHighlighted(false), 2200);
   };
 
+  const triggerPreparingVibration = () => {
+    if (typeof window === "undefined" || !window.navigator) return;
+    const vibrate = window.navigator.vibrate || window.navigator.webkitVibrate || window.navigator.mozVibrate;
+    if (typeof vibrate === "function") {
+      // Vibrate pattern: short-long-short for attention
+      vibrate([160, 80, 160]);
+    }
+  };
+
   const showOrderStatusBanner = (order) => {
     const rawStatus = order?.status ? String(order.status).toLowerCase() : "";
     const isPreparing = rawStatus.includes("preparing");
@@ -581,13 +580,19 @@ export default function Header({
 
     const message = "Your order is preparing";
     setOrderStatusBanner({ message, status: "preparing", ts: Date.now() });
-    if (orderStatusTimerRef.current) {
-      clearTimeout(orderStatusTimerRef.current);
-    }
-    orderStatusTimerRef.current = setTimeout(() => {
+    triggerPreparingVibration();
+  };
+
+  useEffect(() => {
+    if (!orderStatusBanner) return;
+    const timer = window.setTimeout(() => {
       setOrderStatusBanner(null);
     }, 3500);
-  };
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [orderStatusBanner]);
 
   const animateOrderRocketToOrders = () => {
     const targetEl = ordersButtonRef.current;
@@ -1456,30 +1461,30 @@ export default function Header({
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ${
                             isDarkMode
-                              ? orderTypeNormalized === "delivery"
+                              ? orderTypeNormalized.toLowerCase() === "delivery"
                                 ? "border-orange-500/50 bg-orange-500/15 text-orange-200 ring-orange-500/30"
-                                : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
+                                : orderTypeNormalized.toLowerCase() === "take away" || orderTypeNormalized.toLowerCase() === "takeaway"
                                 ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
-                                : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
+                                : orderTypeNormalized.toLowerCase() === "eat here" || orderTypeNormalized.toLowerCase() === "eathere"
                                 ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
                                 : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
-                              : orderTypeNormalized === "delivery"
+                              : orderTypeNormalized.toLowerCase() === "delivery"
                               ? "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 ring-orange-200/70"
-                              : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
+                              : orderTypeNormalized.toLowerCase() === "take away" || orderTypeNormalized.toLowerCase() === "takeaway"
                               ? "border-blue-200 bg-gradient-to-r from-blue-50 to-sky-100 text-blue-700 ring-blue-200/70"
-                              : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
+                              : orderTypeNormalized.toLowerCase() === "eat here" || orderTypeNormalized.toLowerCase() === "eathere"
                               ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
                               : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              orderTypeNormalized === "delivery"
-                                ? "bg-orange-500"
-                                : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway"
-                                ? "bg-blue-500"
-                                : orderTypeNormalized === "eat here" || orderTypeNormalized === "eathere"
-                                ? "bg-green-500"
+                              orderTypeNormalized.toLowerCase() === "delivery"
+                                ? "bg-orange-300 ring-1 ring-orange-300/60"
+                                : orderTypeNormalized.toLowerCase() === "take away" || orderTypeNormalized.toLowerCase() === "takeaway"
+                                ? "bg-blue-300 ring-1 ring-blue-300/60"
+                                : orderTypeNormalized.toLowerCase() === "eat here" || orderTypeNormalized.toLowerCase() === "eathere"
+                                ? "bg-green-300 ring-1 ring-green-300/60"
                                 : "bg-gray-500"
                             }`}
                           />

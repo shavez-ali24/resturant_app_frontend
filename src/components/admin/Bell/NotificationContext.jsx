@@ -21,6 +21,7 @@ const NotificationToasts = lazy(() => import("./NotificationToasts"));
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
+  const [sseConnected, setSseConnected] = useState(false);
   const sseRef = useRef(null);
   const lastEventIdRef = useRef(null);
 
@@ -55,6 +56,10 @@ export const NotificationProvider = ({ children }) => {
     const source = new EventSource(sseUrl);
     sseRef.current = source;
 
+    source.onopen = () => {
+      setSseConnected(true);
+    };
+
     source.onmessage = (event) => {
       if (!event?.data) return;
       let payload;
@@ -79,11 +84,12 @@ export const NotificationProvider = ({ children }) => {
     };
 
     source.onerror = () => {
-      // EventSource auto-reconnects; no-op.
+      setSseConnected(false);
     };
 
     return () => {
       source.close();
+      setSseConnected(false);
       if (sseRef.current === source) {
         sseRef.current = null;
       }
@@ -91,7 +97,7 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ notify, sseEvent }}>
+    <NotificationContext.Provider value={{ notify, sseEvent, sseConnected }}>
       {children}
 
       {notifications.length > 0 && (
