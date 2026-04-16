@@ -93,22 +93,23 @@ export function NavMain({ items, isDarkMode = false }) {
               <SidebarMenuSubItem key={subItem.title}>
                 <SidebarMenuSubButton asChild>
                   <Link
-  to={subItem.url}
-  className={`
-    block px-3 py-1 text-sm rounded transition-colors duration-200
-    ${isSubActive
-      ? isDarkMode
-        ? "bg-slate-800 text-slate-100 shadow-sm"
-        : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
-      : isDarkMode
-        ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
-        : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
-    }
-  `}
->
-  {subItem.title}
-</Link>
-
+                    to={subItem.url}
+                    target={subItem.target || undefined}
+                    rel={subItem.target === "_blank" ? "noreferrer" : undefined}
+                    className={`
+                      block px-3 py-1 text-sm rounded transition-colors duration-200
+                      ${isSubActive
+                        ? isDarkMode
+                          ? "bg-slate-800 text-slate-100 shadow-sm"
+                          : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
+                        : isDarkMode
+                          ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
+                          : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
+                      }
+                    `}
+                  >
+                    {subItem.title}
+                  </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             );

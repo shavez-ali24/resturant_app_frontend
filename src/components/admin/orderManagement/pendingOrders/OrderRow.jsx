@@ -5,6 +5,9 @@ import { Truck, Utensils, House } from "lucide-react";
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
+  getOrderCustomerName,
+  getOrderCustomerPhone,
+  getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
   getStatusRowClass,
@@ -48,7 +51,17 @@ const OrderRow = ({
 
   const orderTypeLabel = getOrderTypeLabel(order.orderType);
   const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
-  const tableLabel = formatOrderTableId(order.tableId);
+  const tableLabel = formatOrderTableId(
+    order.tableId ||
+      order.table ||
+      order.tableNumber ||
+      order?.table?.name ||
+      order?.table?.tableNumber ||
+      order?.table?.number
+  );
+  const customerName = getOrderCustomerName(order);
+  const customerPhone = getOrderCustomerPhone(order);
+  const orderIdDisplay = getOrderIdShortValue(order);
 
   return (
     <tr
@@ -68,11 +81,23 @@ const OrderRow = ({
         {order.formattedTime || "N/A"}
       </td>
 
-      {/* Customer */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerName}</td>
-
-      {/* Phone */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerPhone}</td>
+      {tableType === "pending" ? (
+        <>
+          <td className="text-center border px-1 text-sm font-semibold text-gray-800 dark:border-slate-700 dark:text-slate-100">
+            {customerName}
+          </td>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
+              #{orderIdDisplay || "N/A"}
+            </span>
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerName}</td>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerPhone}</td>
+        </>
+      )}
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
       <td className="px-1 py-2 text-center border dark:border-slate-700">

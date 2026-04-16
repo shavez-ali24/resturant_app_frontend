@@ -64,6 +64,8 @@ export default function Header({
   const [orderType, setOrderType] = useState("");
   const [address, setAddress] = useState("");
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+  const [sseRetryKey, setSseRetryKey] = useState(0);
+  const sseRetryTimer = useRef(null);
 
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
@@ -478,6 +480,11 @@ export default function Header({
       fingerPrint
     )}`;
 
+    if (sseRetryTimer.current) {
+      window.clearTimeout(sseRetryTimer.current);
+      sseRetryTimer.current = null;
+    }
+
     const source = new EventSource(sseUrl);
 
     source.onmessage = (event) => {
@@ -517,13 +524,22 @@ export default function Header({
     };
 
     source.onerror = () => {
-      // EventSource auto-reconnects; no-op.
+      if (sseRetryTimer.current) return;
+      source.close();
+      sseRetryTimer.current = window.setTimeout(() => {
+        sseRetryTimer.current = null;
+        setSseRetryKey((prev) => prev + 1);
+      }, 5000);
     };
 
     return () => {
+      if (sseRetryTimer.current) {
+        window.clearTimeout(sseRetryTimer.current);
+        sseRetryTimer.current = null;
+      }
       source.close();
     };
-  }, [fingerPrint, refetch]);
+  }, [fingerPrint, refetch, sseRetryKey]);
 
   // Pre-fill form with latest order data when modal opens
   useEffect(() => {

@@ -13,6 +13,13 @@ import {
 import { getCompactPageNumbers } from "@/lib/pagination";
 
 import Heading from "../../common/Heading";
+import {
+  clearOrderPreparingStartedAt,
+  getOrderPreparingStartedAt,
+  getOrderIdValue,
+  getOrderItemsList,
+  rememberOrderPreparingStartedAt,
+} from "../commonOrderFile/utils";
 
 const OrdersTable = lazy(() => import("./OrdersTable"));
 const EditOrderModal = lazy(() => import("./EditOrderModal"));
@@ -30,6 +37,30 @@ import {
 
 const Orders = () => {
   const { notify, sseEvent, sseConnected } = useNotification();
+
+  const normalizeIncomingOrder = (incomingOrder) => {
+    const incomingId = getOrderIdValue(incomingOrder);
+    if (!incomingId) return null;
+
+    return {
+      ...incomingOrder,
+      _id: incomingOrder?._id ? String(incomingOrder._id) : incomingId,
+      createdAt: incomingOrder?.createdAt || new Date().toISOString(),
+      status: incomingOrder?.status || "pending",
+    };
+  };
+
+  const mergeOrderData = (baseOrder = {}, incomingOrder = {}) => {
+    const mergedOrder = { ...baseOrder };
+
+    Object.entries(incomingOrder).forEach(([key, value]) => {
+      if (value !== undefined) {
+        mergedOrder[key] = value;
+      }
+    });
+
+    return mergedOrder;
+  };
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,24 +143,52 @@ const Orders = () => {
   const [deleteOrderApi] = useDeleteOrderMutation();
 
   useEffect(() => {
-    if (sseEvent?.type !== "NEW_ORDER" || !sseEvent?.data) return;
+    if (
+      !["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type) ||
+      !sseEvent?.data
+    ) {
+      return;
+    }
+
     const incoming = sseEvent.data;
-    const incomingId = incoming?._id || incoming?.id || incoming?.orderId;
+    const incomingId = getOrderIdValue(incoming);
     if (!incomingId) return;
 
-    const normalizedOrder = {
-      ...incoming,
-      _id: incoming?._id ? String(incoming._id) : String(incomingId),
-      createdAt: incoming?.createdAt || new Date().toISOString(),
-      status: incoming?.status || "pending",
-    };
+    const normalizedOrder = normalizeIncomingOrder(incoming);
+    if (!normalizedOrder) return;
+    const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
+    const eventTimestamp = sseEvent?.ts || Date.now();
+
+    if (normalizedStatus === "preparing") {
+      const preparingStartedAtMs =
+        getOrderPreparingStartedAt(normalizedOrder) ||
+        rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
+
+      if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
+        normalizedOrder.preparingStartedAt = new Date(
+          preparingStartedAtMs
+        ).toISOString();
+      }
+    } else if (normalizedStatus) {
+      clearOrderPreparingStartedAt(incomingId);
+    }
 
     setSseOrders((prev) => {
-      const exists = prev.some(
-        (order) => (order?._id || order?.id || order?.orderId) === incomingId
+      const remainingOrders = prev.filter(
+        (order) => getOrderIdValue(order) !== incomingId
       );
-      if (exists) return prev;
-      return [normalizedOrder, ...prev].slice(0, combinedFetchLimit);
+
+      if (!["pending", "preparing"].includes(normalizedStatus)) {
+        return remainingOrders;
+      }
+
+      const previousVersion = prev.find(
+        (order) => getOrderIdValue(order) === incomingId
+      );
+      return [
+        mergeOrderData(previousVersion, normalizedOrder),
+        ...remainingOrders,
+      ].slice(0, combinedFetchLimit);
     });
 
     setCurrentPage(1);
@@ -261,10 +320,17 @@ const Orders = () => {
   );
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
-    [...sseOrders, ...pendingOrders, ...preparingOrders].forEach((order) => {
-      const key = order?._id || order?.id || order?.orderId || order?.createdAt;
+    [...pendingOrders, ...preparingOrders].forEach((order) => {
+      const key = getOrderIdValue(order) || order?.createdAt;
       if (!key) return;
       orderMap.set(key, order);
+    });
+
+    sseOrders.forEach((order) => {
+      const key = getOrderIdValue(order) || order?.createdAt;
+      if (!key) return;
+      const existingOrder = orderMap.get(key);
+      orderMap.set(key, existingOrder ? mergeOrderData(existingOrder, order) : order);
     });
 
     return Array.from(orderMap.values()).sort(
@@ -301,35 +367,78 @@ const Orders = () => {
 
   useEffect(() => {
     if (!sseOrders.length) return;
-    const fetchedIds = new Set(
+
+    const fetchedOrderMap = new Map(
       [...pendingOrders, ...preparingOrders]
-        .map((order) => order?._id || order?.id || order?.orderId)
-        .filter(Boolean)
+        .map((order) => [getOrderIdValue(order), order])
+        .filter(([id]) => Boolean(id))
     );
-    if (!fetchedIds.size) return;
+    if (!fetchedOrderMap.size) return;
+
     setSseOrders((prev) =>
       prev.filter((order) => {
-        const id = order?._id || order?.id || order?.orderId;
-        return id && !fetchedIds.has(id);
+        const id = getOrderIdValue(order);
+        const fetchedOrder = fetchedOrderMap.get(id);
+        if (!id || !fetchedOrder) return true;
+        return (
+          String(fetchedOrder?.status || "").toLowerCase() !==
+          String(order?.status || "").toLowerCase()
+        );
       })
     );
   }, [pendingOrders, preparingOrders, sseOrders.length]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
+    const orderIdString = String(orderId);
+    const nextStatus = String(updatedData?.status || "").toLowerCase();
+    const currentOrder = combinedOrders.find(
+      (order) => getOrderIdValue(order) === orderIdString
+    );
+    const previousPreparingStartedAt = getOrderPreparingStartedAt(currentOrder);
+    const optimisticTimestamp = Date.now();
+
     try {
-      // ✅ FIX: Ensure orderId is a string
-      const orderIdString = String(orderId);
-      
-      // console.log("Updating order:", { orderIdString, updatedData });
-      
-      // ✅ FIX: Call API with correct parameters
+      if (nextStatus === "preparing") {
+        const preparingStartedAtMs =
+          previousPreparingStartedAt ||
+          rememberOrderPreparingStartedAt(orderIdString, optimisticTimestamp);
+
+        setSseOrders((prev) => {
+          const existingOverlay = prev.find(
+            (order) => getOrderIdValue(order) === orderIdString
+          );
+          const remainingOrders = prev.filter(
+            (order) => getOrderIdValue(order) !== orderIdString
+          );
+          const baseOrder = existingOverlay || currentOrder || {};
+
+          return [
+            mergeOrderData(baseOrder, {
+              ...updatedData,
+              _id: orderIdString,
+              createdAt:
+                baseOrder?.createdAt || currentOrder?.createdAt || new Date().toISOString(),
+              preparingStartedAt: preparingStartedAtMs
+                ? new Date(preparingStartedAtMs).toISOString()
+                : undefined,
+            }),
+            ...remainingOrders,
+          ].slice(0, combinedFetchLimit);
+        });
+      } else if (nextStatus) {
+        clearOrderPreparingStartedAt(orderIdString);
+
+        setSseOrders((prev) =>
+          prev.filter((order) => getOrderIdValue(order) !== orderIdString)
+        );
+      }
+
       await updateOrderApi({ 
         orderId: orderIdString, 
         updatedData 
       }).unwrap();
-      
-      const nextStatus = String(updatedData?.status || "").toLowerCase();
+
       if (
         typeof window !== "undefined" &&
         nextStatus &&
@@ -343,6 +452,14 @@ const Orders = () => {
       refetchPreparingOrders();
       setEditingOrder(null);
     } catch (err) {
+      if (previousPreparingStartedAt) {
+        rememberOrderPreparingStartedAt(orderIdString, previousPreparingStartedAt);
+      } else {
+        clearOrderPreparingStartedAt(orderIdString);
+      }
+
+      refetchPendingOrders();
+      refetchPreparingOrders();
       console.error("Update order error:", err);
       notify(getFriendlyOrderError(err, "update"), "error");
     }
@@ -363,7 +480,7 @@ const Orders = () => {
 
   // Function to handle customizations click
   const handleCustomizationsClick = (order) => {
-    if (order && order.items) {
+    if (order && getOrderItemsList(order).length > 0) {
       setSelectedOrderForCustomizations(order);
     }
   };

@@ -141,7 +141,7 @@ export default function NotificationBell() {
   }, [orders, notificationSound, audioEnabled]);
 
   useEffect(() => {
-    if (sseEvent?.type === "NEW_ORDER") {
+    if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
       refetchPending();
       refetchPreparing();
     }

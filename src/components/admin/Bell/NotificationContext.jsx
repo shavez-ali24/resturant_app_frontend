@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useContext,
@@ -22,8 +22,11 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
+  const [sseRetryKey, setSseRetryKey] = useState(0);
   const sseRef = useRef(null);
-  const lastEventIdRef = useRef(null);
+  const lastEventSignatureRef = useRef(null);
+  const sseRetryTimer = useRef(null);
+  const sseRetryCount = useRef(0);
 
   const removeNotification = (id) => {
     setNotifications((prev) => prev.filter((notification) => notification.id !== id));
@@ -51,50 +54,81 @@ export const NotificationProvider = ({ children }) => {
 
     if (sseRef.current) {
       sseRef.current.close();
+      sseRef.current = null;
     }
 
-    const source = new EventSource(sseUrl);
-    sseRef.current = source;
+    const connectSource = () => {
+      const source = new EventSource(sseUrl);
+      sseRef.current = source;
 
-    source.onopen = () => {
-      setSseConnected(true);
+      source.onopen = () => {
+        setSseConnected(true);
+        sseRetryCount.current = 0;
+        if (sseRetryTimer.current) {
+          window.clearTimeout(sseRetryTimer.current);
+          sseRetryTimer.current = null;
+        }
+      };
+
+      source.onmessage = (event) => {
+        if (!event?.data) return;
+        let payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+
+        if (!payload || payload.type === "CONNECTED") return;
+
+        const eventSignature = [
+          payload?.type || "",
+          payload?.data?._id || payload?.data?.id || payload?.data?.orderId || "",
+          payload?.data?.status || "",
+          payload?.data?.preparingStartedAt || "",
+          payload?.data?.updatedAt || "",
+          payload?.data?.createdAt || "",
+        ].join(":");
+
+        if (eventSignature && lastEventSignatureRef.current === eventSignature) {
+          return;
+        }
+        if (eventSignature) {
+          lastEventSignatureRef.current = eventSignature;
+        }
+
+        setSseEvent({ ...payload, ts: Date.now() });
+      };
+
+      source.onerror = () => {
+        setSseConnected(false);
+        if (sseRetryTimer.current) return;
+
+        source.close();
+
+        const delay = Math.min(30000, 3000 + sseRetryCount.current * 3000);
+        sseRetryTimer.current = window.setTimeout(() => {
+          sseRetryTimer.current = null;
+          sseRetryCount.current += 1;
+          setSseRetryKey((prev) => prev + 1);
+        }, delay);
+      };
     };
 
-    source.onmessage = (event) => {
-      if (!event?.data) return;
-      let payload;
-      try {
-        payload = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-
-      if (!payload || payload.type === "CONNECTED") return;
-
-      const eventId =
-        payload?.data?._id ||
-        payload?.data?.id ||
-        payload?.data?.orderId ||
-        null;
-
-      if (eventId && lastEventIdRef.current === eventId) return;
-      if (eventId) lastEventIdRef.current = eventId;
-
-      setSseEvent({ ...payload, ts: Date.now() });
-    };
-
-    source.onerror = () => {
-      setSseConnected(false);
-    };
+    connectSource();
 
     return () => {
-      source.close();
-      setSseConnected(false);
-      if (sseRef.current === source) {
+      if (sseRetryTimer.current) {
+        window.clearTimeout(sseRetryTimer.current);
+        sseRetryTimer.current = null;
+      }
+      if (sseRef.current) {
+        sseRef.current.close();
         sseRef.current = null;
       }
+      setSseConnected(false);
     };
-  }, []);
+  }, [sseRetryKey]);
 
   return (
     <NotificationContext.Provider value={{ notify, sseEvent, sseConnected }}>

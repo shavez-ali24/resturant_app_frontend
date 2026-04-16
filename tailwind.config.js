@@ -8,7 +8,7 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			mostrate: [
-  				'Mostra Nuova"',
+  				'Mostra Nuova',
   				'sans-serif'
   			]
   		},

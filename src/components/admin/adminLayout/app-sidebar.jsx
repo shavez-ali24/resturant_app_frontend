@@ -107,6 +107,18 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
+    ...(isAdmin || isStaff
+      ? [
+          {
+            title: "Kitchen Display System",
+            url: "#",
+            icon: SquareMenu,
+            isActive: true,
+            roles: ["admin", "staff"],
+            items: [{ title: "Order Display", url: "/kds", target: "_blank" }],
+          },
+        ]
+      : []),
     {
       title: "Profile",
       url: "/admin/profile",

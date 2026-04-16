@@ -1,12 +1,13 @@
 import React from "react";
 import { Eye } from "lucide-react";
+import {
+  getItemCustomizationText,
+  getOrderItemsList,
+} from "../commonOrderFile/utils";
 
 const PendingOrderMobileNote = ({ order, onCustomizationsClick }) => {
   const hasCustomizations =
-    order.items &&
-    order.items.some(
-      (item) => item.customizations && item.customizations.trim() !== ""
-    );
+    getOrderItemsList(order).some((item) => getItemCustomizationText(item));
 
   if (!hasCustomizations) {
     return (

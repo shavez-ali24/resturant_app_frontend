@@ -7,7 +7,8 @@ import { Provider } from "react-redux";
 import { store } from "./redux/store";
 import PrivateRoute from "./components/admin/adminLayout/PrivateRoute";
 import DynamicFavicon from "./DynamicFavicon";
-import { NotificationProvider } from "./components/admin/common/NotificationModal";
+import { NotificationProvider as BellNotificationProvider } from "./components/admin/Bell/NotificationContext";
+import CommonNotificationProvider from "./components/admin/common/NotificationModal";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
 const MainLayout = lazy(() => import("./layouts/MainLayout"));
@@ -20,6 +21,7 @@ const LoginPage = lazy(() => import("@/components/admin/adminLayout/LoginPage"))
 const Orders = lazy(() => import("./components/admin/orderManagement/pendingOrders/PendingOrders"));
 const CompletedOrders = lazy(() => import("./components/admin/orderManagement/completeOrder/CompletedOrders"));
 const CancelledOrders = lazy(() => import("./components/admin/orderManagement/cancelOrder/CancelledOrders"));
+const KitchenDisplaySystem = lazy(() => import("./components/admin/orderManagement/kds/KitchenDisplaySystem"));
 const Adminprofile = lazy(() => import("./components/admin/Profile/Profile"));
 const Revenue = lazy(() => import("./components/admin/observability/revenue/Revenue"));
 const ComingSoon = lazy(() => import("./components/admin/common/ComingSoon"));
@@ -102,12 +104,13 @@ const AdminOnlyRoute = ({ children }) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <ErrorBoundary>
-      <NotificationProvider>
-        <BrowserRouter>
-          <DynamicFavicon />
+      <CommonNotificationProvider>
+        <BellNotificationProvider>
+          <BrowserRouter>
+            <DynamicFavicon />
 
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
             {/* Public Routes */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
@@ -160,6 +163,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               />
               <Route path="comingsoon" element={<ComingSoon />} />
             </Route>
+            <Route path="kds" element={<PrivateRoute><KitchenDisplaySystem /></PrivateRoute>} />
 
             {/* Super Admin Login (Public) */}
             <Route path="super-login" element={<SuperLoginPage />} />
@@ -185,7 +189,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             </Routes>
           </Suspense>
         </BrowserRouter>
-      </NotificationProvider>
+      </BellNotificationProvider>
+    </CommonNotificationProvider>
     </ErrorBoundary>
   </Provider>
 );

@@ -9,7 +9,11 @@ const PendingOrderMobileNote = lazy(() => import("./PendingOrderMobileNote"));
 const PendingOrderMobileControls = lazy(() => import("./PendingOrderMobileControls"));
 import {
   formatOrderTableId,
+  getOrderCustomerName,
+  getOrderCustomerPhone,
   getOrderTypeBadgeClass,
+  getOrderIdValue,
+  getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
   getStatusRowClass,
@@ -53,7 +57,7 @@ const OrdersTable = ({
   containerVariant = "card",
 }) => {
   const dispatch = useDispatch();
-  const [selectedCustomizations, setSelectedCustomizations] = useState(null);
+  const [selectedCustomizationOrder, setSelectedCustomizationOrder] = useState(null);
   const [seenBillOrderId, setSeenBillOrderId] = useState(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("billViewedOrderId") || "";
@@ -63,19 +67,20 @@ const OrdersTable = ({
   const mobileSkeletons = Array.from({ length: 4 });
 
   // Function to handle customizations button click
-  const handleCustomizationsClick = (customizations) => {
-    if (customizations && customizations.trim() !== "") {
-      setSelectedCustomizations(customizations);
+  const handleCustomizationsClick = (order) => {
+    if (order) {
+      setSelectedCustomizationOrder(order);
     }
   };
 
   // Modal background click handler
   const handleModalClose = () => {
-    setSelectedCustomizations(null);
+    setSelectedCustomizationOrder(null);
   };
 
   const getOrderId = (order) =>
-    order?._id || order?.id || order?.orderId || order?.createdAt || "";
+    getOrderIdValue(order) || order?.createdAt || "";
+  const getOrderIdShort = (order) => getOrderIdShortValue(order);
   const latestId = latestOrderId ? String(latestOrderId) : "";
   const isLatestUnseen = (order) => {
     if (!latestId) return false;
@@ -98,14 +103,14 @@ const OrdersTable = ({
   return (
     <div className={containerClassName}>
       {/* Customizations Modal */}
-      {selectedCustomizations && (
+      {selectedCustomizationOrder && (
         <div
           className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]"
           onClick={handleModalClose}
         >
           <Suspense fallback={null}>
             <CustomizationsModal
-              customizations={selectedCustomizations}
+              order={selectedCustomizationOrder}
               onClose={handleModalClose}
             />
           </Suspense>
@@ -121,8 +126,14 @@ const OrdersTable = ({
                 <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
               )}
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Customer</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">
+                Customer
+              </th>
+              {tableType === "pending" ? (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order ID</th>
+              ) : (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              )}
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Type</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Items</th>
               {tableType === "pending" && (
@@ -167,7 +178,7 @@ const OrdersTable = ({
             ) : (
               orders.map((order, index) => (
                 <OrderRow
-                  key={order._id}
+                  key={getOrderId(order) || order?.createdAt || index}
                   order={{
                     ...order,
                     formattedDate: formatDate(order.createdAt),
@@ -235,39 +246,60 @@ const OrdersTable = ({
               };
               const orderTypeLabel = getOrderTypeLabel(order.orderType);
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
-              const tableLabel = formatOrderTableId(order.tableId);
+              const tableLabel = formatOrderTableId(
+                order.tableId ||
+                  order.table ||
+                  order.tableNumber ||
+                  order?.table?.name ||
+                  order?.table?.tableNumber ||
+                  order?.table?.number
+              );
 
               const handlePendingCustomizationsClick =
                 onCustomizationsClick || handleCustomizationsClick;
 
               return (
                 <div
-                  key={order._id}
+                  key={getOrderId(order) || order?.createdAt}
                   className={`min-h-[240px] w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
                     order.status
                   )}`}
                 >
                   <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                     <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
-                      Order
+                      {getOrderCustomerName(order) ||
+                        (tableType === "pending"
+                          ? `Order #${getOrderIdShort(order)}`
+                          : "Order")}
                     </h3>
-                    <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {tableType === "pending"
-                        ? formatTime(order.createdAt)
-                        : `${formatDate(order.createdAt)} | ${formatTime(order.createdAt)}`}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {tableType === "pending"
+                          ? formatTime(order.createdAt)
+                          : `${formatDate(order.createdAt)} | ${formatTime(order.createdAt)}`}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">
+                  {tableType === "pending" ? (
                     <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
-                      <span className="font-medium text-gray-600 dark:text-slate-300">Customer:</span>
-                      <p className="mt-0.5 break-words text-gray-800 dark:text-slate-100">{order.customerName || "N/A"}</p>
+                      <span className="font-medium text-gray-600 dark:text-slate-300">Order ID:</span>
+                      <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">
+                        #{getOrderIdShort(order)}
+                      </p>
                     </div>
-                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
-                      <span className="font-medium text-gray-600 dark:text-slate-300">Phone:</span>
-                      <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">{order.customerPhone || "N/A"}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300">Customer:</span>
+                        <p className="mt-0.5 break-words text-gray-800 dark:text-slate-100">{getOrderCustomerName(order)}</p>
+                      </div>
+                      <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300">Phone:</span>
+                        <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">{getOrderCustomerPhone(order)}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center">
                     <span className="shrink-0 text-sm font-medium text-gray-600 dark:text-slate-300">Type:</span>

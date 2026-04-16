@@ -1,6 +1,10 @@
 import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { SquarePen, Trash, Eye, Ban } from "lucide-react";
+import {
+  getItemCustomizationText,
+  getOrderItemsList,
+} from "../commonOrderFile/utils";
 
 const PendingOrderRowActions = ({
   order,
@@ -9,17 +13,11 @@ const PendingOrderRowActions = ({
   updateOrder,
   onCustomizationsClick,
 }) => {
-  const hasCustomizations =
-    order.items &&
-    order.items.some(
-      (item) => item.customizations && item.customizations.trim() !== ""
-    );
-
-  const customizationCount = order.items
-    ? order.items.filter(
-        (item) => item.customizations && item.customizations.trim() !== ""
-      ).length
-    : 0;
+  const orderItems = getOrderItemsList(order);
+  const customizationCount = orderItems.filter((item) =>
+    getItemCustomizationText(item)
+  ).length;
+  const hasCustomizations = customizationCount > 0;
 
   return (
     <>

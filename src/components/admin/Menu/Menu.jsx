@@ -82,11 +82,7 @@ const normalizeFoodType = (value = "") => {
     .toLowerCase()
     .replace(/[_\s]+/g, "-");
 
-  if (
-    normalized === "veg" ||
-    normalized === "vegetarian" ||
-    normalized === "vegitarian"
-  ) {
+  if (["veg", "vegetarian", "vegitarian"].includes(normalized)) {
     return "veg";
   }
 
