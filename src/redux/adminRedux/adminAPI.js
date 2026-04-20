@@ -284,6 +284,19 @@ export const adminApi = createApi({
       invalidatesTags: (result, error, { orderId }) => [
         { type: "Order", id: orderId },
         { type: "Order", id: "LIST" },
+        { type: "Order", id: "ACTIVE_LIST" },
+      ],
+    }),
+
+    toggleItemReady: builder.mutation({
+      query: ({ orderId, itemId }) => ({
+        url: `/order/${orderId}/items/${itemId}/toggle-ready`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (result, error, { orderId }) => [
+        { type: "Order", id: orderId },
+        { type: "Order", id: "LIST" },
+        { type: "Order", id: "ACTIVE_LIST" },
       ],
     }),
 
@@ -440,6 +453,7 @@ export const {
   useReorderCategoriesMutation,
   useGetOrdersQuery,
   useUpdateOrderMutation,
+  useToggleItemReadyMutation,
   useDeleteOrderMutation,
   useGetAnalyticsQuery,
   useGetMenuQuery,

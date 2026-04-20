@@ -109,22 +109,22 @@ export default function ProfileDetails({ profileData }) {
             <span className={iconBadgeClass}>
               <Store className="h-4 w-4" />
             </span>
-            Restaurant Information
+            Business Profile
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <ProfileField
             icon={<Tag className="w-4 h-4" />}
-            label="Restaurant Name"
+            label="Business Name"
             value={profileData?.restaurantName || profileData?.name}
           />
-          <ProfileField icon={<Mail className="w-4 h-4" />} label="Email Address" value={emailOfAdmin} />
-          <ProfileField icon={<Phone className="w-4 h-4" />} label="Phone Number" value={profileData?.phoneNumber} />
+          <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
+          <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
           <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />
           <div className="sm:col-span-2">
-            <ProfileField icon={<MapPin className="w-4 h-4" />} label="Full Address" value={profileData?.address} />
+            <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
           </div>
-          <ProfileField icon={<Globe className="w-4 h-4" />} label="Client Domain" value={profileData?.domain} />
+          <ProfileField icon={<Globe className="w-4 h-4" />} label="Web URL" value={profileData?.domain} />
         </div>
       </div>
 
@@ -136,14 +136,14 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <Building className="h-4 w-4" />
               </span>
-              Financial Settings
+              Billing & Taxes
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-            <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges ?? 0}`} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Rate" value={`${profileData?.gstRate}%`} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Number" value={profileData?.gstNumber} />
+            <ProfileField label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Rate (%)" value={`${profileData?.gstRate}%`} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax ID / GSTIN" value={profileData?.gstNumber} />
           </div>
         </div>
 
@@ -153,7 +153,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <SlidersHorizontal className="h-4 w-4" />
               </span>
-              Order Modes
+              Service Modes
             </h2>
           </div>
           <div className="space-y-3 p-4">
@@ -172,7 +172,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <Image className="h-4 w-4" />
               </span>
-              Restaurant Logo
+              Brand Identity
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
@@ -196,7 +196,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <ScanLine className="h-4 w-4" />
               </span>
-              {restaurantName} QR
+              Digital Menu QR
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
@@ -226,7 +226,7 @@ export default function ProfileDetails({ profileData }) {
                 <span className={iconBadgeClass}>
                   <Layers3 className="h-4 w-4" />
                 </span>
-                Categories
+                Menu Categories
               </h2>
               <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
                 {categoryCount}

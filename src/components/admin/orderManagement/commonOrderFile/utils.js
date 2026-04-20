@@ -254,6 +254,8 @@ export const getStatusBadge = (status) => {
       return "bg-yellow-100 text-yellow-800 ring-yellow-300 hover:bg-yellow-200 data-[state=open]:bg-yellow-200 dark:bg-yellow-200 dark:text-yellow-900 dark:ring-yellow-400";
     case "preparing":
       return "bg-teal-100 text-teal-800 ring-teal-300 hover:bg-teal-200 data-[state=open]:bg-teal-200 dark:bg-teal-200 dark:text-teal-900 dark:ring-teal-400";
+    case "ready":
+      return "bg-blue-100 text-blue-800 ring-blue-300 hover:bg-blue-200 data-[state=open]:bg-blue-200 dark:bg-blue-200 dark:text-blue-900 dark:ring-blue-400";
     case "completed":
       return "bg-emerald-100 text-emerald-800 ring-emerald-300 hover:bg-emerald-200 data-[state=open]:bg-emerald-200 dark:bg-emerald-200 dark:text-emerald-900 dark:ring-emerald-400";
     case "cancelled":
@@ -269,6 +271,8 @@ export const getStatusRowClass = (status) => {
       return "bg-transparent dark:bg-transparent";
     case "preparing":
       return "bg-transparent dark:bg-transparent";
+    case "ready":
+      return "bg-blue-50 dark:bg-transparent";
     case "completed":
       return "bg-transparent dark:bg-transparent";
     case "cancelled":

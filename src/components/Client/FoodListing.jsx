@@ -503,8 +503,10 @@ export default function FoodListing({
                         {/* ✅ Fixed Size Details Section */}
                         <div className="flex h-28 flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 p-2">
                           {/* Item Name with Pencil Icon */}
-                          <h3 className="flex h-8 items-center justify-between text-xs font-semibold leading-tight text-gray-900">
-                            <span className="flex-1 truncate pr-1">{item.name}</span>
+                          <h3 className="flex h-10 items-start justify-between text-xs font-semibold leading-tight text-gray-900">
+                            <span className="flex-1 line-clamp-1 break-words pr-1">
+                              {item.name}
+                            </span>
                             {quantity > 0 && (
                               <button
                                 type="button"
@@ -897,13 +899,15 @@ export default function FoodListing({
                     >
                       {/* Item Name with Pencil Icon */}
                       <h3
-                        className={`flex items-center justify-between leading-tight text-gray-900 ${
+                        className={`flex items-start justify-between leading-tight text-gray-900 ${
                           layoutMode === "single"
-                            ? "min-h-[26px] text-sm font-semibold"
-                            : "h-8 text-xs font-semibold"
+                            ? "h-10 text-sm font-semibold"
+                            : "h-10 text-xs font-semibold"
                         }`}
                       >
-                        <span className="flex-1 truncate pr-1">{item.name}</span>
+                        <span className="flex-1 line-clamp-2 break-words pr-1">
+                          {item.name}
+                        </span>
                         {quantity > 0 && (
                           <button
                             type="button"

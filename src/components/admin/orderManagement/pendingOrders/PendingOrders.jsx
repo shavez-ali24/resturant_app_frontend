@@ -32,7 +32,8 @@ import {
   useGetMenuQuery,
   useGetRestaurantProfileQuery,
   useUpdateOrderMutation,
-  useDeleteOrderMutation
+  useDeleteOrderMutation,
+  useToggleItemReadyMutation
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
@@ -125,6 +126,26 @@ const Orders = () => {
     }
   );
 
+  const {
+    data: readyOrdersResponse = {},
+    isLoading: readyLoading,
+    isError: readyError,
+    error: readyErrorObj,
+    refetch: refetchReadyOrders,
+  } = useGetOrdersQuery(
+    {
+      status: "ready",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
+    }
+  );
+
   const { data: menuItems = [] } = useGetMenuQuery();
   
   // ✅ Restaurant profile se tables extract karenge
@@ -141,10 +162,11 @@ const Orders = () => {
   
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
+  const [toggleItemReadyApi] = useToggleItemReadyMutation();
 
   useEffect(() => {
     if (
-      !["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type) ||
+      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type) ||
       !sseEvent?.data
     ) {
       return;
@@ -194,8 +216,9 @@ const Orders = () => {
     setCurrentPage(1);
     refetchPendingOrders();
     refetchPreparingOrders();
+    refetchReadyOrders();
     refetchRestaurant();
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchRestaurant]);
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchRestaurant]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -318,9 +341,16 @@ const Orders = () => {
         : [],
     [preparingOrdersResponse?.orders]
   );
+  const readyOrders = useMemo(
+    () =>
+      Array.isArray(readyOrdersResponse?.orders)
+        ? readyOrdersResponse.orders
+        : [],
+    [readyOrdersResponse?.orders]
+  );
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders].forEach((order) => {
+    [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
       const key = getOrderIdValue(order) || order?.createdAt;
       if (!key) return;
       orderMap.set(key, order);
@@ -336,7 +366,7 @@ const Orders = () => {
     return Array.from(orderMap.values()).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
-  }, [pendingOrders, preparingOrders, sseOrders]);
+  }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
 
   const totalPages = Math.max(
     1,
@@ -346,14 +376,14 @@ const Orders = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return combinedOrders.slice(start, start + itemsPerPage);
   }, [combinedOrders, currentPage, itemsPerPage]);
-  const loading = pendingLoading || preparingLoading || restaurantLoading;
+const loading = pendingLoading || preparingLoading || readyLoading || restaurantLoading;
   const error =
-    pendingError || preparingError || restaurantError
+    pendingError || preparingError || readyError || restaurantError
       ? getFriendlyOrderError(
-          pendingErrorObj || preparingErrorObj || restaurantError,
+          pendingErrorObj || preparingErrorObj || readyErrorObj || restaurantError,
           "fetch"
         )
-    : null;
+      : null;
 
   // Update bill modal live
   useEffect(() => {
@@ -434,9 +464,27 @@ const Orders = () => {
         );
       }
 
-      await updateOrderApi({ 
-        orderId: orderIdString, 
-        updatedData 
+      // If status is changing to "ready", mark all items as ready
+      if (nextStatus === "ready" && currentOrder?.items) {
+        try {
+          await Promise.all(
+            currentOrder.items
+              .filter(item => item._id && !item.isReady)
+              .map(item =>
+                toggleItemReadyApi({
+                  orderId: orderIdString,
+                  itemId: item._id
+                }).unwrap()
+              )
+          );
+        } catch (err) {
+          console.error("Failed to mark all items as ready:", err);
+        }
+      }
+
+      await updateOrderApi({
+        orderId: orderIdString,
+        updatedData
       }).unwrap();
 
       if (
@@ -450,6 +498,7 @@ const Orders = () => {
       notify("Order updated successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();
+      refetchReadyOrders();
       setEditingOrder(null);
     } catch (err) {
       if (previousPreparingStartedAt) {
@@ -460,6 +509,7 @@ const Orders = () => {
 
       refetchPendingOrders();
       refetchPreparingOrders();
+      refetchReadyOrders();
       console.error("Update order error:", err);
       notify(getFriendlyOrderError(err, "update"), "error");
     }
@@ -472,6 +522,7 @@ const Orders = () => {
       notify("Order deleted successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();
+      refetchReadyOrders();
       setShowConfirmDelete(null);
     } catch (err) {
       notify(getFriendlyOrderError(err, "delete"), "error");
@@ -505,7 +556,7 @@ const Orders = () => {
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
       <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
-        <Heading title="Pending Orders" />
+        <Heading title="Live Orders" />
       </div>
 
       {/* Orders Table */}

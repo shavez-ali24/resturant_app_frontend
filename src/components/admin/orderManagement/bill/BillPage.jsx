@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
   SelectContent,
@@ -18,17 +19,38 @@ import {
   recalcTotal,
 } from "../commonOrderFile/utils";
 
-const BillPage = ({ 
-  order, 
-  restaurantDetails, 
-  onClose, 
-  menuItems = [], 
+const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
+
+const broadcastItemReady = (orderId, itemId, isReady) => {
+  try {
+    const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+    channel.postMessage({ orderId, itemId, isReady });
+    channel.close();
+  } catch (e) {
+    console.warn("BroadcastChannel not supported:", e);
+  }
+};
+
+const listenForItemReady = (callback) => {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+  channel.onmessage = (event) => callback(event.data);
+  return () => channel.close();
+};
+
+const BillPage = ({
+  order,
+  restaurantDetails,
+  onClose,
+  menuItems = [],
   tables = [],
-  updateOrder 
+  updateOrder,
+  sseEvent
 }) => {
   const billRef = useRef();
   const user = useSelector((state) => state.admin.user);
   const isStaff = user?.role === "staff";
+  // const { sseEvent } = useNotification();
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [localOrderData, setLocalOrderData] = useState(null);
@@ -42,7 +64,8 @@ const BillPage = ({
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
   const [itemChecks, setItemChecks] = useState({});
-  const showItemChecks = ["pending", "preparing"].includes(
+  const [toggleItemReady] = useToggleItemReadyMutation();
+  const showItemChecks = ["pending", "preparing", "ready"].includes(
     String(order?.status || "").toLowerCase()
   );
 
@@ -205,35 +228,166 @@ const BillPage = ({
       setItemChecks({});
       return;
     }
+
+    // Initialize from order data's isReady field using item._id as key
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const orderChecks = {};
+
+    (activeOrder?.items || []).forEach((item) => {
+      if (item._id) {
+        orderChecks[item._id] = !!item?.isReady;
+      }
+    });
+
+    // Load from localStorage if available, but prioritize order data
     try {
       const saved = localStorage.getItem(
         `bill-item-checks:${orderStorageKey}`
       );
-      setItemChecks(saved ? JSON.parse(saved) : {});
+      if (saved) {
+        const savedChecks = JSON.parse(saved);
+        // Merge: use order data as source of truth, but keep any additional UI state from localStorage
+        const mergedChecks = { ...savedChecks };
+        Object.keys(orderChecks).forEach(key => {
+          mergedChecks[key] = orderChecks[key];
+        });
+        setItemChecks(mergedChecks);
+      } else {
+        setItemChecks(orderChecks);
+      }
     } catch (err) {
       console.error("Error loading item checks:", err);
-      setItemChecks({});
+      setItemChecks(orderChecks);
     }
-  }, [orderStorageKey, showItemChecks]);
+  }, [orderStorageKey, showItemChecks, order, localOrderData, isEditMode]);
 
+  // Handle real-time updates from SSE
   useEffect(() => {
-    if (!orderStorageKey || typeof window === "undefined") return;
-    if (!showItemChecks) {
-      localStorage.removeItem(`bill-item-checks:${orderStorageKey}`);
+    if (
+      sseEvent?.type !== "ORDER_UPDATED" ||
+      !sseEvent?.data ||
+      !orderStorageKey
+    ) {
       return;
     }
-    localStorage.setItem(
-      `bill-item-checks:${orderStorageKey}`,
-      JSON.stringify(itemChecks)
-    );
-  }, [orderStorageKey, itemChecks, showItemChecks]);
 
-  const toggleItemCheck = (itemKey) => {
-    setItemChecks((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey],
-    }));
+    const updatedOrder = sseEvent.data;
+    const updatedOrderId = updatedOrder._id || updatedOrder.id || updatedOrder.orderId;
+
+    if (String(updatedOrderId) === String(orderStorageKey)) {
+      // Update checkbox states based on the new order data
+      if (updatedOrder.items && showItemChecks) {
+        const newChecks = {};
+        updatedOrder.items.forEach(item => {
+          if (item._id) {
+            newChecks[item._id] = !!item.isReady;
+          }
+        });
+
+        // Update localStorage
+        try {
+          localStorage.setItem(`bill-item-checks:${orderStorageKey}`, JSON.stringify(newChecks));
+        } catch (err) {
+          console.error("Error updating localStorage:", err);
+        }
+
+        setItemChecks(newChecks);
+      }
+    }
+  }, [sseEvent, orderStorageKey, showItemChecks]);
+
+  // Update checkbox states when order data changes
+  useEffect(() => {
+    if (!showItemChecks || !orderStorageKey) return;
+
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const orderChecks = {};
+
+    (activeOrder?.items || []).forEach((item) => {
+      if (item._id) {
+        orderChecks[item._id] = !!item?.isReady;
+      }
+    });
+
+    setItemChecks(prev => {
+      const merged = { ...prev };
+      Object.keys(orderChecks).forEach(key => {
+        merged[key] = orderChecks[key];
+      });
+      return merged;
+    });
+  }, [order, localOrderData, isEditMode, showItemChecks, orderStorageKey]);
+
+  const toggleItemCheck = async (itemKey) => {
+    const currentValue = itemChecks[itemKey] || false;
+    const newValue = !currentValue;
+
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const item = (activeOrder?.items || []).find(item => item._id === itemKey);
+
+    if (item && item._id) {
+      try {
+        // Update local state immediately for UI responsiveness
+        setItemChecks((prev) => ({
+          ...prev,
+          [itemKey]: newValue,
+        }));
+
+        // Call backend API to update the order
+        await toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap();
+
+        // Broadcast to other tabs/windows using item._id as key
+        broadcastItemReady(orderStorageKey, item._id, newValue);
+      } catch (err) {
+        console.error("Failed to toggle item ready status:", err);
+        // Revert local state on error
+        setItemChecks((prev) => ({
+          ...prev,
+          [itemKey]: currentValue,
+        }));
+      }
+    }
   };
+
+  useEffect(() => {
+    if (!showItemChecks || !orderStorageKey) return () => {};
+
+    const cleanup = listenForItemReady(({ orderId, itemId, isReady }) => {
+      if (String(orderId) === String(orderStorageKey)) {
+        // itemId is the item._id from backend/KDS
+        setItemChecks((prev) => {
+          if (prev[itemId] === isReady) return prev;
+          return { ...prev, [itemId]: isReady };
+        });
+      }
+    });
+    return cleanup;
+  }, [orderStorageKey, showItemChecks]);
+
+  // When order status becomes "ready", mark all items as ready
+  useEffect(() => {
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    if (activeOrder?.status === "ready" && activeOrder?.items) {
+      const unreadyItems = activeOrder.items.filter(item => item._id && !item.isReady);
+      if (unreadyItems.length > 0) {
+        // Mark all unready items as ready
+        Promise.all(
+          unreadyItems.map(item =>
+            toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap()
+          )
+        ).then(() => {
+          // Update local state after successful API calls
+          const newChecks = {};
+          activeOrder.items.forEach(item => {
+            if (item._id) {
+              newChecks[item._id] = true;
+            }
+          });
+          setItemChecks(newChecks);
+        }).catch(console.error);
+      }
+    }
+  }, [order?.status, localOrderData?.status, orderStorageKey, isEditMode]);
 
   const activeOrder = isEditMode && localOrderData ? localOrderData : order;
   const activeOrderTypeKey = getOrderTypeKey(activeOrder?.orderType);
@@ -975,7 +1129,7 @@ const BillPage = ({
                   );
                   const itemQuantity = parseAmount(item.quantity ?? 1);
                   const itemTotal = itemPrice * itemQuantity;
-                  const itemKey = resolveItemCheckKey(item, i);
+                  const itemKey = item._id;
                   const isChecked = !!itemChecks[itemKey];
                   const itemVariant = item.variantName || item.variant;
                   
@@ -1044,7 +1198,7 @@ const BillPage = ({
                       <td className="py-1.5 px-2 text-right font-medium">
                         ₹{itemTotal.toFixed(2)}
                       </td>
-                      {showItemChecks && (
+                      {showItemChecks && item._id && (
                         <td className="no-print py-1.5 px-2 text-center">
                           <input
                             type="checkbox"

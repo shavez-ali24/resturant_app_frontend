@@ -10,6 +10,14 @@ module.exports = {
   			mostrate: [
   				'Mostra Nuova',
   				'sans-serif'
+  			],
+  			fredoka: [
+  				'Fredoka',
+  				'sans-serif'
+  			],
+  			outfit: [
+  				'Outfit',
+  				'sans-serif'
   			]
   		},
   		borderRadius: {

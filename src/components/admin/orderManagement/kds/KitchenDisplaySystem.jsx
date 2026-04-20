@@ -1,9 +1,23 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import audio from "@/assets/orderRing.mp3";
 import { useNotification } from "../../Bell/NotificationContext";
 import { useGetOrdersQuery, useUpdateOrderMutation } from "../../../../redux/adminRedux/adminAPI";
-import { Activity, ChefHat, Wifi, WifiOff } from "lucide-react";
+import {
+  Activity,
+  ChefHat,
+  Wifi,
+  WifiOff,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  CheckCircle2,
+  Inbox,
+  Clock,
+  Moon,
+  Sun
+} from "lucide-react";
 import KitchenDisplayCard from "./KitchenDisplayCard";
+import ReadyOrdersView from "./ReadyOrdersView";
 import {
   clearOrderPreparingStartedAt,
   getOrderPreparingStartedAt,
@@ -12,8 +26,6 @@ import {
 
 const POLLING_INTERVAL = 60000;
 const NEW_ORDER_HIGHLIGHT_MS = 12000;
-const KDS_ACTIVE_ORDER_CACHE_KEY = "kds-active-order-cache-v1";
-const KDS_CARD_ORDER_KEY = "kds-card-order-v1";
 
 const getOrders = (response) => (Array.isArray(response?.orders) ? response.orders : []);
 const getOrderId = (order) => String(order?._id || order?.id || order?.orderId || "");
@@ -53,34 +65,9 @@ const areSetsEqual = (left, right) => {
   }
   return true;
 };
-const areIdArraysEqual = (left, right) => {
-  if (left.length !== right.length) return false;
-  return left.every((value, index) => value === right[index]);
-};
-const readStorageJson = (key, fallback = []) => {
-  if (typeof window === "undefined") return fallback;
-
-  try {
-    const rawValue = window.localStorage.getItem(key);
-    if (!rawValue) return fallback;
-    const parsedValue = JSON.parse(rawValue);
-    return Array.isArray(parsedValue) ? parsedValue : fallback;
-  } catch {
-    return fallback;
-  }
-};
-const writeStorageJson = (key, value) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Ignore storage quota/access issues.
-  }
-};
 const keepKitchenStatusesOnly = (orders) =>
   (Array.isArray(orders) ? orders : []).filter((order) =>
-    ["pending", "preparing"].includes(getOrderStatus(order))
+    ["pending", "preparing", "ready"].includes(getOrderStatus(order))
   );
 
 const readAdminTheme = () => {
@@ -90,17 +77,34 @@ const readAdminTheme = () => {
 
 const KitchenDisplaySystem = () => {
   const { notify, sseEvent, sseConnected } = useNotification();
-  const [cachedOrders, setCachedOrders] = useState(() =>
-    keepKitchenStatusesOnly(readStorageJson(KDS_ACTIVE_ORDER_CACHE_KEY, []))
-  );
-  const [cardOrderIds, setCardOrderIds] = useState(() =>
-    readStorageJson(KDS_CARD_ORDER_KEY, []).map((id) => String(id))
-  );
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [eventOrdersById, setEventOrdersById] = useState({});
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem("kds_current_page");
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
+  const ITEMS_PER_PAGE = 4;
+
+  useEffect(() => {
+    localStorage.setItem("kds_current_page", currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = currentTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
   const [hiddenOrderIds, setHiddenOrderIds] = useState(new Set());
   const [newOrderIds, setNewOrderIds] = useState(new Set());
   const [optimisticStatusById, setOptimisticStatusById] = useState({});
   const [isDarkMode, setIsDarkMode] = useState(readAdminTheme);
+  const [activeTab, setActiveTab] = useState("active"); // "active" (pending/preparing) or "ready"
   const [audioEnabled, setAudioEnabled] = useState(false);
   const knownOrderIds = useRef(new Set());
   const newOrderTimers = useRef(new Map());
@@ -169,24 +173,39 @@ const KitchenDisplaySystem = () => {
       refetchOnMountOrArgChange: true,
     }
   );
+  const {
+    data: readyData = {},
+    isLoading: loadingReady,
+    refetch: refetchReady,
+  } = useGetOrdersQuery(
+    { status: "ready", page: 1, limit: 100, range: "all" },
+    {
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
+      refetchOnMountOrArgChange: true,
+    }
+  );
 
   const [updateOrderApi] = useUpdateOrderMutation();
 
   const pendingOrders = useMemo(() => getOrders(pendingData), [pendingData]);
   const preparingOrders = useMemo(() => getOrders(preparingData), [preparingData]);
+  const readyOrders = useMemo(() => getOrders(readyData), [readyData]);
+
   const fetchedActiveOrderMap = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders].forEach((order) => {
+    [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
       const id = getOrderId(order);
       if (!id) return;
       orderMap.set(id, order);
     });
     return orderMap;
-  }, [pendingOrders, preparingOrders]);
+  }, [pendingOrders, preparingOrders, readyOrders]);
 
   const activeOrders = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders].forEach((order) => {
+    [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
       const id = getOrderId(order);
       if (!id) return;
       orderMap.set(id, order);
@@ -205,56 +224,24 @@ const KitchenDisplaySystem = () => {
         const nextStatus = optimisticStatusById[id];
         return nextStatus ? { ...order, status: nextStatus } : order;
       })
-    ).sort(
-      (a, b) => {
-        const statusDelta =
-          (getOrderStatus(a) === "pending" ? 0 : 1) -
-          (getOrderStatus(b) === "pending" ? 0 : 1);
-
-        if (statusDelta !== 0) return statusDelta;
-        return getOrderCreatedAt(b) - getOrderCreatedAt(a);
-      }
-    );
-  }, [eventOrdersById, optimisticStatusById, pendingOrders, preparingOrders]);
-
-  const hasLoadedLiveOrders = !loadingPending && !loadingPreparing;
-  const sourceOrders = useMemo(() => {
-    if (activeOrders.length > 0 || hasLoadedLiveOrders) {
-      return activeOrders;
-    }
-
-    return cachedOrders;
-  }, [activeOrders, cachedOrders, hasLoadedLiveOrders]);
-
-  const orderedOrders = useMemo(() => {
-    const orderMap = new Map(
-      sourceOrders.map((order) => [getOrderId(order), order]).filter(([id]) => Boolean(id))
-    );
-    const nextOrders = [];
-    const seenIds = new Set();
-
-    cardOrderIds.forEach((id) => {
-      const matchedOrder = orderMap.get(id);
-      if (!matchedOrder) return;
-      nextOrders.push(matchedOrder);
-      seenIds.add(id);
-    });
-
-    sourceOrders.forEach((order) => {
-      const id = getOrderId(order);
-      if (!id || seenIds.has(id)) return;
-      nextOrders.push(order);
-    });
-
-    return nextOrders;
-  }, [cardOrderIds, sourceOrders]);
+    ).sort((a, b) => getOrderCreatedAt(a) - getOrderCreatedAt(b));
+  }, [eventOrdersById, optimisticStatusById, pendingOrders, preparingOrders, readyOrders]);
 
   const visibleOrders = useMemo(() => {
-    return orderedOrders.filter((order) => {
+    return activeOrders.filter((order) => {
       const id = getOrderId(order);
-      return !hiddenOrderIds.has(id);
+      if (hiddenOrderIds.has(id)) return false;
+
+      // Filter based on activeTab
+      if (activeTab === "active") {
+        return getOrderStatus(order) !== "ready";
+      } else if (activeTab === "ready") {
+        return getOrderStatus(order) === "ready";
+      }
+
+      return true;
     });
-  }, [hiddenOrderIds, orderedOrders]);
+  }, [hiddenOrderIds, activeOrders, activeTab]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -272,14 +259,15 @@ const KitchenDisplaySystem = () => {
   }, []);
 
   useEffect(() => {
-    if (!["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) return;
+    if (!["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type)) return;
     refetchPending();
     refetchPreparing();
-  }, [sseEvent, refetchPending, refetchPreparing]);
+    refetchReady();
+  }, [sseEvent, refetchPending, refetchPreparing, refetchReady]);
 
   useEffect(() => {
     if (
-      !["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type) ||
+      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type) ||
       !sseEvent?.data
     ) {
       return;
@@ -291,6 +279,16 @@ const KitchenDisplaySystem = () => {
     const incomingId = getOrderId(normalizedOrder);
     const incomingStatus = getOrderStatus(normalizedOrder);
     const eventTimestamp = sseEvent?.ts || Date.now();
+
+    // Debug: Log all order status changes
+    console.log("KDS SSE received:", {
+      type: sseEvent.type,
+      orderId: incomingId,
+      status: incomingStatus,
+      willRemove: !["pending", "preparing", "ready"].includes(incomingStatus)
+    });
+
+
 
     if (incomingStatus === "preparing") {
       const preparingStartedAtMs =
@@ -308,24 +306,24 @@ const KitchenDisplaySystem = () => {
 
     setEventOrdersById((prev) => {
       const next = { ...prev };
-      if (["pending", "preparing"].includes(incomingStatus)) {
+      if (["pending", "preparing", "ready"].includes(incomingStatus)) {
         next[incomingId] = mergeOrderData(prev[incomingId], normalizedOrder);
       } else {
+        // Order is completed or cancelled - remove from KDS view immediately
         delete next[incomingId];
       }
       return next;
     });
 
-    setCachedOrders((prev) => {
-      const existingOrder = prev.find((order) => getOrderId(order) === incomingId);
-      const nextOrders = prev.filter((order) => getOrderId(order) !== incomingId);
-
-      if (!["pending", "preparing"].includes(incomingStatus)) {
-        return nextOrders;
+    // Also update optimistic status to ensure immediate UI update
+    setOptimisticStatusById((prev) => {
+      const next = { ...prev };
+      if (!["pending", "preparing", "ready"].includes(incomingStatus)) {
+        delete next[incomingId];
+      } else {
+        next[incomingId] = incomingStatus;
       }
-
-      const mergedOrder = mergeOrderData(existingOrder, normalizedOrder);
-      return [...nextOrders, mergedOrder];
+      return next;
     });
 
     if (
@@ -482,34 +480,6 @@ const KitchenDisplaySystem = () => {
   }, [activeOrders]);
 
   useEffect(() => {
-    if (!hasLoadedLiveOrders) return;
-
-    const nextCachedOrders = keepKitchenStatusesOnly(activeOrders);
-    setCachedOrders(nextCachedOrders);
-  }, [activeOrders, hasLoadedLiveOrders]);
-
-  useEffect(() => {
-    writeStorageJson(KDS_ACTIVE_ORDER_CACHE_KEY, cachedOrders);
-  }, [cachedOrders]);
-
-  useEffect(() => {
-    const incomingIds = sourceOrders.map(getOrderId).filter(Boolean);
-    const incomingIdSet = new Set(incomingIds);
-
-    setCardOrderIds((prev) => {
-      const preservedIds = prev.filter((id) => incomingIdSet.has(id));
-      const preservedIdSet = new Set(preservedIds);
-      const freshIds = incomingIds.filter((id) => !preservedIdSet.has(id));
-      const next = [...preservedIds, ...freshIds];
-      return areIdArraysEqual(prev, next) ? prev : next;
-    });
-  }, [sourceOrders]);
-
-  useEffect(() => {
-    writeStorageJson(KDS_CARD_ORDER_KEY, cardOrderIds);
-  }, [cardOrderIds]);
-
-  useEffect(() => {
     const timers = newOrderTimers.current;
 
     return () => {
@@ -526,184 +496,247 @@ const KitchenDisplaySystem = () => {
     );
     const previousPreparingStartedAt = getOrderPreparingStartedAt(existingOrder);
 
-    if (nextStatus) {
-      if (nextStatus === "preparing") {
-        rememberOrderPreparingStartedAt(
-          normalizedOrderId,
-          previousPreparingStartedAt || Date.now()
-        );
-      } else {
-        clearOrderPreparingStartedAt(normalizedOrderId);
+    try {
+      // Optimistic update
+      if (nextStatus) {
+        if (nextStatus === "preparing") {
+          const preparingStartedAtMs =
+            previousPreparingStartedAt || Date.now();
+          rememberOrderPreparingStartedAt(normalizedOrderId, preparingStartedAtMs);
+
+          setEventOrdersById((prev) => ({
+            ...prev,
+            [normalizedOrderId]: mergeOrderData(existingOrder || {}, {
+              ...updatedData,
+              _id: normalizedOrderId,
+              preparingStartedAt: new Date(preparingStartedAtMs).toISOString(),
+            }),
+          }));
+        } else if (nextStatus === "pending" || nextStatus === "ready") {
+          clearOrderPreparingStartedAt(normalizedOrderId);
+          setEventOrdersById((prev) => ({
+            ...prev,
+            [normalizedOrderId]: mergeOrderData(existingOrder || {}, {
+              ...updatedData,
+              _id: normalizedOrderId,
+            }),
+          }));
+        } else {
+          // completed or cancelled - remove from view
+          clearOrderPreparingStartedAt(normalizedOrderId);
+          setEventOrdersById((prev) => {
+            const next = { ...prev };
+            delete next[normalizedOrderId];
+            return next;
+          });
+        }
+
+        setOptimisticStatusById((prev) => ({
+          ...prev,
+          [normalizedOrderId]: nextStatus,
+        }));
       }
 
-      setOptimisticStatusById((prev) => ({
-        ...prev,
-        [normalizedOrderId]: nextStatus,
-      }));
-      setCachedOrders((prev) =>
-        keepKitchenStatusesOnly(
-          prev.map((order) =>
-            getOrderId(order) === normalizedOrderId
-              ? { ...order, status: nextStatus }
-              : order
-          )
-        )
-      );
-    }
+      // API Call
+      await updateOrderApi({ 
+        orderId: normalizedOrderId, 
+        updatedData 
+      }).unwrap();
 
-    try {
-      await updateOrderApi({ orderId: normalizedOrderId, updatedData }).unwrap();
-      await Promise.allSettled([refetchPending(), refetchPreparing()]);
       if (options?.successMessage) {
         notify(options.successMessage, "success");
       } else if (!options?.silentSuccess) {
-        notify("KDS order status updated.", "success");
+        notify("Order status updated.", "success");
       }
+      
+      // Refetch for consistency
+      refetchPending();
+      refetchPreparing();
+      refetchReady();
+      
       return true;
     } catch (error) {
+      // Rollback
       if (previousPreparingStartedAt) {
-        rememberOrderPreparingStartedAt(
-          normalizedOrderId,
-          previousPreparingStartedAt
-        );
+        rememberOrderPreparingStartedAt(normalizedOrderId, previousPreparingStartedAt);
       } else {
         clearOrderPreparingStartedAt(normalizedOrderId);
       }
 
       console.error("KDS update failed", error);
-      await Promise.allSettled([refetchPending(), refetchPreparing()]);
       notify("Unable to update order status. Please try again.", "error");
+      
+      // Refetch to sync state
+      refetchPending();
+      refetchPreparing();
+      refetchReady();
+      
       return false;
     } finally {
-      if (nextStatus) {
-        setOptimisticStatusById((prev) => {
-          const next = { ...prev };
-          delete next[normalizedOrderId];
-          return next;
-        });
-      }
+      setOptimisticStatusById((prev) => {
+        const next = { ...prev };
+        delete next[normalizedOrderId];
+        return next;
+      });
     }
   };
 
-  const pendingCount = visibleOrders.filter((order) => getOrderStatus(order) === "pending").length;
-  const preparingCount = visibleOrders.filter((order) => getOrderStatus(order) === "preparing").length;
+  const pendingCount = activeOrders.filter((order) => getOrderStatus(order) === "pending").length;
+  const preparingCount = activeOrders.filter((order) => getOrderStatus(order) === "preparing").length;
+  const readyCount = activeOrders.filter((order) => getOrderStatus(order) === "ready").length;
   const orderCount = visibleOrders.length;
-  const isLoading = loadingPending || loadingPreparing;
+  const isLoading = loadingPending || loadingPreparing || loadingReady;
+
+  // Pagination Logic
+  const totalPages = Math.max(1, Math.ceil(visibleOrders.length / ITEMS_PER_PAGE));
+  
+  // Refined Pagination Clamping: Only clamp AFTER initial load to avoid resetting to Page 1 on refresh
+  useEffect(() => {
+    if (hasInitializedOrders.current && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return visibleOrders.slice(start, start + ITEMS_PER_PAGE);
+  }, [visibleOrders, currentPage]);
+
+  const handlePrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
+  const handleNextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
   return (
     <div
-      className={`min-h-screen font-mostrate ${
+      className={`h-[100dvh] w-screen overflow-hidden font-mostrate overscroll-none select-none ${
         isDarkMode
-          ? "bg-[linear-gradient(180deg,#0f172a_0%,#111827_48%,#020617_100%)] text-slate-100"
-          : "bg-[linear-gradient(180deg,#fffaf5_0%,#fffdfb_48%,#ffffff_100%)] text-slate-900"
+          ? "bg-[#111111] text-slate-100"
+          : "bg-[#F3F4F6] text-slate-900"
       }`}
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
     >
-      <div className="mx-auto min-h-screen max-w-[1800px] px-4 py-5 sm:px-6 lg:px-8">
+      <div className="h-full w-full px-1 py-1 flex flex-col overflow-hidden">
         <div
-          className={`flex flex-col gap-6 rounded-[2rem] border p-5 shadow-[0_20px_60px_-40px_rgba(249,115,22,0.35)] sm:p-6 ${
+          className={`flex flex-col gap-1.5 rounded-xl border p-2 shadow-sm flex-1 min-h-0 ${
             isDarkMode
-              ? "border-slate-800/80 bg-slate-950/90 shadow-[0_24px_70px_-40px_rgba(2,6,23,0.9)]"
-              : "border-orange-200/80 bg-white/95 shadow-[0_24px_70px_-40px_rgba(249,115,22,0.22)]"
+              ? "border-slate-800 bg-slate-900/90"
+              : "border-slate-200 bg-white"
           }`}
         >
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-3">
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.26em] shadow-sm ${
-                  isDarkMode
-                    ? "border-orange-500/30 bg-orange-500/10 text-orange-200"
-                    : "border-orange-300 bg-orange-100 text-orange-700"
-                }`}
-              >
-                <ChefHat size={14} />
-                Kitchen Display System
+          {/* Header Area - Small & Compact (Fixed) */}
+          <div className="relative flex flex-col gap-2 px-2 py-1 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0">
+            {/* Left Section: Brand & View */}
+            <div className="flex flex-col shrink-0 md:w-[250px]">
+              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                TapnBite
               </div>
-              <div className="space-y-2">
-                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-                  Live kitchen tickets
-                </h1>
+              <div className="flex items-center justify-between md:justify-start gap-4">
+              <div className={`text-lg font-black tracking-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+                {activeTab === "ready" ? "Ready Orders" : "Kitchen Display"}
+              </div>
+                {/* Time for mobile only */}
+                <div className="md:hidden">
+                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                    {formattedTime}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div
-                className={`rounded-3xl border px-4 py-3 ${
-                  isDarkMode
-                    ? "border-amber-500/20 bg-amber-500/10"
-                    : "border-amber-200 bg-amber-50"
-                }`}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-200">
-                  Pending
-                </p>
-                <p className="mt-2 text-[1.7rem] font-black">{pendingCount}</p>
+            {/* Global Time - Centered on MD+ */}
+            <div className="hidden md:flex md:absolute md:left-1/2 md:-translate-x-1/2 md:justify-center">
+              <div className={`text-xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                {formattedTime}
               </div>
-              <div
-                className={`rounded-3xl border px-4 py-3 ${
-                  isDarkMode
-                    ? "border-sky-500/20 bg-sky-500/10"
-                    : "border-sky-200 bg-sky-50"
-                }`}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-200">
-                  Preparing
-                </p>
-                <p className="mt-2 text-[1.7rem] font-black">{preparingCount}</p>
-              </div>
-              <div
-                className={`rounded-3xl border px-4 py-3 ${
-                  isDarkMode
-                    ? "border-slate-700 bg-slate-900"
-                    : "border-orange-200 bg-orange-50"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {sseConnected ? (
-                    <Wifi size={16} className="text-emerald-400" />
-                  ) : (
-                    <WifiOff size={16} className="text-orange-400" />
-                  )}
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em]">
-                  {sseConnected ? "Live Sync" : "Polling"}
-                  </p>
+            </div>
+
+            {/* Right Section: Pagination & Stats */}
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end md:gap-6">
+              {/* Pagination Info & Buttons */}
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
+                  Page {currentPage}/{totalPages}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                    className="flex h-8 items-center gap-1 rounded border-2 border-[#D32F2F] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#D32F2F] transition-all hover:bg-[#D32F2F] hover:text-white disabled:opacity-20"
+                  >
+                    <ChevronLeft size={14} strokeWidth={3} />
+                    <span>PREV</span>
+                  </button>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className="flex h-8 items-center gap-1 rounded border-2 border-[#D32F2F] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#D32F2F] transition-all hover:bg-[#D32F2F] hover:text-white disabled:opacity-20"
+                  >
+                    <span>NEXT</span>
+                    <ChevronRight size={14} strokeWidth={3} />
+                  </button>
                 </div>
-                <p className="mt-2 text-xl font-black">
-                  {isLoading ? "Loading..." : `${orderCount} active`}
-                </p>
               </div>
+
+            <div className="flex items-center gap-2 min-w-fit px-3 py-2 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm">
+              <span className="text-[11px] font-black tracking-wider uppercase text-slate-300">Orders</span>
+              <div className="flex items-center gap-2 ml-1">
+                <button
+                  onClick={() => setActiveTab("active")}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                    activeTab === "active"
+                      ? "bg-green-500 text-white shadow-lg scale-105"
+                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
+                  }`}
+                >
+                  <span className="h-3 w-3 rounded-full bg-green-400 shadow-sm"></span>
+                  <span className="text-[13px] font-black uppercase tracking-wide">Active</span>
+                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                    activeTab === "active" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
+                  }`}>
+                    {pendingCount + preparingCount}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("ready")}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 relative ${
+                    activeTab === "ready"
+                      ? "bg-blue-500 text-white shadow-lg scale-105"
+                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
+                  } ${readyCount > 0 ? "ring-2 ring-blue-400 ring-opacity-50" : ""}`}
+                >
+                  <span className="h-3 w-3 rounded-full bg-blue-400 shadow-sm"></span>
+                  <span className="text-[13px] font-black uppercase tracking-wide">Ready</span>
+                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                    activeTab === "ready" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
+                  }`}>
+                    {readyCount}
+                  </span>
+                </button>
+              </div>
+            </div>
             </div>
           </div>
 
           <div
-            className={`rounded-[2rem] border p-4 ${
-              isDarkMode ? "border-slate-800 bg-slate-950/70" : "border-orange-200 bg-orange-50/70"
+            className={`rounded-xl border p-1 flex-1 min-h-0 flex flex-col ${
+              isDarkMode ? "border-slate-800 bg-slate-950/50" : "border-slate-100 bg-slate-50/50"
             }`}
           >
             {isLoading && (
-              <div
-                className={`mb-4 rounded-3xl border px-4 py-4 text-center text-sm ${
-                  isDarkMode
-                    ? "border-slate-700 bg-slate-900 text-slate-300"
-                    : "border-orange-300 bg-orange-50 text-orange-800"
-                }`}
-              >
-                <div className="mx-auto inline-flex items-center gap-3">
-                  <span
-                    className={`h-4 w-4 animate-spin rounded-full border-2 ${
-                      isDarkMode
-                        ? "border-orange-300 border-t-transparent"
-                        : "border-orange-500 border-t-transparent"
-                    }`}
-                  />
-                  <span className="text-sm font-semibold tracking-wide">TapnBite Loading...</span>
-                </div>
+              <div className="mb-2 flex items-center justify-center gap-2 py-1 shrink-0">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600">TapnBite Loading...</span>
               </div>
             )}
 
-            <div className="min-h-[360px]">
-              {visibleOrders.length > 0 ? (
-                <div className="grid auto-rows-min items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                  {visibleOrders.map((order) => {
+            <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
+              {paginatedOrders.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 pb-10">
+                  {paginatedOrders.map((order) => {
                     const orderId = getOrderId(order);
                     return (
                       <KitchenDisplayCard
@@ -712,6 +745,7 @@ const KitchenDisplaySystem = () => {
                         isDarkMode={isDarkMode}
                         isNewOrder={newOrderIds.has(orderId)}
                         updateOrder={handleOrderStatusChange}
+                        onStatusReady={() => setActiveTab("ready")}
                         onDismiss={(dismissedOrderId) =>
                           setHiddenOrderIds((prev) => new Set(prev).add(String(dismissedOrderId)))
                         }

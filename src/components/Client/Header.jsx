@@ -496,7 +496,7 @@ export default function Header({
         return;
       }
 
-      if (payload?.type === "ORDER_STATUS_CHANGED" && payload.data) {
+      if (["ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(payload?.type) && payload.data) {
         const updatedOrder = payload.data;
         const orderId =
           updatedOrder?._id || updatedOrder?.id || updatedOrder?.orderId;
@@ -510,15 +510,19 @@ export default function Header({
           );
 
           if (idx === -1) {
+            // Only add if it's a relevant status or a generic update
             return [updatedOrder, ...next];
           }
 
+          // Merge updated data
           next[idx] = { ...next[idx], ...updatedOrder };
           return next;
         });
 
         pulseOrdersIcon();
-        showOrderStatusBanner(updatedOrder);
+        if (payload.type === "ORDER_STATUS_CHANGED") {
+          showOrderStatusBanner(updatedOrder);
+        }
         refetch();
       }
     };
@@ -941,8 +945,8 @@ export default function Header({
             <AnimatePresence>
               {!isAccordionOpen && (
                 <motion.div
-                  className="fixed bottom-2 left-2 right-2"
-                  initial={{ y: 64, opacity: 0, scale: 0.88 }}
+              className="fixed bottom-2 left-2 right-2"
+              initial={{ y: 64, opacity: 0, scale: 0.88 }}
                   animate={{ y: 0, opacity: 1, scale: 1 }}
                   exit={{ y: 56, opacity: 0, scale: 0.94 }}
                   transition={{ type: "spring", stiffness: 320, damping: 26, mass: 0.78 }}
@@ -1094,7 +1098,7 @@ export default function Header({
 
                               <div className="flex-1 min-w-0 flex flex-col">
                                 <div className="flex min-w-0 items-center gap-1.5">
-                                  <p className="truncate text-sm font-semibold leading-tight tracking-tight text-slate-900">
+                                  <p className="line-clamp-2 break-words text-sm font-semibold leading-tight tracking-tight text-slate-900 flex-1">
                                     {item.name}
                                   </p>
                                   {item.variantLabel ? (
@@ -1234,7 +1238,11 @@ export default function Header({
         >
           <Link to="/" className="flex items-center space-x-2">
             {logo && <img src={logo} alt="Logo" className="h-12 w-auto" />}
-            <span className={`font-mostrate text-xl drop-shadow-[0_1px_0_rgba(249,115,22,0.15)] sm:text-2xl ${isDarkMode ? "text-orange-400" : "text-primary"}`}>
+            <span className={`font-fredoka text-xl font-semibold tracking-wide sm:text-2xl ${
+              isDarkMode 
+                ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]" 
+                : "text-orange-600 drop-shadow-[0_0_8px_rgba(234,88,12,0.4)]"
+            }`}>
               {siteName}
             </span>
           </Link>
@@ -1459,6 +1467,13 @@ export default function Header({
                     }`}>
                       <div className="grid grid-cols-[72px_1fr] items-center gap-x-2.5 gap-y-2.5">
                         <span className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                          Order ID
+                        </span>
+                        <p className={`truncate text-[15px] font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+                          #{String(order._id || order.id || order.orderId || "").slice(-4).toUpperCase()}
+                        </p>
+
+                        <span className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
                           Name
                         </span>
                         <p className={`truncate text-[15px] font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
@@ -1515,6 +1530,8 @@ export default function Header({
                                   ? "border-amber-500/50 bg-amber-500/15 text-amber-200 ring-amber-500/30"
                                   : String(order.status || "").toLowerCase() === "preparing"
                                   ? "border-teal-500/50 bg-teal-500/15 text-teal-200 ring-teal-500/30"
+                                  : String(order.status || "").toLowerCase() === "ready"
+                                  ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
                                   : String(order.status || "").toLowerCase() === "completed"
                                   ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
                                   : String(order.status || "").toLowerCase() === "cancelled"
@@ -1524,6 +1541,8 @@ export default function Header({
                                 ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 ring-amber-200/80"
                                 : String(order.status || "").toLowerCase() === "preparing"
                                 ? "border-teal-200 bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 ring-teal-200/70"
+                                : String(order.status || "").toLowerCase() === "ready"
+                                ? "border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 ring-blue-200/70"
                                 : String(order.status || "").toLowerCase() === "completed"
                                 ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
                                 : String(order.status || "").toLowerCase() === "cancelled"
@@ -1537,6 +1556,8 @@ export default function Header({
                                   ? "bg-amber-600"
                                   : String(order.status || "").toLowerCase() === "preparing"
                                   ? "bg-teal-600"
+                                  : String(order.status || "").toLowerCase() === "ready"
+                                  ? "bg-blue-600"
                                   : String(order.status || "").toLowerCase() === "completed"
                                   ? "bg-green-600"
                                   : String(order.status || "").toLowerCase() === "cancelled"

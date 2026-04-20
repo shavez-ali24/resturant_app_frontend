@@ -1,9 +1,11 @@
 import * as React from "react";
 import {
-  SquareMenu,
+  Utensils,
   User,
-  ListOrdered,
-  ChartNoAxesCombined,
+  ClipboardList,
+  TrendingUp,
+  Boxes,
+  ChefHat,
 } from "lucide-react";
 import { NavMain } from "@/components/admin/adminLayout/nav-main";
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -56,14 +58,26 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
 
   // Define navigation items based on role
   const navMain = [
+    ...(isAdmin || isStaff
+      ? [
+          {
+            title: "Kitchen KDS",
+            url: "#",
+            icon: ChefHat,
+            isActive: true,
+            roles: ["admin", "staff"],
+            items: [{ title: "Kitchen View", url: "/kds", target: "_blank" }],
+          },
+        ]
+      : []),
     {
-      title: "Order Management",
+      title: "Orders",
       url: "#",
-      icon: ListOrdered,
+      icon: ClipboardList,
       isActive: true,
       roles: ["admin", "staff"],
       items: [
-        { title: "Pending Orders", url: "/admin/orders" },
+        { title: "Live Orders", url: "/admin/orders" },
         { title: "Completed Orders", url: "/admin/completedorder" },
         { title: "Cancelled Orders", url: "/admin/cancelledorder" },
       ],
@@ -71,51 +85,39 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     ...(isAdmin || isStaff
       ? [
           {
-            title: "Menu Management",
+            title: "Digital Menu",
             url: "#",
-            icon: SquareMenu,
+            icon: Utensils,
             isActive: true,
             roles: ["admin", "staff"],
-            items: [{ title: "Menu", url: "/admin/menu" }],
+            items: [{ title: "Edit Menu", url: "/admin/menu" }],
           },
         ]
       : []),
     ...(isAdmin
       ? [
           {
-            title: "Observability",
+            title: "Inventory",
             url: "#",
-            icon: ChartNoAxesCombined,
+            icon: Boxes,
+            isActive: true,
+            roles: ["admin"],
+            items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            title: "Analytics",
+            url: "#",
+            icon: TrendingUp,
             isActive: true,
             roles: ["admin"],
             items: [
               { title: "Revenue", url: "/admin/revenue" },
               { title: "Sales", url: "/admin/sales" },
             ],
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? [
-          {
-            title: "Inventory Management",
-            url: "#",
-            icon: SquareMenu,
-            isActive: true,
-            roles: ["admin"],
-            items: [{ title: "coming soon", url: "/admin/comingsoon" }],
-          },
-        ]
-      : []),
-    ...(isAdmin || isStaff
-      ? [
-          {
-            title: "Kitchen Display System",
-            url: "#",
-            icon: SquareMenu,
-            isActive: true,
-            roles: ["admin", "staff"],
-            items: [{ title: "Order Display", url: "/kds", target: "_blank" }],
           },
         ]
       : []),

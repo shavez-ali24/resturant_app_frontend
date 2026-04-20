@@ -494,142 +494,137 @@ export default function TopSellingAnalytics() {
     <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-          <div>
-            <Heading title="Top Selling Analytics" />
-            <p className="text-gray-600 mt-2">
-              Analyze your best performing products and categories
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Time Range Selector */}
-            <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-              <SelectTrigger className={selectTriggerClass}>
-                <Calendar className="w-4 h-4 mr-2 text-orange-500" />
-                <SelectValue placeholder="Select Range" />
-              </SelectTrigger>
-              <SelectContent className={selectContentClass}>
-                {timeRangeOptions.map((option) => (
-                  <SelectItem 
-                    key={option.value} 
-                    value={option.value}
-                    className={selectItemClass}
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <Heading title="Top Selling Analytics" />
+              <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+                Analyze your top selling products and categories
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Time Range Selector */}
+              <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+                <SelectTrigger className={selectTriggerClass}>
+                  <Calendar className="w-4 h-4 mr-2 text-orange-500" />
+                  <SelectValue placeholder="Select Range" />
+                </SelectTrigger>
+                <SelectContent className={selectContentClass}>
+                  {timeRangeOptions.map((option) => (
+                    <SelectItem 
+                      key={option.value} 
+                      value={option.value}
+                      className={selectItemClass}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {/* Custom Date Picker Button */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
-                  ${showDatePicker || isCustomRange
-                    ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
-                    : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300'}`}
-              >
-                <CalendarDays className="w-4 h-4" />
-                <span>Custom Range</span>
-                {isCustomRange && (
-                  <span className="ml-1 text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full">
-                    ✓
-                  </span>
-                )}
-                <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showDatePicker && (
-                <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80">
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-800 text-center border-b border-orange-100 pb-2">Select Custom Date Range</h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">From Date</label>
-                        <input 
-                          type="date" 
-                          className={inputClass}
-                          value={fromDate} 
-                          onChange={e => setFromDate(e.target.value)} 
-                          max={toDate}
-                        />
+              {/* Custom Date Picker Button */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
+                    ${showDatePicker || isCustomRange
+                      ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
+                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'}`}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Custom Range</span>
+                  {isCustomRange && (
+                    <span className="ml-1 text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full">
+                      ✓
+                    </span>
+                  )}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showDatePicker && (
+                  <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80 dark:border-slate-700 dark:bg-slate-900">
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-gray-800 dark:text-slate-100 text-center border-b border-orange-100 dark:border-slate-700 pb-2">Select Custom Date Range</h4>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">From Date</label>
+                          <input 
+                            type="date" 
+                            className={inputClass}
+                            value={fromDate} 
+                            onChange={e => setFromDate(e.target.value)} 
+                            max={toDate}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">To Date</label>
+                          <input 
+                            type="date" 
+                            className={inputClass}
+                            value={toDate} 
+                            onChange={e => setToDate(e.target.value)} 
+                            min={fromDate}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">To Date</label>
-                        <input 
-                          type="date" 
-                          className={inputClass}
-                          value={toDate} 
-                          onChange={e => setToDate(e.target.value)} 
-                          min={fromDate}
-                        />
-                      </div>
-                    </div>
-                    
-                    {isCustomRange && (
-                      <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-orange-700">Custom Range Active</span>
+                      
+                      {isCustomRange && (
+                        <div className="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Custom Range Active</span>
+                            <button 
+                              onClick={handleClearCustomRange}
+                              className="text-xs text-orange-600 hover:text-orange-800 underline dark:text-orange-400 dark:hover:text-orange-300"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">
+                            {formatFullDate(fromDate)} to {formatFullDate(toDate)}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-end items-center pt-3 border-t border-orange-100 dark:border-slate-700">
+                        <div className="flex gap-2">
                           <button 
-                            onClick={handleClearCustomRange}
-                            className="text-xs text-orange-600 hover:text-orange-800 underline"
+                            onClick={() => {
+                              setShowDatePicker(false);
+                              if (!isCustomRange) {
+                                handleResetDate();
+                              }
+                            }} 
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                           >
-                            Clear
+                            Cancel
+                          </button>
+
+                          <button 
+                            onClick={handleCustomApply} 
+                            disabled={!fromDate || !toDate}
+                            className={primaryButtonClass}
+                          >
+                            Apply
                           </button>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {formatFullDate(fromDate)} to {formatFullDate(toDate)}
-                        </p>
                       </div>
-                    )}
-                    
-                    <div className="flex justify-end items-center pt-3 border-t border-orange-100">
-                      {/* <button 
-                        onClick={handleResetDate}
-                        className="px-2.5 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-orange-100 rounded-md transition-colors"
-                      >
-                        Reset to 30 days
-                      </button> */}
 
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => {
-                            setShowDatePicker(false);
-                            if (!isCustomRange) {
-                              handleResetDate();
-                            }
-                          }} 
-                          className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
-                        >
-                          Cancel
-                        </button>
-
-                        <button 
-                          onClick={handleCustomApply} 
-                          disabled={!fromDate || !toDate}
-                          className={primaryButtonClass}
-                        >
-                          Apply
-                        </button>
-                      </div>
                     </div>
-
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing || isRefreshQueued}
-              className={secondaryButtonClass}
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-            </button>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isRefreshQueued}
+                className={secondaryButtonClass}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
