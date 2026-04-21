@@ -216,7 +216,7 @@ const KitchenDisplayCard = ({
     return cleanup;
   }, [orderId]);
 
-  // When order status becomes "ready", mark all items as ready and switch to ready tab
+  // When order status becomes "ready", mark all items as ready
   useEffect(() => {
     if (status === "ready" && itemRows.length > 0) {
       const unreadyItems = itemRows.filter(item => !item.isReady);
@@ -228,10 +228,8 @@ const KitchenDisplayCard = ({
           )
         ).catch(console.error);
       }
-      // Switch to ready tab
-      onStatusReady?.();
     }
-  }, [status, orderId, itemRows, onStatusReady]);
+  }, [status, orderId, itemRows]);
 
 
 

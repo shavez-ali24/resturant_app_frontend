@@ -520,7 +520,7 @@ export default function Header({
         });
 
         pulseOrdersIcon();
-        if (payload.type === "ORDER_STATUS_CHANGED") {
+        if (payload.type === "ORDER_UPDATED") {
           showOrderStatusBanner(updatedOrder);
         }
         refetch();

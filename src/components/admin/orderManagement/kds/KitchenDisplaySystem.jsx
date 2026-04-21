@@ -234,8 +234,10 @@ const KitchenDisplaySystem = () => {
 
       // Filter based on activeTab
       if (activeTab === "active") {
-        return getOrderStatus(order) !== "ready";
+        // Show only pending and preparing in active tab (exclude ready)
+        return ["pending", "preparing"].includes(getOrderStatus(order));
       } else if (activeTab === "ready") {
+        // Show only ready orders in ready tab
         return getOrderStatus(order) === "ready";
       }
 
@@ -584,6 +586,7 @@ const KitchenDisplaySystem = () => {
   const pendingCount = activeOrders.filter((order) => getOrderStatus(order) === "pending").length;
   const preparingCount = activeOrders.filter((order) => getOrderStatus(order) === "preparing").length;
   const readyCount = activeOrders.filter((order) => getOrderStatus(order) === "ready").length;
+  const activeTabCount = pendingCount + preparingCount;
   const orderCount = visibleOrders.length;
   const isLoading = loadingPending || loadingPreparing || loadingReady;
 
@@ -694,10 +697,10 @@ const KitchenDisplaySystem = () => {
                 >
                   <span className="h-3 w-3 rounded-full bg-green-400 shadow-sm"></span>
                   <span className="text-[13px] font-black uppercase tracking-wide">Active</span>
-                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                    activeTab === "active" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
-                  }`}>
-                    {pendingCount + preparingCount}
+                   <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                     activeTab === "active" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
+                   }`}>
+                     {activeTabCount}
                   </span>
                 </button>
                 <button
@@ -745,7 +748,6 @@ const KitchenDisplaySystem = () => {
                         isDarkMode={isDarkMode}
                         isNewOrder={newOrderIds.has(orderId)}
                         updateOrder={handleOrderStatusChange}
-                        onStatusReady={() => setActiveTab("ready")}
                         onDismiss={(dismissedOrderId) =>
                           setHiddenOrderIds((prev) => new Set(prev).add(String(dismissedOrderId)))
                         }

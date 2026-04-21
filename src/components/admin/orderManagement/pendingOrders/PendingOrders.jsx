@@ -112,39 +112,35 @@ const Orders = () => {
     isError: preparingError,
     error: preparingErrorObj,
     refetch: refetchPreparingOrders,
-  } = useGetOrdersQuery(
-    {
-      status: "preparing",
-      page: 1,
-      limit: combinedFetchLimit,
-      range: "all",
-    },
-    {
-      pollingInterval,
-      refetchOnFocus: refetchOnAction,
-      refetchOnReconnect: refetchOnAction,
-    }
-  );
+   } = useGetOrdersQuery(
+     {
+       status: "preparing",
+       page: 1,
+       limit: combinedFetchLimit,
+       range: "all",
+     },
+     {
+       pollingInterval,
+       refetchOnFocus: refetchOnAction,
+       refetchOnReconnect: refetchOnAction,
+     }
+   );
 
-  const {
-    data: readyOrdersResponse = {},
-    isLoading: readyLoading,
-    isError: readyError,
-    error: readyErrorObj,
-    refetch: refetchReadyOrders,
-  } = useGetOrdersQuery(
-    {
-      status: "ready",
-      page: 1,
-      limit: combinedFetchLimit,
-      range: "all",
-    },
-    {
-      pollingInterval,
-      refetchOnFocus: refetchOnAction,
-      refetchOnReconnect: refetchOnAction,
-    }
-  );
+   const { data: readyOrdersResponse = {}, refetch: refetchReadyOrders } = useGetOrdersQuery(
+     {
+       status: "ready",
+       page: 1,
+       limit: combinedFetchLimit,
+       range: "all",
+     },
+     {
+       pollingInterval,
+       refetchOnFocus: refetchOnAction,
+       refetchOnReconnect: refetchOnAction,
+     }
+   );
+
+
 
   const { data: menuItems = [] } = useGetMenuQuery();
   
@@ -250,6 +246,9 @@ const Orders = () => {
     if (status === 429) {
       return "Too many requests. Please wait a moment and try again.";
     }
+    if (status === 400) {
+      return errorObj?.data?.message || "Invalid request parameters.";
+    }
     if (status >= 500) {
       return "Server issue detected. Please try again in a moment.";
     }
@@ -348,6 +347,7 @@ const Orders = () => {
         : [],
     [readyOrdersResponse?.orders]
   );
+
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
     [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
@@ -363,6 +363,7 @@ const Orders = () => {
       orderMap.set(key, existingOrder ? mergeOrderData(existingOrder, order) : order);
     });
 
+    // Show all orders (pending, preparing, ready) in live view
     return Array.from(orderMap.values()).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
@@ -376,14 +377,14 @@ const Orders = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return combinedOrders.slice(start, start + itemsPerPage);
   }, [combinedOrders, currentPage, itemsPerPage]);
-const loading = pendingLoading || preparingLoading || readyLoading || restaurantLoading;
-  const error =
-    pendingError || preparingError || readyError || restaurantError
-      ? getFriendlyOrderError(
-          pendingErrorObj || preparingErrorObj || readyErrorObj || restaurantError,
-          "fetch"
-        )
-      : null;
+   const loading = pendingLoading || preparingLoading || restaurantLoading;
+   const error =
+     pendingError || preparingError || restaurantError
+       ? getFriendlyOrderError(
+           pendingErrorObj || preparingErrorObj || restaurantError,
+           "fetch"
+         )
+       : null;
 
   // Update bill modal live
   useEffect(() => {
