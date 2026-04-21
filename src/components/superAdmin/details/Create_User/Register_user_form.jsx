@@ -24,7 +24,7 @@ const registerSchema = z.object({
   domain: z
     .string()
     .min(3, "Domain must be at least 3 characters")
-    .regex(/\.com$/i, "Domain must end with .com"),
+    ,
   restaurantName: z.string().min(2, "Restaurant name must be at least 2 characters").optional()
 }).refine((data) => {
   if (data.role === "admin") {

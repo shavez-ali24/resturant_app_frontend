@@ -20,6 +20,7 @@ import {
 } from "../commonOrderFile/utils";
 
 const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
+const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
 
 const broadcastItemReady = (orderId, itemId, isReady) => {
   try {
@@ -31,9 +32,26 @@ const broadcastItemReady = (orderId, itemId, isReady) => {
   }
 };
 
+const broadcastOrderStatus = (orderId, status) => {
+  try {
+    const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
+    channel.postMessage({ orderId, status });
+    channel.close();
+  } catch (e) {
+    console.warn("BroadcastChannel not supported:", e);
+  }
+};
+
 const listenForItemReady = (callback) => {
   if (typeof BroadcastChannel === "undefined") return () => {};
   const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+  channel.onmessage = (event) => callback(event.data);
+  return () => channel.close();
+};
+
+const listenForOrderStatus = (callback) => {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
   channel.onmessage = (event) => callback(event.data);
   return () => channel.close();
 };
@@ -52,10 +70,11 @@ const BillPage = ({
   const isStaff = user?.role === "staff";
   // const { sseEvent } = useNotification();
   
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [localOrderData, setLocalOrderData] = useState(null);
-  const [selectedTableId, setSelectedTableId] = useState("");
-  const [address, setAddress] = useState("");
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [localOrderData, setLocalOrderData] = useState(null);
+   const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
+   const [selectedTableId, setSelectedTableId] = useState("");
+   const [address, setAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -192,34 +211,44 @@ const BillPage = ({
     return () => observer.disconnect();
   }, []);
 
-  // Initialize local order data
-  useEffect(() => {
-    if (order) {
-      const orderItems = Array.isArray(order.items) ? order.items : [];
-      const normalizedItems = normalizeItemsWithBillKeys(
-        orderItems.map((item) => ({
-          ...item,
-          menuItemId: item.menuItemId || item.menuItem?._id || item._id,
-          name: item.name || item.menuItem?.name || "",
-          price: item.discountedPrice || item.price || 0,
-          quantity: item.quantity || 1,
-          variantName: item.variant || item.variantName || null,
-          variants: item.variants || item.menuItem?.variantRates || null,
-          customizations: item.customizations || ""
-        })),
-        localOrderData?.items || []
-      );
+   // Initialize local order data and capture initial snapshot
+   useEffect(() => {
+     if (order) {
+       const orderItems = Array.isArray(order.items) ? order.items : [];
+       const normalizedItems = normalizeItemsWithBillKeys(
+         orderItems.map((item) => ({
+           ...item,
+           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
+           name: item.name || item.menuItem?.name || "",
+           price: item.discountedPrice || item.price || 0,
+           quantity: item.quantity || 1,
+           variantName: item.variant || item.variantName || null,
+           variants: item.variants || item.menuItem?.variantRates || null,
+           customizations: item.customizations || ""
+         })),
+         localOrderData?.items || []
+       );
 
-      const newLocalOrderData = {
-        ...order,
-        items: normalizedItems,
-      };
-      
-      setLocalOrderData(newLocalOrderData);
-      setSelectedTableId(order.tableId || "");
-      setAddress(order.address || "");
-    }
-  }, [order]);
+       const newLocalOrderData = {
+         ...order,
+         items: normalizedItems,
+       };
+
+       setLocalOrderData(newLocalOrderData);
+       setSelectedTableId(order.tableId || "");
+       setAddress(order.address || "");
+
+       // Capture initial snapshot for comparison on save
+       setInitialOrderSnapshot({
+         status: newLocalOrderData.status,
+         items: newLocalOrderData.items.map(item => ({
+           _id: item._id,
+           menuItemId: item.menuItemId
+         })),
+         itemCount: newLocalOrderData.items.length
+       });
+     }
+   }, [order]);
 
   useEffect(() => {
     if (!orderStorageKey || typeof window === "undefined") return;
@@ -354,7 +383,6 @@ const BillPage = ({
 
     const cleanup = listenForItemReady(({ orderId, itemId, isReady }) => {
       if (String(orderId) === String(orderStorageKey)) {
-        // itemId is the item._id from backend/KDS
         setItemChecks((prev) => {
           if (prev[itemId] === isReady) return prev;
           return { ...prev, [itemId]: isReady };
@@ -363,6 +391,25 @@ const BillPage = ({
     });
     return cleanup;
   }, [orderStorageKey, showItemChecks]);
+
+  // Listen for order status changes from KDS
+  useEffect(() => {
+    if (!orderStorageKey) return () => {};
+
+    const cleanup = listenForOrderStatus(({ orderId, status }) => {
+      if (String(orderId) === String(orderStorageKey)) {
+        // Update local order data if in edit mode, or just log
+        setLocalOrderData((prev) => {
+          if (!prev) return prev;
+          if (String(prev.status) === String(status)) return prev;
+          return { ...prev, status };
+        });
+        // Also update the original order prop (will be overwritten by parent state but helps immediate UI)
+        // The parent component should update via SSE anyway
+      }
+    });
+    return cleanup;
+  }, [orderStorageKey]);
 
   // When order status becomes "ready", mark all items as ready
   useEffect(() => {
@@ -659,72 +706,99 @@ const BillPage = ({
     setAddress(e.target.value);
   };
 
-  // Save changes
-  const handleSaveChanges = async () => {
-    if (isSubmitting || !localOrderData) return;
-    
-    // Validation
-    if (localOrderData.items.length === 0) {
-      setError("Minimum 1 item required");
-      return;
-    }
+   // Save changes
+   const handleSaveChanges = async () => {
+     if (isSubmitting || !localOrderData) return;
+     
+     // Validation
+     if (localOrderData.items.length === 0) {
+       setError("Minimum 1 item required");
+       return;
+     }
 
-    const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
-    
-    if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
-      setError("Please select a table for Eat Here order");
-      return;
-    }
-    
-    if (selectedOrderTypeKey === "delivery" && !address.trim()) {
-      setError("Please enter address for Delivery order");
-      return;
-    }
+     const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
+     
+     if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
+       setError("Please select a table for Eat Here order");
+       return;
+     }
+     
+     if (selectedOrderTypeKey === "delivery" && !address.trim()) {
+       setError("Please enter address for Delivery order");
+       return;
+     }
 
-    setIsSubmitting(true);
-    setError("");
+     setIsSubmitting(true);
+     setError("");
 
-    try {
-      const payload = {
-        status: localOrderData.status,
-        orderType: localOrderData.orderType,
-        items: localOrderData.items.map(item => ({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          variant: item.variantName || null,
-          customizations: item.customizations || ""
-        }))
-      };
+     try {
+       const initialStatus = initialOrderSnapshot?.status;
+       const currentStatus = localOrderData.status;
+       const initialItemCount = initialOrderSnapshot?.itemCount || 0;
+       const currentItemCount = localOrderData.items.length;
+       const isAddingNewItems = currentItemCount > initialItemCount;
 
-      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        payload.tableId = selectedTableId;
-      }
+       const payload = {
+         orderType: localOrderData.orderType,
+         items: localOrderData.items.map(item => {
+           const payloadItem = {
+             menuItemId: item.menuItemId,
+             quantity: item.quantity,
+             variant: item.variantName || null,
+             customizations: item.customizations || ""
+           };
+           if (item._id) {
+             payloadItem._id = item._id;
+           }
+           return payloadItem;
+         })
+       };
 
-      if (selectedOrderTypeKey === "delivery" && address.trim()) {
-        payload.address = address.trim();
-        payload.deliveryCharges =
-          parseAmount(localOrderData?.deliveryCharges) ||
-          parseAmount(restaurantDetails?.deliveryCharges) ||
-          0;
-      }
+       // Include status if it changed OR we need to force preparing
+       let statusChanged = false;
+       if (initialStatus === "ready" && isAddingNewItems) {
+         payload.status = "preparing";
+         statusChanged = true;
+       } else if (currentStatus !== initialStatus) {
+         payload.status = currentStatus;
+         statusChanged = true;
+       }
 
-      if (selectedOrderTypeKey === "take_away") {
-        payload.tableId = null;
-        payload.address = null;
-      }
+       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
+         payload.tableId = selectedTableId;
+       }
 
-      await updateOrder({
-        orderId: localOrderData._id,
-        updatedData: payload,
-      }).unwrap();
-      setIsEditMode(false);
-    } catch (err) {
-      console.error("Update Order Failed:", err);
-      setError(err?.data?.message || "Failed to update order");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+       if (selectedOrderTypeKey === "delivery" && address.trim()) {
+         payload.address = address.trim();
+         payload.deliveryCharges =
+           parseAmount(localOrderData?.deliveryCharges) ||
+           parseAmount(restaurantDetails?.deliveryCharges) ||
+           0;
+       }
+
+       if (selectedOrderTypeKey === "take_away") {
+         payload.tableId = null;
+         payload.address = null;
+       }
+
+       await updateOrder({
+         orderId: localOrderData._id,
+         updatedData: payload,
+       }).unwrap();
+       
+       // Broadcast order status change if status was updated
+       if (statusChanged && payload.status) {
+         broadcastOrderStatus(localOrderData._id, payload.status);
+       }
+       
+       setIsEditMode(false);
+     } catch (err) {
+       console.error("Update Order Failed:", err);
+       setError(err?.data?.message || "Failed to update order");
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
 
   // Cancel edit
   const handleCancelEdit = () => {

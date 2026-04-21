@@ -18,6 +18,7 @@ import {
 } from "../commonOrderFile/utils";
 
 const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
+const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
 
 const broadcastItemReady = (orderId, itemId, isReady) => {
   try {
@@ -29,9 +30,26 @@ const broadcastItemReady = (orderId, itemId, isReady) => {
   }
 };
 
+const broadcastOrderStatus = (orderId, status) => {
+  try {
+    const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
+    channel.postMessage({ orderId, status });
+    channel.close();
+  } catch (e) {
+    console.warn("BroadcastChannel not supported:", e);
+  }
+};
+
 const listenForItemReady = (callback) => {
   if (typeof BroadcastChannel === "undefined") return () => {};
   const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+  channel.onmessage = (event) => callback(event.data);
+  return () => channel.close();
+};
+
+const listenForOrderStatus = (callback) => {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
   channel.onmessage = (event) => callback(event.data);
   return () => channel.close();
 };
@@ -75,104 +93,127 @@ const getItemQuantity = (item) => {
   return Number.isFinite(quantity) ? Math.max(1, quantity) : 1;
 };
 
-const KitchenDisplayCard = ({
-  order,
-  isDarkMode,
-  isNewOrder,
-  updateOrder,
-  onStatusReady,
-  onDismiss,
-}) => {
-  const [toggleItemReady] = useToggleItemReadyMutation();
-  const orderId = getOrderIdValue(order) || "-";
-  const orderIdShort = getOrderIdShortValue(order) || orderId;
-  const createdAtMs = order?.createdAt ? new Date(order.createdAt).getTime() : Date.now();
-  
-  const formattedAcceptedTime = new Date(createdAtMs).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+ const KitchenDisplayCard = ({
+   order,
+   isDarkMode,
+   isNewOrder,
+   updateOrder,
+   onStatusReady,
+   onDismiss,
+ }) => {
+   const [toggleItemReady] = useToggleItemReadyMutation();
+   const orderId = getOrderIdValue(order) || "-";
+   const orderIdShort = getOrderIdShortValue(order) || orderId;
+   const createdAtMs = order?.createdAt ? new Date(order.createdAt).getTime() : Date.now();
 
-  const status = String(order?.status || "pending").trim().toLowerCase();
-  const colors = getStatusColors(status);
-  const items = useMemo(() => getOrderItemsList(order), [order]);
+   const formattedAcceptedTime = new Date(createdAtMs).toLocaleTimeString([], {
+     hour: "2-digit",
+     minute: "2-digit",
+     hour12: true,
+   });
 
+   const status = String(order?.status || "pending").trim().toLowerCase();
+   const colors = getStatusColors(status);
+   const items = useMemo(() => getOrderItemsList(order), [order]);
 
-  const orderTypeKey = getOrderTypeKey(order?.orderType);
-  const orderTypeLabel = getOrderTypeLabel(order?.orderType);
-  const customerName = getOrderCustomerName(order);
-  const tableId = formatOrderTableId(
-    order?.tableId ||
-      order?.table ||
-      order?.tableNumber ||
-      order?.table?.name ||
-      order?.table?.tableNumber ||
-      order?.table?.number
-  );
+   const orderTypeKey = getOrderTypeKey(order?.orderType);
+   const orderTypeLabel = getOrderTypeLabel(order?.orderType);
+   const customerName = getOrderCustomerName(order);
+   const tableId = formatOrderTableId(
+     order?.tableId ||
+       order?.table ||
+       order?.tableNumber ||
+       order?.table?.name ||
+       order?.table?.tableNumber ||
+       order?.table?.number
+   );
 
-  const displayOrderType =
-    orderTypeKey === "eat_here" && tableId
-      ? `${orderTypeLabel} • Table ${tableId}`
-      : orderTypeLabel;
-  
-  const [nowMs, setNowMs] = useState(Date.now());
-  const preparingStartedAtMs = useMemo(() => getOrderPreparingStartedAt(order), [order]);
-  const preparingElapsedMs = (status === "preparing" || status === "ready") && preparingStartedAtMs ? Math.max(0, nowMs - preparingStartedAtMs) : 0;
+    const displayOrderType =
+      orderTypeKey === "eat_here" && tableId
+        ? `${orderTypeLabel} • Table ${tableId}`
+        : orderTypeLabel;
 
-  useEffect(() => {
-    const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(timerId);
-  }, []);
+    // Timer for elapsed time calculation
+    const [nowMs, setNowMs] = useState(Date.now());
+    const preparingStartedAtMs = useMemo(() => getOrderPreparingStartedAt(order), [order]);
+    const preparingElapsedMs = (status === "preparing" || status === "ready") && preparingStartedAtMs ? Math.max(0, nowMs - preparingStartedAtMs) : 0;
 
-  const [togglingItems, setTogglingItems] = useState(new Set());
+    useEffect(() => {
+      const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
+      return () => window.clearInterval(timerId);
+    }, []);
 
-  const itemRows = useMemo(() => items
-    .filter(item => item?._id) // Only include items with _id
-    .map((item, index) => {
-      const variant = String(item?.variantName || item?.variant || "").trim();
-      const name = getItemName(item);
+    // Optimistic overrides for item ready state (key: itemId, value: isReady)
+    // Empty means use server state from order.items
+    const [itemOverrides, setItemOverrides] = useState({});
+    const [togglingItems, setTogglingItems] = useState(new Set());
 
-      return {
-        itemId: item._id,
-        itemName: variant ? `${name} (${variant})` : name,
-        itemCustomization: getItemCustomizationText(item),
-        itemKitchenNote: item?.specialInstructions || item?.notes || "",
-        quantity: getItemQuantity(item),
-        isReady: !!item?.isReady,
-        isToggling: togglingItems.has(item._id),
-      };
-    }), [items, togglingItems]);
+    // Cleanup overrides that have been confirmed by server or are stale
+    useEffect(() => {
+      if (!order?.items) return;
+
+      setItemOverrides(prev => {
+        const next = { ...prev };
+        let changed = false;
+        Object.keys(next).forEach(key => {
+          if (togglingItems.has(key)) return; // still pending, keep override
+          const serverItem = order.items.find(i => i._id === key);
+          if (serverItem) {
+            const serverReady = !!serverItem.isReady;
+            if (next[key] === serverReady) {
+              delete next[key];
+              changed = true;
+            } else {
+              // Server state differs; remove override to use server truth
+              delete next[key];
+              changed = true;
+            }
+          } else {
+            // Item no longer in order, clean up
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, [order?.items, order?.updatedAt, togglingItems]);
+
+    const itemRows = useMemo(() => items
+      .filter(item => item?._id) // Only include items with _id
+      .map((item, index) => {
+        const variant = String(item?.variantName || item?.variant || "").trim();
+        const name = getItemName(item);
+
+        return {
+          itemId: item._id,
+          itemName: variant ? `${name} (${variant})` : name,
+          itemCustomization: getItemCustomizationText(item),
+          itemKitchenNote: item?.specialInstructions || item?.notes || "",
+          quantity: getItemQuantity(item),
+          // Use override if present, else server state
+          isReady: itemOverrides[item._id] !== undefined ? itemOverrides[item._id] : !!item.isReady,
+          isToggling: togglingItems.has(item._id),
+        };
+      }), [items, togglingItems, itemOverrides]);
 
   const allItemsReady = itemRows.length > 0 && itemRows.every(item => item.isReady);
 
   const handleStatusToggle = async () => {
     if (status === "pending") {
       const success = await updateOrder(orderId, { status: "preparing" });
-      if (!success) {
+      if (success) {
+        broadcastOrderStatus(orderId, "preparing");
+      } else {
         console.error("Failed to update order status");
       }
     }
     else if (status === "preparing") {
-      try {
-        // Mark all unready items as ready
-        if (!allItemsReady) {
-          await Promise.all(
-            itemRows
-              .filter(item => !item.isReady)
-              .map(item => toggleItemReady({ orderId, itemId: item.itemId }).unwrap())
-          );
-        }
-
-        // Explicitly update order status to "ready"
-        const success = await updateOrder(orderId, { status: "ready" });
-        if (success) {
-          onStatusReady?.();
-        } else {
-          console.error("Failed to update order status to ready");
-        }
-      } catch (err) {
-        console.error("Failed to mark order as ready:", err);
+      const success = await updateOrder(orderId, { status: "ready" });
+      if (success) {
+        broadcastOrderStatus(orderId, "ready");
+        onStatusReady?.();
+      } else {
+        console.error("Failed to update order status to ready");
       }
     }
     else if (status === "ready") {
@@ -180,56 +221,150 @@ const KitchenDisplayCard = ({
     }
   };
 
-  const toggleReady = async (itemId) => {
-    if (togglingItems.has(itemId)) return; // Prevent double-clicks
+    const toggleReady = async (itemId) => {
+      if (togglingItems.has(itemId)) return; // Prevent double-clicks
 
-    const currentItem = itemRows.find(i => i.itemId === itemId);
-    if (!currentItem) return;
+      const currentItem = itemRows.find(i => i.itemId === itemId);
+      if (!currentItem) return;
 
-    // Add to toggling set to show loading state
-    setTogglingItems(prev => new Set(prev).add(itemId));
+      // Get current effective ready state (considering overrides)
+      const currentIsReady = itemOverrides[itemId] !== undefined ? itemOverrides[itemId] : !!currentItem.isReady;
+      const newIsReady = !currentIsReady;
 
-    try {
-      await toggleItemReady({ orderId, itemId }).unwrap();
-      // Backend will emit ORDER_UPDATED event via event emitter
-      // Frontend will receive it via SSE and update the UI
-      broadcastItemReady(orderId, itemId, !currentItem.isReady);
-    } catch (err) {
-      console.error("Failed to toggle item ready status", err);
-    } finally {
-      // Remove from toggling set
-      setTogglingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(itemId);
-        return newSet;
+      // Optimistic override update for instant UI feedback
+      setItemOverrides(prev => ({
+        ...prev,
+        [itemId]: newIsReady
+      }));
+
+      // Add to toggling set to show loading state
+      setTogglingItems(prev => new Set(prev).add(itemId));
+
+      try {
+        await toggleItemReady({ orderId, itemId }).unwrap();
+        // Broadcast to other tabs/windows
+        broadcastItemReady(orderId, itemId, newIsReady);
+      } catch (err) {
+        // Revert override on error
+        setItemOverrides(prev => {
+          const next = { ...prev };
+          delete next[itemId];
+          return next;
+        });
+        console.error("Failed to toggle item ready status", err);
+      } finally {
+        // Remove from toggling set
+        setTogglingItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(itemId);
+          return newSet;
+        });
+      }
+    };
+
+    useEffect(() => {
+      const cleanup = listenForItemReady(({ orderId: broadcastOrderId, itemId: broadcastItemId, isReady: newIsReady }) => {
+        if (String(broadcastOrderId) === String(orderId) && broadcastItemId) {
+          // Update override immediately for cross-tab sync
+          setItemOverrides(prev => ({
+            ...prev,
+            [broadcastItemId]: newIsReady
+          }));
+        }
       });
-    }
-  };
+      return cleanup;
+    }, [orderId]);
 
-  useEffect(() => {
-    const cleanup = listenForItemReady(({ orderId: broadcastOrderId, itemId: broadcastItemId, isReady: newIsReady }) => {
-      if (String(broadcastOrderId) === String(orderId)) {
-        // Broadcast received - the SSE update will handle the UI update
-        // We don't need to do anything here as the order data will be updated via SSE
-      }
-    });
-    return cleanup;
-  }, [orderId]);
+   // Listen for order status changes from other tabs (e.g., BillPage)
+   useEffect(() => {
+     const cleanup = listenForOrderStatus(({ orderId: broadcastOrderId, status: newStatus }) => {
+       if (String(broadcastOrderId) === String(orderId)) {
+         // Trigger a local update by calling updateOrder optimistically
+         // The actual update will be confirmed via SSE
+         if (String(newStatus) !== String(status)) {
+           // Update local UI immediately via the parent's SSE handling or force a re-render
+           // Since order prop comes from parent, we rely on parent SSE update
+           // But we can also trigger a manual refetch if needed
+           window.dispatchEvent(new CustomEvent("order-status-changed", { 
+             detail: { orderId: broadcastOrderId, status: newStatus } 
+           }));
+         }
+       }
+     });
+     return cleanup;
+   }, [orderId, status]);
 
-  // When order status becomes "ready", mark all items as ready
-  useEffect(() => {
-    if (status === "ready" && itemRows.length > 0) {
-      const unreadyItems = itemRows.filter(item => !item.isReady);
-      if (unreadyItems.length > 0) {
-        // Mark all unready items as ready on backend
-        Promise.all(
-          unreadyItems.map(item =>
-            toggleItemReady({ orderId, itemId: item.itemId }).unwrap()
-          )
-        ).catch(console.error);
+    // When order status becomes "ready", mark all items as ready
+    useEffect(() => {
+      if (status === "ready" && order?.items?.length) {
+        // Use server state to determine items that need marking, avoid items already optimistically ready
+        const itemsToMark = order.items.filter(item => 
+          item._id && 
+          !item.isReady && 
+          itemOverrides[item._id] !== true
+        );
+
+        itemsToMark.forEach(item => {
+          const itemId = item._id;
+          if (togglingItems.has(itemId)) return;
+
+          // Set optimistic override
+          setItemOverrides(prev => ({ ...prev, [itemId]: true }));
+          setTogglingItems(prev => new Set(prev).add(itemId));
+
+          toggleItemReady({ orderId, itemId }).unwrap()
+            .then(() => {
+              broadcastItemReady(orderId, itemId, true);
+            })
+            .catch(err => {
+              console.error("Failed to mark item ready", err);
+              setItemOverrides(prev => {
+                const next = { ...prev };
+                delete next[itemId];
+                return next;
+              });
+            })
+            .finally(() => {
+              setTogglingItems(prev => {
+                const next = new Set(prev);
+                next.delete(itemId);
+                return next;
+              });
+            });
+        });
       }
-    }
-  }, [status, orderId, itemRows]);
+    }, [status, orderId, order?.items, itemOverrides, toggleItemReady, broadcastItemReady]);
+
+    // Cleanup: Remove overrides that are confirmed by server or are outdated
+    useEffect(() => {
+      if (!order?.items) return;
+
+      setItemOverrides(prev => {
+        const next = { ...prev };
+        let changed = false;
+        Object.keys(next).forEach(key => {
+          // Skip items that are currently being toggled (pending)
+          if (togglingItems.has(key)) return;
+          const serverItem = order.items.find(i => i._id === key);
+          if (serverItem) {
+            const serverReady = !!serverItem.isReady;
+            if (next[key] === serverReady) {
+              delete next[key];
+              changed = true;
+            }
+            // else: override differs from server, keep it until server confirms
+          } else {
+            // Item no longer exists in order
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, [order?.items, order?.updatedAt, togglingItems]);
+
+
+
 
 
 

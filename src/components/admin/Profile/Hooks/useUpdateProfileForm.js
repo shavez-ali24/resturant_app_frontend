@@ -367,9 +367,20 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 }
             } else {
                 // Append categories array as strings
-                categories.forEach((category) => {
-                    formDataToUpload.append("categories", category);
-                });
+                // categories.forEach((category) => {
+                //     formDataToUpload.append("categories", category);
+                // });
+
+                categories.forEach((category, index) => {
+    formDataToUpload.append(
+        `categories[${index}][name]`,
+        category
+    );
+    formDataToUpload.append(
+        `categories[${index}][displayOrder]`,
+        index
+    );
+});
 
                 if (categories.length === 0) {
                     formDataToUpload.append("categories", ""); // To clear array on backend

@@ -625,23 +625,46 @@ const EditOrderModal = ({
     setIsSubmitting(true);
 
     try {
+      const initialStatus = initialOrderData?.status;
+      const currentStatus = localOrderData.status;
+      const initialItemCount = initialOrderData?.items?.length || 0;
+      const currentItemCount = localOrderData.items.length;
+      const removedCount = removedItemIds.length;
+      const netNewItems = currentItemCount - (initialItemCount - removedCount);
+      const isAddingNewItems = netNewItems > 0;
+
+      // Determine if status needs to be sent explicitly
+      let shouldSetPreparing = false;
+      if (initialStatus === "ready" && isAddingNewItems) {
+        shouldSetPreparing = true;
+      }
+
+      // Build payload - only include fields that changed
       const payload = {
-        status: localOrderData.status,
         orderType: localOrderData.orderType,
         replaceItems: true,
         removeItemIds: removedItemIds,
         items: localOrderData.items.map(item => {
-          // For variant items, ensure variant is set
           const variantValue = item.variantName || item.variant || null;
-          return {
+          const payloadItem = {
             menuItemId: item.menuItemId,
             quantity: Number(item.quantity),
             variant: variantValue,
             customizations: item.customizations || ""
           };
-          // console.log(quantity, variantValue, item.customizations);
+          if (item._id) {
+            payloadItem._id = item._id;
+          }
+          return payloadItem;
         })
       };
+
+      // Include status if it changed OR we need to force preparing
+      if (shouldSetPreparing) {
+        payload.status = "preparing";
+      } else if (currentStatus !== initialStatus) {
+        payload.status = currentStatus;
+      }
 
       // Add tableId for Eat Here
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
