@@ -37,7 +37,7 @@ const ImageUpload = ({ imageFile, currentImage, imageError, handleFileChange, is
           />
 
           <div className="absolute inset-x-0 bottom-0 bg-black/45 px-3 py-2 text-center text-xs font-semibold text-white">
-            {isEditMode ? "Click to replace image" : "Click to upload image"}
+            {isEditMode ? "Click to replace file" : "Click to upload file"}
           </div>
         </div>
 
@@ -60,8 +60,8 @@ const ImageUpload = ({ imageFile, currentImage, imageError, handleFileChange, is
 
       <p className="text-xs text-gray-500">
         {isEditMode
-          ? "Select a new file to replace the current image."
-          : "Upload an image for the product."}
+          ? "Select a new file to replace the current file."
+          : "Upload a file for the product."}
       </p>
 
       {imageError && (

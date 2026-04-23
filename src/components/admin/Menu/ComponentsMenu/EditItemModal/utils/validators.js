@@ -131,16 +131,18 @@ export const validateEditForm = (formData, imageFile, comboItems) => {
   return errors;
 };
 
+import { ALLOWED_FILE_TYPES } from "../../../Lib/constants";
+
 export const validateImage = (file) => {
   if (!file) return null;
-  
-  if (!file.type.startsWith("image/")) {
-    return "Please upload a valid image file";
+
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    return "Invalid file type (JPEG, PNG, GIF, PDF, DOC allowed)";
   }
-  
+
   if (file.size > MAX_IMAGE_KB * 1024) {
-    return `Image size must be less than ${MAX_IMAGE_KB}KB`;
+    return `File size must be less than ${MAX_IMAGE_KB}KB`;
   }
-  
+
   return null;
 };
