@@ -18,15 +18,14 @@ const MAX_NOTIFICATIONS = 3;
 
 const NotificationToasts = lazy(() => import("./NotificationToasts"));
 
+import { SSEConnectionManager } from "@/utils/sseConnectionManager";
+
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
-  const [sseRetryKey, setSseRetryKey] = useState(0);
-  const sseRef = useRef(null);
+  const sseManagerRef = useRef(null);
   const lastEventSignatureRef = useRef(null);
-  const sseRetryTimer = useRef(null);
-  const sseRetryCount = useRef(0);
 
   const removeNotification = (id) => {
     setNotifications((prev) => prev.filter((notification) => notification.id !== id));
@@ -52,25 +51,13 @@ export const NotificationProvider = ({ children }) => {
     const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
     const sseUrl = `${baseUrl}/api/notifications?token=${encodeURIComponent(token)}`;
 
-    if (sseRef.current) {
-      sseRef.current.close();
-      sseRef.current = null;
-    }
-
-    const connectSource = () => {
-      const source = new EventSource(sseUrl);
-      sseRef.current = source;
-
-      source.onopen = () => {
-        setSseConnected(true);
-        sseRetryCount.current = 0;
-        if (sseRetryTimer.current) {
-          window.clearTimeout(sseRetryTimer.current);
-          sseRetryTimer.current = null;
-        }
-      };
-
-      source.onmessage = (event) => {
+    // Create and initialize SSE manager
+    sseManagerRef.current = new SSEConnectionManager({
+      url: sseUrl,
+      onConnectionChange: (connected) => {
+        setSseConnected(connected);
+      },
+      onMessage: (event) => {
         if (!event?.data) return;
         let payload;
         try {
@@ -81,13 +68,11 @@ export const NotificationProvider = ({ children }) => {
 
         if (!payload || payload.type === "CONNECTED") return;
 
+        // Only deduplicate identical events: same order + same status + same timestamp
         const eventSignature = [
-          payload?.type || "",
           payload?.data?._id || payload?.data?.id || payload?.data?.orderId || "",
           payload?.data?.status || "",
-          payload?.data?.preparingStartedAt || "",
-          payload?.data?.updatedAt || "",
-          payload?.data?.createdAt || "",
+          payload?.data?.updatedAt || Date.now(),
         ].join(":");
 
         if (eventSignature && lastEventSignatureRef.current === eventSignature) {
@@ -98,37 +83,19 @@ export const NotificationProvider = ({ children }) => {
         }
 
         setSseEvent({ ...payload, ts: Date.now() });
-      };
+      },
+    });
 
-      source.onerror = () => {
-        setSseConnected(false);
-        if (sseRetryTimer.current) return;
-
-        source.close();
-
-        const delay = Math.min(30000, 3000 + sseRetryCount.current * 3000);
-        sseRetryTimer.current = window.setTimeout(() => {
-          sseRetryTimer.current = null;
-          sseRetryCount.current += 1;
-          setSseRetryKey((prev) => prev + 1);
-        }, delay);
-      };
-    };
-
-    connectSource();
+    sseManagerRef.current.connect();
 
     return () => {
-      if (sseRetryTimer.current) {
-        window.clearTimeout(sseRetryTimer.current);
-        sseRetryTimer.current = null;
-      }
-      if (sseRef.current) {
-        sseRef.current.close();
-        sseRef.current = null;
+      if (sseManagerRef.current) {
+        sseManagerRef.current.destroy();
+        sseManagerRef.current = null;
       }
       setSseConnected(false);
     };
-  }, [sseRetryKey]);
+  }, []);
 
   return (
     <NotificationContext.Provider value={{ notify, sseEvent, sseConnected }}>

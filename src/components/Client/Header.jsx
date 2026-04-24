@@ -67,6 +67,8 @@ export default function Header({
   const ordersButtonRef = useRef(null);
   const prevCartCountRef = useRef(0);
   const sseRetryTimer = useRef(null);
+  const orderStatusTracker = useRef(new Map());
+  const orderItemStatusTracker = useRef(new Map());
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -479,6 +481,7 @@ export default function Header({
           updatedOrder?._id || updatedOrder?.id || updatedOrder?.orderId;
         if (!orderId) return;
 
+        // ALWAYS update UI for all data changes (including item ticks/checkboxes)
         setAllOrders((prev) => {
           const next = Array.isArray(prev) ? [...prev] : [];
           const idx = next.findIndex(
@@ -491,7 +494,16 @@ export default function Header({
         });
 
         pulseOrdersIcon();
-        if (payload.type === "ORDER_UPDATED") showOrderStatusBanner(updatedOrder);
+
+        // ONLY trigger notification if actual status has changed
+        const previousStatus = orderStatusTracker.current.get(orderId);
+        const newStatus = String(updatedOrder.status || "").toLowerCase();
+        
+        if (previousStatus !== newStatus) {
+          orderStatusTracker.current.set(orderId, newStatus);
+          if (payload.type === "ORDER_UPDATED") showOrderStatusBanner(updatedOrder);
+        }
+        
         refetch();
       }
     };
@@ -1730,49 +1742,60 @@ export default function Header({
                                 </span>
                               </div>
                               <div className="space-y-2">
-                                {order.items.map((item, index) => (
+                                {order.items.map((item, index) => {
+                                  const isCompleted = item.status === "completed" || item.isReady === true || item.done === true;
+                                  return (
                                   <div
                                     key={index}
                                     className={`flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-sm ${
-                                      isDarkMode
+                                      isCompleted
+                                        ? isDarkMode
+                                          ? "border-green-700/50 bg-green-900/20"
+                                          : "border-green-200 bg-green-50"
+                                        : isDarkMode
                                         ? "border-slate-600 bg-slate-900/90"
                                         : "border-orange-200/80 bg-white"
                                     }`}
                                   >
-                                    <span
-                                      className={
-                                        isDarkMode
-                                          ? "text-slate-100"
-                                          : "text-gray-700"
-                                      }
-                                    >
-                                      {item.name}
-                                      {item.variant && (
+                                    <div className="flex items-center gap-2">
+                                      {isCompleted && <span className="text-green-600 font-bold">✔</span>}
+                                      <span
+                                        className={
+                                          isDarkMode
+                                            ? "text-slate-100"
+                                            : "text-gray-700"
+                                        }
+                                      >
+                                        {item.name}
+                                        {item.variant && (
+                                          <span
+                                            className={`ml-1 text-xs ${
+                                              isDarkMode
+                                                ? "text-slate-400"
+                                                : "text-gray-500"
+                                            }`}
+                                          >
+                                            ({item.variant})
+                                          </span>
+                                        )}
                                         <span
-                                          className={`ml-1 text-xs ${
+                                          className={`ml-1 font-semibold ${
                                             isDarkMode
-                                              ? "text-slate-400"
-                                              : "text-gray-500"
+                                              ? "text-slate-300"
+                                              : "text-gray-600"
                                           }`}
                                         >
-                                          ({item.variant})
+                                          × {item.quantity}
                                         </span>
-                                      )}
-                                      <span
-                                        className={`ml-1 font-semibold ${
-                                          isDarkMode
-                                            ? "text-slate-300"
-                                            : "text-gray-600"
-                                        }`}
-                                      >
-                                        × {item.quantity}
                                       </span>
-                                    </span>
+                                    </div>
                                     <span
                                       className={`font-semibold ${
-                                        isDarkMode
-                                          ? "text-slate-100"
-                                          : "text-gray-800"
+                                        isCompleted
+                                          ? "text-green-600"
+                                          : isDarkMode
+                                            ? "text-slate-100"
+                                            : "text-gray-800"
                                       }`}
                                     >
                                       ₹
@@ -1781,7 +1804,7 @@ export default function Header({
                                       ).toFixed(2)}
                                     </span>
                                   </div>
-                                ))}
+                                )})}
                               </div>
                             </div>
 
