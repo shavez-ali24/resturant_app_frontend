@@ -55,22 +55,20 @@ export default function Header({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
-  const [orderStatusBanner, setOrderStatusBanner] = useState(null);
-
-  // ✅ FIXED: Added missing state variables
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isCartBarBump, setIsCartBarBump] = useState(false);
+  const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
+  const [orderStatusBanner, setOrderStatusBanner] = useState(null);
 
   const { data: restaurantData } = useGetRestaurantQuery();
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
 
   const searchRef = useRef(null);
   const ordersButtonRef = useRef(null);
+  const prevCartCountRef = useRef(0);
   const sseRetryTimer = useRef(null);
   const orderStatusTracker = useRef(new Map());
-  // ✅ FIXED: Added missing ref
-  const prevCartCountRef = useRef(0);
+  const orderItemStatusTracker = useRef(new Map());
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -455,6 +453,12 @@ export default function Header({
     if (typeof window === "undefined") return undefined;
     if (!fingerPrint || !config?.BASE_URL) return undefined;
 
+    const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
+    const sseUrl = `${baseUrl}/api/notifications?fingerPrint=${encodeURIComponent(fingerPrint)}`;
+
+    if (sseRetryTimer.current) {
+      window.clearTimeout(sseRetryTimer.current);
+      sseRetryTimer.current = null;
     }
 
     const source = new EventSource(sseUrl);
@@ -1184,6 +1188,50 @@ export default function Header({
                         : "border-slate-200 bg-white"
                     }`}
                   >
+                    {!isRestaurantOpen ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="w-full rounded-xl border border-orange-200/80 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 px-4 py-3 shadow-[0_8px_18px_rgba(249,115,22,0.12)]"
+                      >
+                        <div className="flex items-center justify-center gap-2.5 text-orange-700">
+                          <Clock className="h-5 w-5" />
+                          <p className="text-base font-black uppercase tracking-[0.07em] text-red-600">
+                            Restaurant Closed
+                          </p>
+                        </div>
+                        <p className="mt-1 text-center text-sm font-medium text-orange-600">
+                          We'll be back soon
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <OrderComplete
+                        buttonText="Order Now"
+                        disabled={cartCount === 0}
+                        onClick={() => {
+                          if (!isRestaurantOpen) return;
+                          setOrderType("");
+                          setTableId("");
+                          setAddress("");
+                          setUseCurrentLocation(false);
+                          setShowModal(true);
+                          setIsAccordionOpen(false);
+                          onSidebarToggle?.(false);
+                        }}
+                        className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${
+                          cartCount === 0
+                            ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
+                            : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
+                        }`}
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
 
         {/* Main Header */}
         <header
