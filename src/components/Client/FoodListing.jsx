@@ -905,7 +905,7 @@ export default function FoodListing({
                             : "h-10 text-xs font-semibold"
                         }`}
                       >
-                        <span className="flex-1 line-clamp-2 break-words pr-1">
+                        <span className="flex-1 line-clamp-1 break-all pr-1">
                           {item.name}
                         </span>
                         {quantity > 0 && (
