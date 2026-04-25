@@ -62,7 +62,7 @@ const OrdersTable = ({
     if (typeof window === "undefined") return "";
     return localStorage.getItem("billViewedOrderId") || "";
   });
-  const columnCount = tableType === "pending" ? 8 : 6;
+  const columnCount = tableType === "pending" ? 9 : 6;
   const skeletonRows = Array.from({ length: 8 });
   const mobileSkeletons = Array.from({ length: 4 });
 
@@ -122,16 +122,19 @@ const OrdersTable = ({
         <table className="min-w-full">
           <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
-              {tableType !== "pending" && (
+              {tableType === "pending" ? (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">ID</th>
+              ) : (
                 <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
               )}
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Placed At</th>
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">
                 Customer
               </th>
-              {tableType === "pending" ? (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">ID</th>
-              ) : (
+              {tableType === "pending" && (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              )}
+              {tableType !== "pending" && (
                 <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
               )}
               <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Type</th>
@@ -267,10 +270,9 @@ const OrdersTable = ({
                 >
                   <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                     <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
-                      {getOrderCustomerName(order) ||
-                        (tableType === "pending"
-                          ? `Order #${getOrderIdShort(order)}`
-                          : "Order")}
+                      {tableType === "pending"
+                        ? `ID: ${getOrderIdShort(order)}`
+                        : (getOrderCustomerName(order) || "Order")}
                     </h3>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -282,11 +284,17 @@ const OrdersTable = ({
                   </div>
 
                   {tableType === "pending" ? (
-                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
-                      <span className="font-medium text-gray-600 dark:text-slate-300">Order ID:</span>
-                      <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">
-                        #{getOrderIdShort(order)}
-                      </p>
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300">Name:</span>
+                        <p className="mt-0.5 break-words text-gray-800 dark:text-slate-100">
+                          {getOrderCustomerName(order) || "N/A"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300">Phone:</span>
+                        <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">{getOrderCustomerPhone(order) || "N/A"}</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">

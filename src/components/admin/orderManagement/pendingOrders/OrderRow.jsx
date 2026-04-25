@@ -76,24 +76,31 @@ const OrderRow = ({
         </td>
       )}
 
-      {/* Time Column */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
-        {order.formattedTime || "N/A"}
-      </td>
-
       {tableType === "pending" ? (
         <>
+          {/* ID Column - FIRST for pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
+              {orderIdDisplay || "N/A"}
+            </span>
+          </td>
+          {/* Time Column - SECOND for pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            {order.formattedTime || "N/A"}
+          </td>
           <td className="text-center border px-1 text-sm font-semibold text-gray-800 dark:border-slate-700 dark:text-slate-100">
             {customerName}
           </td>
           <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
-            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
-              #{orderIdDisplay || "N/A"}
-            </span>
+            {customerPhone || "N/A"}
           </td>
         </>
       ) : (
         <>
+          {/* Time Column - FIRST for non-pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            {order.formattedTime || "N/A"}
+          </td>
           <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerName}</td>
           <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerPhone}</td>
         </>

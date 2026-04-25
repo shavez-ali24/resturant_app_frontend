@@ -102,7 +102,7 @@ const CustomizationsModal = ({ order, onClose }) => {
                             Customer Request:
                           </h5>
                           <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                            <p className="text-gray-800 whitespace-pre-wrap">
+                            <p className="text-gray-800 whitespace-pre-wrap break-all text-sm leading-relaxed">
                               {item.customizations}
                             </p>
                           </div>

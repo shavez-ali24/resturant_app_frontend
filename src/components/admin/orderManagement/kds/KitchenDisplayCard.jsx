@@ -442,18 +442,18 @@ const getItemQuantity = (item) => {
                   </div>
 
                   {item.itemCustomization && (
-                    <p className={`text-[11px] mt-1 leading-relaxed transition-all ${
+                    <p className={`text-[13px] mt-1 leading-relaxed transition-all break-all ${
                       isFullyDone ? "text-slate-300" : "text-slate-500"
                     }`}>
-                      <span className="font-black uppercase text-[9px] mr-1">Note:</span>
+                      <span className="font-black uppercase text-[11px] mr-1">Note:</span>
                       {item.itemCustomization}
                     </p>
                   )}
                   {item.itemKitchenNote && (
-                    <p className={`text-[11px] font-medium mt-1 italic transition-all ${
+                    <p className={`text-[13px] font-medium mt-1 italic transition-all break-all ${
                       isFullyDone ? "text-slate-300" : "text-orange-600"
                     }`}>
-                      <span className="font-black uppercase text-[9px] not-italic mr-1">Instruction:</span>
+                      <span className="font-black uppercase text-[11px] not-italic mr-1">Instruction:</span>
                       {item.itemKitchenNote}
                     </p>
                   )}

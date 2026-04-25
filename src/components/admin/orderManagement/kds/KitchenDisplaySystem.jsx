@@ -612,8 +612,8 @@ const KitchenDisplaySystem = () => {
     <div
       className={`h-[100dvh] w-screen overflow-hidden font-mostrate overscroll-none select-none ${
         isDarkMode
-          ? "bg-[#111111] text-slate-100"
-          : "bg-[#F3F4F6] text-slate-900"
+          ? "bg-[#0a0a0a] text-white"
+          : "bg-[#FFF5F0] text-slate-900"
       }`}
       style={{
         paddingTop: "env(safe-area-inset-top)",
@@ -622,28 +622,30 @@ const KitchenDisplaySystem = () => {
         paddingRight: "env(safe-area-inset-right)",
       }}
     >
-      <div className="h-full w-full px-1 py-1 flex flex-col overflow-hidden">
+      <div className="h-full w-full p-2 md:p-3 flex flex-col overflow-hidden">
         <div
-          className={`flex flex-col gap-1.5 rounded-xl border p-2 shadow-sm flex-1 min-h-0 ${
+          className={`flex flex-col gap-0 rounded-2xl border shadow-sm flex-1 min-h-0 overflow-hidden ${
             isDarkMode
-              ? "border-slate-800 bg-slate-900/90"
-              : "border-slate-200 bg-white"
+              ? "border-slate-800 bg-[#141414]"
+              : "border-orange-200 bg-[#FFF8F3]"
           }`}
         >
           {/* Header Area - Small & Compact (Fixed) */}
-          <div className="relative flex flex-col gap-2 px-2 py-1 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0">
+          <div className={`relative flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0 ${
+            isDarkMode ? "bg-[#1a1a1a] border-b border-slate-800" : "bg-[#FFF0E6] border-b border-orange-200"
+          }`}>
             {/* Left Section: Brand & View */}
             <div className="flex flex-col shrink-0 md:w-[250px]">
               <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
                 TapnBite
               </div>
               <div className="flex items-center justify-between md:justify-start gap-4">
-              <div className={`text-lg font-black tracking-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+              <div className={`text-xl font-black tracking-tight ${isDarkMode ? "text-white" : "text-slate-800"}`}>
                 {activeTab === "ready" ? "Ready Orders" : "Kitchen Display"}
               </div>
                 {/* Time for mobile only */}
                 <div className="md:hidden">
-                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-white" : "text-slate-700"}`}>
                     {formattedTime}
                   </div>
                 </div>
@@ -652,7 +654,7 @@ const KitchenDisplaySystem = () => {
 
             {/* Global Time - Centered on MD+ */}
             <div className="hidden md:flex md:absolute md:left-1/2 md:-translate-x-1/2 md:justify-center">
-              <div className={`text-xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+              <div className={`text-2xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-white" : "text-slate-700"}`}>
                 {formattedTime}
               </div>
             </div>
@@ -661,14 +663,22 @@ const KitchenDisplaySystem = () => {
             <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end md:gap-6">
               {/* Pagination Info & Buttons */}
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
+                <span className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
                   Page {currentPage}/{totalPages}
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
-                    className="flex h-8 items-center gap-1 rounded border-2 border-[#D32F2F] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#D32F2F] transition-all hover:bg-[#D32F2F] hover:text-white disabled:opacity-20"
+                    className={`flex h-8 items-center gap-1 rounded-lg border-2 px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                      currentPage === 1
+                        ? isDarkMode
+                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
+                          : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : isDarkMode
+                          ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          : "border-[#D32F2F] bg-white text-[#D32F2F] hover:bg-[#D32F2F] hover:text-white"
+                    }`}
                   >
                     <ChevronLeft size={14} strokeWidth={3} />
                     <span>PREV</span>
@@ -676,7 +686,15 @@ const KitchenDisplaySystem = () => {
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
-                    className="flex h-8 items-center gap-1 rounded border-2 border-[#D32F2F] bg-white px-3 text-[10px] font-black uppercase tracking-widest text-[#D32F2F] transition-all hover:bg-[#D32F2F] hover:text-white disabled:opacity-20"
+                    className={`flex h-8 items-center gap-1 rounded-lg border-2 px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                      currentPage === totalPages
+                        ? isDarkMode
+                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
+                          : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : isDarkMode
+                          ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          : "border-[#D32F2F] bg-white text-[#D32F2F] hover:bg-[#D32F2F] hover:text-white"
+                    }`}
                   >
                     <span>NEXT</span>
                     <ChevronRight size={14} strokeWidth={3} />
@@ -684,49 +702,59 @@ const KitchenDisplaySystem = () => {
                 </div>
               </div>
 
-            <div className="flex items-center gap-2 min-w-fit px-3 py-2 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm">
-              <span className="text-[11px] font-black tracking-wider uppercase text-slate-300">Orders</span>
+            <div className={`flex items-center gap-2 min-w-fit px-3 py-2 rounded-xl border ${
+              isDarkMode
+                ? "bg-[#1f1f1f] border-slate-800"
+                : "bg-slate-50 border-slate-200"
+            }`}>
+              <span className={`text-[11px] font-black tracking-wider uppercase ${
+                isDarkMode ? "text-slate-400" : "text-slate-500"
+              }`}>Orders</span>
               <div className="flex items-center gap-2 ml-1">
-                <button
-                  onClick={() => setActiveTab("active")}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                    activeTab === "active"
-                      ? "bg-green-500 text-white shadow-lg scale-105"
-                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
-                  }`}
-                >
-                  <span className="h-3 w-3 rounded-full bg-green-400 shadow-sm"></span>
-                  <span className="text-[13px] font-black uppercase tracking-wide">Active</span>
-                   <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                     activeTab === "active" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
-                   }`}>
-                     {activeTabCount}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("ready")}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 relative ${
-                    activeTab === "ready"
-                      ? "bg-blue-500 text-white shadow-lg scale-105"
-                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
-                  } ${readyCount > 0 ? "ring-2 ring-blue-400 ring-opacity-50" : ""}`}
-                >
-                  <span className="h-3 w-3 rounded-full bg-blue-400 shadow-sm"></span>
-                  <span className="text-[13px] font-black uppercase tracking-wide">Ready</span>
-                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                    activeTab === "ready" ? "bg-white/20 text-white" : "bg-slate-600 text-slate-300"
-                  }`}>
-                    {readyCount}
-                  </span>
-                </button>
+                  <button
+                    onClick={() => setActiveTab("active")}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                      activeTab === "active"
+                        ? "bg-green-500 text-white shadow-lg scale-105"
+                        : isDarkMode
+                          ? "bg-[#2a2a2a] text-slate-300 hover:bg-[#333333] hover:text-white"
+                          : "bg-white text-slate-600 hover:bg-slate-200 hover:text-slate-800 border border-slate-200"
+                    }`}
+                  >
+                    <span className="h-3 w-3 rounded-full bg-green-400 shadow-sm"></span>
+                    <span className="text-[13px] font-black uppercase tracking-wide">Active</span>
+                     <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                       activeTab === "active" ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600"
+                     }`}>
+                       {activeTabCount}
+                     </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("ready")}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 relative ${
+                      activeTab === "ready"
+                        ? "bg-blue-500 text-white shadow-lg scale-105"
+                        : isDarkMode
+                          ? "bg-[#2a2a2a] text-slate-300 hover:bg-[#333333] hover:text-white"
+                          : "bg-white text-slate-600 hover:bg-slate-200 hover:text-slate-800 border border-slate-200"
+                    } ${readyCount > 0 ? "ring-2 ring-blue-400 ring-opacity-50" : ""}`}
+                  >
+                    <span className="h-3 w-3 rounded-full bg-blue-400 shadow-sm"></span>
+                    <span className="text-[13px] font-black uppercase tracking-wide">Ready</span>
+                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                      activeTab === "ready" ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600"
+                    }`}>
+                      {readyCount}
+                    </span>
+                  </button>
               </div>
             </div>
             </div>
           </div>
 
           <div
-            className={`rounded-xl border p-1 flex-1 min-h-0 flex flex-col ${
-              isDarkMode ? "border-slate-800 bg-slate-950/50" : "border-slate-100 bg-slate-50/50"
+            className={`m-2 rounded-xl border flex-1 min-h-0 flex flex-col ${
+              isDarkMode ? "border-slate-800/50 bg-[#0f0f0f]" : "border-orange-100 bg-white"
             }`}
           >
             {isLoading && (

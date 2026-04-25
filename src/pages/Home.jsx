@@ -219,7 +219,7 @@ export default function Home() {
         <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
       </div>
 
-      <div className={`flex-1 overflow-y-auto overscroll-contain ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
+      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>

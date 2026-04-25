@@ -82,8 +82,27 @@
   * {
     @apply border-border;
   }
+  html {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overscroll-behavior: none;
+  }
+  #root {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
   }
 }
 .scroll-hidden {
@@ -142,11 +161,50 @@
   transition: none !important;
 }
 
+/* ✅ iOS SAFARI EXCLUSIVE FIXES - NO ANDROID SIDE EFFECTS */
 @supports (-webkit-touch-callout: none) {
+  /* Fix 1: Prevent Safari viewport resizing on scroll */
+  html, body, #root {
+    position: fixed !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    touch-action: manipulation;
+  }
+
+  /* Fix 2: Proper scroll container with Safari momentum scrolling */
+  .ios-scroll-container {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: scroll !important;
+    overscroll-behavior-y: contain !important;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+
+  /* Fix 3: Prevent header flickering / disappearing */
+  * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Fix 4: Sticky / Fixed positioning stability */
+  [class*="sticky"], [class*="fixed"] {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Fix 5: Bottom safe area for iPhone notch models */
+  :root {
+    --ios-bottom-safe: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fix 6: Category scroll fixes */
   .client-category-scroll {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
   }
 
   .client-category-track {
@@ -166,6 +224,16 @@
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+  }
+
+  /* Fix 7: Prevent scroll jumping */
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  /* Fix 8: Add to Cart bottom bar proper spacing */
+  .bottom-cart-bar {
+    padding-bottom: calc(12px + var(--ios-bottom-safe)) !important;
   }
 }
 

@@ -1547,7 +1547,7 @@ export default function Header({
                                       : "text-slate-900"
                                   }`}
                                 >
-                                  #
+                                  
                                   {String(
                                     order._id ||
                                       order.id ||
