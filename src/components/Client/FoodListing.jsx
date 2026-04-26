@@ -306,9 +306,7 @@ export default function FoodListing({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.02 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`relative ${
-              hasOpenVariantInSection ? "z-40" : "z-0"
-            }`}
+           className="relative"
           >
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -415,9 +413,9 @@ export default function FoodListing({
                         viewport={{ once: true, amount: 0.06 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         whileHover={{ y: -2 }}
-                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
-                          isUnavailable ? "opacity-60 grayscale" : "opacity-100"
-                        } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
+                       className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
+                           isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                         } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
                       >
                         {/* ✅ Image Section */}
                         <div
@@ -747,7 +745,6 @@ export default function FoodListing({
                     );
                   })}
               </div>
-                <div className={`pointer-events-none absolute inset-y-2 right-0 w-4 bg-gradient-to-l ${isDarkMode ? "from-slate-950" : "from-[#fff8f2]"} to-transparent`} />
               </div>
             ) : (
               <div className={containerClass} style={{ position: "relative" }}>
@@ -802,7 +799,7 @@ export default function FoodListing({
                       layoutMode === "single"
                         ? "flex min-h-[128px] w-full self-start"
                         : "w-full"
-                    } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
+                         } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
                   >
                     {/* ✅ Image Section */}
                     <div

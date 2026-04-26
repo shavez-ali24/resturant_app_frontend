@@ -1010,31 +1010,7 @@ export default function Header({
                     </button>
                   </div>
 
-                  {/* Total summary strip */}
-                  <div
-                    className={`shrink-0 border-b px-3 py-3 ${
-                      isDarkMode
-                        ? "border-slate-700 bg-slate-900/90"
-                        : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <div
-                      className={`rounded-xl border p-2 shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${
-                        isDarkMode
-                          ? "border-slate-700 bg-slate-900"
-                          : "border-orange-200/80 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2">
-                        <span className="text-sm font-bold text-white">
-                          Total Amount
-                        </span>
-                        <span className="text-lg font-bold text-primary">
-                          ₹{calculatedDetails.totalAmount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                 
 
                   {/* Items list */}
                   <div className="flex-1 overflow-y-auto px-3 py-3 pb-28">
@@ -1180,14 +1156,47 @@ export default function Header({
                     )}
                   </div>
 
-                  {/* Footer CTA */}
-                  <div
-                    className={`sticky bottom-0 border-t px-4 py-4 ${
-                      isDarkMode
-                        ? "border-slate-700 bg-slate-900/95"
-                        : "border-slate-200 bg-white"
-                    }`}
-                  >
+                   {/* Price Breakdown */}
+                   <div className={`px-4 py-3 border-t ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-orange-100 bg-orange-50/50"}`}>
+                     {/* Subtotal */}
+                     <div className="flex justify-between items-center text-sm">
+                       <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Subtotal</span>
+                       <span className="font-medium">₹{calculatedDetails.subtotal.toFixed(2)}</span>
+                     </div>
+                     
+                     {/* GST */}
+                     {calculatedDetails.gstAmount > 0 && (
+                       <div className="flex justify-between items-center text-sm mt-1.5">
+                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
+                           GST ({restaurantData?.restaurant?.gstRate || 5}%)
+                         </span>
+                         <span className="font-medium">+ ₹{calculatedDetails.gstAmount.toFixed(2)}</span>
+                       </div>
+                     )}
+
+                     {/* Delivery Charges */}
+                     {calculatedDetails.deliveryCharges > 0 && (
+                       <div className="flex justify-between items-center text-sm mt-1.5">
+                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Delivery Charges</span>
+                         <span className="font-medium">+ ₹{calculatedDetails.deliveryCharges.toFixed(2)}</span>
+                       </div>
+                     )}
+
+                     {/* Total Amount */}
+                     <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-dashed font-bold text-lg">
+                       <span>Total Amount</span>
+                       <span className="text-primary">₹{calculatedDetails.totalAmount.toFixed(2)}</span>
+                     </div>
+                   </div>
+
+                   {/* Footer CTA */}
+                   <div
+                     className={`sticky bottom-0 border-t px-4 py-4 ${
+                       isDarkMode
+                         ? "border-slate-700 bg-slate-900/95"
+                         : "border-slate-200 bg-white"
+                     }`}
+                   >
                     {!isRestaurantOpen ? (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
