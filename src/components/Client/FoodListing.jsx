@@ -1,6 +1,7 @@
 "use client";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
+import {createPortal} from "react-dom";
 import {
   addToCart,
   removeFromCart,
@@ -289,14 +290,14 @@ export default function FoodListing({
         const hasOpenVariantInSection = itemsInCategory.some(
           (menuItem) => openVariantMenu === menuItem._id
         );
-        const containerClass =
-          layoutMode === "multi"
-            ? "flex gap-3 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 pl-2 pr-0 py-2.5 sm:-mx-3 sm:gap-4 sm:pl-3 sm:pr-1"
-            : `grid items-start gap-3 ${
-                layoutMode === "single"
-                  ? "grid-cols-1 pt-1 pb-2"
-                  : "grid-cols-2 pt-1 pb-2"
-              }`;
+         const containerClass =
+           layoutMode === "multi"
+             ? "flex gap-3 overflow-x-auto scroll-hidden -mx-2 pl-2 pr-0 py-2.5 sm:-mx-3 sm:gap-4 sm:pl-3 sm:pr-1"
+             : `grid items-start gap-3 ${
+                 layoutMode === "single"
+                   ? "grid-cols-1 pt-1 pb-2"
+                   : "grid-cols-2 pt-1 pb-2"
+               }`;
 
         return (
           <motion.section
@@ -416,6 +417,9 @@ export default function FoodListing({
                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
                            isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                          } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
+                       style={{
+                         willChange: "auto"
+                       }}
                       >
                         {/* ✅ Image Section */}
                         <div
@@ -1150,10 +1154,11 @@ export default function FoodListing({
         );
       })}
       {/* Description Modal - Fixed Size with Scroll */}
-      <AnimatePresence>
-        {descModal.open && descModal.item && (
-          <motion.div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {descModal.open && descModal.item && (
+            <motion.div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
             onClick={closeDescription}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1433,13 +1438,17 @@ export default function FoodListing({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* Customization Modal */}
-      <AnimatePresence>
-        {customizationModal.open && (
-          <motion.div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+      {/* Customization Modal */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {customizationModal.open && (
+            <motion.div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
             onClick={closeCustomization}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1532,7 +1541,9 @@ export default function FoodListing({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }
