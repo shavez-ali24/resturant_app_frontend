@@ -61,6 +61,7 @@ export default function Header({
   const [orderStatusBanner, setOrderStatusBanner] = useState(null);
 
   const { data: restaurantData } = useGetRestaurantQuery();
+
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
 
   const searchRef = useRef(null);

@@ -32,6 +32,7 @@ const SuperAdminLayout = lazy(() => import("./layouts/SuperAdminLayout"));
 const SuperAdminProfile = lazy(() => import("./components/superAdmin/Pages/SuperAdminProfile"));
 const Sales = lazy(() => import("./components/admin/observability/sales/Sales"));
 const StaffManagement = lazy(() => import("./components/admin/Staff/StaffManagement"));
+const AdminOrderPanel = lazy(() => import("./components/admin/OrderPanel/AdminOrderPanel"));
 
 const RouteFallback = () => {
   const location = useLocation();
@@ -160,6 +161,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                     <StaffManagement />
                   </AdminOnlyRoute>
                 }
+              />
+              <Route 
+                path="order-panel" 
+                element={
+                  <AdminOnlyRoute>
+                    <AdminOrderPanel />
+                  </AdminOnlyRoute>
+                } 
               />
               <Route path="comingsoon" element={<ComingSoon />} />
             </Route>

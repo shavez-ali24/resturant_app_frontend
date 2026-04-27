@@ -6,6 +6,7 @@ import {
   TrendingUp,
   Boxes,
   ChefHat,
+  UtensilsCrossed,
 } from "lucide-react";
 import { NavMain } from "@/components/admin/adminLayout/nav-main";
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -85,6 +86,23 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     ...(isAdmin || isStaff
       ? [
           {
+            title: "Input Form",
+            url: "#",
+            icon: UtensilsCrossed,
+            isActive: true,
+            roles: ["admin", "staff"],
+            items: [
+              { 
+                title: "New Order", 
+                url: "/admin/order-panel"
+              }
+            ],
+          },
+        ]
+      : []),
+    ...(isAdmin || isStaff
+      ? [
+          {
             title: "Digital Menu",
             url: "#",
             icon: Utensils,
@@ -94,18 +112,18 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
-    ...(isAdmin
-      ? [
-          {
-            title: "Inventory",
-            url: "#",
-            icon: Boxes,
-            isActive: true,
-            roles: ["admin"],
-            items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
-          },
-        ]
-      : []),
+    // ...(isAdmin
+    //   ? [
+    //       {
+    //         title: "Inventory",
+    //         url: "#",
+    //         icon: Boxes,
+    //         isActive: true,
+    //         roles: ["admin"],
+    //         items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
+    //       },
+    //     ]
+    //   : []),
     ...(isAdmin
       ? [
           {
