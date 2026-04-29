@@ -1618,9 +1618,16 @@ export default function Header({
                                         <span className={`ml-1 ${isDarkMode ? "text-slate-400" : "text-slate-400"}`}>× {item.quantity}</span>
                                       </span>
                                     </div>
-                                    <span className={`shrink-0 font-semibold ${isCompleted ? "text-green-500" : isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
-                                      ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
-                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {item.discountedPrice && item.price && Number(item.discountedPrice) < Number(item.price) && (
+                                        <span className={`text-xs line-through ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                                          ₹{Number(item.price).toFixed(2)}
+                                        </span>
+                                      )}
+                                      <span className={`font-semibold ${isCompleted ? "text-green-500" : isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                                        ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
+                                      </span>
+                                    </div>
                                   </div>
                                 );
                               })}
