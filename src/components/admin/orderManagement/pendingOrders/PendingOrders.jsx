@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
+import { Plus, ArrowLeft } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   Pagination,
@@ -26,6 +28,7 @@ const EditOrderModal = lazy(() => import("./EditOrderModal"));
 const DeleteModal = lazy(() => import("./DeleteModal"));
 const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
 const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
+const AdminOrderPanel = lazy(() => import("../../OrderPanel/AdminOrderPanel"));
 
 import {
   useGetOrdersQuery,
@@ -38,6 +41,11 @@ import {
 
 const Orders = () => {
   const { notify, sseEvent, sseConnected } = useNotification();
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showCreateOrder = searchParams.get("view") === "create";
+  const openCreateOrder = () => setSearchParams({ view: "create" });
+  const closeCreateOrder = () => setSearchParams({});
 
   const normalizeIncomingOrder = (incomingOrder) => {
     const incomingId = getOrderIdValue(incomingOrder);
@@ -553,11 +561,59 @@ const Orders = () => {
     }
   }, [currentPage, totalPages]);
 
+  if (showCreateOrder) {
+    return (
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "bg-[#0d1629]" : "bg-[#fffaf4]"}`}>
+        {/* Back bar */}
+        <div className={`flex items-center gap-3 px-4 py-3 border-b shrink-0 ${isDarkMode ? "bg-slate-900 border-slate-700" : "bg-white border-orange-100"}`}>
+          <button
+            onClick={() => {
+              closeCreateOrder();
+              refetchPendingOrders();
+              refetchPreparingOrders();
+              refetchReadyOrders();
+            }}
+            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-700"}`}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Live Orders
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={
+            <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0d1629]" : "bg-white"}`}>
+              <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+            </div>
+          }>
+            <AdminOrderPanel
+              asModal={true}
+              isDarkMode={isDarkMode}
+              onOrderSuccess={() => {
+                closeCreateOrder();
+                refetchPendingOrders();
+                refetchPreparingOrders();
+                refetchReadyOrders();
+              }}
+            />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
       <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
         <Heading title="Live Orders" />
+        <button
+          onClick={() => openCreateOrder()}
+          className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-orange-600 active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Create Order</span>
+          <span className="sm:hidden">New</span>
+        </button>
       </div>
 
       {/* Orders Table */}

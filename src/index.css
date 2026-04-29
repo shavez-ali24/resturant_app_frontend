@@ -373,6 +373,23 @@
   background-color: rgba(30, 41, 59, 0.9) !important;
 }
 
+/* ✅ PROTECT orange-500/600 — placed AFTER bg-orange-50 rule so last !important wins */
+.admin-dark [class*="bg-orange-500"] {
+  background-color: #f97316 !important;
+  color: #ffffff !important;
+}
+.admin-dark [class*="bg-orange-600"] {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+}
+/* Hover states for orange-500/600 buttons */
+.admin-dark [class*="hover:bg-orange-500"]:hover {
+  background-color: #ea580c !important;
+}
+.admin-dark [class*="hover:bg-orange-600"]:hover {
+  background-color: #c2410c !important;
+}
+
 .admin-dark [class*="bg-gray-50"],
 .admin-dark [class*="bg-gray-100"],
 .admin-dark [class*="bg-gray-200"],

@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Boxes,
   ChefHat,
-  UtensilsCrossed,
 } from "lucide-react";
 import { NavMain } from "@/components/admin/adminLayout/nav-main";
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -83,23 +82,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
         { title: "Cancelled Orders", url: "/admin/cancelledorder" },
       ],
     },
-    ...(isAdmin || isStaff
-      ? [
-          {
-            title: "Input Form",
-            url: "#",
-            icon: UtensilsCrossed,
-            isActive: true,
-            roles: ["admin", "staff"],
-            items: [
-              { 
-                title: "New Order", 
-                url: "/admin/order-panel"
-              }
-            ],
-          },
-        ]
-      : []),
+
     ...(isAdmin || isStaff
       ? [
           {

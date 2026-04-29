@@ -1526,356 +1526,127 @@ export default function Header({
                         return (
                           <div
                             key={order._id || order.id || order.orderId}
-                            className={`rounded-2xl border p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)] ${
+                            className={`overflow-hidden rounded-2xl border shadow-sm ${
                               isDarkMode
-                                ? "border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ring-1 ring-slate-700"
-                                : "border-primary/20 bg-gradient-to-br from-white via-orange-50 to-amber-50 ring-1 ring-orange-100"
+                                ? "border-slate-700 bg-slate-900"
+                                : "border-orange-100 bg-white"
                             }`}
                           >
-                            {/* Customer meta */}
-                            <div
-                              className={`mb-3 rounded-xl border p-3 shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${
-                                isDarkMode
-                                  ? "border-slate-600 bg-slate-900/90"
-                                  : "border-orange-200/80 bg-white/80"
-                              }`}
-                            >
-                              <div className="grid grid-cols-[72px_1fr] items-center gap-x-2.5 gap-y-2.5">
-                                <span
-                                  className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${
-                                    isDarkMode
-                                      ? "text-slate-400"
-                                      : "text-slate-500"
-                                  }`}
-                                >
-                                  Order ID
+                            {/* Meta rows */}
+                            <div className="px-4 pt-4 pb-3 space-y-2.5">
+                              {/* ID + Name + Phone */}
+                              <div className={`grid grid-cols-[68px_1fr] gap-x-3 gap-y-2`}>
+                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Order ID</span>
+                                <span className={`text-sm font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
+                                  {String(order._id || order.id || order.orderId || "").slice(-4).toUpperCase()}
                                 </span>
-                                <p
-                                  className={`truncate text-[15px] font-bold ${
-                                    isDarkMode
-                                      ? "text-slate-100"
-                                      : "text-slate-900"
-                                  }`}
-                                >
-                                  
-                                  {String(
-                                    order._id ||
-                                      order.id ||
-                                      order.orderId ||
-                                      ""
-                                  )
-                                    .slice(-4)
-                                    .toUpperCase()}
-                                </p>
-
-                                <span
-                                  className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${
-                                    isDarkMode
-                                      ? "text-slate-400"
-                                      : "text-slate-500"
-                                  }`}
-                                >
-                                  Name
-                                </span>
-                                <p
-                                  className={`truncate text-[15px] font-bold ${
-                                    isDarkMode
-                                      ? "text-slate-100"
-                                      : "text-slate-900"
-                                  }`}
-                                >
-                                  {order.customerName || "Guest"}
-                                </p>
-
-                                <span
-                                  className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${
-                                    isDarkMode
-                                      ? "text-slate-400"
-                                      : "text-slate-500"
-                                  }`}
-                                >
-                                  Phone
-                                </span>
-                                <p
-                                  className={`break-all text-sm font-semibold ${
-                                    isDarkMode
-                                      ? "text-slate-200"
-                                      : "text-slate-700"
-                                  }`}
-                                >
-                                  {order.customerPhone || "Not provided"}
-                                </p>
+                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Name</span>
+                                <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{order.customerName || "Guest"}</span>
+                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Phone</span>
+                                <span className={`text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>{order.customerPhone || "—"}</span>
                               </div>
 
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold shadow-sm ring-1 ${
-                                    isDarkMode
-                                      ? orderTypeNormalized === "delivery"
-                                        ? "border-orange-500/50 bg-orange-500/15 text-orange-200 ring-orange-500/30"
-                                        : orderTypeNormalized === "take away" ||
-                                          orderTypeNormalized === "takeaway"
-                                        ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
-                                        : orderTypeNormalized === "eat here" ||
-                                          orderTypeNormalized === "eathere"
-                                        ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
-                                        : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
-                                      : orderTypeNormalized === "delivery"
-                                      ? "border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 ring-orange-200/70"
-                                      : orderTypeNormalized === "take away" ||
-                                        orderTypeNormalized === "takeaway"
-                                      ? "border-blue-200 bg-gradient-to-r from-blue-50 to-sky-100 text-blue-700 ring-blue-200/70"
-                                      : orderTypeNormalized === "eat here" ||
-                                        orderTypeNormalized === "eathere"
-                                      ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
-                                      : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
-                                  }`}
-                                >
-                                  <span
-                                    className={`h-1.5 w-1.5 rounded-full ${
-                                      orderTypeNormalized === "delivery"
-                                        ? "bg-orange-300 ring-1 ring-orange-300/60"
-                                        : orderTypeNormalized === "take away" ||
-                                          orderTypeNormalized === "takeaway"
-                                        ? "bg-blue-300 ring-1 ring-blue-300/60"
-                                        : orderTypeNormalized === "eat here" ||
-                                          orderTypeNormalized === "eathere"
-                                        ? "bg-green-300 ring-1 ring-green-300/60"
-                                        : "bg-gray-500"
-                                    }`}
-                                  />
-                                  <span>{orderTypeLabel}</span>
+                              {/* Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                {/* Order type badge */}
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                  isDarkMode
+                                    ? orderTypeNormalized === "delivery" ? "bg-orange-500/15 text-orange-300"
+                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-500/15 text-blue-300"
+                                      : "bg-green-500/15 text-green-300"
+                                    : orderTypeNormalized === "delivery" ? "bg-orange-50 text-orange-700"
+                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-50 text-blue-700"
+                                      : "bg-green-50 text-green-700"
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${
+                                    orderTypeNormalized === "delivery" ? "bg-orange-400"
+                                    : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-400"
+                                    : "bg-green-400"
+                                  }`} />
+                                  {orderTypeLabel}
                                 </span>
 
-                                {order.status && (
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold capitalize shadow-sm ring-1 ${
-                                      isDarkMode
-                                        ? String(order.status || "").toLowerCase() === "pending"
-                                          ? "border-amber-500/50 bg-amber-500/15 text-amber-200 ring-amber-500/30"
-                                          : String(order.status || "").toLowerCase() === "preparing"
-                                          ? "border-teal-500/50 bg-teal-500/15 text-teal-200 ring-teal-500/30"
-                                          : String(order.status || "").toLowerCase() === "ready"
-                                          ? "border-blue-500/50 bg-blue-500/15 text-blue-200 ring-blue-500/30"
-                                          : String(order.status || "").toLowerCase() === "completed"
-                                          ? "border-green-500/50 bg-green-500/15 text-green-200 ring-green-500/30"
-                                          : String(order.status || "").toLowerCase() === "cancelled"
-                                          ? "border-red-500/50 bg-red-500/15 text-red-200 ring-red-500/30"
-                                          : "border-slate-600 bg-slate-700/80 text-slate-200 ring-slate-600/70"
-                                        : String(order.status || "").toLowerCase() === "pending"
-                                        ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 ring-amber-200/80"
-                                        : String(order.status || "").toLowerCase() === "preparing"
-                                        ? "border-teal-200 bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 ring-teal-200/70"
-                                        : String(order.status || "").toLowerCase() === "ready"
-                                        ? "border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 ring-blue-200/70"
-                                        : String(order.status || "").toLowerCase() === "completed"
-                                        ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 ring-green-200/70"
-                                        : String(order.status || "").toLowerCase() === "cancelled"
-                                        ? "border-red-200 bg-gradient-to-r from-red-50 to-rose-100 text-red-700 ring-red-200/70"
-                                        : "border-gray-200 bg-gray-100 text-gray-700 ring-gray-200/70"
-                                    }`}
-                                  >
-                                    <span
-                                      className={`h-1.5 w-1.5 rounded-full ${
-                                        String(order.status || "").toLowerCase() === "pending"
-                                          ? "bg-amber-600"
-                                          : String(order.status || "").toLowerCase() === "preparing"
-                                          ? "bg-teal-600"
-                                          : String(order.status || "").toLowerCase() === "ready"
-                                          ? "bg-blue-600"
-                                          : String(order.status || "").toLowerCase() === "completed"
-                                          ? "bg-green-600"
-                                          : String(order.status || "").toLowerCase() === "cancelled"
-                                          ? "bg-red-600"
-                                          : "bg-gray-500"
-                                      }`}
-                                    />
-                                    <span>{order.status}</span>
-                                  </span>
-                                )}
+                                {/* Status badge */}
+                                {order.status && (() => {
+                                  const s = String(order.status).toLowerCase();
+                                  const colorDark = s === "pending" ? "bg-amber-500/15 text-amber-300" : s === "preparing" ? "bg-teal-500/15 text-teal-300" : s === "ready" ? "bg-blue-500/15 text-blue-300" : s === "completed" ? "bg-green-500/15 text-green-300" : s === "cancelled" ? "bg-red-500/15 text-red-300" : "bg-slate-700 text-slate-300";
+                                  const colorLight = s === "pending" ? "bg-amber-50 text-amber-700" : s === "preparing" ? "bg-teal-50 text-teal-700" : s === "ready" ? "bg-blue-50 text-blue-700" : s === "completed" ? "bg-green-50 text-green-700" : s === "cancelled" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600";
+                                  const dot = s === "pending" ? "bg-amber-400" : s === "preparing" ? "bg-teal-400" : s === "ready" ? "bg-blue-400" : s === "completed" ? "bg-green-400" : s === "cancelled" ? "bg-red-400" : "bg-gray-400";
+                                  return (
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${isDarkMode ? colorDark : colorLight}`}>
+                                      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                                      {order.status}
+                                    </span>
+                                  );
+                                })()}
 
+                                {/* Table badge */}
                                 {order.tableId && (
-                                  <span
-                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                      isDarkMode
-                                        ? "border-slate-600 bg-slate-700/80 text-slate-200"
-                                        : "border-slate-200 bg-slate-100 text-slate-700"
-                                    }`}
-                                  >
+                                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
                                     Table {order.tableId}
                                   </span>
                                 )}
                               </div>
+
+                              {/* Address */}
+                              {order.address && (
+                                <p className={`text-xs leading-relaxed ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                                  📍 {order.address}
+                                </p>
+                              )}
                             </div>
 
-                            {/* Delivery address */}
-                            {order.address && (
-                              <div
-                                className={`mb-3 rounded-xl border p-3 ${
-                                  isDarkMode
-                                    ? "border-slate-600 bg-slate-900/70"
-                                    : "border-orange-200/80 bg-orange-50/30"
-                                }`}
-                              >
-                                <span
-                                  className={`text-[11px] font-semibold uppercase tracking-wide ${
-                                    isDarkMode
-                                      ? "text-slate-400"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  Address:
-                                </span>
-                                <p
-                                  className={`mt-1 text-xs leading-relaxed ${
-                                    isDarkMode
-                                      ? "text-slate-200"
-                                      : "text-gray-600"
-                                  }`}
-                                >
-                                  {order.address}
-                                </p>
-                              </div>
-                            )}
+                            {/* Divider */}
+                            <div className={`h-px ${isDarkMode ? "bg-slate-700/80" : "bg-orange-50"}`} />
 
                             {/* Items */}
-                            <div className="mb-3">
-                              <div className="mb-2 flex items-center gap-2">
-                                <span
-                                  className={`text-[11px] font-semibold uppercase tracking-wide ${
-                                    isDarkMode
-                                      ? "text-slate-400"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  Items:
-                                </span>
-                              </div>
-                              <div className="space-y-2">
-                                {order.items.map((item, index) => {
-                                  const isCompleted = item.status === "completed" || item.isReady === true || item.done === true;
-                                  return (
+                            <div>
+                              {order.items.map((item, index) => {
+                                const isCompleted = item.status === "completed" || item.isReady === true || item.done === true;
+                                return (
                                   <div
                                     key={index}
-                                    className={`flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-sm ${
-                                      isCompleted
-                                        ? isDarkMode
-                                          ? "border-green-700/50 bg-green-900/20"
-                                          : "border-green-200 bg-green-50"
-                                        : isDarkMode
-                                        ? "border-slate-600 bg-slate-900/90"
-                                        : "border-orange-200/80 bg-white"
-                                    }`}
+                                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
+                                      index !== 0 ? isDarkMode ? "border-t border-slate-700/50" : "border-t border-orange-50" : ""
+                                    } ${isCompleted ? isDarkMode ? "bg-green-900/10" : "bg-green-50/50" : ""}`}
                                   >
-                                    <div className="flex items-center gap-2">
-                                      {isCompleted && <span className="text-green-600 font-bold">✔</span>}
-                                      <span
-                                        className={
-                                          isDarkMode
-                                            ? "text-slate-100"
-                                            : "text-gray-700"
-                                        }
-                                      >
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      {isCompleted && <span className="shrink-0 text-green-500 text-xs">✔</span>}
+                                      <span className={`truncate ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
                                         {item.name}
-                                        {item.variant && (
-                                          <span
-                                            className={`ml-1 text-xs ${
-                                              isDarkMode
-                                                ? "text-slate-400"
-                                                : "text-gray-500"
-                                            }`}
-                                          >
-                                            ({item.variant})
-                                          </span>
-                                        )}
-                                        <span
-                                          className={`ml-1 font-semibold ${
-                                            isDarkMode
-                                              ? "text-slate-300"
-                                              : "text-gray-600"
-                                          }`}
-                                        >
-                                          × {item.quantity}
-                                        </span>
+                                        {item.variant && <span className={`ml-1 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>({item.variant})</span>}
+                                        <span className={`ml-1 ${isDarkMode ? "text-slate-400" : "text-slate-400"}`}>× {item.quantity}</span>
                                       </span>
                                     </div>
-                                    <span
-                                      className={`font-semibold ${
-                                        isCompleted
-                                          ? "text-green-600"
-                                          : isDarkMode
-                                            ? "text-slate-100"
-                                            : "text-gray-800"
-                                      }`}
-                                    >
-                                      ₹
-                                      {Number(
-                                        item.discountedPrice || item.price || 0
-                                      ).toFixed(2)}
+                                    <span className={`shrink-0 font-semibold ${isCompleted ? "text-green-500" : isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                                      ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
                                     </span>
                                   </div>
-                                )})}
-                              </div>
+                                );
+                              })}
                             </div>
 
-                            {/* GST */}
-                            {order.gstAmount !== undefined && (
-                              <div className="mt-1 flex items-center justify-between text-sm">
-                                <span
-                                  className={`text-sm ${
-                                    isDarkMode
-                                      ? "text-slate-300"
-                                      : "text-gray-600"
-                                  }`}
-                                >
-                                  GST{" "}
-                                  {order.gstRate ? `(${order.gstRate}%)` : ""}:
-                                </span>
-                                <span
-                                  className={`text-sm font-semibold ${
-                                    isDarkMode
-                                      ? "text-slate-100"
-                                      : "text-gray-800"
-                                  }`}
-                                >
-                                  ₹{Number(order.gstAmount).toFixed(2)}
-                                </span>
-                              </div>
-                            )}
+                            {/* Divider */}
+                            <div className={`h-px ${isDarkMode ? "bg-slate-700/80" : "bg-orange-50"}`} />
 
-                            {/* Delivery charges */}
-                            {orderTypeNormalized === "delivery" &&
-                              typeof order.deliveryCharges === "number" && (
-                                <div className="mt-1 flex items-center justify-between text-sm">
-                                  <span
-                                    className={`text-sm ${
-                                      isDarkMode
-                                        ? "text-slate-300"
-                                        : "text-gray-600"
-                                    }`}
-                                  >
-                                    Delivery Charges:
-                                  </span>
-                                  <span
-                                    className={`text-sm font-semibold ${
-                                      isDarkMode
-                                        ? "text-slate-100"
-                                        : "text-gray-800"
-                                    }`}
-                                  >
-                                    ₹{Number(order.deliveryCharges).toFixed(2)}
-                                  </span>
+                            {/* Totals */}
+                            <div className="px-4 py-3 space-y-1.5">
+                              {order.gstAmount !== undefined && (
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>GST{order.gstRate ? ` (${order.gstRate}%)` : ""}</span>
+                                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>₹{Number(order.gstAmount).toFixed(2)}</span>
                                 </div>
                               )}
-
-                            {/* Total */}
-                            <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2.5">
-                              <span className="font-semibold text-white">
-                                Total Amount:
-                              </span>
-                              <span className="text-xl font-bold text-primary">
-                                ₹{order.totalAmount?.toFixed(2) || "0.00"}
-                              </span>
+                              {orderTypeNormalized === "delivery" && typeof order.deliveryCharges === "number" && (
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>Delivery</span>
+                                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>₹{Number(order.deliveryCharges).toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between pt-1">
+                                <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>Total</span>
+                                <span className="text-base font-bold text-orange-500">₹{order.totalAmount?.toFixed(2) || "0.00"}</span>
+                              </div>
                             </div>
                           </div>
                         );

@@ -330,7 +330,7 @@ export default function TopSellingAnalytics() {
   };
 
   const secondaryButtonClass =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800";
+    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60";
   const primaryButtonClass =
     "inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
   const selectTriggerClass =

@@ -292,9 +292,10 @@ function OrderSummaryPanel({
             <button
               key={type}
               onClick={() => { setOrderType(type); setTableId(""); setAddress(""); }}
+              style={orderType === type ? { backgroundColor: "#f97316", color: "#ffffff" } : {}}
               className={`flex-1 py-2 text-xs font-semibold transition-all duration-200 ${
                 orderType === type
-                  ? "bg-orange-500 text-white shadow-sm"
+                  ? "shadow-sm"
                   : isDarkMode
                   ? "bg-slate-700/80 text-slate-300 hover:bg-slate-600"
                   : "bg-white text-slate-600 hover:bg-orange-50"
@@ -528,7 +529,7 @@ function OrderSummaryPanel({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function AdminOrderPanel({ isDarkMode = false }) {
+export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false }) {
   const dispatch = useDispatch();
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
@@ -711,6 +712,9 @@ export default function AdminOrderPanel({ isDarkMode = false }) {
       setTableId("");
       setAddress("");
       setOrderType("Dine In");
+      if (onOrderSuccess) {
+        onOrderSuccess();
+      }
     } catch (err) {
       showError(err?.data?.message || "Failed to place order");
     }
@@ -763,28 +767,33 @@ export default function AdminOrderPanel({ isDarkMode = false }) {
   return (
     // style prop forces the bg color even if a parent has conflicting bg
     <div
-      className={`flex flex-col h-screen overflow-hidden ${bg}`}
+      className={`flex flex-col ${asModal ? "h-full" : "h-screen"} overflow-hidden ${bg}`}
       style={{ backgroundColor: isDarkMode ? "#0d1629" : "#fffaf4" }}
     >
 
-      {/* STICKY HEADER */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 sticky top-0 z-20 ${headerBg}`}>
-        <h2 className={`text-base font-bold leading-tight ${textPrimary}`}>
-          {selectedCategory || "Menu"}
-        </h2>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-            isDarkMode ? "bg-slate-800 text-slate-300" : "bg-orange-100 text-orange-700"
-          }`}>
-            {currentItems.length} item{currentItems.length !== 1 ? "s" : ""}
-          </span>
-          {cartCount > 0 && (
-            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-orange-500 text-white">
-              {cartCount} in cart
+      {/* STICKY HEADER — hidden when used as modal */}
+      {!asModal && (
+        <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 sticky top-0 z-20 ${headerBg}`}>
+          <h2 className={`text-base font-bold leading-tight ${textPrimary}`}>
+            {selectedCategory || "Menu"}
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              isDarkMode ? "bg-slate-800 text-slate-300" : "bg-orange-100 text-orange-700"
+            }`}>
+              {currentItems.length} item{currentItems.length !== 1 ? "s" : ""}
             </span>
-          )}
+            {cartCount > 0 && (
+              <span
+                style={{ backgroundColor: "#f97316", color: "#ffffff" }}
+                className="text-xs px-2.5 py-1 rounded-full font-semibold"
+              >
+                {cartCount} in cart
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MOBILE: Category strip */}
       <div
@@ -797,9 +806,10 @@ export default function AdminOrderPanel({ isDarkMode = false }) {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
+            style={selectedCategory === cat ? { backgroundColor: "#f97316", color: "#ffffff" } : {}}
             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-150 ${
               selectedCategory === cat
-                ? "bg-orange-500 text-white shadow-md scale-[1.02]"
+                ? "shadow-md scale-[1.02]"
                 : isDarkMode
                 ? "bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600"
                 : "bg-white text-slate-600 border border-orange-200 hover:bg-orange-50"
@@ -824,9 +834,10 @@ export default function AdminOrderPanel({ isDarkMode = false }) {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
+              style={selectedCategory === cat ? { backgroundColor: "#f97316", color: "#ffffff" } : {}}
               className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${
                 selectedCategory === cat
-                  ? "bg-orange-500 text-white shadow-md"
+                  ? "shadow-md"
                   : isDarkMode
                   ? "text-slate-300 hover:bg-slate-800"
                   : "text-slate-600 hover:bg-orange-100"

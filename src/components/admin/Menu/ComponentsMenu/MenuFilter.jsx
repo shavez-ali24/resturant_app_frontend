@@ -64,7 +64,7 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-slate-700"
       >
         <span className="mr-2">
           {label}: <span className="font-semibold text-gray-900">{displayLabel}</span>

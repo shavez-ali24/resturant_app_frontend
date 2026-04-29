@@ -1568,8 +1568,8 @@ const prepareFormData = (formData, file) => {
                 onClick={() => setIsFilterOpen((prev) => !prev)}
                 className={`inline-flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:px-4 ${
                   isFilterOpen
-                    ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
-                    : "border-orange-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-orange-700"
+                    ? "border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
+                    : "border-orange-500 bg-orange-500 text-white hover:bg-orange-600"
                 }`}
               >
                 <SlidersHorizontal size={14} />
@@ -1761,7 +1761,7 @@ const prepareFormData = (formData, file) => {
                       <button
                         type="button"
                         onClick={() => setIsAddModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-700 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500 bg-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600 hover:border-orange-600"
                       >
                         <CirclePlus size={14} />
                         Add New Item
@@ -1869,14 +1869,6 @@ const prepareFormData = (formData, file) => {
 
                             <div className="flex w-full flex-col items-start gap-1 sm:w-auto sm:items-end">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                                  {displayPrice || "—"}
-                                </span>
-                                {singleDetails?.hasDiscount && singleDetails.original != null && (
-                                  <span className="text-xs text-gray-400 line-through">
-                                    {formatCurrency(singleDetails.original)}
-                                  </span>
-                                )}
                                 <AvailabilityBadge available={isAvailable} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
@@ -1925,10 +1917,10 @@ const prepareFormData = (formData, file) => {
                                 <button
                                   type="button"
                                   onClick={() => setEditingItem(buildEditItem(item))}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                                  className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100 dark:text-orange-400 dark:hover:bg-slate-700"
                                   aria-label="Edit menu item"
                                 >
-                                  <Edit size={14} />
+                                  <Edit size={16} />
                                 </button>
                                 <button
                                   type="button"
@@ -1938,10 +1930,10 @@ const prepareFormData = (formData, file) => {
                                       name: item.name,
                                     })
                                   }
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-800 dark:bg-slate-950 dark:text-red-300"
+                                  className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-slate-700"
                                   aria-label="Delete menu item"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={16} />
                                 </button>
                               </div>
                             )}
