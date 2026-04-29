@@ -1,11 +1,15 @@
-export const ALLOWED_IMAGE_TYPES = [
+export const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/gif",
-  "image/webp",
-  "image/avif",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
+
+// Backward compatibility alias
+export const ALLOWED_IMAGE_TYPES = ALLOWED_FILE_TYPES;
 export const MAX_IMAGE_KB = 300;
 
 export const defaultAddFormState = {

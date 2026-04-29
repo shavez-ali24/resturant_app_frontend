@@ -8,7 +8,15 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			mostrate: [
-  				'Mostra Nuova"',
+  				'Mostra Nuova',
+  				'sans-serif'
+  			],
+  			fredoka: [
+  				'Fredoka',
+  				'sans-serif'
+  			],
+  			outfit: [
+  				'Outfit',
   				'sans-serif'
   			]
   		},

@@ -40,12 +40,12 @@ const ImageUpload = ({ addFile, addFileError, handleFileChange }) => {
               <PhotoIcon
                 className={`h-10 w-10 ${addFileError ? "text-red-400" : "text-orange-300"}`}
               />
-              <p className="text-sm font-medium text-gray-500">Image preview will appear here</p>
+              <p className="text-sm font-medium text-gray-500">File preview will appear here</p>
             </div>
           )}
 
           <div className="absolute inset-x-0 bottom-0 bg-black/45 px-3 py-2 text-center text-xs font-semibold text-white">
-            {previewUrl ? "Click to replace image" : "Click to upload product image"}
+            {previewUrl ? "Click to replace file" : "Click to upload product file"}
           </div>
         </div>
 

@@ -145,6 +145,19 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         setNotification({ show: false, message: "", type: "" });
     };
 
+    const scrollToSelector = (selector) => {
+        if (typeof document === "undefined") return;
+        const target = document.querySelector(selector);
+        if (!target) return;
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof target.focus === "function") {
+            setTimeout(() => target.focus({ preventScroll: true }), 200);
+        }
+    };
+
+    const scrollToField = (name) => scrollToSelector(`[name="${name}"]`);
+    const scrollToId = (id) => scrollToSelector(`#${id}`);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         let processedValue = value;
@@ -233,36 +246,39 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     };
 
     // Category Handlers
+    const addCategoryFromInput = () => {
+        const formattedValue = formatCategoryLabel(currentCategoryInput);
+
+        if (!formattedValue) return;
+
+        setCategories((prev) => {
+            const exists = prev.some(
+                (category) =>
+                    getCategoryKey(category) === getCategoryKey(formattedValue)
+            );
+            if (exists) return prev;
+            return [...prev, formattedValue];
+        });
+
+        setCategorySuggestions((prev) => {
+            const updatedSuggestions = uniqueCategories([
+                ...prev,
+                formattedValue,
+            ]);
+            localStorage.setItem(
+                "restaurantCategories",
+                JSON.stringify(updatedSuggestions)
+            );
+            return updatedSuggestions;
+        });
+
+        setCurrentCategoryInput("");
+    };
+
     const handleCategoryKeyDown = (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            const formattedValue = formatCategoryLabel(currentCategoryInput);
-
-            if (!formattedValue) return;
-
-            setCategories((prev) => {
-                const exists = prev.some(
-                    (category) =>
-                        getCategoryKey(category) === getCategoryKey(formattedValue)
-                );
-                if (exists) return prev;
-                return [...prev, formattedValue];
-            });
-
-            setCategorySuggestions((prev) => {
-                const updatedSuggestions = uniqueCategories([
-                    ...prev,
-                    formattedValue,
-                ]);
-                localStorage.setItem(
-                    "restaurantCategories",
-                    JSON.stringify(updatedSuggestions)
-                );
-                return updatedSuggestions;
-            });
-
-            setCurrentCategoryInput("");
-        }
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        addCategoryFromInput();
     };
 
     const handleRemoveCategory = useCallback((categoryToRemove) => {
@@ -293,7 +309,23 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         const { eathere, takeaway, delivery } = formData.orderModes;
         if (!eathere && !takeaway && !delivery) {
             showNotification("At least one order mode must be enabled.", "error");
+            scrollToId("eathere-toggle");
             return;
+        }
+
+        if (formData.gstEnabled) {
+            const gstNumber = String(formData.gstNumber || "").trim();
+            const gstRateValue = Number(formData.gstRate);
+            if (!gstNumber) {
+                showNotification("GST number is required when GST is enabled.", "error");
+                scrollToField("gstNumber");
+                return;
+            }
+            if (!gstRateValue) {
+                showNotification("GST rate is required when GST is enabled.", "error");
+                scrollToField("gstRate");
+                return;
+            }
         }
 
         try {
@@ -335,9 +367,20 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 }
             } else {
                 // Append categories array as strings
-                categories.forEach((category) => {
-                    formDataToUpload.append("categories", category);
-                });
+                // categories.forEach((category) => {
+                //     formDataToUpload.append("categories", category);
+                // });
+
+                categories.forEach((category, index) => {
+    formDataToUpload.append(
+        `categories[${index}][name]`,
+        category
+    );
+    formDataToUpload.append(
+        `categories[${index}][displayOrder]`,
+        index
+    );
+});
 
                 if (categories.length === 0) {
                     formDataToUpload.append("categories", ""); // To clear array on backend
@@ -387,6 +430,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         handleOrderModeToggle, 
         handleFileChange, 
         handleCategoryKeyDown,
+        handleAddCategory: addCategoryFromInput,
         handleRemoveCategory, 
         handleSubmit, 
         closeNotification,

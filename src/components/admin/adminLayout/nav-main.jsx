@@ -43,7 +43,8 @@ export function NavMain({ items, isDarkMode = false }) {
       <button
         type="button"
         className={`
-          flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded transition-all duration-200 group 
+          flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded transition-all duration-200 group
+          group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
           ${isActive
             ? isDarkMode
               ? "bg-slate-800 text-slate-100 shadow-sm"
@@ -56,19 +57,19 @@ export function NavMain({ items, isDarkMode = false }) {
       >
         <item.icon
           className={`
-            mr-3 w-4 h-4 transition-colors duration-200 
+            mr-3 w-4 h-4 transition-colors duration-200 group-data-[collapsible=icon]:mr-0
             ${isActive
               ? isDarkMode ? "text-orange-300" : "text-gray-900"
               : isDarkMode ? "text-slate-400 group-hover:text-orange-300" : "text-gray-500 group-hover:text-orange-700"}
           `}
         />
 
-        <span className="flex-1 truncate">{item.title}</span>
+        <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">{item.title}</span>
 
         {item.items?.length && (
           <ChevronRight
             className={`
-              w-4 h-4 transition-transform duration-200 
+              w-4 h-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden
               ${isActive
                 ? isDarkMode
                   ? "rotate-90 text-orange-300"
@@ -84,7 +85,7 @@ export function NavMain({ items, isDarkMode = false }) {
 
     {/* Submenu */}
     {item.items?.length && (
-      <CollapsibleContent>
+      <CollapsibleContent className="group-data-[collapsible=icon]:hidden">
         <SidebarMenuSub className="pl-6 mt-1 space-y-1">
           {item.items.map((subItem) => {
             const isSubActive = subItem.url === location.pathname;
@@ -92,22 +93,23 @@ export function NavMain({ items, isDarkMode = false }) {
               <SidebarMenuSubItem key={subItem.title}>
                 <SidebarMenuSubButton asChild>
                   <Link
-  to={subItem.url}
-  className={`
-    block px-3 py-1 text-sm rounded transition-colors duration-200
-    ${isSubActive
-      ? isDarkMode
-        ? "bg-slate-800 text-slate-100 shadow-sm"
-        : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
-      : isDarkMode
-        ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
-        : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
-    }
-  `}
->
-  {subItem.title}
-</Link>
-
+                    to={subItem.url}
+                    target={subItem.target || undefined}
+                    rel={subItem.target === "_blank" ? "noreferrer" : undefined}
+                    className={`
+                      block px-3 py-1 text-sm rounded transition-colors duration-200
+                      ${isSubActive
+                        ? isDarkMode
+                          ? "bg-slate-800 text-slate-100 shadow-sm"
+                          : "bg-gradient-to-r from-orange-200 to-orange-400 text-gray-900 shadow-sm"
+                        : isDarkMode
+                          ? "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
+                          : "text-gray-600 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 hover:text-orange-900"
+                      }
+                    `}
+                  >
+                    {subItem.title}
+                  </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             );

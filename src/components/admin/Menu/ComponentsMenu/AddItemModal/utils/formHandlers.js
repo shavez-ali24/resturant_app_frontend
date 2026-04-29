@@ -129,7 +129,7 @@ export const handleAddFormFileChange = (e, setAddFile, setAddFileError) => {
   }
 
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    const errorMsg = "Invalid image file type (JPEG, PNG, GIF, WEBP, AVIF allowed)";
+    const errorMsg = "Invalid file type (JPEG, PNG, GIF, PDF, DOC allowed)";
     setAddFileError(errorMsg);
     e.target.value = "";
     return;

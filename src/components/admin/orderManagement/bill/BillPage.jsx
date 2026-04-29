@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
   SelectContent,
@@ -8,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../ui/select";
+} from "@/components/ui/select";
 import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
@@ -18,22 +19,62 @@ import {
   recalcTotal,
 } from "../commonOrderFile/utils";
 
-const BillPage = ({ 
-  order, 
-  restaurantDetails, 
-  onClose, 
-  menuItems = [], 
+const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
+const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
+
+const broadcastItemReady = (orderId, itemId, isReady) => {
+  try {
+    const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+    channel.postMessage({ orderId, itemId, isReady });
+    channel.close();
+  } catch (e) {
+    console.warn("BroadcastChannel not supported:", e);
+  }
+};
+
+const broadcastOrderStatus = (orderId, status) => {
+  try {
+    const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
+    channel.postMessage({ orderId, status });
+    channel.close();
+  } catch (e) {
+    console.warn("BroadcastChannel not supported:", e);
+  }
+};
+
+const listenForItemReady = (callback) => {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
+  channel.onmessage = (event) => callback(event.data);
+  return () => channel.close();
+};
+
+const listenForOrderStatus = (callback) => {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
+  channel.onmessage = (event) => callback(event.data);
+  return () => channel.close();
+};
+
+const BillPage = ({
+  order,
+  restaurantDetails,
+  onClose,
+  menuItems = [],
   tables = [],
-  updateOrder 
+  updateOrder,
+  sseEvent
 }) => {
   const billRef = useRef();
   const user = useSelector((state) => state.admin.user);
   const isStaff = user?.role === "staff";
+  // const { sseEvent } = useNotification();
   
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [localOrderData, setLocalOrderData] = useState(null);
-  const [selectedTableId, setSelectedTableId] = useState("");
-  const [address, setAddress] = useState("");
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [localOrderData, setLocalOrderData] = useState(null);
+   const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
+   const [selectedTableId, setSelectedTableId] = useState("");
+   const [address, setAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -42,15 +83,15 @@ const BillPage = ({
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
   const [itemChecks, setItemChecks] = useState({});
-  const showItemChecks = ["pending", "preparing"].includes(
+  const [toggleItemReady] = useToggleItemReadyMutation();
+  const showItemChecks = ["pending", "preparing", "ready"].includes(
     String(order?.status || "").toLowerCase()
   );
 
   const orderStorageKey =
     order?._id || order?.orderId || order?.id || "";
 
-  const buildItemCheckKey = (item, index) => {
-    if (item?._id) return String(item._id);
+  const buildItemCheckBase = (item) => {
     const baseId =
       item?.menuItemId ||
       item?.menuItem?._id ||
@@ -58,8 +99,103 @@ const BillPage = ({
       "item";
     const variant = item?.variantName || item?.variant || "";
     const customizations = item?.customizations || "";
-    return `${baseId}::${variant}::${customizations}::${index}`;
+    return `${baseId}::${variant}::${customizations}`;
   };
+
+  const resolveItemCheckKey = (item, index) => {
+    if (item?.billItemKey) return String(item.billItemKey);
+    const baseKey = buildItemCheckBase(item);
+    if (index === undefined || index === null) return baseKey;
+    return `${baseKey}::${index}`;
+  };
+
+  const normalizeItemsWithBillKeys = (items = [], previousItems = []) => {
+    const previousQueues = new Map();
+    previousItems.forEach((item) => {
+      const baseKey = buildItemCheckBase(item);
+      if (!baseKey) return;
+      if (!previousQueues.has(baseKey)) previousQueues.set(baseKey, []);
+      const key =
+        item?.billItemKey ||
+        `${baseKey}::${previousQueues.get(baseKey).length + 1}`;
+      previousQueues.get(baseKey).push(key);
+    });
+
+    const used = new Set();
+    const counters = new Map();
+
+    return items.map((item) => {
+      const baseKey = buildItemCheckBase(item);
+      let key;
+
+      const queue = previousQueues.get(baseKey);
+      if (queue && queue.length) {
+        while (queue.length && used.has(queue[0])) queue.shift();
+        if (queue.length) key = queue.shift();
+      }
+
+      if (!key) {
+        const nextCount = (counters.get(baseKey) || 0) + 1;
+        counters.set(baseKey, nextCount);
+        key = `${baseKey}::${nextCount}`;
+      }
+
+      used.add(key);
+      return { ...item, billItemKey: key };
+    });
+  };
+
+  const getNextBillItemKey = (items, baseKey) => {
+    let max = 0;
+    items.forEach((item) => {
+      const key = item?.billItemKey;
+      if (!key || !key.startsWith(`${baseKey}::`)) return;
+      const parts = key.split("::");
+      const last = parts[parts.length - 1];
+      const num = Number(last);
+      if (Number.isFinite(num)) max = Math.max(max, num);
+    });
+    return `${baseKey}::${max + 1}`;
+  };
+
+  useEffect(() => {
+    if (!showItemChecks) return;
+    const activeItems = localOrderData?.items || order?.items || [];
+    if (!Array.isArray(activeItems) || activeItems.length === 0) return;
+
+    setItemChecks((prev) => {
+      if (!prev || typeof prev !== "object") return prev;
+      const next = {};
+      const existingKeys = Object.keys(prev);
+      let changed = false;
+
+      activeItems.forEach((item, index) => {
+        const baseKey = buildItemCheckBase(item);
+        const nextKey = resolveItemCheckKey(item, index);
+        if (!nextKey) return;
+
+        const candidateKeys = [
+          nextKey,
+          baseKey && index !== undefined ? `${baseKey}::${index}` : null,
+          baseKey,
+          item?._id ? String(item._id) : null,
+        ].filter(Boolean);
+
+        const matchedKey = candidateKeys.find((key) => prev[key] !== undefined);
+
+        if (matchedKey !== undefined) {
+          next[nextKey] = prev[matchedKey];
+          if (matchedKey !== nextKey) changed = true;
+        }
+      });
+
+      if (!changed && Object.keys(next).length === Object.keys(prev).length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [isEditMode, localOrderData?.items, order?.items, showItemChecks]);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -75,64 +211,297 @@ const BillPage = ({
     return () => observer.disconnect();
   }, []);
 
-  // Initialize local order data
-  useEffect(() => {
-    if (order) {
-      const newLocalOrderData = {
-        ...order,
-        items: order.items.map(item => ({
-          ...item,
-          menuItemId: item.menuItemId || item.menuItem?._id || item._id,
-          name: item.name || item.menuItem?.name || "",
-          price: item.discountedPrice || item.price || 0,
-          quantity: item.quantity || 1,
-          variantName: item.variant || item.variantName || null,
-          variants: item.variants || item.menuItem?.variantRates || null,
-          customizations: item.customizations || ""
-        }))
-      };
-      
-      setLocalOrderData(newLocalOrderData);
-      setSelectedTableId(order.tableId || "");
-      setAddress(order.address || "");
-    }
-  }, [order]);
+   // Initialize local order data and capture initial snapshot
+   useEffect(() => {
+     if (order) {
+       const orderItems = Array.isArray(order.items) ? order.items : [];
+       const normalizedItems = normalizeItemsWithBillKeys(
+         orderItems.map((item) => ({
+           ...item,
+           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
+           name: item.name || item.menuItem?.name || "",
+           price: item.discountedPrice || item.price || 0,
+           quantity: item.quantity || 1,
+           variantName: item.variant || item.variantName || null,
+           variants: item.variants || item.menuItem?.variantRates || null,
+           customizations: item.customizations || ""
+         })),
+         localOrderData?.items || []
+       );
+
+       const newLocalOrderData = {
+         ...order,
+         items: normalizedItems,
+       };
+
+       setLocalOrderData(newLocalOrderData);
+       setSelectedTableId(order.tableId || "");
+       setAddress(order.address || "");
+
+       // Capture initial snapshot for comparison on save
+       setInitialOrderSnapshot({
+         status: newLocalOrderData.status,
+         items: newLocalOrderData.items.map(item => ({
+           _id: item._id,
+           menuItemId: item.menuItemId
+         })),
+         itemCount: newLocalOrderData.items.length
+       });
+     }
+   }, [order]);
 
   useEffect(() => {
     if (!orderStorageKey || typeof window === "undefined") return;
+    if (!showItemChecks) {
+      localStorage.removeItem(`bill-item-checks:${orderStorageKey}`);
+      setItemChecks({});
+      return;
+    }
+
+    // Initialize from order data's isReady field using item._id as key
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const orderChecks = {};
+
+    (activeOrder?.items || []).forEach((item) => {
+      if (item._id) {
+        orderChecks[item._id] = !!item?.isReady;
+      }
+    });
+
+    // Load from localStorage if available, but prioritize order data
     try {
       const saved = localStorage.getItem(
         `bill-item-checks:${orderStorageKey}`
       );
-      setItemChecks(saved ? JSON.parse(saved) : {});
+      if (saved) {
+        const savedChecks = JSON.parse(saved);
+        // Merge: use order data as source of truth, but keep any additional UI state from localStorage
+        const mergedChecks = { ...savedChecks };
+        Object.keys(orderChecks).forEach(key => {
+          mergedChecks[key] = orderChecks[key];
+        });
+        setItemChecks(mergedChecks);
+      } else {
+        setItemChecks(orderChecks);
+      }
     } catch (err) {
       console.error("Error loading item checks:", err);
-      setItemChecks({});
+      setItemChecks(orderChecks);
     }
-  }, [orderStorageKey]);
+  }, [orderStorageKey, showItemChecks, order, localOrderData, isEditMode]);
 
+  // Handle real-time updates from SSE
   useEffect(() => {
-    if (!orderStorageKey || typeof window === "undefined") return;
-    localStorage.setItem(
-      `bill-item-checks:${orderStorageKey}`,
-      JSON.stringify(itemChecks)
-    );
-  }, [orderStorageKey, itemChecks]);
+    if (
+      sseEvent?.type !== "ORDER_UPDATED" ||
+      !sseEvent?.data ||
+      !orderStorageKey
+    ) {
+      return;
+    }
 
-  const toggleItemCheck = (itemKey) => {
-    setItemChecks((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey],
-    }));
+    const updatedOrder = sseEvent.data;
+    const updatedOrderId = updatedOrder._id || updatedOrder.id || updatedOrder.orderId;
+
+    if (String(updatedOrderId) === String(orderStorageKey)) {
+      // Update checkbox states based on the new order data
+      if (updatedOrder.items && showItemChecks) {
+        const newChecks = {};
+        updatedOrder.items.forEach(item => {
+          if (item._id) {
+            newChecks[item._id] = !!item.isReady;
+          }
+        });
+
+        // Update localStorage
+        try {
+          localStorage.setItem(`bill-item-checks:${orderStorageKey}`, JSON.stringify(newChecks));
+        } catch (err) {
+          console.error("Error updating localStorage:", err);
+        }
+
+        setItemChecks(newChecks);
+      }
+    }
+  }, [sseEvent, orderStorageKey, showItemChecks]);
+
+  // Update checkbox states when order data changes
+  useEffect(() => {
+    if (!showItemChecks || !orderStorageKey) return;
+
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const orderChecks = {};
+
+    (activeOrder?.items || []).forEach((item) => {
+      if (item._id) {
+        orderChecks[item._id] = !!item?.isReady;
+      }
+    });
+
+    setItemChecks(prev => {
+      const merged = { ...prev };
+      Object.keys(orderChecks).forEach(key => {
+        merged[key] = orderChecks[key];
+      });
+      return merged;
+    });
+  }, [order, localOrderData, isEditMode, showItemChecks, orderStorageKey]);
+
+  const toggleItemCheck = async (itemKey) => {
+    const currentValue = itemChecks[itemKey] || false;
+    const newValue = !currentValue;
+
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const item = (activeOrder?.items || []).find(item => item._id === itemKey);
+
+    if (item && item._id) {
+      try {
+        // Update local state immediately for UI responsiveness
+        setItemChecks((prev) => ({
+          ...prev,
+          [itemKey]: newValue,
+        }));
+
+        // Call backend API to update the order
+        await toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap();
+
+        // Broadcast to other tabs/windows using item._id as key
+        broadcastItemReady(orderStorageKey, item._id, newValue);
+      } catch (err) {
+        console.error("Failed to toggle item ready status:", err);
+        // Revert local state on error
+        setItemChecks((prev) => ({
+          ...prev,
+          [itemKey]: currentValue,
+        }));
+      }
+    }
   };
 
-  // Use backend data directly - already calculated with discounts
-  const gstAmount = Number(order?.gstAmount || 0);
-  const deliveryCharges = (order?.orderType === "Delivery") ? Number(order?.deliveryCharges || 0) : 0;
-  const grandTotal = Number(order?.totalAmount || 0);
+  useEffect(() => {
+    if (!showItemChecks || !orderStorageKey) return () => {};
 
-  // For item display, use discountedPrice if available (already calculated by backend)
-  const displaySubtotal = grandTotal - gstAmount - deliveryCharges;
+    const cleanup = listenForItemReady(({ orderId, itemId, isReady }) => {
+      if (String(orderId) === String(orderStorageKey)) {
+        setItemChecks((prev) => {
+          if (prev[itemId] === isReady) return prev;
+          return { ...prev, [itemId]: isReady };
+        });
+      }
+    });
+    return cleanup;
+  }, [orderStorageKey, showItemChecks]);
+
+  // Listen for order status changes from KDS
+  useEffect(() => {
+    if (!orderStorageKey) return () => {};
+
+    const cleanup = listenForOrderStatus(({ orderId, status }) => {
+      if (String(orderId) === String(orderStorageKey)) {
+        // Update local order data if in edit mode, or just log
+        setLocalOrderData((prev) => {
+          if (!prev) return prev;
+          if (String(prev.status) === String(status)) return prev;
+          return { ...prev, status };
+        });
+        // Also update the original order prop (will be overwritten by parent state but helps immediate UI)
+        // The parent component should update via SSE anyway
+      }
+    });
+    return cleanup;
+  }, [orderStorageKey]);
+
+  // When order status becomes "ready", mark all items as ready
+  useEffect(() => {
+    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    if (activeOrder?.status === "ready" && activeOrder?.items) {
+      const unreadyItems = activeOrder.items.filter(item => item._id && !item.isReady);
+      if (unreadyItems.length > 0) {
+        // Mark all unready items as ready
+        Promise.all(
+          unreadyItems.map(item =>
+            toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap()
+          )
+        ).then(() => {
+          // Update local state after successful API calls
+          const newChecks = {};
+          activeOrder.items.forEach(item => {
+            if (item._id) {
+              newChecks[item._id] = true;
+            }
+          });
+          setItemChecks(newChecks);
+        }).catch(console.error);
+      }
+    }
+  }, [order?.status, localOrderData?.status, orderStorageKey, isEditMode]);
+
+  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+  const activeOrderTypeKey = getOrderTypeKey(activeOrder?.orderType);
+
+  const parseAmount = (value) => {
+    if (value == null) return 0;
+    if (typeof value === "number") return value;
+    const cleaned = String(value).replace(/[^\d.]/g, "");
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const restaurantDeliveryCharge = parseAmount(restaurantDetails?.deliveryCharges);
+  const hasOrderDeliveryCharge =
+    activeOrder?.deliveryCharges !== undefined &&
+    activeOrder?.deliveryCharges !== null &&
+    String(activeOrder?.deliveryCharges).trim() !== "";
+  const orderDeliveryCharge = hasOrderDeliveryCharge
+    ? parseAmount(activeOrder?.deliveryCharges)
+    : 0;
+  const resolvedDeliveryCharge = hasOrderDeliveryCharge
+    ? orderDeliveryCharge
+    : restaurantDeliveryCharge;
+  const deliveryCharges =
+    activeOrderTypeKey === "delivery"
+      ? resolvedDeliveryCharge
+      : 0;
+
+  const itemsSubtotal = recalcTotal(activeOrder?.items || []);
+  const backendSubtotal = parseAmount(activeOrder?.subtotal);
+  const hasBackendSubtotal =
+    Number.isFinite(backendSubtotal) && backendSubtotal > 0;
+
+  // Subtotal should respect backend when provided; otherwise fallback to items sum
+  const displaySubtotal = isEditMode
+    ? itemsSubtotal
+    : (hasBackendSubtotal ? backendSubtotal : itemsSubtotal);
+
+  const gstRate = parseAmount(
+    activeOrder?.gstRate ??
+    restaurantDetails?.gstRate ??
+    order?.gstRate ??
+    0
+  );
+  const backendGstAmount = parseAmount(activeOrder?.gstAmount);
+  const computedGstAmount = gstRate > 0
+    ? (displaySubtotal * gstRate) / 100
+    : 0;
+  const displayGstAmount = isEditMode
+    ? computedGstAmount
+    : (backendGstAmount || computedGstAmount);
+
+  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges;
+  const backendGrandTotal = parseAmount(activeOrder?.totalAmount || 0);
+  let displayGrandTotal = computedGrandTotal;
+
+  if (!isEditMode && backendGrandTotal) {
+    const diff = Math.abs(backendGrandTotal - computedGrandTotal);
+    if (diff <= 0.01) {
+      displayGrandTotal = backendGrandTotal;
+    } else if (Math.abs(backendGrandTotal - displaySubtotal) <= 0.01) {
+      // Backend total excludes GST/delivery, so show computed total
+      displayGrandTotal = computedGrandTotal;
+    } else {
+      displayGrandTotal = backendGrandTotal;
+    }
+  }
 
   const restaurantName =
     restaurantDetails?.restaurantName ||
@@ -140,10 +509,63 @@ const BillPage = ({
     "Restaurant Name";
   const restaurantAddress = restaurantDetails?.address || "Restaurant Address";
   const restaurantPhone = restaurantDetails?.phoneNumber || "N/A";
+  const rawGstin =
+    restaurantDetails?.gstNumber ??
+    restaurantDetails?.gstin ??
+    restaurantDetails?.gstIN ??
+    "";
+  const normalizedGstin = String(rawGstin || "").trim();
   const restaurantGstin =
-    restaurantDetails?.gstEnabled && restaurantDetails.gstNumber
-      ? restaurantDetails.gstNumber
+    normalizedGstin && restaurantDetails?.gstEnabled !== false
+      ? normalizedGstin
       : null;
+  const displayAddress = isEditMode ? address : order?.address;
+  const forceLightBill = true;
+  const billThemeIsDark = isDarkMode && !forceLightBill;
+  const billSurfaceClass = billThemeIsDark
+    ? "bg-slate-950 text-slate-100"
+    : "bg-white text-gray-900";
+  const billPanelClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
+  const billBorderClass = billThemeIsDark ? "border-slate-700" : "border-gray-200";
+  const billTextClass = billThemeIsDark ? "text-slate-100" : "text-gray-900";
+  const billMutedTextClass = billThemeIsDark ? "text-slate-300" : "text-gray-700";
+  const billContentBgClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
+  const billInputClass = billThemeIsDark
+    ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
+    : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200";
+  const billSelectContentClass = billThemeIsDark
+    ? "border-slate-700 bg-slate-950"
+    : "border-gray-200 bg-white";
+  const billSelectItemClass = billThemeIsDark
+    ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
+    : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900";
+  const billControlButtonClass = billThemeIsDark
+    ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
+    : "bg-gray-100 text-gray-700 hover:bg-gray-200";
+  const billCheckboxClass = billThemeIsDark
+    ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
+    : "border-gray-300 text-orange-600 accent-orange-500";
+
+  const getFinalQR = () => {
+    const rawQR =
+      (typeof restaurantDetails?.qrCode === "string" ||
+      typeof restaurantDetails?.qrCode === "number")
+        ? String(restaurantDetails?.qrCode)
+        : (
+            restaurantDetails?.qrCode?.url ||
+            restaurantDetails?.qrCode?.secure_url ||
+            restaurantDetails?.qrCode?.secureUrl ||
+            restaurantDetails?.qrCode?.path ||
+            restaurantDetails?.qrCode?.base64 ||
+            ""
+          );
+    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
+    if (!cleanedQR) return "";
+    if (cleanedQR.startsWith("data:image")) return cleanedQR;
+    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
+    return `data:image/png;base64,${cleanedQR}`;
+  };
+  const qrSrc = getFinalQR();
 
   // =============================
   // EDIT MODE FUNCTIONS
@@ -151,10 +573,17 @@ const BillPage = ({
 
   // Add item
   const handleAddItem = (menuItemId) => {
+    if (!localOrderData) return;
     const selected = menuItems.find(m => m._id === menuItemId);
     if (!selected) return;
 
     let newItem;
+    const baseKey = buildItemCheckBase({
+      menuItemId: selected._id,
+      variantName: selected.pricingType === "variant" ? Object.keys(selected.variantRates || {})[0] : null,
+      customizations: "",
+    }) || `${selected._id || selected.name || "item"}`;
+    const nextKey = getNextBillItemKey(localOrderData?.items || [], baseKey);
 
     if (selected.pricingType === "variant" && selected.variantRates) {
       const firstVariant = Object.keys(selected.variantRates)[0];
@@ -165,7 +594,8 @@ const BillPage = ({
         variantName: firstVariant,
         variants: selected.variantRates,
         price: selected.variantRates[firstVariant],
-        customizations: ""
+        customizations: "",
+        billItemKey: nextKey
       };
     } else {
       newItem = {
@@ -175,7 +605,8 @@ const BillPage = ({
         variantName: null,
         variants: null,
         price: selected.price,
-        customizations: ""
+        customizations: "",
+        billItemKey: nextKey
       };
     }
 
@@ -190,6 +621,7 @@ const BillPage = ({
 
   // Remove item
   const handleRemoveItem = (idx) => {
+    if (!localOrderData) return;
     if (localOrderData.items.length <= 1) {
       setError("Minimum 1 item required");
       return;
@@ -207,6 +639,7 @@ const BillPage = ({
 
   // Update quantity
   const handleQuantityChange = (idx, qty) => {
+    if (!localOrderData) return;
     const quantity = Math.max(1, parseInt(qty) || 1);
     const items = [...localOrderData.items];
     items[idx].quantity = quantity;
@@ -220,6 +653,7 @@ const BillPage = ({
 
   // Update variant
   const handleVariantChange = (idx, variant) => {
+    if (!localOrderData) return;
     const items = [...localOrderData.items];
     const item = items[idx];
 
@@ -227,6 +661,7 @@ const BillPage = ({
 
     item.variantName = variant;
     item.price = item.variants[variant];
+    item.billItemKey = buildItemCheckBase(item) || item.billItemKey;
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -237,8 +672,14 @@ const BillPage = ({
 
   // Order type change
   const handleOrderTypeChange = (orderType) => {
+    if (!localOrderData) return;
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
+    const defaultDeliveryCharge = parseAmount(
+      localOrderData?.deliveryCharges ??
+      order?.deliveryCharges ??
+      restaurantDetails?.deliveryCharges
+    );
     
     // Clear fields based on transition
     if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
@@ -250,7 +691,8 @@ const BillPage = ({
 
     setLocalOrderData(prev => ({
       ...prev,
-      orderType
+      orderType,
+      deliveryCharges: newType === "delivery" ? defaultDeliveryCharge : 0
     }));
   };
 
@@ -264,72 +706,106 @@ const BillPage = ({
     setAddress(e.target.value);
   };
 
-  // Save changes
-  const handleSaveChanges = async () => {
-    if (isSubmitting || !localOrderData) return;
-    
-    // Validation
-    if (localOrderData.items.length === 0) {
-      setError("Minimum 1 item required");
-      return;
-    }
+   // Save changes
+   const handleSaveChanges = async () => {
+     if (isSubmitting || !localOrderData) return;
+     
+     // Validation
+     if (localOrderData.items.length === 0) {
+       setError("Minimum 1 item required");
+       return;
+     }
 
-    const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
-    
-    if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
-      setError("Please select a table for Eat Here order");
-      return;
-    }
-    
-    if (selectedOrderTypeKey === "delivery" && !address.trim()) {
-      setError("Please enter address for Delivery order");
-      return;
-    }
+     const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
+     
+     if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
+       setError("Please select a table for Eat Here order");
+       return;
+     }
+     
+     if (selectedOrderTypeKey === "delivery" && !address.trim()) {
+       setError("Please enter address for Delivery order");
+       return;
+     }
 
-    setIsSubmitting(true);
-    setError("");
+     setIsSubmitting(true);
+     setError("");
 
-    try {
-      const payload = {
-        status: localOrderData.status,
-        orderType: localOrderData.orderType,
-        items: localOrderData.items.map(item => ({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          variant: item.variantName || null,
-          customizations: item.customizations || ""
-        }))
-      };
+     try {
+       const initialStatus = initialOrderSnapshot?.status;
+       const currentStatus = localOrderData.status;
+       const initialItemCount = initialOrderSnapshot?.itemCount || 0;
+       const currentItemCount = localOrderData.items.length;
+       const isAddingNewItems = currentItemCount > initialItemCount;
 
-      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        payload.tableId = selectedTableId;
-      }
+       const payload = {
+         orderType: localOrderData.orderType,
+         items: localOrderData.items.map(item => {
+           const payloadItem = {
+             menuItemId: item.menuItemId,
+             quantity: item.quantity,
+             variant: item.variantName || null,
+             customizations: item.customizations || ""
+           };
+           if (item._id) {
+             payloadItem._id = item._id;
+           }
+           return payloadItem;
+         })
+       };
 
-      if (selectedOrderTypeKey === "delivery" && address.trim()) {
-        payload.address = address.trim();
-      }
+       // Include status if it changed OR we need to force preparing
+       let statusChanged = false;
+       if (initialStatus === "ready" && isAddingNewItems) {
+         payload.status = "preparing";
+         statusChanged = true;
+       } else if (currentStatus !== initialStatus) {
+         payload.status = currentStatus;
+         statusChanged = true;
+       }
 
-      if (selectedOrderTypeKey === "take_away") {
-        payload.tableId = null;
-        payload.address = null;
-      }
+       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
+         payload.tableId = selectedTableId;
+       }
 
-      await updateOrder(localOrderData._id, payload);
-      setIsEditMode(false);
-    } catch (err) {
-      console.error("Update Order Failed:", err);
-      setError(err?.data?.message || "Failed to update order");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+       if (selectedOrderTypeKey === "delivery" && address.trim()) {
+         payload.address = address.trim();
+         payload.deliveryCharges =
+           parseAmount(localOrderData?.deliveryCharges) ||
+           parseAmount(restaurantDetails?.deliveryCharges) ||
+           0;
+       }
+
+       if (selectedOrderTypeKey === "take_away") {
+         payload.tableId = null;
+         payload.address = null;
+       }
+
+       await updateOrder({
+         orderId: localOrderData._id,
+         updatedData: payload,
+       }).unwrap();
+       
+       // Broadcast order status change if status was updated
+       if (statusChanged && payload.status) {
+         broadcastOrderStatus(localOrderData._id, payload.status);
+       }
+       
+       setIsEditMode(false);
+     } catch (err) {
+       console.error("Update Order Failed:", err);
+       setError(err?.data?.message || "Failed to update order");
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
 
   // Cancel edit
   const handleCancelEdit = () => {
+    const orderItems = Array.isArray(order?.items) ? order.items : [];
     // Reset to original data
-    const newLocalOrderData = {
-      ...order,
-      items: order.items.map(item => ({
+    const normalizedItems = normalizeItemsWithBillKeys(
+      orderItems.map((item) => ({
         ...item,
         menuItemId: item.menuItemId || item.menuItem?._id || item._id,
         name: item.name || item.menuItem?.name || "",
@@ -338,7 +814,13 @@ const BillPage = ({
         variantName: item.variant || item.variantName || null,
         variants: item.variants || item.menuItem?.variantRates || null,
         customizations: item.customizations || ""
-      }))
+      })),
+      localOrderData?.items || []
+    );
+
+    const newLocalOrderData = {
+      ...order,
+      items: normalizedItems,
     };
     
     setLocalOrderData(newLocalOrderData);
@@ -381,6 +863,23 @@ const BillPage = ({
             @media print {
               .no-print {
                 display: none !important;
+              }
+              body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .printable-bill,
+              .printable-bill * {
+                color: #000000 !important;
+                background: #ffffff !important;
+                border-color: #000000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+              }
+              .printable-bill {
+                background: #ffffff !important;
               }
             }
           </style>
@@ -437,7 +936,7 @@ const BillPage = ({
         className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] ${
           isDarkMode
             ? "border-slate-700 bg-slate-950 text-slate-100 shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
-            : "border-orange-100 bg-white/95"
+            : "border-orange-100 bg-white"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -467,7 +966,7 @@ const BillPage = ({
             {isStaff && !isEditMode && (
               <button
                 onClick={() => setIsEditMode(true)}
-                className={`rounded-lg p-2 transition-colors ${
+                className={`relative rounded-lg p-2 transition-colors ${
                   isDarkMode
                     ? "text-orange-300 hover:bg-slate-800"
                     : "text-orange-700 hover:bg-orange-100"
@@ -541,21 +1040,30 @@ const BillPage = ({
         )}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div ref={billRef} className="printable-bill">
+        <div className={`flex-1 overflow-y-auto p-6 ${billContentBgClass}`}>
+          <div ref={billRef} className={`printable-bill ${billSurfaceClass}`}>
 
             {/* Restaurant Header */}
-            <div className={`mb-4 border-b pb-4 text-center ${isDarkMode ? "border-slate-700" : ""}`}>
-              <h2 className="text-xl font-bold">{restaurantName}</h2>
-              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>{restaurantAddress}</p>
-              <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Phone: {restaurantPhone}</p>
-              {restaurantGstin && (
-                <p className={`text-sm ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>GSTIN: {restaurantGstin}</p>
-              )}
+            <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
+              <div className="flex flex-col items-center text-center">
+                {qrSrc ? (
+                  <img
+                    src={qrSrc}
+                    alt="QR Code"
+                    className={`mb-2 h-12 w-12 rounded-md border ${billBorderClass} object-contain`}
+                  />
+                ) : null}
+                <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
+                <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
+                <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
+                {restaurantGstin && (
+                  <p className={`text-sm ${billTextClass}`}>GSTIN: {restaurantGstin}</p>
+                )}
+              </div>
             </div>
 
             {/* Customer & Order Info */}
-            <div className="mb-4 text-sm grid grid-cols-2 gap-x-4">
+            <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
               <p>
                 <strong>Customer:</strong> {order?.customerName || "Guest"}
               </p>
@@ -574,17 +1082,15 @@ const BillPage = ({
                 })}
               </p>
               <p>
-                <strong>Type:</strong> {order?.orderType || "N/A"}
+                <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
               </p>
             </div>
 
-            {order?.orderType === "Delivery" && order?.address && (
-              <div className={`mb-4 rounded border p-3 text-sm ${
-                isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
-              }`}>
+            {activeOrderTypeKey === "delivery" && displayAddress && (
+              <div className={`mb-4 rounded border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
                 <strong>Delivery Address:</strong>
                 <br />
-                {order.address}
+                {displayAddress}
               </div>
             )}
 
@@ -593,7 +1099,7 @@ const BillPage = ({
               <div className="mb-4 space-y-3">
                 {/* Order Type */}
                 <div>
-                  <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                  <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                     Order Type
                   </label>
                   <Select
@@ -606,9 +1112,7 @@ const BillPage = ({
                         <span>{getOrderTypeLabel(localOrderData?.orderType)}</span>
                       </div>
                     </SelectTrigger>
-                    <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                      isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                    }`}>
+                    <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                       <SelectGroup>
                         <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
                           <div className="flex items-center gap-2">
@@ -633,27 +1137,21 @@ const BillPage = ({
                 {/* Table Selection - Eat Here */}
                 {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (
                   <div>
-                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                    <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                       Select Table *
                     </label>
                     <Select value={selectedTableId} onValueChange={handleTableChange}>
-                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
-                        isDarkMode
-                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                      }`}>
+                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
-                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                        isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                      }`}>
+                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                         <SelectGroup>
                           {availableTables.map((table) => (
-                            <SelectItem key={table._id} value={table._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
-                              isDarkMode
-                                ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                                : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                            }`}>
+                            <SelectItem
+                              key={table._id}
+                              value={table._id}
+                              className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${billSelectItemClass}`}
+                            >
                               Table {table.tableNumber || table.number || table._id.slice(-4)}
                             </SelectItem>
                           ))}
@@ -666,18 +1164,14 @@ const BillPage = ({
                 {/* Address - Delivery */}
                 {getOrderTypeKey(localOrderData?.orderType) === "delivery" && (
                   <div>
-                    <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                    <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                       Delivery Address *
                     </label>
                     <textarea
                       value={address}
                       onChange={handleAddressChange}
                       placeholder="Enter delivery address"
-                      className={`w-full resize-none rounded-xl border p-3 text-sm shadow-sm transition-all outline-none ${
-                        isDarkMode
-                          ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                          : "border-gray-300 bg-white hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                      }`}
+                      className={`w-full resize-none rounded-xl border p-3 text-sm shadow-sm transition-all outline-none ${billInputClass}`}
                       rows={2}
                     />
                   </div>
@@ -686,11 +1180,9 @@ const BillPage = ({
             )}
 
             {/* Items Table */}
-            <table className={`mb-4 w-full border-y text-sm ${
-              isDarkMode ? "border-slate-700" : "border-gray-200"
-            }`}>
+            <table className={`mb-4 w-full border-y text-sm ${billBorderClass}`}>
               <thead>
-                <tr className={isDarkMode ? "bg-slate-900" : "bg-gray-50"}>
+                <tr className="bg-transparent">
                   <th className="py-2 px-2 text-left">Item</th>
                   <th className="py-2 px-2 text-center">Qty</th>
                   <th className="py-2 px-2 text-right">Price</th>
@@ -702,25 +1194,29 @@ const BillPage = ({
                 </tr>
               </thead>
               <tbody>
-                {(isEditMode ? localOrderData?.items : order?.items)?.map((item, i) => {
-                  const itemPrice = Number(item.discountedPrice || item.price || 0);
-                  const itemTotal = itemPrice * Number(item.quantity || 1);
-                  const itemKey = buildItemCheckKey(item, i);
+                {(localOrderData?.items || order?.items || [])?.map((item, i) => {
+                  const itemPrice = parseAmount(
+                    item.discountedPrice ??
+                    item.price ??
+                    item.menuItem?.price ??
+                    0
+                  );
+                  const itemQuantity = parseAmount(item.quantity ?? 1);
+                  const itemTotal = itemPrice * itemQuantity;
+                  const itemKey = item._id;
                   const isChecked = !!itemChecks[itemKey];
+                  const itemVariant = item.variantName || item.variant;
                   
                   return (
-                    <tr key={i} className={isDarkMode ? "border-b border-slate-700" : "border-b border-gray-200"}>
+                    <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
                         <div>
                           {item.name}
-                          {item.variant && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>({item.variant})</div>
-                          )}
-                          {item.customizations && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{item.customizations}</div>
+                          {itemVariant && (
+                            <div className={`text-xs ${billTextClass}`}>({itemVariant})</div>
                           )}
                           {item.comboItems && (
-                            <div className={`text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                            <div className={`text-xs ${billTextClass}`}>
                               Combo: {item.comboItems.length} items
                             </div>
                           )}
@@ -731,11 +1227,7 @@ const BillPage = ({
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity - 1)}
-                              className={`rounded p-1 transition-colors ${
-                                isDarkMode
-                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
+                              className={`rounded p-1 transition-colors ${billControlButtonClass}`}
                               disabled={item.quantity <= 1}
                             >
                               <Minus size={12} />
@@ -743,11 +1235,7 @@ const BillPage = ({
                             <span className="w-6 text-center">{item.quantity}</span>
                             <button
                               onClick={() => handleQuantityChange(i, item.quantity + 1)}
-                              className={`rounded p-1 transition-colors ${
-                                isDarkMode
-                                  ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
+                              className={`rounded p-1 transition-colors ${billControlButtonClass}`}
                             >
                               <Plus size={12} />
                             </button>
@@ -762,22 +1250,16 @@ const BillPage = ({
                             value={item.variantName}
                             onValueChange={(v) => handleVariantChange(i, v)}
                           >
-                            <SelectTrigger className={`h-8 w-24 rounded-lg border text-xs font-medium shadow-sm transition-all outline-none ${
-                              isDarkMode
-                                ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                            }`}>
+                            <SelectTrigger className={`h-8 w-24 rounded-lg border text-xs font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className={`rounded-xl border p-1 shadow-xl ${
-                              isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                            }`}>
+                            <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                               {Object.entries(item.variants).map(([variant, price]) => (
-                                <SelectItem key={variant} value={variant} className={`cursor-pointer rounded-lg py-1 text-xs font-medium ${
-                                  isDarkMode
-                                    ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                                    : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                                }`}>
+                                <SelectItem
+                                  key={variant}
+                                  value={variant}
+                                  className={`cursor-pointer rounded-lg py-1 text-xs font-medium ${billSelectItemClass}`}
+                                >
                                   {variant}: ₹{price}
                                 </SelectItem>
                               ))}
@@ -790,17 +1272,13 @@ const BillPage = ({
                       <td className="py-1.5 px-2 text-right font-medium">
                         ₹{itemTotal.toFixed(2)}
                       </td>
-                      {showItemChecks && (
+                      {showItemChecks && item._id && (
                         <td className="no-print py-1.5 px-2 text-center">
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => toggleItemCheck(itemKey)}
-                            className={`h-4 w-4 rounded border transition-colors cursor-pointer ${
-                              isDarkMode
-                                ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
-                                : "border-gray-300 text-orange-600 accent-orange-500"
-                            }`}
+                            className={`h-4 w-4 cursor-pointer rounded border transition-colors ${billCheckboxClass}`}
                             aria-label={`Mark ${item.name} as sent`}
                           />
                         </td>
@@ -825,30 +1303,24 @@ const BillPage = ({
             {/* EDIT MODE: Add Item */}
             {isEditMode && (
               <div className="mb-4">
-                <label className={`mb-1 block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                   Add Item
                 </label>
                 <Select onValueChange={handleAddItem}>
-                  <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${
-                    isDarkMode
-                      ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                  }`}>
+                  <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
                     <SelectValue placeholder="Select item to add..." />
                   </SelectTrigger>
-                  <SelectContent className={`max-h-60 rounded-xl border p-1 shadow-xl ${
-                    isDarkMode ? "border-slate-700 bg-slate-950" : "border-gray-200 bg-white"
-                  }`}>
+                  <SelectContent className={`max-h-60 rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                     <SelectGroup>
                       {menuItems.map((item) => (
-                        <SelectItem key={item._id} value={item._id} className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${
-                          isDarkMode
-                            ? "text-slate-200 hover:bg-slate-800 data-[highlighted]:bg-slate-800 data-[highlighted]:text-slate-50"
-                            : "text-gray-700 hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-900"
-                        }`}>
+                        <SelectItem
+                          key={item._id}
+                          value={item._id}
+                          className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${billSelectItemClass}`}
+                        >
                           <div className="flex items-center justify-between">
                             <span>{item.name}</span>
-                            <span className={`ml-2 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                            <span className={`ml-2 text-xs ${billTextClass}`}>
                               {item.pricingType === "variant" 
                                 ? "Variant" 
                                 : `₹${item.price || 0}`}
@@ -863,38 +1335,34 @@ const BillPage = ({
             )}
 
             {/* Totals - Use backend data directly */}
-            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${
-              isDarkMode ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50"
-            }`}>
+            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{displaySubtotal.toFixed(2)}</span>
               </div>
 
-              {gstAmount > 0 && (
+              {displayGstAmount > 0 && (
                 <div className="flex justify-between">
-                  <span>GST {order?.gstRate ? `(${order.gstRate}%)` : ""}</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
+                  <span>GST {gstRate > 0 ? `(${gstRate}%)` : ""}</span>
+                  <span>₹{displayGstAmount.toFixed(2)}</span>
                 </div>
               )}
 
-              {deliveryCharges > 0 && (
+              {activeOrderTypeKey === "delivery" && (
                 <div className="flex justify-between">
                   <span>Delivery Charges</span>
                   <span>₹{deliveryCharges.toFixed(2)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between font-bold border-t pt-2 mt-2">
+              <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass}`}>
                 <span>Grand Total</span>
-                <span>₹{grandTotal.toFixed(2)}</span>
+                <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
             </div>
 
-            <p className={`mt-4 border-t pt-3 text-center text-xs ${
-              isDarkMode ? "border-slate-700 text-slate-400" : "text-gray-600"
-            }`}>
-              Thank you! Visit again!
+            <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
+             Hope to serve you again soon! 😊🍽️ 
             </p>
           </div>
         </div>

@@ -244,7 +244,7 @@ const DiscountSection = ({
 
           {/* Validation summary */}
           {safeDiscount.active && safeDiscount.type && safeDiscount.value && 
-           !localErrors.type && !localErrors.value && (
+           !localErrors.type && !localErrors.value && !error && (
             <div className="text-xs text-gray-600 p-2 bg-green-50 border border-green-200 rounded-md">
               <p className="font-medium">
                 Discount Applied: {safeDiscount.value} {safeDiscount.type === "percentage" ? "%" : "₹"}

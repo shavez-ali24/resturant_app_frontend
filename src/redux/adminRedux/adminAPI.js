@@ -89,17 +89,36 @@ const normalizeMenuItem = (it) => {
   return copy;
 };
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${config.BASE_URL}/api`,
+  prepareHeaders: (headers) => {
+    const token = localStorage.getItem("token");
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    headers.set("Accept", "application/json");
+    return headers;
+  },
+});
+
+const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
+  const result = await baseQuery(args, api, extraOptions);
+  const status = result.error?.status || result.error?.originalStatus;
+
+  if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("adminInfo");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("user");
+    window.location.replace("/login");
+  }
+
+  return result;
+};
+
 export const adminApi = createApi({
   reducerPath: "adminApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${config.BASE_URL}/api`,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-      headers.set("Accept", "application/json");
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithAuthRedirect,
 
   tagTypes: [
     "Admin",
@@ -154,6 +173,15 @@ export const adminApi = createApi({
         url: "/restaurant/",
         method: "PUT",
         body: formData,
+      }),
+      invalidatesTags: ["Restaurant"],
+    }),
+
+    reorderCategories: builder.mutation({
+      query: (orderedCategoryNames) => ({
+        url: "/restaurant/reorder-categories",
+        method: "POST",
+        body: { orderedCategoryNames },
       }),
       invalidatesTags: ["Restaurant"],
     }),
@@ -256,6 +284,19 @@ export const adminApi = createApi({
       invalidatesTags: (result, error, { orderId }) => [
         { type: "Order", id: orderId },
         { type: "Order", id: "LIST" },
+        { type: "Order", id: "ACTIVE_LIST" },
+      ],
+    }),
+
+    toggleItemReady: builder.mutation({
+      query: ({ orderId, itemId }) => ({
+        url: `/order/${orderId}/items/${itemId}/toggle-ready`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (result, error, { orderId }) => [
+        { type: "Order", id: orderId },
+        { type: "Order", id: "LIST" },
+        { type: "Order", id: "ACTIVE_LIST" },
       ],
     }),
 
@@ -318,6 +359,16 @@ export const adminApi = createApi({
       query: (itemId) => ({
         url: `/menu/${itemId}`,
         method: "DELETE",
+      }),
+      invalidatesTags: ["Menu"],
+    }),
+
+    // done
+    reorderMenuItems: builder.mutation({
+      query: (orderedMenuItemIds) => ({
+        url: "/menu/reorder-menuitems",
+        method: "POST",
+        body: { orderedMenuItemIds },
       }),
       invalidatesTags: ["Menu"],
     }),
@@ -399,14 +450,17 @@ export const {
   useLoginMutation,
   useGetRestaurantProfileQuery,
   useUpdateRestaurantProfileMutation,
+  useReorderCategoriesMutation,
   useGetOrdersQuery,
   useUpdateOrderMutation,
+  useToggleItemReadyMutation,
   useDeleteOrderMutation,
   useGetAnalyticsQuery,
   useGetMenuQuery,
   useCreateMenuItemMutation,
   useUpdateMenuItemMutation,
   useDeleteMenuItemMutation,
+  useReorderMenuItemsMutation,
   useToggleRestaurantMutation,
   useGetTopSellingProductsQuery,
   useGetTopSellingCategoriesQuery,

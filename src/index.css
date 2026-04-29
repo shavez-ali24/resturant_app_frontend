@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -80,8 +82,29 @@
   * {
     @apply border-border;
   }
+  html {
+    height: 100%;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
   body {
     @apply bg-background text-foreground;
+    height: 100%;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior-y: auto;
+  }
+  #root {
+    height: 100%;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
   }
 }
 .scroll-hidden {
@@ -118,11 +141,75 @@
   transform: translateZ(0);
 }
 
+@keyframes bill-border-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(249, 115, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+}
+
+.bill-border-animate {
+  animation: bill-border-pulse 1.6s ease-out infinite;
+}
+
+.menu-no-anim,
+.menu-no-anim * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ✅ iOS SAFARI EXCLUSIVE FIXES - NO ANDROID SIDE EFFECTS */
 @supports (-webkit-touch-callout: none) {
+  /* Fix 1: Enable pull-to-refresh while maintaining viewport stability */
+  html, body, #root {
+    position: relative !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    touch-action: manipulation;
+    overscroll-behavior-y: auto;
+  }
+
+  /* Fix 2: Proper scroll container with Safari momentum scrolling */
+  .ios-scroll-container {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: scroll !important;
+    overscroll-behavior-y: contain !important;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+
+   /* Fix 3: Prevent header flickering / disappearing */
+  .client-category-image,
+  .client-category-chip {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Fix 4: Sticky / Fixed positioning stability */
+  [class*="sticky"], [class*="fixed"] {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Fix 5: Bottom safe area for iPhone notch models */
+  :root {
+    --ios-bottom-safe: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fix 6: Category scroll fixes */
   .client-category-scroll {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
   }
 
   .client-category-track {
@@ -142,6 +229,16 @@
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+  }
+
+  /* Fix 7: Prevent scroll jumping */
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  /* Fix 8: Add to Cart bottom bar proper spacing */
+  .bottom-cart-bar {
+    padding-bottom: calc(12px + var(--ios-bottom-safe)) !important;
   }
 }
 
@@ -193,6 +290,48 @@
 
 .client-dark .client-theme-toggle {
   border-color: rgba(100, 116, 139, 0.6) !important;
+}
+
+/* Client Add Button (Orange Apple-like) */
+.client-add-button {
+  background-image: linear-gradient(135deg, #e05a00 0%, #ff8a1f 100%);
+  border: 1px solid rgba(224, 90, 0, 0.75);
+  box-shadow:
+    0 10px 18px -12px rgba(224, 90, 0, 0.95),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.client-add-button:hover {
+  background-image: linear-gradient(135deg, #f26b00 0%, #ff9d3a 100%);
+  box-shadow:
+    0 12px 20px -12px rgba(224, 90, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.client-add-button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.client-add-button:disabled {
+  box-shadow: none;
+}
+
+.client-add-button-outline {
+  background-color: rgba(255, 122, 0, 0.08);
+  border: 1px solid rgba(224, 90, 0, 0.65);
+  color: #d95900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.client-add-button-outline:hover {
+  background-color: rgba(255, 122, 0, 0.16);
+}
+
+.client-dark .client-add-button-outline {
+  background-color: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 160, 96, 0.55);
+  color: #ffd4a3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* Admin Dark Mode Overrides (scoped to AdminLayout only) */
@@ -431,4 +570,44 @@
 .admin-dark .restaurant-toggle-card {
   background-color: rgba(15, 23, 42, 0.95) !important;
   border-color: rgba(100, 116, 139, 0.35) !important;
+}
+
+/* ✅ GLOBAL ADMIN MOBILE SCROLL FIXES */
+@layer utilities {
+  /* Remove all min-h-screen / h-screen from admin pages */
+  .admin-page [class*="min-h-screen"],
+  .admin-page [class*="h-screen"] {
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  /* Prevent nested scroll containers */
+  [--admin-scroll-container=true] * {
+    overflow-y: visible !important;
+  }
+
+  /* Safe area bottom padding for all admin components */
+  .admin-safe-bottom {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Fix flex child min height issue */
+  .admin-flex-child {
+    min-height: 0 !important;
+    flex-shrink: 0;
+  }
+}
+
+/* ✅ iOS SAFARI ADMIN SPECIFIC FIXES */
+@supports (-webkit-touch-callout: none) {
+  [--admin-scroll-container=true] {
+    -webkit-overflow-scrolling: touch !important;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+
+  [--admin-scroll-container=true] > * {
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+  }
 }

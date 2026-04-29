@@ -16,20 +16,19 @@ const initialState = {
 
 // Helper function to get correct price based on pricing type
 const getCartItemPrice = (cartItem) => {
-  // Prefer explicit cart snapshot price (usually discounted/final)
+  // ✅ ALWAYS USE THE PRICE THAT WAS ACTUALLY SAVED WHEN ITEM WAS ADDED TO CART
+  // This is the final discounted price user sees
   if (cartItem?.price !== undefined && cartItem?.price !== null && cartItem?.price !== "") {
     const explicitPrice = Number(cartItem.price);
     if (!Number.isNaN(explicitPrice)) {
       return explicitPrice;
     }
   }
+  // Fallback only if price not found
   if (cartItem.pricingType === "combo") {
     return Number(cartItem.comboPrice) || 0;
   }
-  if (cartItem.variantKey && cartItem.variantRates && cartItem.variantRates[cartItem.variantKey]) {
-    return Number(cartItem.variantRates[cartItem.variantKey].price) || 0;
-  }
-  return 0;
+  return Number(cartItem.price) || Number(cartItem.originalPrice) || 0;
 };
 
 const clientSlice = createSlice({
@@ -114,7 +113,10 @@ const clientSlice = createSlice({
         0
       );
       state.cart.totalAmount = Object.values(state.cart.items).reduce(
-        (total, cartItem) => total + (getCartItemPrice(cartItem) * cartItem.quantity),
+        (total, cartItem) => {
+          const price = Number(cartItem.price) || 0;
+          return total + (price * cartItem.quantity);
+        },
         0
       );
     },
@@ -135,7 +137,10 @@ const clientSlice = createSlice({
           (total, item) => total + item.quantity, 0
         );
         state.cart.totalAmount = Object.values(state.cart.items).reduce(
-          (total, item) => total + (getCartItemPrice(item) * item.quantity), 0
+          (total, item) => {
+            const price = Number(item.price) || 0;
+            return total + (price * item.quantity);
+          }, 0
         );
       }
     },

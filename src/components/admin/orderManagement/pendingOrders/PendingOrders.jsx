@@ -1,15 +1,5 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
-import { SlRefresh } from "react-icons/sl";
-
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import {
   Pagination,
@@ -22,23 +12,56 @@ import {
 } from "@/components/ui/pagination";
 import { getCompactPageNumbers } from "@/lib/pagination";
 
-import OrdersTable from "./OrdersTable";
-import EditOrderModal from "./EditOrderModal";
-import DeleteModal from "./DeleteModal";
-import ItemsModal from "../commonOrderFile/ItemsModal";
-import CustomizationsModal from "./CustomizationsModal";
 import Heading from "../../common/Heading";
+import {
+  clearOrderPreparingStartedAt,
+  getOrderPreparingStartedAt,
+  getOrderIdValue,
+  getOrderItemsList,
+  rememberOrderPreparingStartedAt,
+} from "../commonOrderFile/utils";
+
+const OrdersTable = lazy(() => import("./OrdersTable"));
+const EditOrderModal = lazy(() => import("./EditOrderModal"));
+const DeleteModal = lazy(() => import("./DeleteModal"));
+const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
+const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
 
 import {
   useGetOrdersQuery,
   useGetMenuQuery,
   useGetRestaurantProfileQuery,
   useUpdateOrderMutation,
-  useDeleteOrderMutation
+  useDeleteOrderMutation,
+  useToggleItemReadyMutation
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
-  const { notify } = useNotification();
+  const { notify, sseEvent, sseConnected } = useNotification();
+
+  const normalizeIncomingOrder = (incomingOrder) => {
+    const incomingId = getOrderIdValue(incomingOrder);
+    if (!incomingId) return null;
+
+    return {
+      ...incomingOrder,
+      _id: incomingOrder?._id ? String(incomingOrder._id) : incomingId,
+      createdAt: incomingOrder?.createdAt || new Date().toISOString(),
+      status: incomingOrder?.status || "pending",
+    };
+  };
+
+  const mergeOrderData = (baseOrder = {}, incomingOrder = {}) => {
+    const mergedOrder = { ...baseOrder };
+
+    Object.entries(incomingOrder).forEach(([key, value]) => {
+      if (value !== undefined) {
+        mergedOrder[key] = value;
+      }
+    });
+
+    return mergedOrder;
+  };
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,22 +69,23 @@ const Orders = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(
-    () => {
-      const saved = localStorage.getItem("autoRefresh");
-      return ["OFF", "1", "2", "5"].includes(saved) ? saved : "OFF";
-    }
-  );
+  const [sseOrders, setSseOrders] = useState([]);
+  const [autoRefresh] = useState(() => {
+    const saved = localStorage.getItem("autoRefresh");
+    return ["1", "2", "5"].includes(saved) ? saved : "1";
+  });
   const itemsPerPage = 10;
   const combinedFetchLimit = itemsPerPage * 25;
   const autoRefreshMinutes = useMemo(() => {
-    if (autoRefresh === "OFF") return 0;
     const mins = parseInt(autoRefresh, 10);
-    return Number.isNaN(mins) ? 0 : mins;
+    return Number.isNaN(mins) ? 1 : mins;
   }, [autoRefresh]);
-  const pollingIntervalMs = autoRefreshMinutes > 0 ? autoRefreshMinutes * 60 * 1000 : 0;
+  const pollingIntervalMs = autoRefreshMinutes * 60 * 1000;
 
   // --- RTK Query Hook with API parameters ---
+  const pollingInterval = sseConnected ? 0 : pollingIntervalMs;
+  const refetchOnAction = !sseConnected;
+
   const {
     data: pendingOrdersResponse = {},
     isLoading: pendingLoading,
@@ -76,9 +100,9 @@ const Orders = () => {
       range: "all",
     },
     {
-      pollingInterval: pollingIntervalMs,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
     }
   );
 
@@ -88,19 +112,35 @@ const Orders = () => {
     isError: preparingError,
     error: preparingErrorObj,
     refetch: refetchPreparingOrders,
-  } = useGetOrdersQuery(
-    {
-      status: "preparing",
-      page: 1,
-      limit: combinedFetchLimit,
-      range: "all",
-    },
-    {
-      pollingInterval: pollingIntervalMs,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-    }
-  );
+   } = useGetOrdersQuery(
+     {
+       status: "preparing",
+       page: 1,
+       limit: combinedFetchLimit,
+       range: "all",
+     },
+     {
+       pollingInterval,
+       refetchOnFocus: refetchOnAction,
+       refetchOnReconnect: refetchOnAction,
+     }
+   );
+
+   const { data: readyOrdersResponse = {}, refetch: refetchReadyOrders } = useGetOrdersQuery(
+     {
+       status: "ready",
+       page: 1,
+       limit: combinedFetchLimit,
+       range: "all",
+     },
+     {
+       pollingInterval,
+       refetchOnFocus: refetchOnAction,
+       refetchOnReconnect: refetchOnAction,
+     }
+   );
+
+
 
   const { data: menuItems = [] } = useGetMenuQuery();
   
@@ -111,13 +151,70 @@ const Orders = () => {
     error: restaurantError,
     refetch: refetchRestaurant
   } = useGetRestaurantProfileQuery(undefined, {
-    pollingInterval: pollingIntervalMs,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
   
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
+  const [toggleItemReadyApi] = useToggleItemReadyMutation();
+
+  useEffect(() => {
+    if (
+      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type) ||
+      !sseEvent?.data
+    ) {
+      return;
+    }
+
+    const incoming = sseEvent.data;
+    const incomingId = getOrderIdValue(incoming);
+    if (!incomingId) return;
+
+    const normalizedOrder = normalizeIncomingOrder(incoming);
+    if (!normalizedOrder) return;
+    const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
+    const eventTimestamp = sseEvent?.ts || Date.now();
+
+    if (normalizedStatus === "preparing") {
+      const preparingStartedAtMs =
+        getOrderPreparingStartedAt(normalizedOrder) ||
+        rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
+
+      if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
+        normalizedOrder.preparingStartedAt = new Date(
+          preparingStartedAtMs
+        ).toISOString();
+      }
+    } else if (normalizedStatus) {
+      clearOrderPreparingStartedAt(incomingId);
+    }
+
+    setSseOrders((prev) => {
+      const remainingOrders = prev.filter(
+        (order) => getOrderIdValue(order) !== incomingId
+      );
+
+      if (!["pending", "preparing"].includes(normalizedStatus)) {
+        return remainingOrders;
+      }
+
+      const previousVersion = prev.find(
+        (order) => getOrderIdValue(order) === incomingId
+      );
+      return [
+        mergeOrderData(previousVersion, normalizedOrder),
+        ...remainingOrders,
+      ].slice(0, combinedFetchLimit);
+    });
+
+    setCurrentPage(1);
+    refetchPendingOrders();
+    refetchPreparingOrders();
+    refetchReadyOrders();
+    refetchRestaurant();
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchRestaurant]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -148,6 +245,9 @@ const Orders = () => {
     }
     if (status === 429) {
       return "Too many requests. Please wait a moment and try again.";
+    }
+    if (status === 400) {
+      return errorObj?.data?.message || "Invalid request parameters.";
     }
     if (status >= 500) {
       return "Server issue detected. Please try again in a moment.";
@@ -240,18 +340,34 @@ const Orders = () => {
         : [],
     [preparingOrdersResponse?.orders]
   );
+  const readyOrders = useMemo(
+    () =>
+      Array.isArray(readyOrdersResponse?.orders)
+        ? readyOrdersResponse.orders
+        : [],
+    [readyOrdersResponse?.orders]
+  );
+
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders].forEach((order) => {
-      const key = order?._id || order?.id || order?.orderId || order?.createdAt;
+    [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
+      const key = getOrderIdValue(order) || order?.createdAt;
       if (!key) return;
       orderMap.set(key, order);
     });
 
+    sseOrders.forEach((order) => {
+      const key = getOrderIdValue(order) || order?.createdAt;
+      if (!key) return;
+      const existingOrder = orderMap.get(key);
+      orderMap.set(key, existingOrder ? mergeOrderData(existingOrder, order) : order);
+    });
+
+    // Show all orders (pending, preparing, ready) in live view
     return Array.from(orderMap.values()).sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
-  }, [pendingOrders, preparingOrders]);
+  }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
 
   const totalPages = Math.max(
     1,
@@ -261,14 +377,14 @@ const Orders = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return combinedOrders.slice(start, start + itemsPerPage);
   }, [combinedOrders, currentPage, itemsPerPage]);
-  const loading = pendingLoading || preparingLoading || restaurantLoading;
-  const error =
-    pendingError || preparingError || restaurantError
-      ? getFriendlyOrderError(
-          pendingErrorObj || preparingErrorObj || restaurantError,
-          "fetch"
-        )
-    : null;
+   const loading = pendingLoading || preparingLoading || restaurantLoading;
+   const error =
+     pendingError || preparingError || restaurantError
+       ? getFriendlyOrderError(
+           pendingErrorObj || preparingErrorObj || restaurantError,
+           "fetch"
+         )
+       : null;
 
   // Update bill modal live
   useEffect(() => {
@@ -280,37 +396,121 @@ const Orders = () => {
     }
   }, [combinedOrders, orderForBillModal]);
 
-  // Manual Refresh
-  const handleManualRefresh = async () => {
-    try {
-      await refetchPendingOrders();
-      await refetchPreparingOrders();
-      await refetchRestaurant(); // ✅ Restaurant profile bhi refresh karein
-      notify("Orders & Restaurant data refreshed", "success");
-    } catch (err) {
-      notify(getFriendlyOrderError(err, "refresh"), "error");
-    }
-  };
+  useEffect(() => {
+    if (!sseOrders.length) return;
+
+    const fetchedOrderMap = new Map(
+      [...pendingOrders, ...preparingOrders]
+        .map((order) => [getOrderIdValue(order), order])
+        .filter(([id]) => Boolean(id))
+    );
+    if (!fetchedOrderMap.size) return;
+
+    setSseOrders((prev) =>
+      prev.filter((order) => {
+        const id = getOrderIdValue(order);
+        const fetchedOrder = fetchedOrderMap.get(id);
+        if (!id || !fetchedOrder) return true;
+        return (
+          String(fetchedOrder?.status || "").toLowerCase() !==
+          String(order?.status || "").toLowerCase()
+        );
+      })
+    );
+  }, [pendingOrders, preparingOrders, sseOrders.length]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
+    const orderIdString = String(orderId);
+    const nextStatus = String(updatedData?.status || "").toLowerCase();
+    const currentOrder = combinedOrders.find(
+      (order) => getOrderIdValue(order) === orderIdString
+    );
+    const previousPreparingStartedAt = getOrderPreparingStartedAt(currentOrder);
+    const optimisticTimestamp = Date.now();
+
     try {
-      // ✅ FIX: Ensure orderId is a string
-      const orderIdString = String(orderId);
-      
-      // console.log("Updating order:", { orderIdString, updatedData });
-      
-      // ✅ FIX: Call API with correct parameters
-      await updateOrderApi({ 
-        orderId: orderIdString, 
-        updatedData 
+      if (nextStatus === "preparing") {
+        const preparingStartedAtMs =
+          previousPreparingStartedAt ||
+          rememberOrderPreparingStartedAt(orderIdString, optimisticTimestamp);
+
+        setSseOrders((prev) => {
+          const existingOverlay = prev.find(
+            (order) => getOrderIdValue(order) === orderIdString
+          );
+          const remainingOrders = prev.filter(
+            (order) => getOrderIdValue(order) !== orderIdString
+          );
+          const baseOrder = existingOverlay || currentOrder || {};
+
+          return [
+            mergeOrderData(baseOrder, {
+              ...updatedData,
+              _id: orderIdString,
+              createdAt:
+                baseOrder?.createdAt || currentOrder?.createdAt || new Date().toISOString(),
+              preparingStartedAt: preparingStartedAtMs
+                ? new Date(preparingStartedAtMs).toISOString()
+                : undefined,
+            }),
+            ...remainingOrders,
+          ].slice(0, combinedFetchLimit);
+        });
+      } else if (nextStatus) {
+        clearOrderPreparingStartedAt(orderIdString);
+
+        setSseOrders((prev) =>
+          prev.filter((order) => getOrderIdValue(order) !== orderIdString)
+        );
+      }
+
+      // If status is changing to "ready", mark all items as ready
+      if (nextStatus === "ready" && currentOrder?.items) {
+        try {
+          await Promise.all(
+            currentOrder.items
+              .filter(item => item._id && !item.isReady)
+              .map(item =>
+                toggleItemReadyApi({
+                  orderId: orderIdString,
+                  itemId: item._id
+                }).unwrap()
+              )
+          );
+        } catch (err) {
+          console.error("Failed to mark all items as ready:", err);
+        }
+      }
+
+      await updateOrderApi({
+        orderId: orderIdString,
+        updatedData
       }).unwrap();
-      
+
+      if (
+        typeof window !== "undefined" &&
+        nextStatus &&
+        !["pending", "preparing"].includes(nextStatus)
+      ) {
+        localStorage.removeItem(`bill-item-checks:${orderIdString}`);
+      }
+
       notify("Order updated successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();
+      refetchReadyOrders();
       setEditingOrder(null);
     } catch (err) {
+      if (previousPreparingStartedAt) {
+        rememberOrderPreparingStartedAt(orderIdString, previousPreparingStartedAt);
+      } else {
+        clearOrderPreparingStartedAt(orderIdString);
+      }
+
+      refetchPendingOrders();
+      refetchPreparingOrders();
+      refetchReadyOrders();
       console.error("Update order error:", err);
       notify(getFriendlyOrderError(err, "update"), "error");
     }
@@ -323,6 +523,7 @@ const Orders = () => {
       notify("Order deleted successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();
+      refetchReadyOrders();
       setShowConfirmDelete(null);
     } catch (err) {
       notify(getFriendlyOrderError(err, "delete"), "error");
@@ -331,25 +532,9 @@ const Orders = () => {
 
   // Function to handle customizations click
   const handleCustomizationsClick = (order) => {
-    if (order && order.items) {
+    if (order && getOrderItemsList(order).length > 0) {
       setSelectedOrderForCustomizations(order);
     }
-  };
-
-  // --- Auto Refresh ---
-  const handleAutoRefreshChange = (value) => {
-    setAutoRefresh(value);
-    localStorage.setItem("autoRefresh", value);
-
-    if (value === "OFF") {
-      notify("Auto-refresh turned off", "info");
-      return;
-    }
-
-    notify(`Auto-refresh set to every ${value} min`, "success");
-    refetchPendingOrders();
-    refetchPreparingOrders();
-    refetchRestaurant();
   };
 
   // Handle page change
@@ -372,56 +557,45 @@ const Orders = () => {
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
       <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
-        <Heading title="Pending Orders" />
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleManualRefresh}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
-          >
-            <SlRefresh size={16} />
-            <span className="hidden text-xs sm:inline">Refresh</span>
-          </button>
-
-          {/* Auto Refresh */}
-          <Select
-            value={autoRefresh}
-            onValueChange={handleAutoRefreshChange}
-          >
-            <SelectTrigger className="h-10 w-[130px] rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200">
-              <SelectValue placeholder="Auto Refresh" />
-            </SelectTrigger>
-
-            <SelectContent className="min-w-[130px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
-              <SelectGroup>
-                <SelectItem value="OFF" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Off</SelectItem>
-                <SelectItem value="1" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 1 min</SelectItem>
-                <SelectItem value="2" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 2 min</SelectItem>
-                <SelectItem value="5" className="cursor-pointer rounded-lg text-xs font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800">Every 5 min</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
+        <Heading title="Live Orders" />
       </div>
 
       {/* Orders Table */}
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:mt-4">
-        <OrdersTable
-        orders={orders}
-        loading={loading}
-        error={error}
-        setEditingOrder={setEditingOrder}
-        setShowConfirmDelete={setShowConfirmDelete}
-        setOrderForBillModal={setOrderForBillModal}
-        updateOrder={updateOrder}
-        tableType="pending"
-        onCustomizationsClick={handleCustomizationsClick}
-      />
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4 sm:mt-4">
+        <Suspense
+          fallback={
+            <div className="min-h-[420px] md:min-h-[520px] p-4">
+              <div className="h-6 w-40 rounded bg-orange-100/80 dark:bg-slate-800/80" />
+              <div className="mt-4 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+            </div>
+          }
+        >
+          <OrdersTable
+            orders={orders}
+            loading={loading}
+            error={error}
+            setEditingOrder={setEditingOrder}
+            setShowConfirmDelete={setShowConfirmDelete}
+            setOrderForBillModal={setOrderForBillModal}
+            updateOrder={updateOrder}
+            tableType="pending"
+            onCustomizationsClick={handleCustomizationsClick}
+            containerVariant="plain"
+            latestOrderId={
+              combinedOrders[0]?._id ||
+              combinedOrders[0]?.id ||
+              combinedOrders[0]?.orderId ||
+              combinedOrders[0]?.createdAt
+            }
+          />
+        </Suspense>
       </div>
 
       {/* Server-side Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-shrink-0 justify-center px-2 py-2">
+      <div className="flex flex-shrink-0 justify-center px-2 py-2 min-h-[44px]">
+        {totalPages > 1 && (
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
               <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
@@ -483,48 +657,50 @@ const Orders = () => {
               </PaginationContent>
             </Pagination>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modals */}
       
-      {/* Customizations Modal */}
-      {selectedOrderForCustomizations && (
-        <CustomizationsModal
-          order={selectedOrderForCustomizations}
-          onClose={() => setSelectedOrderForCustomizations(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {/* Customizations Modal */}
+        {selectedOrderForCustomizations && (
+          <CustomizationsModal
+            order={selectedOrderForCustomizations}
+            onClose={() => setSelectedOrderForCustomizations(null)}
+          />
+        )}
 
-      {/* Items Modal */}
-      {orderForBillModal && (
-        <ItemsModal
-          order={orderForBillModal}
-          restaurantDetails={restaurantData}
-          onClose={() => setOrderForBillModal(null)}
-        />
-      )}
+        {/* Items Modal */}
+        {orderForBillModal && (
+          <ItemsModal
+            order={orderForBillModal}
+            restaurantDetails={restaurantData}
+            onClose={() => setOrderForBillModal(null)}
+          />
+        )}
 
-      {/* Edit Order Modal */}
-      {editingOrder && (
-        <EditOrderModal
-          editingOrder={editingOrder}
-          setEditingOrder={setEditingOrder}
-          updateOrder={updateOrder}
-          getFriendlyErrorMessage={getFriendlyOrderError}
-          menuItems={menuItems}
-          tables={tables} // ✅ Passing tables from restaurant profile
-        />
-      )}
+        {/* Edit Order Modal */}
+        {editingOrder && (
+          <EditOrderModal
+            editingOrder={editingOrder}
+            setEditingOrder={setEditingOrder}
+            updateOrder={updateOrder}
+            getFriendlyErrorMessage={getFriendlyOrderError}
+            menuItems={menuItems}
+            tables={tables} // ✅ Passing tables from restaurant profile
+          />
+        )}
 
-      {/* Delete Modal */}
-      {showConfirmDelete && (
-        <DeleteModal
-          order={showConfirmDelete}
-          onCancel={() => setShowConfirmDelete(null)}
-          onDelete={() => deleteOrder(showConfirmDelete._id)}
-        />
-      )}
+        {/* Delete Modal */}
+        {showConfirmDelete && (
+          <DeleteModal
+            order={showConfirmDelete}
+            onCancel={() => setShowConfirmDelete(null)}
+            onDelete={() => deleteOrder(showConfirmDelete._id)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

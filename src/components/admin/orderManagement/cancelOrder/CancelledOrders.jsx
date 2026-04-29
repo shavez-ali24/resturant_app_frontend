@@ -32,12 +32,21 @@ const CancelledOrders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
 
-  const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery({
-    status: "cancelled",
-    range: dateRange,
-    page: currentPage,
-    limit: ordersPerPage,
-  });
+  const resolvedRange = dateRange === "1d" ? "24h" : dateRange;
+
+  const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery(
+    {
+      status: "cancelled",
+      range: resolvedRange,
+      page: currentPage,
+      limit: ordersPerPage,
+    },
+    {
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
 
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalPages = ordersResponse?.totalPages || 1;
@@ -69,6 +78,7 @@ const CancelledOrders = () => {
             </SelectTrigger>
             <SelectContent className="min-w-[160px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
               <SelectGroup>
+                <SelectItem value="24h" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 24 Hours</SelectItem>
                 <SelectItem value="2d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 2 Days</SelectItem>
                 <SelectItem value="7d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 7 Days</SelectItem>
                 <SelectItem value="15d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 15 Days</SelectItem>
@@ -101,12 +111,13 @@ const CancelledOrders = () => {
         </div>
       </div>
 
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
+      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4">
         <OrdersTable
           orders={orders}
           loading={isLoading}
           error={isError}
           tableType="cancelled"
+          containerVariant="plain"
         />
       </div>
 

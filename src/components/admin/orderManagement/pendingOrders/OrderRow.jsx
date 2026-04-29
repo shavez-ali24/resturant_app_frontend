@@ -1,16 +1,28 @@
-import React from "react";
-import StatusDropdown from "./StatusDropdown";
+import React, { Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { SquarePen, Trash, Truck, Utensils, Eye, Ban, House } from "lucide-react";
+import { Truck, Utensils, House } from "lucide-react";
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
+  getOrderCustomerName,
+  getOrderCustomerPhone,
+  getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
   getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
+
+const PendingOrderRowActions = lazy(() => import("./PendingOrderRowActions"));
+
+const PendingOrderRowActionsFallback = () => (
+  <>
+    <td className="border py-2" aria-hidden="true" />
+    <td className="border py-2" aria-hidden="true" />
+    <td className="border py-2" aria-hidden="true" />
+  </>
+);
 
 const OrderRow = ({
   order,
@@ -19,16 +31,10 @@ const OrderRow = ({
   updateOrder,
   tableType,
   onCustomizationsClick,
+  showBillAttention,
+  onBillOpen,
 }) => {
   const dispatch = useDispatch();
-
-  // Check if any item in the order has customizations
-  const hasCustomizations = order.items && 
-    order.items.some(item => item.customizations && item.customizations.trim() !== "");
-
-  // Count how many items have customizations
-  const customizationCount = order.items ? 
-    order.items.filter(item => item.customizations && item.customizations.trim() !== "").length : 0;
 
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
@@ -45,7 +51,17 @@ const OrderRow = ({
 
   const orderTypeLabel = getOrderTypeLabel(order.orderType);
   const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
-  const tableLabel = formatOrderTableId(order.tableId);
+  const tableLabel = formatOrderTableId(
+    order.tableId ||
+      order.table ||
+      order.tableNumber ||
+      order?.table?.name ||
+      order?.table?.tableNumber ||
+      order?.table?.number
+  );
+  const customerName = getOrderCustomerName(order);
+  const customerPhone = getOrderCustomerPhone(order);
+  const orderIdDisplay = getOrderIdShortValue(order);
 
   return (
     <tr
@@ -54,24 +70,45 @@ const OrderRow = ({
       )}`}
     >
       {/* Date Column */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
-        {order.formattedDate || "N/A"}
-      </td>
+      {tableType !== "pending" && (
+        <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+          {order.formattedDate || "N/A"}
+        </td>
+      )}
 
-      {/* Time Column */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
-        {order.formattedTime || "N/A"}
-      </td>
-
-      {/* Customer */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerName}</td>
-
-      {/* Phone */}
-      <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{order.customerPhone}</td>
+      {tableType === "pending" ? (
+        <>
+          {/* ID Column - FIRST for pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
+              {orderIdDisplay || "N/A"}
+            </span>
+          </td>
+          {/* Time Column - SECOND for pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            {order.formattedTime || "N/A"}
+          </td>
+          <td className="text-center border px-1 text-sm font-semibold text-gray-800 dark:border-slate-700 dark:text-slate-100">
+            {customerName}
+          </td>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            {customerPhone || "N/A"}
+          </td>
+        </>
+      ) : (
+        <>
+          {/* Time Column - FIRST for non-pending */}
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">
+            {order.formattedTime || "N/A"}
+          </td>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerName}</td>
+          <td className="text-center border px-1 text-sm text-gray-700 dark:border-slate-700 dark:text-slate-200">{customerPhone}</td>
+        </>
+      )}
 
       {/* Order Type - DISPLAY ONLY (same styling as EditOrderModal) */}
       <td className="px-1 py-2 text-center border dark:border-slate-700">
-        <div className={`inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
+        <div className={`mx-auto inline-flex h-9 w-40 items-center justify-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}>
           <div className="flex items-center gap-1.5">
             {getOrderTypeIcon(order.orderType)}
             <span>{orderTypeLabel}</span>
@@ -85,8 +122,11 @@ const OrderRow = ({
       {/* View Items / Bill */}
       <td className="text-center border py-2">
         <button
-          onClick={() => dispatch(showBill(order))}
-          className="rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+          onClick={() => {
+            if (onBillOpen) onBillOpen();
+            dispatch(showBill(order));
+          }}
+          className={`rounded-xl border border-orange-200 bg-white px-4 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 ${showBillAttention ? "bill-border-animate" : ""}`}
         >
           <span className="flex justify-center items-center gap-1">
             View Items & Bill
@@ -96,62 +136,15 @@ const OrderRow = ({
 
       {/* C/S Column - Show only for pending orders */}
       {tableType === "pending" && (
-        <td className="text-center border py-2">
-          {hasCustomizations ? (
-            <button
-              onClick={() => onCustomizationsClick(order)}
-              className="mx-auto flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
-              title={`${customizationCount} item(s) have customizations`}
-            >
-              <Eye size={14} />
-              Note
-              {customizationCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold ml-1">
-                  {customizationCount}
-                </span>
-              )}
-            </button>
-          ) : (
-            <span className="text-gray-400 italic text-xs" title="No customizations">
-              <Ban size={16} className="mx-auto opacity-50 text-orange-700" />
-            </span>
-          )}
-        </td>
-      )}
-
-      {/* For other table types (completed, etc.), don't show C/S column */}
-
-      {/* Pending Table Actions - Show only for pending orders */}
-      {tableType === "pending" && (
-        <>
-          <td className="border">
-            {/* Status dropdown - shown for both admin and staff */}
-            <div className="flex justify-center items-center w-full">
-              <StatusDropdown order={order} updateOrder={updateOrder} />
-            </div>
-          </td>
-
-          {/* Edit and Delete buttons - shown for both admin and staff */}
-          <td className="text-center border py-2">
-            <div className="flex items-center justify-center gap-1">
-              <button
-                onClick={() => setEditingOrder(order)}
-                className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100"
-                title="Edit order"
-              >
-                <SquarePen size={16} />
-              </button>
-
-              <button
-                onClick={() => setShowConfirmDelete(order)}
-                className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100"
-                title="Delete order"
-              >
-                <Trash size={16} />
-              </button>
-            </div>
-          </td>
-        </>
+        <Suspense fallback={<PendingOrderRowActionsFallback />}>
+          <PendingOrderRowActions
+            order={order}
+            setEditingOrder={setEditingOrder}
+            setShowConfirmDelete={setShowConfirmDelete}
+            updateOrder={updateOrder}
+            onCustomizationsClick={onCustomizationsClick}
+          />
+        </Suspense>
       )}
     </tr>
   );

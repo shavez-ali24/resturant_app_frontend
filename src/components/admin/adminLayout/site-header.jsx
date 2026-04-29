@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { PanelRightClose, Store, AlertTriangle, CheckCircle, Moon, Sun } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
-import NotificationBell from "../Bell/NotificationBell";
 import { useNotification } from "../Bell/NotificationContext";
 import {
   useGetRestaurantProfileQuery,
   useToggleRestaurantMutation,
 } from "@/redux/adminRedux/adminAPI";
+
+const NotificationBell = lazy(() => import("../Bell/NotificationBell"));
 
 export function SiteHeader({
   isDarkMode = false,
@@ -33,27 +34,45 @@ export function SiteHeader({
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null);
+  const [showBell, setShowBell] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let idleId;
+    const enableBell = () => setShowBell(true);
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(enableBell, { timeout: 800 });
+    } else {
+      idleId = window.setTimeout(enableBell, 600);
+    }
+
+    return () => {
+      if ("cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      } else {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!profileData) return;
 
     let status = null;
     let name = "Restaurant";
+    const restaurantInfo = profileData?.restaurant || profileData;
 
-    if (typeof profileData.isOpen === "boolean") {
-      status = profileData.isOpen;
-    } else if (
-      profileData.restaurant &&
-      typeof profileData.restaurant.isOpen === "boolean"
-    ) {
-      status = profileData.restaurant.isOpen;
+    if (typeof restaurantInfo?.isOpen === "boolean") {
+      status = restaurantInfo.isOpen;
     }
 
-    if (profileData.restaurant?.name) {
-      name =
-        typeof profileData.restaurant.name === "string"
-          ? profileData.restaurant.name
-          : String(profileData.restaurant.name || "").trim();
+    const rawName =
+      restaurantInfo?.restaurantName ||
+      restaurantInfo?.name ||
+      "";
+    if (rawName) {
+      name = typeof rawName === "string" ? rawName : String(rawName).trim();
     }
 
     setIsOpen(status ?? false);
@@ -97,31 +116,31 @@ export function SiteHeader({
           ? "border-slate-700 bg-gradient-to-r from-slate-950/95 via-slate-900/95 to-slate-900/95"
           : "border-orange-200 bg-gradient-to-r from-orange-50/95 to-orange-200/95"
       }`}>
-        <div className="flex h-16 w-full flex-wrap items-center justify-between gap-2 px-3 md:px-6">
+        <div className="flex h-14 w-full flex-wrap items-center justify-between gap-2 px-3 md:px-6">
           {/* Left Side - Menu Toggle */}
           <div className="flex shrink-0 items-center gap-3">
             <Button
               onClick={toggleSidebar}
               variant="outline"
               size="icon"
-              className={`h-10 w-10 rounded-xl transition-colors ${
+              className={`h-9 w-9 rounded-xl transition-colors ${
                 isDarkMode
                   ? "border-slate-700/50 bg-slate-900/50 text-slate-200 hover:bg-slate-800 hover:text-orange-300"
                   : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-600"
               }`}
               aria-label="Toggle sidebar"
             >
-              <PanelRightClose size={22} />
+              <PanelRightClose size={20} />
             </Button>
 
             <Separator
               orientation="vertical"
-              className={`h-8 ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
+              className={`h-7 ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
             />
 
             {/* Restaurant Info - only show on md+ */}
             <div className="hidden items-center gap-3 md:flex">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm ${
+              <div className={`flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${
                 isDarkMode
                   ? "bg-gradient-to-br from-orange-400 to-orange-500"
                   : "bg-gradient-to-br from-orange-500 to-orange-600"
@@ -129,10 +148,17 @@ export function SiteHeader({
                 <Store size={20} className="text-white" />
               </div>
               <div>
+                <p
+                  className={`text-[9px] font-medium uppercase tracking-[0.16em] ${
+                    isDarkMode ? "text-slate-400" : "text-gray-500"
+                  }`}
+                >
+                  TapNbite
+                </p>
                 <h1 className={`text-lg font-bold leading-tight ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                   {restaurantName}
                 </h1>
-                <p className={`text-xs ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Dashboard Panel</p>
+                {/* <p className={`text-xs ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Dashboard Panel</p> */}
               </div>
             </div>
           </div>
@@ -143,7 +169,7 @@ export function SiteHeader({
             {isAdmin && (
               <>
                 <div 
-                  className={`flex items-center gap-2 rounded-xl border px-2 py-1 shadow-sm md:gap-3 md:px-4 md:py-2 restaurant-toggle-card ${
+                  className={`flex items-center gap-2 rounded-xl border px-2 py-1 shadow-sm md:gap-3 md:px-3 md:py-1 restaurant-toggle-card  ${
                     isDarkMode
                       ? "border-slate-700 bg-gradient-to-r from-slate-950/95 via-slate-900/95 to-slate-900/95"
                       : "border-orange-200 bg-white"
@@ -152,7 +178,7 @@ export function SiteHeader({
                 >
                   <div className="flex flex-col">
                     <span className={`text-xs font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>Restaurant</span>
-                    <span className={`text-sm font-semibold ${isOpen ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-red-400' : 'text-red-600')}`}>
+                    <span className={`text-xs font-semibold ${isOpen ? (isDarkMode ? 'text-emerald-300' : 'text-emerald-800') : (isDarkMode ? 'text-rose-300' : 'text-rose-700')}`}>
                       {isOpen === true ? 'OPEN' : isOpen === false ? 'CLOSED' : '...'}
                     </span>
                   </div>
@@ -168,12 +194,12 @@ export function SiteHeader({
                     />
                     <label
                       htmlFor="status-toggle"
-                      className={`relative inline-flex items-center h-6 w-11 cursor-pointer rounded-full transition-all duration-300 ${
+                      className={`relative inline-flex items-center h-5 w-10 cursor-pointer rounded-full transition-all duration-300 ${
                         loading || toggleLoading ? 'opacity-50 cursor-not-allowed' : ''
                       } ${isOpen ? (isDarkMode ? 'bg-emerald-400' : 'bg-green-600') : (isDarkMode ? 'bg-rose-500' : 'bg-red-600')}`}
                     >
                       <span
-                        className={`inline-block w-5 h-5 transform bg-white rounded-full transition-all duration-300 shadow-md ${
+                        className={`inline-block w-3 h-3 transform bg-white rounded-full transition-all duration-300 shadow-md ${
                           isOpen ? 'translate-x-6' : 'translate-x-0.5'
                         }`}
                       />
@@ -185,7 +211,7 @@ export function SiteHeader({
                 </div>
                 <Separator
                   orientation="vertical"
-                  className={`hidden h-8 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
+                  className={`hidden h-7 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
                 />
               </>
             )}
@@ -195,7 +221,7 @@ export function SiteHeader({
               onClick={onToggleDarkMode}
               variant="outline"
               size="icon"
-              className={`h-10 w-10 rounded-xl transition-colors ${
+              className={`h-9 w-9 rounded-xl transition-colors ${
                 isDarkMode
                   ? "border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800"
                   : "border-orange-200 bg-white text-orange-600 hover:bg-orange-50"
@@ -203,11 +229,35 @@ export function SiteHeader({
               aria-label="Toggle admin dark mode"
               title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </Button>
 
             {/* Notifications */}
-            <NotificationBell />
+            {showBell ? (
+              <Suspense
+                fallback={
+                  <div
+                    className={`h-9 w-9 rounded-full border shadow-sm ${
+                      isDarkMode
+                        ? "border-slate-700 bg-slate-900"
+                        : "border-orange-200 bg-white"
+                    }`}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                <NotificationBell />
+              </Suspense>
+            ) : (
+              <div
+                className={`h-9 w-9 rounded-full border shadow-sm ${
+                  isDarkMode
+                    ? "border-slate-700 bg-slate-900"
+                    : "border-orange-200 bg-white"
+                }`}
+                aria-hidden="true"
+              />
+            )}
           </div>
         </div>
       </header>

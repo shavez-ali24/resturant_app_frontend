@@ -1,6 +1,7 @@
 "use client";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
+import {createPortal} from "react-dom";
 import {
   addToCart,
   removeFromCart,
@@ -114,8 +115,40 @@ export default function FoodListing({
   onQuantityChange,
   isRestaurantOpen = true,
   isDarkMode = false,
+  categoryOrder = [],
 }) {
+  const normalizeCategoryKey = (value) =>
+    String(value || "")
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+
   const groupedMenu = groupByCategory(menu || []);
+  const groupedKeys = Object.keys(groupedMenu);
+  const groupedKeyByNormalized = new Map();
+
+  groupedKeys.forEach((key) => {
+    const normalized = normalizeCategoryKey(key);
+    if (!groupedKeyByNormalized.has(normalized)) {
+      groupedKeyByNormalized.set(normalized, key);
+    }
+  });
+
+  const orderedCategoryKeys = [];
+  (Array.isArray(categoryOrder) ? categoryOrder : []).forEach((cat) => {
+    const label = typeof cat === "object" && cat !== null ? cat.name || cat.category : cat;
+    const normalized = normalizeCategoryKey(label);
+    const resolved = groupedKeyByNormalized.get(normalized);
+    if (resolved) {
+      orderedCategoryKeys.push(resolved);
+      groupedKeyByNormalized.delete(normalized);
+    }
+  });
+
+  if (groupedKeyByNormalized.size) {
+    orderedCategoryKeys.push(...groupedKeyByNormalized.values());
+  }
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client.cart.items || {});
   const [descModal, setDescModal] = useState({ open: false, item: null });
@@ -245,7 +278,7 @@ export default function FoodListing({
 
   return (
     <div className={`flex flex-col px-2 pb-24 pt-2 sm:px-3 ${isDarkMode ? "bg-slate-950" : "bg-white"}`}>
-      {Object.keys(groupedMenu).map((category) => {
+      {orderedCategoryKeys.map((category) => {
         const itemsInCategory = groupedMenu[category] || [];
         const layoutMode =
           itemsInCategory.length === 1
@@ -257,14 +290,14 @@ export default function FoodListing({
         const hasOpenVariantInSection = itemsInCategory.some(
           (menuItem) => openVariantMenu === menuItem._id
         );
-        const containerClass =
-          layoutMode === "multi"
-            ? "flex gap-3 overflow-x-auto overflow-y-visible scroll-hidden -mx-2 pl-2 pr-0 py-2.5 sm:-mx-3 sm:gap-4 sm:pl-3 sm:pr-1"
-            : `grid items-start gap-3 ${
-                layoutMode === "single"
-                  ? "grid-cols-1 pt-1 pb-2"
-                  : "grid-cols-2 pt-1 pb-2"
-              }`;
+         const containerClass =
+           layoutMode === "multi"
+             ? "flex gap-3 overflow-x-auto scroll-hidden -mx-2 pl-2 pr-0 py-2.5 sm:-mx-3 sm:gap-4 sm:pl-3 sm:pr-1"
+             : `grid items-start gap-3 ${
+                 layoutMode === "single"
+                   ? "grid-cols-1 pt-1 pb-2"
+                   : "grid-cols-2 pt-1 pb-2"
+               }`;
 
         return (
           <motion.section
@@ -274,9 +307,7 @@ export default function FoodListing({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.02 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`relative ${
-              hasOpenVariantInSection ? "z-40" : "z-0"
-            }`}
+           className="relative"
           >
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -299,11 +330,29 @@ export default function FoodListing({
             {/* ✅ Category Header */}
             <div className="flex items-center gap-2 pt-1">
               <div className="relative h-2.5 w-2.5">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 animate-pulse"></div>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 animate-ping"></div>
-                <div className="relative h-2.5 w-2.5 rounded-full bg-orange-600/95 ring-1 ring-orange-300"></div>
+                <div
+                  className={`absolute inset-0 rounded-full animate-pulse ${
+                    isDarkMode
+                      ? "bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 shadow-[0_0_10px_rgba(251,146,60,0.9)]"
+                      : "bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700"
+                  }`}
+                ></div>
+                <div
+                  className={`absolute inset-0 rounded-full animate-ping ${
+                    isDarkMode
+                      ? "bg-gradient-to-r from-orange-200 via-orange-300 to-orange-400 opacity-70"
+                      : "bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"
+                  }`}
+                ></div>
+                <div
+                  className={`relative h-2.5 w-2.5 rounded-full ${
+                    isDarkMode
+                      ? "bg-orange-400 ring-1 ring-orange-300/80 shadow-[0_0_6px_rgba(251,146,60,0.95)]"
+                      : "bg-orange-600/95 ring-1 ring-orange-300"
+                  }`}
+                ></div>
               </div>
-              <h2 className="text-base font-semibold tracking-wide text-gray-800">
+              <h2 className={`text-base font-semibold tracking-wide ${isDarkMode ? "text-orange-50" : "text-gray-800"}`}>
                 {category}
               </h2>
               <div 
@@ -365,9 +414,12 @@ export default function FoodListing({
                         viewport={{ once: true, amount: 0.06 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         whileHover={{ y: -2 }}
-                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
-                          isUnavailable ? "opacity-60 grayscale" : "opacity-100"
-                        } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
+                       className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${
+                           isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                         } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
+                       style={{
+                         willChange: "auto"
+                       }}
                       >
                         {/* ✅ Image Section */}
                         <div
@@ -388,19 +440,19 @@ export default function FoodListing({
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-green-700 text-green-700"
+                                className="border-2 border-current text-green-700"
                               />
                             ) : item.type === "non-veg" ? (
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-red-600 text-red-600"
+                                className="border-2 border-current text-red-600"
                               />
                             ) : (
                               <Dot
                                 size={12}
                                 strokeWidth={12}
-                                className="border-2 border-orange-600 text-orange-600"
+                                className="border-2 border-current text-orange-600"
                               />
                             )}
                           </div>
@@ -453,8 +505,10 @@ export default function FoodListing({
                         {/* ✅ Fixed Size Details Section */}
                         <div className="flex h-28 flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 p-2">
                           {/* Item Name with Pencil Icon */}
-                          <h3 className="flex h-8 items-center justify-between text-xs font-semibold leading-tight text-gray-900">
-                            <span className="flex-1 truncate pr-1">{item.name}</span>
+                          <h3 className="flex h-10 items-start justify-between text-xs font-semibold leading-tight text-gray-900">
+                            <span className="flex-1 line-clamp-1 break-words pr-1">
+                              {item.name}
+                            </span>
                             {quantity > 0 && (
                               <button
                                 type="button"
@@ -535,7 +589,7 @@ export default function FoodListing({
                                             >
                                               <span>{formatVariantLabel(key)}</span>
                                               
-                                              {/* ✅ सिर्फ final price (discount के बाद) */}
+                                           
                                               {(() => {
                                                 const finalPrice = hasVariantDiscount ? 
                                                   discountedVariantPrice : 
@@ -647,7 +701,7 @@ export default function FoodListing({
                                             );
                                           }}
                                           disabled={!isRestaurantOpen || !canAdd}
-                                          className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                          className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                           +
                                         </Button>
@@ -681,7 +735,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Add
                                     </Button>
@@ -695,7 +749,6 @@ export default function FoodListing({
                     );
                   })}
               </div>
-                <div className={`pointer-events-none absolute inset-y-2 right-0 w-4 bg-gradient-to-l ${isDarkMode ? "from-slate-950" : "from-[#fff8f2]"} to-transparent`} />
               </div>
             ) : (
               <div className={containerClass} style={{ position: "relative" }}>
@@ -750,7 +803,7 @@ export default function FoodListing({
                       layoutMode === "single"
                         ? "flex min-h-[128px] w-full self-start"
                         : "w-full"
-                    } ${isMenuOpen ? "z-40 overflow-visible" : "z-10 overflow-hidden"}`}
+                         } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
                   >
                     {/* ✅ Image Section */}
                     <div
@@ -775,19 +828,19 @@ export default function FoodListing({
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-green-700 text-green-700"
+                            className="border-2 border-current text-green-700"
                           />
                         ) : item.type === "non-veg" ? (
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-red-600 text-red-600"
+                            className="border-2 border-current text-red-600"
                           />
                         ) : (
                           <Dot
                             size={12}
                             strokeWidth={12}
-                            className="border-2 border-orange-600 text-orange-600"
+                            className="border-2 border-current text-orange-600"
                           />
                         )}
                       </div>
@@ -847,13 +900,15 @@ export default function FoodListing({
                     >
                       {/* Item Name with Pencil Icon */}
                       <h3
-                        className={`flex items-center justify-between leading-tight text-gray-900 ${
+                        className={`flex items-start justify-between leading-tight text-gray-900 ${
                           layoutMode === "single"
-                            ? "min-h-[26px] text-sm font-semibold"
-                            : "h-8 text-xs font-semibold"
+                            ? "h-10 text-sm font-semibold"
+                            : "h-10 text-xs font-semibold"
                         }`}
                       >
-                        <span className="flex-1 truncate pr-1">{item.name}</span>
+                        <span className="flex-1 line-clamp-1 break-all pr-1">
+                          {item.name}
+                        </span>
                         {quantity > 0 && (
                           <button
                             type="button"
@@ -934,7 +989,7 @@ export default function FoodListing({
                                         >
                                           <span>{formatVariantLabel(key)}</span>
                                           
-                                          {/* ✅ सिर्फ final price (discount के बाद) */}
+                                        
                                           {(() => {
                                             const finalPrice = hasVariantDiscount ? 
                                               discountedVariantPrice : 
@@ -1046,7 +1101,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="h-6 w-6 rounded-lg bg-primary p-0 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
                                     </Button>
@@ -1080,7 +1135,7 @@ export default function FoodListing({
                                     );
                                   }}
                                   disabled={!isRestaurantOpen || !canAdd}
-                                  className="h-8 w-full rounded-lg bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Add
                                 </Button>
@@ -1099,10 +1154,11 @@ export default function FoodListing({
         );
       })}
       {/* Description Modal - Fixed Size with Scroll */}
-      <AnimatePresence>
-        {descModal.open && descModal.item && (
-          <motion.div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {descModal.open && descModal.item && (
+            <motion.div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
             onClick={closeDescription}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1148,19 +1204,19 @@ export default function FoodListing({
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-green-700 text-green-700"
+                    className="border-2 border-current text-green-700"
                   />
                 ) : descModal.item.type === "non-veg" ? (
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-red-600 text-red-600"
+                    className="border-2 border-current text-red-600"
                   />
                 ) : (
                   <Dot
                     size={16}
                     strokeWidth={12}
-                    className="border-2 border-orange-600 text-orange-600"
+                    className="border-2 border-current text-orange-600"
                   />
                 )}
               </div>
@@ -1382,13 +1438,17 @@ export default function FoodListing({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* Customization Modal */}
-      <AnimatePresence>
-        {customizationModal.open && (
-          <motion.div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
+      {/* Customization Modal */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {customizationModal.open && (
+            <motion.div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-sm"
             onClick={closeCustomization}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1481,7 +1541,9 @@ export default function FoodListing({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }

@@ -41,13 +41,28 @@ export default function ProfileDetails({ profileData }) {
   const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-orange-700 dark:text-orange-300";
   const iconBadgeClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm";
+  const categoryCount = Array.isArray(profileData?.categories)
+    ? profileData.categories.length
+    : 0;
 
   const getFinalQR = () => {
-    const rawQR = profileData?.qrCode || "";
-    const cleanedQR = rawQR.replace(/\s/g, "");
-    return cleanedQR.startsWith("data:image")
-      ? cleanedQR
-      : `data:image/png;base64,${cleanedQR}`;
+    const rawQR =
+      (typeof profileData?.qrCode === "string" ||
+      typeof profileData?.qrCode === "number")
+        ? String(profileData?.qrCode)
+        : (
+            profileData?.qrCode?.url ||
+            profileData?.qrCode?.secure_url ||
+            profileData?.qrCode?.secureUrl ||
+            profileData?.qrCode?.path ||
+            profileData?.qrCode?.base64 ||
+            ""
+          );
+    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
+    if (!cleanedQR) return "";
+    if (cleanedQR.startsWith("data:image")) return cleanedQR;
+    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
+    return `data:image/png;base64,${cleanedQR}`;
   };
 
   const handleQRDownload = () => {
@@ -94,22 +109,22 @@ export default function ProfileDetails({ profileData }) {
             <span className={iconBadgeClass}>
               <Store className="h-4 w-4" />
             </span>
-            Restaurant Information
+            Business Profile
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <ProfileField
             icon={<Tag className="w-4 h-4" />}
-            label="Restaurant Name"
+            label="Business Name"
             value={profileData?.restaurantName || profileData?.name}
           />
-          <ProfileField icon={<Mail className="w-4 h-4" />} label="Email Address" value={emailOfAdmin} />
-          <ProfileField icon={<Phone className="w-4 h-4" />} label="Phone Number" value={profileData?.phoneNumber} />
+          <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
+          <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
           <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />
           <div className="sm:col-span-2">
-            <ProfileField icon={<MapPin className="w-4 h-4" />} label="Full Address" value={profileData?.address} />
+            <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
           </div>
-          <ProfileField icon={<Globe className="w-4 h-4" />} label="Client Domain" value={profileData?.domain} />
+          <ProfileField icon={<Globe className="w-4 h-4" />} label="Web URL" value={profileData?.domain} />
         </div>
       </div>
 
@@ -121,14 +136,14 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <Building className="h-4 w-4" />
               </span>
-              Financial Settings
+              Billing & Taxes
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-            <ProfileField label="Delivery Charges" value={`₹${profileData?.deliveryCharges ?? 0}`} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Rate" value={`${profileData?.gstRate}%`} />
-            <ProfileField icon={<Building className="w-4 h-4" />} label="GST Number" value={profileData?.gstNumber} />
+            <ProfileField label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Rate (%)" value={`${profileData?.gstRate}%`} />
+            <ProfileField icon={<Building className="w-4 h-4" />} label="Tax ID / GSTIN" value={profileData?.gstNumber} />
           </div>
         </div>
 
@@ -138,7 +153,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <SlidersHorizontal className="h-4 w-4" />
               </span>
-              Order Modes
+              Service Modes
             </h2>
           </div>
           <div className="space-y-3 p-4">
@@ -157,7 +172,7 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <Image className="h-4 w-4" />
               </span>
-              Restaurant Logo
+              Brand Identity
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
@@ -181,11 +196,11 @@ export default function ProfileDetails({ profileData }) {
               <span className={iconBadgeClass}>
                 <ScanLine className="h-4 w-4" />
               </span>
-              {restaurantName} QR
+              Digital Menu QR
             </h2>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
-            {profileData?.qrCode ? (
+            {getFinalQR() ? (
               <div className="w-full text-center">
                 <img src={getFinalQR()} alt="QR Code" className="mx-auto mb-3 h-40 w-40 rounded-lg border border-orange-100 object-contain" />
                 <button
@@ -206,12 +221,17 @@ export default function ProfileDetails({ profileData }) {
 
         <div className={`${cardClass} lg:col-span-2`}>
           <div className={headerClass}>
-            <h2 className={titleRowClass}>
-              <span className={iconBadgeClass}>
-                <Layers3 className="h-4 w-4" />
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className={titleRowClass}>
+                <span className={iconBadgeClass}>
+                  <Layers3 className="h-4 w-4" />
+                </span>
+                Menu Categories
+              </h2>
+              <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                {categoryCount}
               </span>
-              Categories
-            </h2>
+            </div>
           </div>
           <div className="p-4">
             <CategoryChips categories={profileData?.categories} />

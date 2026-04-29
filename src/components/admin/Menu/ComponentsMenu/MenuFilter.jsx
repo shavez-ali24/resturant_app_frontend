@@ -64,12 +64,12 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
       >
         <span className="mr-2">
           {label}: <span className="font-semibold text-gray-900">{displayLabel}</span>
         </span>
-        <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDownIcon className={`h-4 w-4 text-gray-500 ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
         <div className="absolute z-50 mt-2 max-h-60 w-full min-w-[200px] origin-top-right overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl focus:outline-none">
@@ -107,7 +107,7 @@ function FilterModal({ isOpen, onClose, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-start justify-center bg-black/45 pt-16 transition-opacity backdrop-blur-[2px] md:hidden"
+      className="fixed inset-0 z-40 flex items-start justify-center bg-black/45 pt-16 backdrop-blur-[2px] md:hidden"
       onClick={handleOverlayClick}
     >
       <div
@@ -120,7 +120,7 @@ function FilterModal({ isOpen, onClose, children }) {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-orange-100 hover:text-orange-700"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -140,24 +140,26 @@ function FilterControls({
   handleSelectFilter,
   handleResetFilters,
   categoryOptions,
-  isInModal = false
+  isInModal = false,
+  showSearch = true
 }) {
   return (
     <>
-    
-      <div className="relative flex-grow rounded-xl border border-orange-200 bg-white shadow-sm md:min-w-[250px]">
-        <label htmlFor="search" className="sr-only">Search</label>
-        <input
-          type="search"
-          name="search"
-          id="search"
-          value={filters.search}
-          onChange={handleSearchChange}
-          className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2 pl-10 text-sm outline-none transition-all hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-          placeholder="Search by name or category..."
-        />
-        <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-      </div>
+      {showSearch && (
+        <div className="relative flex-grow rounded-xl border border-orange-200 bg-white shadow-sm md:min-w-[250px]">
+          <label htmlFor="search" className="sr-only">Search</label>
+          <input
+            type="search"
+            name="search"
+            id="search"
+            value={filters.search}
+            onChange={handleSearchChange}
+            className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2 pl-10 text-sm outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            placeholder="Search by name or category..."
+          />
+          <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        </div>
+      )}
 
       <FilterDropdown
         label="Category"
@@ -192,7 +194,7 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className="h-11 w-full flex-shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:from-orange-600 hover:to-orange-600 md:w-auto"
+        className="h-11 w-full flex-shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-orange-600 md:w-auto"
       >
         Reset Filters
       </button>
@@ -201,8 +203,16 @@ function FilterControls({
 }
 
 // Main
-export default function MenuFilter({ onFilterChange, categories, value, onResetNotify }) {
+export default function MenuFilter({
+  onFilterChange,
+  categories,
+  value,
+  onResetNotify,
+  layout = "auto",
+  showSearch = true,
+}) {
   const isControlled = value != null && typeof onFilterChange === "function";
+  const isPanelLayout = layout === "panel";
 
   const [uncontrolledFilters, setUncontrolledFilters] = useState(initialFilters);
   const filters = isControlled ? value : uncontrolledFilters;
@@ -261,6 +271,23 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
     ...(categories || []).map((cat) => ({ value: cat, label: cat })),
   ];
 
+  if (isPanelLayout) {
+    return (
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
+        <FilterControls
+          filters={filters}
+          openDropdown={openDropdown}
+          handleSearchChange={handleSearchChange}
+          handleToggleDropdown={handleToggleDropdown}
+          handleSelectFilter={handleSelectFilter}
+          handleResetFilters={handleResetFilters}
+          categoryOptions={categoryOptions}
+          showSearch={showSearch}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="hidden md:flex flex-wrap items-center gap-4 ">
@@ -272,6 +299,7 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
           handleSelectFilter={handleSelectFilter}
           handleResetFilters={handleResetFilters}
           categoryOptions={categoryOptions}
+          showSearch={showSearch}
         />
       </div>
 
@@ -279,7 +307,7 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-orange-300 hover:bg-orange-50"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50"
         >
           <FilterIcon className="h-4 w-4" />
           Filters
@@ -297,11 +325,12 @@ export default function MenuFilter({ onFilterChange, categories, value, onResetN
             handleResetFilters={handleResetFilters}
             categoryOptions={categoryOptions}
             isInModal={true}
+            showSearch={showSearch}
           />
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className="mt-2 h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:from-orange-600 hover:to-orange-600"
+            className="mt-2 h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-orange-600"
           >
             Apply Filters
           </button>

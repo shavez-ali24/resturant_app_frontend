@@ -1,15 +1,19 @@
 // src/components/admin/orderManagement/OrdersTable.jsx
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
 import OrderRow from "./OrderRow";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
 import { Utensils, House, Truck } from "lucide-react";
-import StatusDropdown from "./StatusDropdown";
-import CustomizationsModal from "./CustomizationsModal";
-import { Eye } from "lucide-react";
+const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
+const PendingOrderMobileNote = lazy(() => import("./PendingOrderMobileNote"));
+const PendingOrderMobileControls = lazy(() => import("./PendingOrderMobileControls"));
 import {
   formatOrderTableId,
+  getOrderCustomerName,
+  getOrderCustomerPhone,
   getOrderTypeBadgeClass,
+  getOrderIdValue,
+  getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
   getStatusRowClass,
@@ -49,34 +53,67 @@ const OrdersTable = ({
   updateOrder,
   tableType,
   onCustomizationsClick,
+  latestOrderId,
+  containerVariant = "card",
 }) => {
   const dispatch = useDispatch();
-  const [selectedCustomizations, setSelectedCustomizations] = useState(null);
+  const [selectedCustomizationOrder, setSelectedCustomizationOrder] = useState(null);
+  const [seenBillOrderId, setSeenBillOrderId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("billViewedOrderId") || "";
+  });
+  const columnCount = tableType === "pending" ? 9 : 6;
+  const skeletonRows = Array.from({ length: 8 });
+  const mobileSkeletons = Array.from({ length: 4 });
 
   // Function to handle customizations button click
-  const handleCustomizationsClick = (customizations) => {
-    if (customizations && customizations.trim() !== "") {
-      setSelectedCustomizations(customizations);
+  const handleCustomizationsClick = (order) => {
+    if (order) {
+      setSelectedCustomizationOrder(order);
     }
   };
 
   // Modal background click handler
   const handleModalClose = () => {
-    setSelectedCustomizations(null);
+    setSelectedCustomizationOrder(null);
   };
 
+  const getOrderId = (order) =>
+    getOrderIdValue(order) || order?.createdAt || "";
+  const getOrderIdShort = (order) => getOrderIdShortValue(order);
+  const latestId = latestOrderId ? String(latestOrderId) : "";
+  const isLatestUnseen = (order) => {
+    if (!latestId) return false;
+    const id = String(getOrderId(order) || "");
+    return id && id === latestId && id !== seenBillOrderId;
+  };
+  const markLatestSeen = (order) => {
+    if (typeof window === "undefined") return;
+    const id = String(getOrderId(order) || "");
+    if (!id || id !== latestId) return;
+    localStorage.setItem("billViewedOrderId", id);
+    setSeenBillOrderId(id);
+  };
+
+  const containerClassName =
+    containerVariant === "plain"
+      ? "min-h-[460px] md:min-h-[560px] rounded-2xl bg-transparent shadow-none"
+      : "min-h-[460px] md:min-h-[560px] rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none";
+
   return (
-    <div className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
+    <div className={containerClassName}>
       {/* Customizations Modal */}
-      {selectedCustomizations && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]" 
+      {selectedCustomizationOrder && (
+        <div
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]"
           onClick={handleModalClose}
         >
-          <CustomizationsModal
-            customizations={selectedCustomizations}
-            onClose={handleModalClose}
-          />
+          <Suspense fallback={null}>
+            <CustomizationsModal
+              order={selectedCustomizationOrder}
+              onClose={handleModalClose}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -85,20 +122,31 @@ const OrdersTable = ({
         <table className="min-w-full">
           <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
             <tr>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Time</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Customer</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Type</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Items</th>
+              {tableType === "pending" ? (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">ID</th>
+              ) : (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+              )}
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Placed At</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">
+                Customer
+              </th>
               {tableType === "pending" && (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Note</th>
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              )}
+              {tableType !== "pending" && (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+              )}
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Type</th>
+              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Details</th>
+              {tableType === "pending" && (
+                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Kitchen Note</th>
               )}
 
               {tableType === "pending" && (
                 <>
                   <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Status</th>
-                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Actions</th>
+                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Manage</th>
                 </>
               )}
             </tr>
@@ -106,27 +154,34 @@ const OrdersTable = ({
 
           <tbody className="divide-y divide-orange-100 bg-white/95 dark:divide-slate-700 dark:bg-slate-900/95">
             {loading ? (
-              <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-gray-500 dark:text-slate-300">
-                  Loading...
-                </td>
-              </tr>
+              skeletonRows.map((_, rowIndex) => (
+                <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
+                  {Array.from({ length: columnCount }).map((__, colIndex) => (
+                    <td
+                      key={`skeleton-cell-${rowIndex}-${colIndex}`}
+                      className="border border-orange-100 px-2 py-3 dark:border-slate-700"
+                    >
+                      <div className="h-4 w-full rounded bg-orange-100/80 dark:bg-slate-800/80" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : error ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center text-red-500 dark:text-red-400">
+                <td colSpan={columnCount} className="py-6 text-center text-red-500 dark:text-red-400">
                   {error}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={tableType === "pending" ? 10 : 8} className="py-6 text-center italic text-gray-400 dark:text-slate-400">
+                <td colSpan={columnCount} className="py-6 text-center italic text-gray-500 dark:text-slate-300">
                   No orders yet
                 </td>
               </tr>
             ) : (
               orders.map((order, index) => (
                 <OrderRow
-                  key={order._id}
+                  key={getOrderId(order) || order?.createdAt || index}
                   order={{
                     ...order,
                     formattedDate: formatDate(order.createdAt),
@@ -139,6 +194,8 @@ const OrdersTable = ({
                   updateOrder={updateOrder}
                   tableType={tableType}
                   onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
+                  showBillAttention={isLatestUnseen(order)}
+                  onBillOpen={() => markLatestSeen(order)}
                 />
               ))
             )}
@@ -146,14 +203,35 @@ const OrdersTable = ({
         </table>
       </div>
 
-      {/* Mobile View */}
-      <div className="block md:hidden px-2 sm:px-3">
+       {/* Mobile View */}
+       <div className="block md:hidden">
         {loading ? (
-          <p className="py-6 text-center text-gray-500 dark:text-slate-300">Loading...</p>
+          <div className="space-y-3.5 pb-2">
+            {mobileSkeletons.map((_, idx) => (
+              <div
+                key={`mobile-skeleton-${idx}`}
+                className="min-h-[240px] w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-24 rounded bg-orange-100/80 dark:bg-slate-800/80" />
+                  <div className="h-5 w-28 rounded-full bg-orange-100/80 dark:bg-slate-800/80" />
+                </div>
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
+                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
+                </div>
+                <div className="h-9 w-44 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <p className="py-6 text-center text-red-500 dark:text-red-400">{error}</p>
         ) : orders.length === 0 ? (
-          <p className="py-6 text-center italic text-gray-400 dark:text-slate-400">No orders yet</p>
+          <p className="py-6 text-center italic text-gray-500 dark:text-slate-300">No orders yet</p>
         ) : (
           <div className="space-y-3.5 pb-2">
             {orders.map((order) => {
@@ -171,46 +249,57 @@ const OrdersTable = ({
               };
               const orderTypeLabel = getOrderTypeLabel(order.orderType);
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
-              const tableLabel = formatOrderTableId(order.tableId);
+              const tableLabel = formatOrderTableId(
+                order.tableId ||
+                  order.table ||
+                  order.tableNumber ||
+                  order?.table?.name ||
+                  order?.table?.tableNumber ||
+                  order?.table?.number
+              );
 
-              const hasCustomizations =
-                tableType === "pending" &&
-                order.items &&
-                order.items.some(
-                  (item) => item.customizations && item.customizations.trim() !== ""
-                );
+              const handlePendingCustomizationsClick =
+                onCustomizationsClick || handleCustomizationsClick;
 
               return (
-                <div
-                  key={order._id}
-                  className={`w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5 ${getStatusRowClass(
-                    order.status
-                  )}`}
-                >
-                  <div className="flex flex-col gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
-                    <h3 className="font-bold text-gray-900 text-[15px] leading-tight">
-                      Order
+               <div
+                 key={getOrderId(order) || order?.createdAt}
+                 className={`w-full space-y-3 rounded-2xl border border-orange-100 p-2.5 sm:p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none ${getStatusRowClass(
+                   order.status
+                 )}`}
+               >
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <h3 className="font-bold text-gray-900 text-[15px] leading-tight shrink-0">
+                      {tableType === "pending"
+                        ? `ID: ${getOrderIdShort(order)}`
+                        : (getOrderCustomerName(order) || "Order")}
                     </h3>
-                    <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {formatDate(order.createdAt)} | {formatTime(order.createdAt)}
-                    </span>
+                    <div className="flex items-center">
+                      <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {tableType === "pending"
+                          ? formatTime(order.createdAt)
+                          : `${formatDate(order.createdAt)} | ${formatTime(order.createdAt)}`}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
-                      <span className="font-medium text-gray-600 dark:text-slate-300">Customer:</span>
-                      <p className="mt-0.5 break-words text-gray-800 dark:text-slate-100">{order.customerName || "N/A"}</p>
+                   <div className="flex items-center justify-between gap-1.5 text-sm">
+                      <div className="flex-1 flex items-center rounded-lg bg-orange-50/50 px-2.5 py-1.5 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300 text-sm">Name:</span>
+                        <p className="break-words text-gray-800 dark:text-slate-100 font-medium ml-1.5">
+                          {getOrderCustomerName(order) || "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex-1 flex items-center rounded-lg bg-orange-50/50 px-2.5 py-1.5 dark:bg-slate-800/80">
+                        <span className="font-medium text-gray-600 dark:text-slate-300 text-sm">Phone:</span>
+                        <p className="break-all text-gray-800 dark:text-slate-100 font-medium ml-1.5">{getOrderCustomerPhone(order) || "N/A"}</p>
+                      </div>
                     </div>
-                    <div className="rounded-lg bg-orange-50/50 px-2.5 py-2 dark:bg-slate-800/80">
-                      <span className="font-medium text-gray-600 dark:text-slate-300">Phone:</span>
-                      <p className="mt-0.5 break-all text-gray-800 dark:text-slate-100">{order.customerPhone || "N/A"}</p>
-                    </div>
-                  </div>
 
                   <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center">
                     <span className="shrink-0 text-sm font-medium text-gray-600 dark:text-slate-300">Type:</span>
                     <div
-                      className={`inline-flex h-9 w-fit items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
+                      className={`inline-flex h-9 w-40 items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
                     >
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         {getOrderTypeIcon(order.orderType)}
@@ -222,56 +311,36 @@ const OrdersTable = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2">
+                   <div className="grid grid-cols-2 gap-2">
                     {tableType === "pending" && (
-                      hasCustomizations ? (
-                        <button
-                          onClick={() => (onCustomizationsClick || handleCustomizationsClick)(order)}
-                          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-medium text-white transition hover:from-orange-600 hover:to-orange-700"
-                        >
-                          <Eye size={16} />
-                          Note
-                        </button>
-                      ) : (
-                        <div className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm italic text-gray-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                          No Note
-                        </div>
-                      )
+                      <Suspense fallback={null}>
+                        <PendingOrderMobileNote
+                          order={order}
+                          onCustomizationsClick={handlePendingCustomizationsClick}
+                        />
+                      </Suspense>
                     )}
 
                     <button
-                      onClick={() => dispatch(showBill(order))}
-                      className="flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        markLatestSeen(order);
+                        dispatch(showBill(order));
+                      }}
+                      className={`flex h-10 items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${isLatestUnseen(order) ? "bill-border-animate" : ""}`}
                     >
-                      View Items & Bill
+                      View Bill
                     </button>
                   </div>
 
                   {tableType === "pending" && (
-                    <>
-                      <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Status</span>
-                        <div className="w-full min-[360px]:w-auto">
-                          <StatusDropdown order={order} updateOrder={updateOrder} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setEditingOrder(order)}
-                          className="h-10 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => setShowConfirmDelete(order)}
-                          className="h-10 w-full rounded-xl bg-red-50 px-4 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
+                    <Suspense fallback={null}>
+                      <PendingOrderMobileControls
+                        order={order}
+                        updateOrder={updateOrder}
+                        setEditingOrder={setEditingOrder}
+                        setShowConfirmDelete={setShowConfirmDelete}
+                      />
+                    </Suspense>
                   )}
                 </div>
               );

@@ -14,6 +14,8 @@ import {
   Clock,
   RefreshCw,
   CalendarDays,
+  Calendar,
+  ChevronDown,
   AlertCircle,
   Receipt,
   Percent,
@@ -38,6 +40,17 @@ const formatCompactNumber = (number) => {
   return `₹${number}`
 }
 
+const getBackendDateParts = (value) => {
+  const raw = String(value || "").trim()
+  if (!raw) return { raw: "", date: "", time: "" }
+  const [datePart, timePart] = raw.split(" ")
+  return {
+    raw,
+    date: datePart || raw,
+    time: timePart || "",
+  }
+}
+
 const analyticsTabsListClass =
   "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)] dark:border-slate-600 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.2),0_10px_24px_-18px_rgba(2,6,23,0.9)]"
 const analyticsTabsTriggerClass =
@@ -45,72 +58,15 @@ const analyticsTabsTriggerClass =
 
 // Format date for chart X-axis
 const formatChartDate = (dateString, range) => {
-  try {
-    const date = new Date(dateString.replace(' ', 'T') + 'Z')
-    
-    // For custom range, always show full date
-    if (range === "custom") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "numeric",
-        month: "short",
-      })
-    }
-    
-    if (range === "all" || range === "1y" || range === "6m") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        month: "short",
-        year: range === "all" ? "numeric" : undefined,
-      })
-    }
-    
-    if (range === "7d" || range === "15d" || range === "30d") {
-      return date.toLocaleDateString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "numeric",
-        month: "short",
-      })
-    }
-    
-    if (range === "1d") {
-      return date.toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    }
-    
-    return dateString
-  } catch (error) {
-    return dateString
-  }
+  const { raw, date, time } = getBackendDateParts(dateString)
+  if (!raw) return ""
+  if (range === "1d") return time || raw
+  return date || raw
 }
 
 // Format date for table
 const formatTableDate = (dateString, range) => {
-  try {
-    const date = new Date(dateString.replace(' ', 'T') + 'Z')
-    
-    if (range === "1d") {
-      return date.toLocaleTimeString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    }
-    
-    return date.toLocaleDateString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      day: "numeric",
-      month: "short",
-      year: range === "custom" || range === "all" ? "numeric" : undefined,
-    })
-  } catch (error) {
-    return dateString
-  }
+  return getBackendDateParts(dateString).raw
 }
 
 // Group data by date for long ranges
@@ -121,8 +77,8 @@ const groupChartDataByDate = (data, range) => {
   const grouped = {}
   
   data.forEach(item => {
-    const date = new Date(item.date.replace(' ', 'T') + 'Z')
-    const dateKey = date.toISOString().split('T')[0]
+    const dateKey = getBackendDateParts(item.date).date
+    if (!dateKey) return
     
     if (!grouped[dateKey]) {
       grouped[dateKey] = {
@@ -145,8 +101,12 @@ export default function RevenueAnalytics() {
   const [toDate, setToDate] = useState("")
   const [activeTab, setActiveTab] = useState("chart")
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const isCustomRange = timeRange === "custom"
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshQueued, setIsRefreshQueued] = useState(false)
   const dropdownRef = useRef(null)
+  const refreshDebounceRef = useRef(null)
+  const isRefreshingRef = useRef(false)
   const notify = useNotify()
   
   // Get domain
@@ -206,6 +166,19 @@ export default function RevenueAnalytics() {
     }
   }
 
+  const handleClearCustomRange = () => {
+    handleResetDate()
+  }
+
+  const formatFullDate = (dateStr) => {
+    if (!dateStr) return ""
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+  }
+
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -215,6 +188,14 @@ export default function RevenueAnalytics() {
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current)
+      }
+    }
   }, [])
 
   // Calculate metrics
@@ -248,7 +229,7 @@ export default function RevenueAnalytics() {
     return chartData
       .map(item => ({
         ...item,
-        displayDate: formatTableDate(item.date + " 12:00", timeRange)
+        displayDate: formatTableDate(item.date, timeRange)
       }))
       .sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [chartData, timeRange])
@@ -276,8 +257,9 @@ export default function RevenueAnalytics() {
   const getRefreshErrorMessage = (err) =>
     err?.data?.message || err?.error || err?.message || "Unable to refresh revenue analytics."
 
-  const handleRefresh = async () => {
-    if (isRefreshing) return
+  const runRefresh = async () => {
+    if (isRefreshingRef.current) return
+    isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
       const result = await refetch()
@@ -289,8 +271,22 @@ export default function RevenueAnalytics() {
     } catch (err) {
       notify(getRefreshErrorMessage(err), "error")
     } finally {
+      isRefreshingRef.current = false
       setIsRefreshing(false)
     }
+  }
+
+  const handleRefresh = () => {
+    if (isRefreshingRef.current) return
+    if (refreshDebounceRef.current) {
+      clearTimeout(refreshDebounceRef.current)
+    }
+    setIsRefreshQueued(true)
+    refreshDebounceRef.current = setTimeout(() => {
+      refreshDebounceRef.current = null
+      setIsRefreshQueued(false)
+      runRefresh()
+    }, 500)
   }
 
   const secondaryButtonClass =
@@ -310,37 +306,21 @@ export default function RevenueAnalytics() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex flex-row lg:flex-row lg:items-center justify-between gap-4 mb-4">
-          <div>
-            <Heading title="Revenue Analytics" />
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="mb-6 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium text-gray-700">Time Range:</span>
-              <span className="text-orange-600 font-semibold">
-                {getDisplayRangeText()}
-              </span>
+        <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <Heading title="Revenue Analytics" />
+              <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+                Track your business earnings and growth
+              </p>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <div className="flex flex-col sm:flex-row gap-3">
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
+                  <Calendar className="w-4 h-4 mr-2 text-orange-500" />
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
                 <SelectContent className={selectContentClass}>
@@ -359,60 +339,79 @@ export default function RevenueAnalytics() {
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
-                    ${showDatePicker
+                    ${showDatePicker || isCustomRange
                       ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
-                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300'}`}
+                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'}`}
                 >
                   <CalendarDays className="w-4 h-4" />
                   <span>Custom Range</span>
+                  {isCustomRange && (
+                    <span className="ml-1 text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full">
+                      ✓
+                    </span>
+                  )}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
                 </button>
                 
                 {showDatePicker && (
-                  <div className="absolute right-0 top-12 z-50 w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80">
+                  <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80 dark:border-slate-700 dark:bg-slate-900">
                     <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-800 text-center border-b border-orange-100 pb-2">Select Date Range</h4>
+                      <h4 className="font-semibold text-gray-800 dark:text-slate-100 text-center border-b border-orange-100 dark:border-slate-700 pb-2">Select Custom Date Range</h4>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">From Date</label>
+                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">From Date</label>
                           <input 
                             type="date" 
                             className={inputClass}
                             value={fromDate} 
                             onChange={e => setFromDate(e.target.value)} 
+                            max={toDate}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">To Date</label>
+                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">To Date</label>
                           <input 
                             type="date" 
                             className={inputClass}
                             value={toDate} 
                             onChange={e => setToDate(e.target.value)} 
+                            min={fromDate}
                           />
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between border-t border-orange-100 pt-3">
-                        <button 
-                          onClick={handleResetDate}
-                          className="rounded-lg px-3 py-2 text-sm font-medium text-orange-700 transition-colors hover:bg-orange-50"
-                        >
-                          Reset
-                        </button>
+                      {isCustomRange && (
+                        <div className="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Custom Range Active</span>
+                            <button 
+                              onClick={handleClearCustomRange}
+                              className="text-xs text-orange-600 hover:text-orange-800 underline dark:text-orange-400 dark:hover:text-orange-300"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">
+                            {formatFullDate(fromDate)} to {formatFullDate(toDate)}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-end items-center pt-3 border-t border-orange-100 dark:border-slate-700">
                         <div className="flex gap-2">
                           <button 
                             onClick={() => setShowDatePicker(false)} 
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                           >
                             Cancel
                           </button>
                           <button 
                             onClick={handleCustomApply} 
                             disabled={!fromDate || !toDate}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            className={primaryButtonClass}
                           >
-                            Apply Dates
+                            Apply Range
                           </button>
                         </div>
                       </div>
@@ -421,8 +420,19 @@ export default function RevenueAnalytics() {
                 )}
               </div>
             </div>
+
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isRefreshQueued}
+                className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
 
       {/* Stats Cards - 2 Cards Only (Removed Avg Order Value) */}
@@ -532,7 +542,7 @@ export default function RevenueAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={primaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -647,22 +657,21 @@ export default function RevenueAnalytics() {
             {/* Table Tab */}
             <TabsContent value="table" className="mt-0">
               <div className="overflow-hidden rounded-xl border border-orange-200">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-orange-50/70">
-                      <TableRow>
-                        <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
-                          Date
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-right border-r border-orange-200">
-                          Orders
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-right">
-                          Revenue
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <Table containerClassName="max-h-[540px] overflow-x-auto overflow-y-auto">
+                  <TableHeader className="sticky top-0 z-10 bg-orange-50/70">
+                    <TableRow>
+                      <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
+                        Date
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right border-r border-orange-200">
+                        Orders
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 text-right">
+                        Revenue
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                       {isLoading ? (
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
@@ -716,9 +725,8 @@ export default function RevenueAnalytics() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
+                  </TableBody>
+                </Table>
                 
                 {/* Table Footer */}
                 {tableData.length > 0 && (
@@ -767,7 +775,7 @@ export default function RevenueAnalytics() {
                   </p>
                   <button
                     onClick={handleRefresh}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || isRefreshQueued}
                     className={primaryButtonClass}
                   >
                     <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -776,57 +784,7 @@ export default function RevenueAnalytics() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Summary Cards */}
-                  {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-green-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-xl">
-                            <IndianRupee className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency(totalRevenue)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl">
-                            <Percent className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Total Discounts</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency(analyticsData?.totalDiscounts || 0)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border border-orange-200 shadow-sm bg-gradient-to-br from-purple-50 to-white">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl">
-                            <ShoppingBag className="w-5 h-5 text-purple-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">Net Revenue</p>
-                            <p className="text-xl font-bold text-gray-800">
-                              {formatCurrency((analyticsData?.totalRevenue || 0) - (analyticsData?.totalDiscounts || 0))}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div> */}
-
+              
                  
                 </div>
               )}

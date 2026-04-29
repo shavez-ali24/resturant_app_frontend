@@ -21,9 +21,10 @@ const registerSchema = z.object({
   role: z.enum(["admin", "staff", "superadmin", "user"], {
     required_error: "Please select a role",
   }),
-  domain: z.string().min(3, "Domain must be at least 3 characters")
-    .regex(/^[a-zA-Z0-9-]+$/, "Domain can only contain letters, numbers, and hyphens")
-    .optional(),
+  domain: z
+    .string()
+    .min(3, "Domain must be at least 3 characters")
+    ,
   restaurantName: z.string().min(2, "Restaurant name must be at least 2 characters").optional()
 }).refine((data) => {
   if (data.role === "admin") {

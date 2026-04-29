@@ -5,8 +5,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell } from "lucide-react";
 import audio from "@/assets/orderRing.mp3";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
+import { useNotification } from "./NotificationContext";
 
 const POLLING_INTERVAL = 60000; // 60 seconds for notifications
+
+const extractOrders = (response) => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response.orders)) return response.orders;
+  if (Array.isArray(response.data)) return response.data;
+  return [];
+};
 
 export default function NotificationBell() {
   const MotionDiv = motion.div;
@@ -17,39 +26,71 @@ export default function NotificationBell() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const knownOrderIds = useRef(new Set());
   const notificationSound = useMemo(() => new Audio(audio), []);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const { sseEvent, sseConnected } = useNotification();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
 
-  // ✅ RTK Query with polling for PENDING orders only
-  const { data: ordersResponse = {}, refetch } = useGetOrdersQuery({
+  const pollingInterval = sseConnected ? 0 : POLLING_INTERVAL;
+  const refetchOnAction = !sseConnected;
+
+  // ✅ RTK Query with polling disabled when SSE is connected
+  const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery({
     status: "pending",
     page: 1,
     limit: 20, // Get more orders for notifications
     range: "all"
   }, {
-    pollingInterval: POLLING_INTERVAL,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
+  });
+  const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery({
+    status: "preparing",
+    page: 1,
+    limit: 20,
+    range: "all"
+  }, {
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
 
   
+  const pendingOrders = useMemo(
+    () => extractOrders(pendingResponse),
+    [pendingResponse]
+  );
+  const preparingOrders = useMemo(
+    () => extractOrders(preparingResponse),
+    [preparingResponse]
+  );
+
   const orders = useMemo(() => {
-    if (!ordersResponse) return [];
-    
-    if (Array.isArray(ordersResponse)) return ordersResponse;
-    if (Array.isArray(ordersResponse.orders)) return ordersResponse.orders;
-    if (Array.isArray(ordersResponse.data)) return ordersResponse.data;
-    
-    return [];
-  }, [ordersResponse]);
+    const combined = [...pendingOrders, ...preparingOrders];
+    if (!combined.length) return [];
+    const seen = new Set();
+    const deduped = [];
+    combined.forEach((order) => {
+      const id = order?._id || order?.id || order?.orderId;
+      if (id) {
+        if (seen.has(id)) return;
+        seen.add(id);
+      }
+      deduped.push(order);
+    });
+    return deduped;
+  }, [pendingOrders, preparingOrders]);
 
   const pendingOrdersCount = useMemo(() => {
-    if (typeof ordersResponse?.totalOrders === "number") {
-      return ordersResponse.totalOrders;
+    if (typeof pendingResponse?.totalOrders === "number") {
+      return pendingResponse.totalOrders;
     }
-    return orders.length;
-  }, [ordersResponse, orders]);
+    return pendingOrders.length;
+  }, [pendingResponse, pendingOrders]);
 
   useEffect(() => {
     if (!orders.length) return;
@@ -71,12 +112,16 @@ export default function NotificationBell() {
 
 
     if (freshOrders.length > 0) {
-      // Play sound for new orders
-      try {
-        notificationSound.currentTime = 0;
-        notificationSound.play()
-      } catch (err) {
-        console.log("Sound error:", err);
+      if (audioEnabled) {
+        try {
+          notificationSound.currentTime = 0;
+          const playPromise = notificationSound.play();
+          if (playPromise?.catch) {
+            playPromise.catch(() => {});
+          }
+        } catch (err) {
+          // Intentionally ignore autoplay errors.
+        }
       }
 
       // Mark these orders as known
@@ -93,7 +138,14 @@ export default function NotificationBell() {
       [...knownOrderIds.current].filter(id => currentIds.has(id))
     );
 
-  }, [orders, notificationSound]);
+  }, [orders, notificationSound, audioEnabled]);
+
+  useEffect(() => {
+    if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
+      refetchPending();
+      refetchPreparing();
+    }
+  }, [sseEvent, refetchPending, refetchPreparing]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -103,6 +155,19 @@ export default function NotificationBell() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const enableAudio = () => setAudioEnabled(true);
+    window.addEventListener("click", enableAudio, { once: true });
+    window.addEventListener("keydown", enableAudio, { once: true });
+    window.addEventListener("touchstart", enableAudio, { once: true });
+    return () => {
+      window.removeEventListener("click", enableAudio);
+      window.removeEventListener("keydown", enableAudio);
+      window.removeEventListener("touchstart", enableAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -136,7 +201,8 @@ export default function NotificationBell() {
   };
 
   const handleManualRefresh = () => {
-    refetch();
+    refetchPending();
+    refetchPreparing();
   };
 
   const displayNotificationCount =
@@ -146,14 +212,17 @@ export default function NotificationBell() {
     <div className="relative" ref={bellRef}>
       <button
         onClick={handleBellClick}
-        className={`relative overflow-visible rounded-full p-2 transition-colors duration-200 ${
+        className={`relative flex h-9 w-9 items-center justify-center overflow-visible rounded-full transition-colors duration-200 ${
           isDarkMode
-            ? "border border-slate-700 bg-slate-900 text-orange-300 hover:bg-slate-800 hover:text-orange-200"
-            : "bg-orange-50 text-orange-600 hover:bg-orange-50 hover:text-orange-600"
+            ? "border border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800 hover:text-orange-200"
+            : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-600"
         }`}
         title="Order Notifications"
       >
-        <Bell size={26} className="relative z-0" />
+        <Bell
+          size={18}
+          className={`relative z-0 ${isDarkMode ? "text-orange-300" : "text-orange-600"}`}
+        />
         
         {/* Notification counter badge */}
         {pendingOrdersCount > 0 && (
@@ -161,10 +230,10 @@ export default function NotificationBell() {
             key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[10px] font-black leading-none shadow-md ring-2 ${
+            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[11px] font-black leading-none shadow-md ring-2 ${
               isDarkMode
                 ? "bg-slate-100 text-orange-600 ring-slate-950"
-                : "bg-red-500 text-white ring-white"
+                : "bg-red-700 text-white ring-white"
             }`}
           >
             {displayNotificationCount}
@@ -258,15 +327,49 @@ export default function NotificationBell() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                isDarkMode
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : "bg-green-100 text-green-800"
+                                String(order.status || "").toLowerCase() === "preparing"
+                                  ? isDarkMode
+                                    ? "bg-teal-500/20 text-teal-200"
+                                    : "bg-teal-100 text-teal-800"
+                                  : isDarkMode
+                                    ? "bg-emerald-500/20 text-emerald-300"
+                                    : "bg-green-100 text-green-800"
                               }`}
                             >
-                              Pending
+                              {String(order.status || "").toLowerCase() === "preparing"
+                                ? "Preparing"
+                                : "Pending"}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                (() => {
+                                  const raw = String(order.orderType || "").trim().toLowerCase();
+                                  const compact = raw.replace(/\s+/g, "");
+                                  if (raw === "delivery") {
+                                    return isDarkMode
+                                      ? "bg-orange-500/15 text-orange-200"
+                                      : "bg-orange-100 text-orange-700";
+                                  }
+                                  if (compact === "takeaway") {
+                                    return isDarkMode
+                                      ? "bg-blue-500/15 text-blue-200"
+                                      : "bg-blue-100 text-blue-700";
+                                  }
+                                  if (compact === "eathere") {
+                                    return isDarkMode
+                                      ? "bg-emerald-500/15 text-emerald-200"
+                                      : "bg-emerald-100 text-emerald-700";
+                                  }
+                                  return isDarkMode
+                                    ? "bg-slate-700/70 text-slate-200"
+                                    : "bg-slate-100 text-slate-700";
+                                })()
+                              }`}
+                            >
+                              {order.orderType || "Unknown"}
                             </span>
                           </div>
                           
@@ -276,20 +379,18 @@ export default function NotificationBell() {
                                 isDarkMode ? "text-slate-100" : "text-gray-900"
                               }`}
                             >
-                              ₹{order.totalAmount || 0}
+                              {order.customerName || "Guest"}
                             </p>
-                            {order.items && (
-                              <p
-                                className={`line-clamp-1 text-sm ${
-                                  isDarkMode ? "text-slate-300" : "text-gray-600"
-                                }`}
-                              >
-                                {order.items.map(item => item.name).join(', ')}
-                              </p>
-                            )}
+                            <p
+                              className={`text-sm ${
+                                isDarkMode ? "text-slate-300" : "text-gray-600"
+                              }`}
+                            >
+                              {order.customerPhone || "No phone"}
+                            </p>
                             <p
                               className={`text-xs ${
-                                isDarkMode ? "text-slate-500" : "text-gray-400"
+                                isDarkMode ? "text-slate-400" : "text-gray-600"
                               }`}
                             >
                               {order.createdAt ? (

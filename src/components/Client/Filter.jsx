@@ -113,10 +113,8 @@ export default function Filter({
         onClick={() => onChange("combo", !filters.combo)}
         className={`ml-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
           filters.combo
-            ? "bg-primary text-white shadow-md"
-            : isDarkMode
-            ? "border border-slate-600 bg-slate-900 text-orange-200 shadow-sm hover:bg-slate-800"
-            : "bg-white text-orange-700 shadow-sm hover:bg-orange-50"
+            ? "client-add-button text-white"
+            : "client-add-button-outline"
         }`}
       >
         Combo

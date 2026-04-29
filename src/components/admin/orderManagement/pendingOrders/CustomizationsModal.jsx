@@ -1,17 +1,24 @@
 // src/components/admin/orderManagement/CustomizationsModal.jsx
 import React from "react";
 import { XCircleIcon } from "@heroicons/react/24/solid";
+import {
+  getItemCustomizationText,
+  getOrderCustomerName,
+  getOrderCustomerPhone,
+  getOrderItemsList,
+} from "../commonOrderFile/utils";
 
 const CustomizationsModal = ({ order, onClose }) => {
-  if (!order || !order.items) return null;
+  const orderItems = getOrderItemsList(order);
+  if (!order || !orderItems.length) return null;
 
   // Extract all customizations from order items
-  const customizations = order.items
-    .filter(item => item.customizations && item.customizations.trim() !== "")
+  const customizations = orderItems
+    .filter((item) => getItemCustomizationText(item))
     .map(item => ({
-      itemName: item.name,
-      variant: item.variant,
-      customizations: item.customizations
+      itemName: item.name || item.menuItem?.name || "Item",
+      variant: item.variant || item.variantName,
+      customizations: getItemCustomizationText(item)
     }));
 
   // Handle backdrop click
@@ -95,7 +102,7 @@ const CustomizationsModal = ({ order, onClose }) => {
                             Customer Request:
                           </h5>
                           <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                            <p className="text-gray-800 whitespace-pre-wrap">
+                            <p className="text-gray-800 whitespace-pre-wrap break-all text-sm leading-relaxed">
                               {item.customizations}
                             </p>
                           </div>
@@ -112,7 +119,7 @@ const CustomizationsModal = ({ order, onClose }) => {
                   <div>
                     <h4 className="text-sm font-semibold text-gray-600">Order Details</h4>
                     <p className="text-sm text-gray-800 mt-1">
-                      <span className="font-medium">Total Items:</span> {order.items?.length || 0}
+                      <span className="font-medium">Total Items:</span> {orderItems.length}
                     </p>
                     <p className="text-sm text-gray-800">
                       <span className="font-medium">Customized Items:</span> {customizations.length}
@@ -120,8 +127,8 @@ const CustomizationsModal = ({ order, onClose }) => {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-gray-600">Customer</h4>
-                    <p className="text-sm text-gray-800 mt-1">{order.customerName}</p>
-                    <p className="text-sm text-gray-800">{order.customerPhone}</p>
+                    <p className="text-sm text-gray-800 mt-1">{getOrderCustomerName(order)}</p>
+                    <p className="text-sm text-gray-800">{getOrderCustomerPhone(order)}</p>
                   </div>
                 </div>
               </div>

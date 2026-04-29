@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Clock } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import {
@@ -12,7 +12,6 @@ import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
-import fingerprintService from "@/service/fingerprintService";
 
 export default function Home() {
   const outletContext = useOutletContext() || {};
@@ -30,12 +29,12 @@ export default function Home() {
     error: restaurantError,
   } = useGetRestaurantQuery();
 
-  const [showLoader, setShowLoader] = useState(true);
   const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
   const [, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   const normalizeCategoryValue = (value) =>
     String(value || "")
@@ -47,11 +46,6 @@ export default function Home() {
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
   const error = menuError || restaurantError;
-
-  // Get fingerprint on component mount
-  useEffect(() => {
-    fingerprintService.getFingerprint();
-  }, []);
 
   useEffect(() => {
     let timer;
@@ -65,6 +59,60 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading]);
 
+  const restaurant = restaurantData?.restaurant || restaurantData || {};
+  const menu =
+    menuData?.menu ||
+    menuData?.data?.menu ||
+    (Array.isArray(menuData) ? menuData : []);
+
+  const isRestaurantOpen =
+    restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
+
+  const rawCategories =
+    Array.isArray(restaurant?.categories) && restaurant.categories.length
+      ? restaurant.categories
+      : Array.isArray(restaurantData?.restaurant?.categories) &&
+        restaurantData.restaurant.categories.length
+      ? restaurantData.restaurant.categories
+      : [];
+
+  const orderedCategories = Array.isArray(rawCategories)
+    ? rawCategories
+        .map((category, index) => ({ category, index }))
+        .sort((a, b) => {
+          const aOrder = Number(a.category?.displayOrder);
+          const bOrder = Number(b.category?.displayOrder);
+          const aValid = Number.isFinite(aOrder);
+          const bValid = Number.isFinite(bOrder);
+          if (aValid && bValid && aOrder !== bOrder) {
+            return aOrder - bOrder;
+          }
+          if (aValid && !bValid) return -1;
+          if (!aValid && bValid) return 1;
+          return a.index - b.index;
+        })
+        .map(({ category }) => category)
+    : [];
+
+  const categoryImages = useMemo(() => {
+    const imageMap = {};
+    const list = Array.isArray(menu) ? menu : [];
+    list.forEach((item) => {
+      const key = normalizeCategoryValue(item?.category);
+      if (!key || imageMap[key]) return;
+      const candidate =
+        item?.image?.url ||
+        item?.image?.secure_url ||
+        item?.image ||
+        item?.thumbnail?.url ||
+        item?.thumbnail;
+      if (candidate) {
+        imageMap[key] = candidate;
+      }
+    });
+    return imageMap;
+  }, [menu, normalizeCategoryValue]);
+
   if (showLoader)
     return (
       <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]"}`}>
@@ -76,15 +124,6 @@ export default function Home() {
         />
       </div>
     );
-
-  const restaurant = restaurantData?.restaurant || restaurantData || {};
-  const menu =
-    menuData?.menu ||
-    menuData?.data?.menu ||
-    (Array.isArray(menuData) ? menuData : []);
-
-  const isRestaurantOpen =
-    restaurant?.isOpen === undefined ? true : Boolean(restaurant.isOpen);
 
   if (error) {
     return (
@@ -119,7 +158,6 @@ export default function Home() {
 
     return true;
   });
-
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -173,14 +211,15 @@ export default function Home() {
 
         <Category
           title="Choose Your Favourite Food"
-          categories={menu}
+          categories={orderedCategories.length ? orderedCategories : menu}
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
+          categoryImages={categoryImages}
         />
         <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
       </div>
 
-      <div className={`flex-1 overflow-y-auto overscroll-contain ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
+      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
@@ -196,7 +235,13 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <FoodListing menu={filteredMenu} onQuantityChange={setTotal} isRestaurantOpen={isRestaurantOpen} isDarkMode={isDarkMode} />
+          <FoodListing
+            menu={filteredMenu}
+            onQuantityChange={setTotal}
+            isRestaurantOpen={isRestaurantOpen}
+            isDarkMode={isDarkMode}
+            categoryOrder={orderedCategories}
+          />
         )}
       </div>
     </div>
