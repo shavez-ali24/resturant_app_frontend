@@ -1843,7 +1843,7 @@ const prepareFormData = (formData, file) => {
                               <img
                                 src={
                                   item?.image?.url ||
-                                  "https://via.placeholder.com/120x120?text=No+Image"
+                                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='11' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E"
                                 }
                                 alt={item?.name || "Menu item"}
                                 className="absolute inset-0 h-full w-full object-cover"

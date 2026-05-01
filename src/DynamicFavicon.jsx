@@ -1,7 +1,7 @@
-"use client";
-
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useGetRestaurantQuery } from "@/redux/clientRedux/clientAPI";
+
+import logoFallback from "@/assets/tapNbite.png";
 
 const DynamicFavicon = () => {
   const { data, isLoading, isError } = useGetRestaurantQuery();
@@ -9,8 +9,7 @@ const DynamicFavicon = () => {
   useEffect(() => {
     if (isLoading || isError) return;
 
-    // Get logo URL from API, fallback to default favicon if not available
-    const logoUrl = data?.restaurant?.logo?.url || "/favicon.png";
+    const logoUrl = data?.restaurant?.logo?.url || logoFallback;
     if (!logoUrl) return;
 
     // Remove existing favicons

@@ -558,11 +558,16 @@ export default function Header({
 
   const triggerPreparingVibration = () => {
     if (typeof window === "undefined" || !window.navigator) return;
-    const vibrate =
-      window.navigator.vibrate ||
-      window.navigator.webkitVibrate ||
-      window.navigator.mozVibrate;
-    if (typeof vibrate === "function") vibrate([160, 80, 160]);
+    try {
+      const nav = window.navigator;
+      const vibrateFn =
+        nav.vibrate?.bind(nav) ||
+        nav.webkitVibrate?.bind(nav) ||
+        nav.mozVibrate?.bind(nav);
+      if (typeof vibrateFn === "function") vibrateFn([160, 80, 160]);
+    } catch (e) {
+      // vibration not supported on this device
+    }
   };
 
   const showOrderStatusBanner = (order) => {
