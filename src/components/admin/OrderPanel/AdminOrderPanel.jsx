@@ -13,9 +13,10 @@ import {
 import {
   useGetRestaurantQuery,
   useGetMenuQuery,
-  useCreateOrderMutation
 } from "../../../redux/clientRedux/clientAPI";
-import fingerprintService from "../../../service/fingerprintService";
+import {
+  useCreateOrderByAdminMutation
+} from "../../../redux/adminRedux/adminAPI";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
@@ -511,7 +512,13 @@ function OrderSummaryPanel({
         </button>
         <button
           onClick={handleSubmit}
-          disabled={cartCount === 0 || isSubmitting || !isRestaurantOpen}
+          disabled={
+            cartCount === 0 ||
+            isSubmitting ||
+            !isRestaurantOpen ||
+            !customerName.trim() ||
+            !PHONE_VALID_PATTERN.test(customerPhone)
+          }
           className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 client-add-button disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {isSubmitting ? (
@@ -540,7 +547,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
   const { data: restaurantData } = useGetRestaurantQuery();
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
-  const [createOrder, { isLoading: isSubmitting }] = useCreateOrderMutation();
+  const [createOrder, { isLoading: isSubmitting }] = useCreateOrderByAdminMutation();
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedVariants, setSelectedVariants] = useState({});
@@ -692,10 +699,9 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         if (cartItem.isCombo && cartItem.comboItems) orderItem.comboItems = cartItem.comboItems;
         return orderItem;
       });
-      const fp = await fingerprintService.getFingerprint();
+      // Admin/Staff order — uses protected endpoint, no fingerprint needed
       const formattedName = capitalizeFirst(trimmedName.replace(/\s+/g, " "));
       const orderData = {
-        fingerPrint: fp,
         customerName: formattedName,
         customerPhone,
         items: orderItems,

@@ -197,6 +197,17 @@ export const adminApi = createApi({
     }),
 
     // ORDER MANAGEMENT ----------------------------------------------- done 
+
+    // Create Order by Admin/Staff (protected endpoint)
+    createOrderByAdmin: builder.mutation({
+      query: (orderData) => ({
+        url: "/order/protected",
+        method: "POST",
+        body: orderData,
+      }),
+      invalidatesTags: [{ type: "Order", id: "LIST" }],
+    }),
+
     // ✅ getOrders API - FIXED VERSION
     getOrders: builder.query({
       query: ({ status = "pending", range = "all", page = 1, limit = 10 }) => ({
@@ -451,6 +462,7 @@ export const {
   useGetRestaurantProfileQuery,
   useUpdateRestaurantProfileMutation,
   useReorderCategoriesMutation,
+  useCreateOrderByAdminMutation,
   useGetOrdersQuery,
   useUpdateOrderMutation,
   useToggleItemReadyMutation,
