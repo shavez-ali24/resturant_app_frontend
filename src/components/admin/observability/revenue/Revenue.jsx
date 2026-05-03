@@ -23,6 +23,8 @@ import {
 import { useGetAnalyticsQuery } from "@/redux/adminRedux/adminAPI"
 import Heading from "../../common/Heading"
 import { useNotify } from "../../common/NotificationModal"
+import { useAdminTour } from "../../../../hooks/useAdminTour"
+import { TOUR_KEYS, getRevenueSteps } from "../../../../utils/adminTour"
 
 // --- Helpers ---
 const formatCurrency = (amount) =>
@@ -95,6 +97,8 @@ const groupChartDataByDate = (data, range) => {
 }
 
 export default function RevenueAnalytics() {
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark"
+  useAdminTour(TOUR_KEYS.revenue, getRevenueSteps, isDarkMode, 700)
   // --- State ---
   const [timeRange, setTimeRange] = useState("7d")
   const [fromDate, setFromDate] = useState("")
@@ -308,7 +312,7 @@ export default function RevenueAnalytics() {
       <div className="mb-6">
         <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+            <div data-tour="revenue-heading">
               <Heading title="Revenue Analytics" />
               <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
                 Track your business earnings and growth
@@ -316,7 +320,7 @@ export default function RevenueAnalytics() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div data-tour="revenue-date-filter" className="flex flex-col sm:flex-row gap-3">
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
@@ -422,6 +426,7 @@ export default function RevenueAnalytics() {
             </div>
 
               <button
+                data-tour="revenue-refresh"
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
                 className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
@@ -436,7 +441,7 @@ export default function RevenueAnalytics() {
       </div>
 
       {/* Stats Cards - 2 Cards Only (Removed Avg Order Value) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div data-tour="revenue-cards" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         {/* Total Revenue Card */}
         <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardContent className="p-4">

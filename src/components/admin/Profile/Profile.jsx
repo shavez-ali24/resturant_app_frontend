@@ -7,6 +7,8 @@ import { LoadingSpinner } from "./Components/commanProfile/LoadingSpinner";
 import { ErrorMessage } from "./Components/commanProfile/ErrorMessage";
 import { useNotify } from "../common/NotificationModal";
 import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getProfileSteps } from "../../../utils/adminTour";
 
 const Profile = () => {
   const [token] = useState(() => localStorage.getItem("token") || "");
@@ -14,6 +16,8 @@ const Profile = () => {
   const notify = useNotify();
   const userRole = localStorage.getItem("userRole") || "";
   const isAdmin = userRole === "admin";
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  useAdminTour(TOUR_KEYS.profile, getProfileSteps, isDarkMode, 800);
 
   const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantProfileQuery();
   // console.log("Fetched restaurant profile data:", restaurant);

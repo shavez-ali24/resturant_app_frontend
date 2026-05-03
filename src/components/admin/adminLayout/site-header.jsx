@@ -169,6 +169,7 @@ export function SiteHeader({
             {isAdmin && (
               <>
                 <div 
+                  data-tour="header-restaurant-toggle"
                   className={`flex items-center gap-2 rounded-xl border px-2 py-1 shadow-sm md:gap-3 md:px-3 md:py-1 restaurant-toggle-card  ${
                     isDarkMode
                       ? "border-slate-700 bg-gradient-to-r from-slate-950/95 via-slate-900/95 to-slate-900/95"

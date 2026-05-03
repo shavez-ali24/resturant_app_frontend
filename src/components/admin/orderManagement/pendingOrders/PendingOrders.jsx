@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
 import { Plus, ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { useAdminTour } from "../../../../hooks/useAdminTour";
+import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
 
 import {
   Pagination,
@@ -46,6 +48,9 @@ const Orders = () => {
   const showCreateOrder = searchParams.get("view") === "create";
   const openCreateOrder = () => setSearchParams({ view: "create" });
   const closeCreateOrder = () => setSearchParams({});
+
+  // Auto onboarding tour — first visit only
+  useAdminTour(TOUR_KEYS.orders, getOrdersSteps, isDarkMode, 800);
 
   const normalizeIncomingOrder = (incomingOrder) => {
     const incomingId = getOrderIdValue(incomingOrder);
@@ -604,9 +609,10 @@ const Orders = () => {
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
       {/* Header */}
-      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
+      <div data-tour="orders-heading" className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
         <Heading title="Live Orders" />
         <button
+          data-tour="orders-create-btn"
           onClick={() => openCreateOrder()}
           className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-orange-600 active:scale-95"
         >
@@ -617,7 +623,7 @@ const Orders = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4 sm:mt-4">
+      <div data-tour="orders-table" className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4 sm:mt-4">
         <Suspense
           fallback={
             <div className="min-h-[420px] md:min-h-[520px] p-4">
