@@ -32,8 +32,12 @@ import {
 } from "lucide-react";
 import Heading from "../common/Heading";
 import { useNotify } from "../common/NotificationModal";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getStaffSteps } from "../../../utils/adminTour";
 
 const StaffManagement = () => {
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  useAdminTour(TOUR_KEYS.staff, getStaffSteps, isDarkMode, 700);
   const { data: staffData, isLoading, refetch } = useGetStaffQuery();
   const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
   const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
@@ -354,9 +358,10 @@ const StaffManagement = () => {
 
       {/* Header */}
       <div className="mx-auto mb-4 max-w-7xl">
-        <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-row sm:items-center sm:p-4">
+        <div data-tour="staff-heading" className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:flex-row sm:items-center sm:p-4">
           <Heading title="Staff Management" />
           <Button
+            data-tour="staff-add-btn"
             onClick={handleAddNew}
             className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
           >
@@ -380,7 +385,7 @@ const StaffManagement = () => {
       </div>
 
       {/* Staff Table */}
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
+      <div data-tour="staff-list" className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
         <Table>
           <TableHeader>
             <TableRow className="bg-[linear-gradient(90deg,#f97316,#ea580c)] hover:bg-[linear-gradient(90deg,#f97316,#ea580c)]">

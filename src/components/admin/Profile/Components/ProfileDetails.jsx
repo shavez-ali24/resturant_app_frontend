@@ -129,7 +129,7 @@ export default function ProfileDetails({ profileData }) {
       </div>
 
       {/* Financial & Order Modes Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div data-tour="profile-settings" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className={cardClass}>
           <div className={headerClass}>
             <h2 className={titleRowClass}>
@@ -165,7 +165,7 @@ export default function ProfileDetails({ profileData }) {
       </div>
 
       {/* Logo, QR & Categories Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div data-tour="profile-branding" className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className={`${cardClass} flex flex-col`}>
           <div className={headerClass}>
             <h2 className={titleRowClass}>
@@ -219,7 +219,7 @@ export default function ProfileDetails({ profileData }) {
           </div>
         </div>
 
-        <div className={`${cardClass} lg:col-span-2`}>
+        <div data-tour="profile-categories" className={`${cardClass} lg:col-span-2`}>
           <div className={headerClass}>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className={titleRowClass}>

@@ -16,6 +16,8 @@ import {
   useCreateOrderMutation
 } from "../../../redux/clientRedux/clientAPI";
 import fingerprintService from "../../../service/fingerprintService";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
@@ -531,6 +533,7 @@ function OrderSummaryPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false }) {
   const dispatch = useDispatch();
+  useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
   const cartCount = Object.values(cartItems).reduce(
@@ -825,6 +828,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
         {/* DESKTOP: Category sidebar */}
         <div
+          data-tour="orderpanel-categories"
           className={`hidden md:flex md:flex-col w-44 shrink-0 overflow-y-auto border-r p-2 gap-0.5 ${
             isDarkMode ? "border-slate-700 bg-[#0d1629]" : "border-orange-100 bg-orange-50/30"
           }`}
@@ -850,6 +854,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
         {/* ITEMS GRID */}
         <div
+          data-tour="orderpanel-items"
           className={`flex-1 overflow-y-auto p-3 ${isDarkMode ? "bg-[#0d1629]" : "bg-[#fffaf4]"}`}
           style={{ WebkitOverflowScrolling: "touch", backgroundColor: isDarkMode ? "#0d1629" : "#fffaf4" }}
         >
@@ -982,6 +987,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
         {/* DESKTOP: Order Summary sidebar */}
         <div
+          data-tour="orderpanel-summary"
           className={`hidden md:flex md:flex-col w-80 shrink-0 border-l overflow-hidden ${
             isDarkMode ? `border-slate-700 ${summaryBg}` : `border-orange-100 ${summaryBg}`
           }`}

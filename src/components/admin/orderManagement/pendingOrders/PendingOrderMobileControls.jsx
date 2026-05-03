@@ -13,8 +13,12 @@ const PendingOrderMobileControls = ({
         <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
           Status
         </span>
-        <div className="w-full min-[360px]:w-auto">
-          <StatusDropdown order={order} updateOrder={updateOrder} />
+        <div data-tour="orders-mobile-status" className="w-full min-[360px]:w-auto">
+          <StatusDropdown
+            data-tour="orders-status-dropdown"
+            order={order}
+            updateOrder={updateOrder}
+          />
         </div>
       </div>
 

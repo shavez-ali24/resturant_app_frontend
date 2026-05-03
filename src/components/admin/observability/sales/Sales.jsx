@@ -52,6 +52,8 @@ import {
 import Heading from "../../common/Heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotify } from "../../common/NotificationModal";
+import { useAdminTour } from "../../../../hooks/useAdminTour";
+import { TOUR_KEYS, getSalesSteps } from "../../../../utils/adminTour";
 
 // Helper functions
 const formatCurrency = (amount) => {
@@ -148,6 +150,8 @@ const analyticsTabsTriggerClass =
   "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current";
 
 export default function TopSellingAnalytics() {
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  useAdminTour(TOUR_KEYS.sales, getSalesSteps, isDarkMode, 700);
   const [activeTab, setActiveTab] = useState("products");
   const [timeRange, setTimeRange] = useState("7d");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -496,15 +500,14 @@ export default function TopSellingAnalytics() {
       <div className="mb-6">
         <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
+            <div data-tour="sales-heading">
               <Heading title="Top Selling Analytics" />
               <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
                 Analyze your top selling products and categories
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Time Range Selector */}
+            <div data-tour="sales-date-filter" className="flex flex-col sm:flex-row gap-3">
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
                   <Calendar className="w-4 h-4 mr-2 text-orange-500" />
@@ -617,6 +620,7 @@ export default function TopSellingAnalytics() {
               </div>
 
               <button
+                data-tour="sales-refresh"
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
                 className={secondaryButtonClass}
@@ -707,7 +711,7 @@ export default function TopSellingAnalytics() {
 
       {/* Main Content */}
       <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
+        <Card data-tour="sales-chart" className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
           <CardHeader className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>

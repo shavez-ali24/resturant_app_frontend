@@ -20,6 +20,8 @@ import AddItemModal from "./ComponentsMenu/AddItemModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
 import { useNotify } from "../common/NotificationModal";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getMenuSteps } from "../../../utils/adminTour";
 
 import {
   useGetMenuQuery,
@@ -445,6 +447,8 @@ const TabButton = ({ active, onClick, children }) => (
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery();
   const { data: restaurantData } = useGetRestaurantProfileQuery();
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
   
   // Get user role
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
@@ -1539,7 +1543,7 @@ const prepareFormData = (formData, file) => {
       <div className="flex w-full flex-1 min-h-0 flex-col pb-6 px-4">
         <div className="menu-no-anim mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
+            <div data-tour="menu-heading" className="min-w-0 flex-1">
               <h2 className="truncate text-lg font-bold text-gray-900 dark:text-slate-100">
                 Menu Management
               </h2>
@@ -1564,6 +1568,7 @@ const prepareFormData = (formData, file) => {
                 <Search size={18} />
               </button>
               <Button
+                data-tour="menu-filters-btn"
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
                 className={`inline-flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:px-4 ${
@@ -1666,12 +1671,14 @@ const prepareFormData = (formData, file) => {
                       <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
                         <button
                           type="button"
+                          data-tour="menu-drag-category"
                           onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                          className="order-1 inline-flex h-6 w-6 shrink-0 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/90 dark:text-orange-300 sm:order-2 sm:ml-auto"
-                          aria-label={`Drag ${category}`}
-                          title="Drag to reorder"
+                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border border-orange-200 bg-orange-50 px-1.5 py-1 text-orange-600 shadow-sm transition hover:bg-orange-100 active:cursor-grabbing dark:border-slate-600 dark:bg-slate-800 dark:text-orange-400 dark:hover:bg-slate-700 sm:order-2 sm:ml-auto"
+                          aria-label={`Drag ${category} to reorder`}
+                          title="Hold and drag to reorder"
                         >
-                          <GripVertical size={12} />
+                          <GripVertical size={13} />
+                          <span className="text-[10px] font-semibold leading-none">drag</span>
                         </button>
                         <div className="order-2 min-w-0 flex-1 pr-3 sm:order-1">
                           <div className="truncate text-[13px] font-semibold text-gray-900 dark:text-slate-100">
@@ -1690,7 +1697,7 @@ const prepareFormData = (formData, file) => {
         <div className="flex flex-1 min-h-0 flex-col">
           {activeTab === "editor" ? (
             <div className="grid h-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-1">
-              <div className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+              <div data-tour="menu-categories" className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
               <div className="flex items-center justify-between border-b border-orange-100 px-4 py-3 dark:border-slate-800">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
@@ -1700,6 +1707,7 @@ const prepareFormData = (formData, file) => {
                 {isAdmin && (
                   <button
                     type="button"
+                    data-tour="menu-manage-btn"
                     onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
                     className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300"
                   >
@@ -1762,6 +1770,7 @@ const prepareFormData = (formData, file) => {
                         type="button"
                         onClick={() => setIsAddModalOpen(true)}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500 bg-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600 hover:border-orange-600"
+                        data-tour="menu-add-item-btn"
                       >
                         <CirclePlus size={14} />
                         Add New Item
@@ -1770,7 +1779,7 @@ const prepareFormData = (formData, file) => {
                   )}
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
+                <div data-tour="menu-item-list" className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
                   {isLoading ? (
                     <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
                       Loading menu items...
@@ -1829,6 +1838,7 @@ const prepareFormData = (formData, file) => {
                             {dragHandleProps && (
                               <button
                                 type="button"
+                                data-tour="menu-drag-item"
                                 {...dragHandleProps}
                                 onClick={(event) => event.stopPropagation()}
                                 className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300 sm:self-auto"

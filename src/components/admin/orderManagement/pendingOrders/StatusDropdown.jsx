@@ -38,6 +38,8 @@ const StatusDropdown = ({ order, updateOrder }) => {
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
       <SelectTrigger
+        data-tour="orders-status-dropdown"
+        aria-label={`Change order status — currently ${order.status}`}
         className={`h-10 w-full min-w-[140px] rounded-xl border border-transparent px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-9 md:w-[150px] ${getStatusBadge(
           order.status
         )}`}

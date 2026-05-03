@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
+import { useAdminTour } from "../../../../hooks/useAdminTour";
+import { TOUR_KEYS, getCancelledSteps } from "../../../../utils/adminTour";
 
 import OrdersTable from "../pendingOrders/OrdersTable";
 
@@ -28,6 +30,8 @@ import {
 import { getCompactPageNumbers } from "@/lib/pagination";
 
 const CancelledOrders = () => {
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  useAdminTour(TOUR_KEYS.cancelled, getCancelledSteps, isDarkMode, 600);
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
@@ -68,9 +72,8 @@ const CancelledOrders = () => {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
-      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-col gap-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:flex-row sm:items-center sm:justify-between">
+      <div data-tour="cancelled-heading" className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-col gap-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:flex-row sm:items-center sm:justify-between">
         <Heading title="Cancelled Orders" />
-
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Select value={dateRange} onValueChange={handleDateRangeChange}>
             <SelectTrigger className="h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-600 sm:w-[145px]">
@@ -111,7 +114,7 @@ const CancelledOrders = () => {
         </div>
       </div>
 
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4">
+      <div data-tour="cancelled-table" className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4">
         <OrdersTable
           orders={orders}
           loading={isLoading}
