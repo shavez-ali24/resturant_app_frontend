@@ -87,6 +87,8 @@
     height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
+    /* iOS: prevent elastic bounce on html level */
+    -webkit-overflow-scrolling: touch;
   }
   body {
     @apply bg-background text-foreground;
@@ -98,6 +100,8 @@
     margin: 0;
     padding: 0;
     overscroll-behavior-y: auto;
+    /* iOS momentum scrolling */
+    -webkit-overflow-scrolling: touch;
   }
   #root {
     height: 100%;
@@ -105,6 +109,7 @@
     overflow-x: hidden;
     overflow-y: auto;
     position: relative;
+    -webkit-overflow-scrolling: touch;
   }
 }
 .scroll-hidden {
@@ -626,5 +631,113 @@
   [--admin-scroll-container=true] > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
+  }
+}
+
+/* ============================================================
+   iOS SAFARI SCROLL FIXES — Admin + Client
+   ============================================================ */
+
+/* 1. All scrollable containers get momentum scrolling on iOS */
+@supports (-webkit-touch-callout: none) {
+
+  /* Any element with overflow scroll/auto gets iOS momentum */
+  [class*="overflow-y-auto"],
+  [class*="overflow-y-scroll"],
+  [class*="overflow-auto"],
+  [class*="overflow-scroll"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent double-tap zoom on buttons/links — improves tap responsiveness */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Fix: iOS sometimes freezes scroll inside flex/grid children */
+  [class*="flex-1"],
+  [class*="flex-col"] {
+    min-height: 0;
+  }
+
+  /* Fix: h-screen on iOS includes browser chrome — use dvh */
+  [class*="h-screen"] {
+    height: 100dvh;
+  }
+  [class*="min-h-screen"] {
+    min-height: 100dvh;
+  }
+  [class*="max-h-screen"] {
+    max-height: 100dvh;
+  }
+
+  /* Fix: position:fixed elements on iOS Safari with keyboard open */
+  [class*="fixed"] {
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Admin sidebar scroll */
+  [data-sidebar="sidebar"],
+  [data-sidebar="content"] {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* Client side: food listing, cart, modals */
+  .client-scroll-area {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* Prevent body scroll when modal/drawer is open */
+  body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+}
+
+/* 2. Safe area insets — notch/home bar on iPhone */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+
+  /* Bottom nav / action bars */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Fixed bottom elements */
+  [class*="bottom-0"][class*="fixed"],
+  [class*="bottom-0"][class*="sticky"] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Top notch */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* 3. Prevent iOS text size adjustment after orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 4. Smooth scroll globally */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 5. Input zoom fix — iOS zooms in on inputs with font-size < 16px */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
