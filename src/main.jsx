@@ -88,6 +88,19 @@ const RouteFallback = () => {
 };
 
 const SuperAdminPrivateRoute = ({ children }) => {
+  const allowedDomains = [
+    "app.flamendough.com",
+    "www.app.flamendough.com",
+    "localhost",
+  ];
+
+  const host =
+    typeof window !== "undefined" ? window.location.hostname : "";
+
+  if (!allowedDomains.includes(host)) {
+    return <ErrorPage />;
+  }
+
   return children;
 };
 
