@@ -1517,7 +1517,7 @@ export default function Header({
                     </div>
                   ) : (
                     <>
-                      {allOrders.slice(0, 1).map((order) => {
+                      {allOrders.map((order) => {
                         const orderTypeNormalized = String(
                           order.orderType || ""
                         )
@@ -1663,6 +1663,21 @@ export default function Header({
                           </div>
                         );
                       })}
+
+                      {/* Load More */}
+                      {hasMore && allOrders.length >= 3 && (
+                        <button
+                          onClick={() => setCurrentPage((p) => p + 1)}
+                          disabled={ordersLoading}
+                          className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? "bg-slate-800 text-orange-400 hover:bg-slate-700 disabled:opacity-50"
+                              : "bg-orange-50 text-orange-600 hover:bg-orange-100 disabled:opacity-50"
+                          }`}
+                        >
+                          {ordersLoading ? "Loading..." : "Load More"}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
