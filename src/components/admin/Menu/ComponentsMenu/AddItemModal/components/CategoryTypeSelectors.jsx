@@ -6,7 +6,6 @@ import {
   Check,
   Loader2,
   Plus,
-  SquarePen,
   Trash,
   X,
 } from "lucide-react";
@@ -559,20 +558,6 @@ const CategoryTypeSelectors = ({
                         <span className="block max-w-full truncate">{cat}</span>
                       </SelectItem>
                       <div className="absolute inset-y-0 right-1 z-10 flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          onPointerDown={(event) => handleActionIconClick(event, () => {})}
-                          onClick={(event) =>
-                            handleActionIconClick(event, () => handleStartRename(cat))
-                          }
-                          disabled={isSavingCategory || !!activeCategoryAction}
-                          aria-label={`Edit ${cat}`}
-                          title="Edit category"
-                        >
-                          <SquarePen size={16} />
-                        </button>
-
                         <button
                           type="button"
                           className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"

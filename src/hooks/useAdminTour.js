@@ -100,6 +100,9 @@ export function useAdminTour(tourKey, getSteps, isDarkMode = false, delay = 600)
   const startTour = useCallback(() => {
     if (hasTourSeen(tourKey)) return;
 
+    // ── Desktop only — skip tour on mobile/tablet ──────────────────────────
+    if (window.innerWidth < 1024) return;
+
     const allSteps = getSteps();
     const steps = buildSteps(allSteps);
 
