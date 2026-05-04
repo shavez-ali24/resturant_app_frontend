@@ -14,7 +14,11 @@ import {
   useGetRestaurantQuery,
   useGetMenuQuery,
 } from "../../../redux/clientRedux/clientAPI";
-import fingerprintService from "../../../service/fingerprintService";
+import {
+  useCreateOrderByAdminMutation
+} from "../../../redux/adminRedux/adminAPI";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
