@@ -741,8 +741,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
   // ── Styles ───────────────────────────────────────────────────────────────────
   const inputStyle = isDarkMode
-    ? "border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition w-full"
-    : "border border-orange-200 bg-white text-slate-800 placeholder-slate-400 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition w-full";
+    ? "border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-1.5 md:py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition w-full"
+    : "border border-orange-200 bg-white text-slate-800 placeholder-slate-400 rounded-xl px-3 py-1.5 md:py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition w-full";
 
   // FIX: bg-[#0d1629] guaranteed in dark mode — no cream/white leaking
   const bg = isDarkMode ? "bg-[#0d1629]" : "bg-[#fffaf4]";
@@ -884,7 +884,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {currentItems.map((item) => {
                 const { cartKey, quantity, selectedVariant } = getCartKeyAndQty(item);
                 let basePrice = Number(item.price) || 0;
@@ -900,13 +900,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                 return (
                   <div
                     key={item._id}
-                    className={`relative h-full flex flex-col justify-between min-h-[120px] md:min-h-[130px] rounded-2xl border p-2 transition-all duration-200 ${
+                    className={`relative flex flex-col justify-between min-h-[130px] rounded-2xl border p-2.5 transition-all duration-200 ${
                       isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
                     } ${cardBg}`}
                   >
                     <div className="flex items-start gap-1.5 mb-1.5">
                       <VegDot type={item.type} />
-                      <h3 className={`text-xs font-semibold leading-tight line-clamp-2 flex-1 ${textPrimary}`}>
+                      <h3 className={`text-xs font-semibold leading-tight line-clamp-2 flex-1 min-w-0 break-words ${textPrimary}`}>
                         {item.name}
                       </h3>
                     </div>
@@ -919,7 +919,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       </span>
                     )}
 
-                    <div className="flex items-center gap-1 mb-1.5">
+                    <div className="flex flex-wrap items-center gap-1 mb-1.5">
                       {hasDiscount ? (
                         <>
                           <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
@@ -959,7 +959,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         <button
                           onClick={() => handleAddItem(item)}
                           disabled={!isRestaurantOpen}
-                          className="client-add-button w-full py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                          className="client-add-button w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                         >
                           + Add
                         </button>
@@ -967,7 +967,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         <div className="flex items-center justify-between gap-1">
                           <button
                             onClick={() => dispatch(removeFromCart(cartKey))}
-                            className={`h-6 w-6 rounded-lg border flex items-center justify-center ${
+                            className={`h-7 w-7 rounded-lg border flex items-center justify-center ${
                               isDarkMode ? "border-slate-600 bg-slate-700 text-orange-400" : "border-orange-200 bg-orange-50 text-orange-600"
                             }`}
                           >
@@ -977,7 +977,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                           <button
                             onClick={() => handleAddItem(item)}
                             disabled={!isRestaurantOpen}
-                            className="client-add-button h-6 w-6 rounded-lg flex items-center justify-center text-white disabled:opacity-50"
+                            className="client-add-button h-7 w-7 rounded-lg flex items-center justify-center text-white disabled:opacity-50"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
