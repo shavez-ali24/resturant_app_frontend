@@ -161,6 +161,10 @@ export default function Home() {
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    // Koi bhi type filter ON hone par active category reset karo
+    if (value === true) {
+      setActiveCategory(null);
+    }
   };
 
   const handleCategoryClick = (category) => {
@@ -169,6 +173,8 @@ export default function Home() {
       const normalizedPrev = normalizeCategoryValue(prev);
       return normalizedPrev === normalizedNext ? null : category;
     });
+    // Category select hone par saare type filters reset karo
+    setFilters({ veg: false, nonVeg: false, mixed: false, combo: false });
   };
 
   return (
@@ -215,6 +221,7 @@ export default function Home() {
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
           categoryImages={categoryImages}
+          hasActiveFilter={filters.veg || filters.nonVeg || filters.mixed || filters.combo}
         />
         <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
       </div>

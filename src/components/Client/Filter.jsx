@@ -12,6 +12,8 @@ export default function Filter({
       ? "nonVeg"
       : filters.mixed
       ? "mixed"
+      : filters.combo
+      ? "combo"
       : "all";
 
   const setMode = (mode) => {
@@ -46,7 +48,10 @@ export default function Filter({
         <div className={`inline-flex items-center gap-0.5 rounded-full p-0.5 shadow-sm ${isDarkMode ? "bg-slate-900/90 border border-slate-600" : "bg-white"}`}>
           <button
             type="button"
-            onClick={() => setMode("all")}
+            onClick={() => {
+              setMode("all");
+              onChange("combo", false);
+            }}
             className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
               currentMode === "all"
                 ? isDarkMode

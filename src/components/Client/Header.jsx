@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Clock, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
@@ -20,6 +20,7 @@ import OrderComplete from "@/components/Client/OrderComplete";
 import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
 import config from "@/config";
+import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
@@ -58,6 +59,21 @@ export default function Header({
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isCartBarBump, setIsCartBarBump] = useState(false);
   const [isOrdersIconHighlighted, setIsOrdersIconHighlighted] = useState(false);
+
+  // ── Mobile back button — close overlays instead of navigating away ──────────
+  useBackButtonClose(isAccordionOpen, useCallback(() => {
+    setIsAccordionOpen(false);
+    onSidebarToggle?.(false);
+  }, [onSidebarToggle]));
+
+  useBackButtonClose(isCartOpen, useCallback(() => {
+    setIsCartOpen(false);
+    onSidebarToggle?.(false);
+  }, [onSidebarToggle]));
+
+  useBackButtonClose(showModal, useCallback(() => {
+    setShowModal(false);
+  }, []));
   const [orderStatusBanner, setOrderStatusBanner] = useState(null);
 
   const { data: restaurantData } = useGetRestaurantQuery();

@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MapPin, Navigation, Utensils, Truck, Home, ArrowLeft, Loader2, ShoppingBag, IndianRupee } from "lucide-react";
-import { Link } from "react-router-dom";
 import { getCurrentAddress } from "@/service/deliveryService";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -181,18 +180,17 @@ export default function OrderFormModal({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-between gap-3">
-              {/* Home Button - Only show when no order type is selected */}
+              {/* Close Button - Only show when no order type is selected */}
               {!orderType && (
-                <Link 
-                  to="/"
+                <button
                   onClick={() => setShowModal(false)}
                   className={`flex items-center gap-2 text-sm font-semibold transition-colors duration-200 hover:underline ${
                     isDarkMode ? "text-orange-300" : "text-primary"
                   }`}
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Home
-                </Link>
+                  Back
+                </button>
               )}
               
               {/* Back Button - Only show when order type is selected */}

@@ -114,11 +114,123 @@ export function useAdminTour(tourKey, getSteps, isDarkMode = false, delay = 600)
 
     const config = getDriverConfig(isDarkMode);
 
+    // ── Keep sidebar expanded during tour ──────────────────────────────────
+    const SIDEBAR_COOKIE = "sidebar_state";
+    const originalCookie = document.cookie
+      .split("; ")
+      .find((r) => r.startsWith(`${SIDEBAR_COOKIE}=`))
+      ?.split("=")[1];
+
+    // Force cookie to expanded
+    document.cookie = `${SIDEBAR_COOKIE}=true; path=/; max-age=${60 * 60 * 24 * 7}`;
+
+    // Force sidebar DOM to expanded state
+    // Tailwind uses data-state + data-collapsible to collapse/expand
+    const sidebarEl = document.querySelector(".group.peer[data-state]");
+    if (sidebarEl) {
+      sidebarEl.setAttribute("data-state", "expanded");
+      sidebarEl.removeAttribute("data-collapsible"); // collapsible classes tab hi apply hoti hain
+    }
+
+    // MutationObserver — agar koi aur code data-state change kare toh wapas expanded karo
+    const sidebarObserver = sidebarEl ? new MutationObserver(() => {
+      if (sidebarEl.getAttribute("data-state") !== "expanded") {
+        sidebarEl.setAttribute("data-state", "expanded");
+        sidebarEl.removeAttribute("data-collapsible");
+      }
+    }) : null;
+    if (sidebarObserver) {
+      sidebarObserver.observe(sidebarEl, { attributes: true, attributeFilter: ["data-state", "data-collapsible"] });
+    }
+
+    const restoreSidebar = () => {
+      sidebarObserver?.disconnect();
+      document.documentElement.classList.remove("driver-tour-active");
+      // Remove injected override style
+      document.getElementById("driver-tour-sidebar-fix")?.remove();
+      if (originalCookie !== undefined) {
+        document.cookie = `${SIDEBAR_COOKIE}=${originalCookie}; path=/; max-age=${60 * 60 * 24 * 7}`;
+      }
+      // Restore original state
+      if (sidebarEl && originalCookie === "false") {
+        sidebarEl.setAttribute("data-state", "collapsed");
+        sidebarEl.setAttribute("data-collapsible", "offcanvas");
+      }
+    };
+
+    document.documentElement.classList.add("driver-tour-active");
+
+    // ── driver.js built-in CSS override ───────────────────────────────────
+    // driver.js injects: :not(body):has(>.driver-active-element){overflow:hidden!important}
+    // Yeh sidebar ke parent container ka overflow hide kar deta hai jab
+    // sidebar ke andar koi element highlight hota hai — sidebar collapse ho jaati hai.
+    // Fix: driver.js ki stylesheet mein us rule ko directly disable karo.
+    let disabledRule = null;
+    try {
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          const rules = Array.from(sheet.cssRules || []);
+          for (let i = 0; i < rules.length; i++) {
+            const rule = rules[i];
+            if (
+              rule.selectorText &&
+              rule.selectorText.includes("driver-active-element") &&
+              rule.style?.overflow === "hidden"
+            ) {
+              // Rule ko delete karo — tour khatam hone par wapas add nahi karna
+              // kyunki page reload hone par driver.js CSS fresh load hogi
+              sheet.deleteRule(i);
+              disabledRule = { sheet, index: i, text: rule.cssText };
+              break;
+            }
+          }
+        } catch { /* cross-origin sheets ignore */ }
+        if (disabledRule) break;
+      }
+    } catch { /* ignore */ }
+
+    const overrideStyle = document.createElement("style");
+    overrideStyle.id = "driver-tour-sidebar-fix";
+    overrideStyle.textContent = `
+      .group\\/sidebar-wrapper:has(> .driver-active-element),
+      .group\\/sidebar-wrapper { overflow: visible !important; }
+      [data-sidebar="sidebar"]:has(> .driver-active-element),
+      [data-sidebar="sidebar"] { overflow: visible !important; }
+      .group.peer:has(> .driver-active-element) { overflow: visible !important; }
+    `;
+    document.head.appendChild(overrideStyle);
+
     driverRef.current = driver({
       ...config,
       steps,
+      // ── Skip button — top-right corner mein, X button ki jagah ──────────
+      onPopoverRender: (popover) => {
+        try {
+          // X (close) button hide karo
+          if (popover.closeButton) {
+            popover.closeButton.style.display = "none";
+          }
+
+          // Footer mein pehle se inject hua Skip button remove karo (re-render case)
+          const existing = popover.wrapper?.querySelector(".driver-skip-btn");
+          if (existing) existing.remove();
+
+          // Popover wrapper ke top-right mein Skip button inject karo
+          const wrapper = popover.wrapper;
+          if (wrapper) {
+            const skipBtn = document.createElement("button");
+            skipBtn.className = "driver-skip-btn";
+            skipBtn.innerText = "Skip";
+            skipBtn.onclick = () => {
+              if (driverRef.current) {
+                driverRef.current.destroy();
+              }
+            };
+            wrapper.appendChild(skipBtn);
+          }
+        } catch { /* ignore */ }
+      },
       onHighlightStarted: (element) => {
-        // Scroll element into view before highlighting
         if (element) {
           try {
             element.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -128,8 +240,7 @@ export function useAdminTour(tourKey, getSteps, isDarkMode = false, delay = 600)
       onDestroyed: () => {
         markTourSeen(tourKey);
         driverRef.current = null;
-        // Reset mobile viewport after tour — driver.js leaves scroll locks
-        // and overflow:hidden on body which breaks layout on iOS/Android
+        restoreSidebar();
         resetMobileViewport();
       },
     });
