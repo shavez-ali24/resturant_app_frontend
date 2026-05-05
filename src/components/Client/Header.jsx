@@ -1260,11 +1260,12 @@ export default function Header({
 
                    {/* Footer CTA */}
                    <div
-                     className={`sticky bottom-0 border-t px-4 py-4 ${
+                     className={`sticky bottom-0 border-t px-4 pt-4 pb-6 ${
                        isDarkMode
                          ? "border-slate-700 bg-slate-900/95"
                          : "border-slate-200 bg-white"
                      }`}
+                     style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
                    >
                     {!isRestaurantOpen ? (
                       <motion.div
