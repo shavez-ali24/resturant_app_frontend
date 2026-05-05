@@ -56,7 +56,21 @@ const ProfessionalComingSoon = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [particles, setParticles] = useState([]);
 
-  const isDark = localStorage.getItem('admin-theme') === 'dark';
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () => setIsDark(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const newParticles = Array.from({ length: 12 }, (_, i) => ({
