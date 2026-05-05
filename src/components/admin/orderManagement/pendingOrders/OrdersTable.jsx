@@ -122,25 +122,25 @@ const OrdersTable = ({
       <div className="hidden md:flex md:h-full md:flex-col">
         <div className="overflow-auto flex-1">
         <table className="min-w-full">
-          <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800/80" : "bg-[#f7f3ef]"}`}>
-            <tr>
+          <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800" : "bg-orange-50"}`}>
+            <tr className={`border-b ${isDarkMode ? "border-slate-700" : "border-orange-100"}`}>
               {tableType === "pending" ? (
-                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Order ID</th>
+                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order ID</th>
               ) : (
-                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Date</th>
+                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Date</th>
               )}
-              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Placed At</th>
-              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Customer</th>
-              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Phone</th>
-              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Type</th>
-              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Order Details</th>
+              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Placed At</th>
+              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Customer</th>
+              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Phone</th>
+              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Type</th>
+              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order Details</th>
               {tableType === "pending" && (
-                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Note</th>
+                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Note</th>
               )}
               {tableType === "pending" && (
                 <>
-                  <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Status</th>
-                  <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Manage</th>
+                  <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Status</th>
+                  <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Manage</th>
                 </>
               )}
             </tr>
@@ -223,7 +223,8 @@ const OrdersTable = ({
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
               const tableLabel = formatOrderTableId(
                 order.tableId || order.table || order.tableNumber ||
-                order?.table?.name || order?.table?.tableNumber || order?.table?.number
+                order?.table?.name || order?.table?.tableNumber || order?.table?.number,
+                order.source
               );
               const handlePendingCustomizationsClick = onCustomizationsClick || handleCustomizationsClick;
 

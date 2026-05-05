@@ -420,7 +420,21 @@ export const getOrderTypeItemClass = (value) => {
   return "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-900 data-[state=checked]:bg-slate-200 data-[state=checked]:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-700/80 dark:data-[highlighted]:text-slate-100 dark:data-[state=checked]:bg-slate-700/90 dark:data-[state=checked]:text-slate-100";
 };
 
-export const formatOrderTableId = (tableId) => {
+export const formatOrderTableId = (tableId, source) => {
+  // ✅ New source object: { section: "indoor", number: 3, type: "TABLE" }
+  if (source && source.section && source.number) {
+    const sectionLabels = {
+      indoor:  "Indoor",
+      outdoor: "Outdoor",
+      rooftop: "Rooftop",
+      rooms:   "Room",
+    };
+    const section = sectionLabels[String(source.section).toLowerCase()] || 
+                    (String(source.section).charAt(0).toUpperCase() + String(source.section).slice(1));
+    const unit = source.type === "ROOM" ? "" : "Table";
+    return unit ? `${section} ${unit} ${source.number}` : `${section} ${source.number}`;
+  }
+
   if (!tableId) return "";
 
   if (typeof tableId === "object") {

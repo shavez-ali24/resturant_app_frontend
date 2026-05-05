@@ -235,7 +235,12 @@ const BillPage = ({
        };
 
        setLocalOrderData(newLocalOrderData);
-       setSelectedTableId(order.tableId || "");
+       // Initialize from source (new) or tableId (legacy)
+       if (order.source?.section && order.source?.number) {
+         setSelectedTableId(`${order.source.section}:${order.source.number}`);
+       } else {
+         setSelectedTableId(order.tableId || "");
+       }
        setAddress(order.address || "");
 
        // Capture initial snapshot for comparison on save
@@ -765,7 +770,11 @@ const BillPage = ({
        }
 
        if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-         payload.tableId = selectedTableId;
+         // selectedTableId format: "indoor:3" → source object
+         const [section, numStr] = selectedTableId.split(":");
+         const number = parseInt(numStr, 10) || 1;
+         const type = section === "rooms" ? "ROOM" : "TABLE";
+         payload.source = { section, number, type };
        }
 
        if (selectedOrderTypeKey === "delivery" && address.trim()) {
@@ -777,7 +786,7 @@ const BillPage = ({
        }
 
        if (selectedOrderTypeKey === "take_away") {
-         payload.tableId = null;
+         payload.source = { section: null, number: null, type: "NONE" };
          payload.address = null;
        }
 
@@ -1070,9 +1079,20 @@ const BillPage = ({
               <p>
                 <strong>Phone:</strong> {order?.customerPhone || "N/A"}
               </p>
-              {order?.tableId && (
+              {(order?.source?.section || order?.tableId) && (
                 <p>
-                  <strong>Table:</strong> {order.tableId}
+                  <strong>
+                    {order?.source?.type === "ROOM" ? "Room:" : "Table:"}
+                  </strong>{" "}
+                  {order?.source?.section
+                    ? (() => {
+                        const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+                        const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
+                        const unit = order.source.type === "ROOM" ? "" : "Table";
+                        return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
+                      })()
+                    : order.tableId
+                  }
                 </p>
               )}
               <p>
@@ -1134,32 +1154,78 @@ const BillPage = ({
                   </Select>
                 </div>
 
-                {/* Table Selection - Eat Here */}
-                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (
-                  <div>
-                    <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
-                      Select Table *
-                    </label>
-                    <Select value={selectedTableId} onValueChange={handleTableChange}>
-                      <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm transition-all outline-none ${billInputClass}`}>
-                        <SelectValue placeholder="Select table" />
-                      </SelectTrigger>
-                      <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
-                        <SelectGroup>
-                          {availableTables.map((table) => (
-                            <SelectItem
-                              key={table._id}
-                              value={table._id}
-                              className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${billSelectItemClass}`}
-                            >
-                              Table {table.tableNumber || table.number || table._id.slice(-4)}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {/* Table / Room Selection - Eat Here */}
+                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (() => {
+                  const sec = restaurantDetails?.sections || {};
+                  const indoorCount  = sec.indoor?.tables  || restaurantDetails?.tableNumbers || 0;
+                  const outdoorCount = sec.outdoor?.tables || 0;
+                  const rooftopCount = sec.rooftop?.tables || 0;
+                  const roomsCount   = sec.rooms?.rooms    || 0;
+
+                  const sectionDefs = [
+                    { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
+                    { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
+                    { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
+                    { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
+                  ].filter(s => s.count > 0);
+
+                  const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+
+                  return (
+                    <div>
+                      <label className={`mb-2 block text-sm font-medium ${billMutedTextClass}`}>
+                        Select Section & Table *
+                      </label>
+                      {sectionDefs.length === 0 ? (
+                        <p className={`rounded-xl border border-dashed p-3 text-sm text-center ${billInputClass}`}>
+                          No tables configured yet.
+                        </p>
+                      ) : (
+                        <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                          {sectionDefs.map(({ key, label, count, unit }) => {
+                            const isSelected = selSection === key;
+                            return (
+                              <div key={key} className={`flex flex-col gap-1.5 ${isSelected ? "col-span-full" : ""}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTableChange(isSelected ? "" : `${key}:1`)}
+                                  className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
+                                    isSelected
+                                      ? "border-orange-500 bg-orange-500 text-white"
+                                      : billThemeIsDark
+                                        ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-orange-400"
+                                        : "border-gray-200 bg-white text-gray-700 hover:border-orange-400"
+                                  }`}
+                                >
+                                  <span className="flex-1 text-left">{label}</span>
+                                  <span className={`text-xs font-normal ${isSelected ? "text-white/80" : billThemeIsDark ? "text-slate-400" : "text-gray-400"}`}>
+                                    {count} {unit}{count > 1 ? "s" : ""}
+                                  </span>
+                                </button>
+                                {isSelected && (
+                                  <Select value={selNum || "1"} onValueChange={(v) => handleTableChange(`${key}:${v}`)}>
+                                    <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-medium ${billInputClass}`}>
+                                      <SelectValue placeholder={`Select ${unit}`} />
+                                    </SelectTrigger>
+                                    <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
+                                      <SelectGroup>
+                                        {Array.from({ length: count }, (_, i) => (
+                                          <SelectItem key={i + 1} value={String(i + 1)} className={`cursor-pointer py-2 text-sm font-medium ${billSelectItemClass}`}>
+                                            {unit} {i + 1}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Address - Delivery */}
                 {getOrderTypeKey(localOrderData?.orderType) === "delivery" && (

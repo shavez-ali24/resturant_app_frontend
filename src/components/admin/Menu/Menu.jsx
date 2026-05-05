@@ -1707,7 +1707,7 @@ const prepareFormData = (formData, file) => {
         <div className="flex flex-1 min-h-0 flex-col">
           {activeTab === "editor" ? (
             <div className="grid h-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-1">
-              <div data-tour="menu-categories" className="flex min-h-0 flex-col rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
+              <div data-tour="menu-categories" className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
               <div className="flex items-center justify-between border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#a8a29e] dark:text-slate-400">
@@ -1741,14 +1741,14 @@ const prepareFormData = (formData, file) => {
                           key={categoryKey}
                           type="button"
                           onClick={() => setSelectedCategory(category.label)}
-                          className={`group flex w-full items-center justify-between gap-3 border-l-4 px-4 py-2.5 text-left text-sm font-semibold transition ${
+                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 px-4 py-2.5 text-left text-sm font-semibold transition ${
                             isActive
                               ? "border-orange-500 bg-[#fff7ed] text-orange-600"
                               : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800/60"
                           }`}
                         >
-                          <span className="truncate">{category.label}</span>
-                          <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">{category.label}</span>
+                          <span className="shrink-0 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {category.items.length}
                           </span>
                         </button>
@@ -1839,7 +1839,7 @@ const prepareFormData = (formData, file) => {
                             onDragOver={(event) => handleDragOver(event, item._id)}
                             onDrop={(event) => event.preventDefault()}
                             onDragLeave={() => setDragOverId(null)}
-                            className={`group relative flex flex-col gap-3 px-4 py-3 pr-12 transition sm:flex-row sm:items-center sm:pr-4 ${
+                            className={`group relative flex min-w-0 flex-col gap-3 overflow-hidden px-4 py-3 pr-12 transition sm:flex-row sm:items-center sm:pr-4 ${
                               dragOverId === item._id
                                 ? "bg-[#f7f3ef]"
                                 : "hover:bg-[#faf7f4] dark:hover:bg-slate-800/60"
@@ -1873,7 +1873,7 @@ const prepareFormData = (formData, file) => {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <FoodTypeIndicator type={item?.type} />
-                                <span className="truncate text-sm font-semibold text-[#1c1917] dark:text-slate-100">
+                                <span className="truncate text-sm font-semibold text-[#1c1917] dark:text-slate-100 max-w-[140px] sm:max-w-none">
                                   {item?.name || "Unnamed Item"}
                                 </span>
                               </div>

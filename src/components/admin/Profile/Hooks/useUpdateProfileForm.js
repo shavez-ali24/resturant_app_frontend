@@ -95,7 +95,6 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const [updateRestaurantProfile, { isLoading: isSubmitting }] = useUpdateRestaurantProfileMutation();
 
     const [formData, setFormData] = useState({
-        tableNumbers: initialData.tableNumbers || "",
         phoneNumber: initialData.phoneNumber || "",
         address: initialData.address || "",
         gstNumber: initialData.gstNumber || "",
@@ -108,6 +107,12 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         gstRate: initialData.gstRate || 0,
         deliveryCharges: initialData.deliveryCharges || 0,
         publicId: initialData.logo?.public_id || "",
+        sections: {
+            indoor:  { tables: initialData.sections?.indoor?.tables  ?? 0 },
+            outdoor: { tables: initialData.sections?.outdoor?.tables ?? 0 },
+            rooftop: { tables: initialData.sections?.rooftop?.tables ?? 0 },
+            rooms:   { rooms:  initialData.sections?.rooms?.rooms    ?? 0 },
+        },
     });
 
     const initialCategoryLabels = uniqueCategories(initialData?.categories || []);
@@ -173,6 +178,26 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 .replace(/(\..*?)\..*/g, "$1");
         } else if (name === "deliveryCharges") {
             processedValue = value.replace(/[^0-9]/g, "");
+        }
+
+        // Handle nested sections fields e.g. "sections.indoor.tables"
+        if (name.startsWith("sections.")) {
+            const parts = name.split(".");
+            // parts = ["sections", "indoor", "tables"] or ["sections", "rooms", "rooms"]
+            const section = parts[1];
+            const field = parts[2];
+            const numVal = parseInt(processedValue, 10);
+            setFormData((prev) => ({
+                ...prev,
+                sections: {
+                    ...prev.sections,
+                    [section]: {
+                        ...prev.sections?.[section],
+                        [field]: isNaN(numVal) ? 0 : Math.max(0, numVal),
+                    },
+                },
+            }));
+            return;
         }
 
         setFormData((prev) => ({ ...prev, [name]: processedValue }));
@@ -331,9 +356,9 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         try {
             const formDataToUpload = new FormData();
 
-            // Append all form data fields EXCEPT orderModes
+            // Append all form data fields EXCEPT orderModes and sections
             Object.keys(formData).forEach((key) => {
-                if (key !== "orderModes") {
+                if (key !== "orderModes" && key !== "sections") {
                     formDataToUpload.append(key, formData[key]);
                 }
             });
@@ -342,6 +367,12 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             formDataToUpload.append("orderModes[eathere]", formData.orderModes.eathere);
             formDataToUpload.append("orderModes[takeaway]", formData.orderModes.takeaway);
             formDataToUpload.append("orderModes[delivery]", formData.orderModes.delivery);
+
+            // Append sections as nested fields
+            formDataToUpload.append("sections[indoor][tables]",  formData.sections?.indoor?.tables  ?? 0);
+            formDataToUpload.append("sections[outdoor][tables]", formData.sections?.outdoor?.tables ?? 0);
+            formDataToUpload.append("sections[rooftop][tables]", formData.sections?.rooftop?.tables ?? 0);
+            formDataToUpload.append("sections[rooms][rooms]",    formData.sections?.rooms?.rooms    ?? 0);
 
             if (file) {
                 formDataToUpload.append("file", file);

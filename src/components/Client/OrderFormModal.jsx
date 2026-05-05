@@ -324,61 +324,113 @@ export default function OrderFormModal({
 
               {/* Conditional Fields Based on Order Type */}
               <div className="space-y-4">
-                {/* Table Selection - Only for Eat Here */}
-                {orderType === "Eat Here" && (
-                  <div className="animate-fade-in">
-                    <label
-                      className={`mb-2 block text-sm font-medium ${
-                        isDarkMode ? "text-slate-200" : "text-gray-700"
-                      }`}
-                    >
-                      Select Table *
-                    </label>
-                    <Select value={tableId} onValueChange={setTableId}>
-                      <SelectTrigger
-                        className={`h-11 w-full rounded-xl border p-3.5 font-medium shadow-sm transition-all duration-200 focus:ring-2 ${
-                          isDarkMode
-                            ? "border-orange-500 bg-slate-900 text-slate-100 hover:border-orange-400 focus:border-orange-400 focus:ring-orange-400/30"
-                            : "border-primary bg-white text-gray-800 hover:border-primary focus:border-primary focus:ring-primary"
-                        }`}
-                      >
-                        <SelectValue
-                          placeholder="Choose your table"
-                          className={isDarkMode ? "text-slate-400" : "text-gray-400"}
-                        />
-                      </SelectTrigger>
+                {/* Table / Room Selection - Only for Eat Here */}
+                {orderType === "Eat Here" && (() => {
+                  const sections = restaurantData?.restaurant?.sections || {};
+                  const indoorCount  = sections.indoor?.tables  || restaurantData?.restaurant?.tableNumbers || 0;
+                  const outdoorCount = sections.outdoor?.tables || 0;
+                  const rooftopCount = sections.rooftop?.tables || 0;
+                  const roomsCount   = sections.rooms?.rooms    || 0;
 
-                      <SelectContent
-                        className={`max-h-60 rounded-xl border shadow-xl ${
-                          isDarkMode
-                            ? "border-orange-500 bg-slate-900 text-slate-100"
-                            : "border-primary bg-white"
-                        }`}
-                      >
-                        <SelectGroup>
-                          {Array.from(
-                            { length: restaurantData?.restaurant?.tableNumbers || 0 }, 
-                            (_, i) => (
-                              <SelectItem
-                                key={i + 1}
-                                value={`T${i + 1}`}
-                                className={`cursor-pointer border-b px-4 py-3 font-medium transition-colors duration-150 last:border-b-0 ${
-                                  isDarkMode
-                                    ? "border-slate-700 text-slate-200 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white"
-                                    : "border-orange-100 text-gray-700 hover:bg-primary hover:text-white focus:bg-primary focus:text-white"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">
-                                  Table {i + 1}
-                                </span>
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  const sectionDefs = [
+                    { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
+                    { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
+                    { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
+                    { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
+                  ].filter(s => s.count > 0);
+
+                  // Parse selected: "indoor:3" → { section: "indoor", number: 3 }
+                  const [selSection, selNum] = tableId ? tableId.split(":") : ["", ""];
+
+                  return (
+                    <div className="animate-fade-in space-y-3">
+                      <label className={`block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
+                        Select Section & Table *
+                      </label>
+
+                      {sectionDefs.length === 0 ? (
+                        <p className={`rounded-xl border border-dashed p-3 text-sm text-center ${isDarkMode ? "border-slate-600 text-slate-400" : "border-orange-200 text-gray-500"}`}>
+                          No tables configured yet.
+                        </p>
+                      ) : (
+                        <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                          {sectionDefs.map(({ key, label, count, unit }) => {
+                            const isSelected = selSection === key;
+                            // If selected and only 1 section, or selected in 2-col grid → span full width
+                            const spanFull = isSelected;
+                            return (
+                              <div key={key} className={`flex flex-col gap-1.5 ${spanFull ? "col-span-full" : ""}`}>
+                                {/* Section button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) setTableId("");
+                                    else setTableId(`${key}:1`);
+                                  }}
+                                  className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all ${
+                                    isSelected
+                                      ? "border-orange-500 bg-orange-500 text-white shadow-md"
+                                      : isDarkMode
+                                        ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-orange-400"
+                                        : "border-orange-200 bg-white text-gray-700 hover:border-orange-400 hover:bg-orange-50"
+                                  }`}
+                                >
+                                  <span className="flex-1 text-left">{label}</span>
+                                  <span className={`text-xs font-normal ${isSelected ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-gray-400"}`}>
+                                    {count} {unit}{count > 1 ? "s" : ""}
+                                  </span>
+                                </button>
+
+                                {/* Dropdown — full width when selected */}
+                                {isSelected && (
+                                  <Select
+                                    value={selNum || "1"}
+                                    onValueChange={(v) => setTableId(`${key}:${v}`)}
+                                  >
+                                    <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-medium ${
+                                      isDarkMode
+                                        ? "border-orange-500 bg-slate-900 text-slate-100"
+                                        : "border-orange-400 bg-white text-gray-800"
+                                    }`}>
+                                      <SelectValue placeholder={`Select ${unit}`} />
+                                    </SelectTrigger>
+                                    <SelectContent className={`rounded-xl border shadow-xl max-h-[180px] overflow-y-auto ${
+                                      isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200 bg-white"
+                                    }`}>
+                                      <SelectGroup>
+                                        {Array.from({ length: count }, (_, i) => (
+                                          <SelectItem
+                                            key={i + 1}
+                                            value={String(i + 1)}
+                                            className={`cursor-pointer py-2 text-sm font-medium ${
+                                              isDarkMode
+                                                ? "text-slate-200 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white"
+                                                : "text-gray-700 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white"
+                                            }`}
+                                          >
+                                            {unit} {i + 1}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {tableId && (
+                        <p className={`text-xs font-medium ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>
+                          ✓ {selSection?.charAt(0).toUpperCase() + selSection?.slice(1)} — {
+                            sectionDefs.find(s => s.key === selSection)?.unit
+                          } {selNum} selected
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Delivery Address - Only for Delivery */}
                 {orderType === "Delivery" && (

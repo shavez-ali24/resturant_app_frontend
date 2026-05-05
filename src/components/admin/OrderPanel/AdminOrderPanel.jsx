@@ -438,15 +438,40 @@ function OrderSummaryPanel({
           </p>
         </div>
 
-        {orderType === "Dine In" && (
-          <StyledSelect
-            value={tableId}
-            onChange={setTableId}
-            options={tableOptions}
-            placeholder="Select Table *"
-            isDarkMode={isDarkMode}
-          />
-        )}
+        {orderType === "Dine In" && (() => {
+          const sec = tableOptions.reduce((acc, opt) => {
+            const [section] = opt.value.split(":");
+            if (!acc[section]) acc[section] = [];
+            acc[section].push(opt);
+            return acc;
+          }, {});
+          const sectionKeys = Object.keys(sec);
+          const sectionLabels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Rooms" };
+          const [selSection, selNum] = tableId ? tableId.split(":") : ["", ""];
+
+          return (
+            <div className="space-y-2">
+              {/* Section select */}
+              <StyledSelect
+                value={selSection || ""}
+                onChange={(v) => setTableId(v ? `${v}:1` : "")}
+                options={sectionKeys.map((k) => ({ value: k, label: sectionLabels[k] || k }))}
+                placeholder="Select Section *"
+                isDarkMode={isDarkMode}
+              />
+              {/* Number select — only when section chosen */}
+              {selSection && sec[selSection] && (
+                <StyledSelect
+                  value={tableId}
+                  onChange={setTableId}
+                  options={sec[selSection]}
+                  placeholder={`Select ${selSection === "rooms" ? "Room" : "Table"} *`}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+            </div>
+          );
+        })()}
 
         {orderType === "Delivery" && (
           <textarea
@@ -712,7 +737,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         items: orderItems,
         orderType: normalizedOrderType,
       };
-      if (normalizedOrderType === "Eat Here" && tableId) orderData.tableId = tableId;
+      if (normalizedOrderType === "Eat Here" && tableId) {
+        const [section, numStr] = tableId.split(":");
+        const number = parseInt(numStr, 10) || 1;
+        const type = section === "rooms" ? "ROOM" : "TABLE";
+        orderData.source = { section, number, type };
+      }
       if (normalizedOrderType === "Delivery" && trimmedAddress) orderData.address = trimmedAddress;
       await createOrder(orderData).unwrap();
       setSuccess(true);
@@ -756,10 +786,19 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const summaryBg = isDarkMode ? "bg-[#1e293b]" : "bg-white";
   const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]";
 
-  const tableOptions = Array.from(
-    { length: restaurant.tableNumbers || 0 },
-    (_, i) => ({ value: `table-${i + 1}`, label: `Table ${i + 1}` })
-  );
+  const tableOptions = (() => {
+    const sec = restaurant.sections || {};
+    const opts = [];
+    const indoorCount  = sec.indoor?.tables  || restaurant.tableNumbers || 0;
+    const outdoorCount = sec.outdoor?.tables || 0;
+    const rooftopCount = sec.rooftop?.tables || 0;
+    const roomsCount   = sec.rooms?.rooms    || 0;
+    for (let i = 1; i <= indoorCount;  i++) opts.push({ value: `indoor:${i}`,  label: `Indoor Table ${i}` });
+    for (let i = 1; i <= outdoorCount; i++) opts.push({ value: `outdoor:${i}`, label: `Outdoor Table ${i}` });
+    for (let i = 1; i <= rooftopCount; i++) opts.push({ value: `rooftop:${i}`, label: `Rooftop Table ${i}` });
+    for (let i = 1; i <= roomsCount;   i++) opts.push({ value: `rooms:${i}`,   label: `Room ${i}` });
+    return opts;
+  })();
 
   // All props for OrderSummaryPanel (module-level component)
   const summaryProps = {

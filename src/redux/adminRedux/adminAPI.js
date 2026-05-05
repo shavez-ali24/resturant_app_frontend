@@ -339,9 +339,11 @@ export const adminApi = createApi({
       transformResponse: (response) => {
         const arr = Array.isArray(response) ? response : response?.menu ?? [];
         return Array.isArray(arr) ? arr.map(normalizeMenuItem) : [];
+        
       },
       providesTags: ["Menu"],
     }),
+    
 
     // done 
     createMenuItem: builder.mutation({

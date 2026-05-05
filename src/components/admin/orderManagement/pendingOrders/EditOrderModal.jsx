@@ -195,7 +195,8 @@ const EditOrderModal = ({
   updateOrder, 
   getFriendlyErrorMessage,
   menuItems,
-  tables
+  tables,
+  restaurantData,
 }) => {
   const itemsContainerRef = useRef(null);
   const addItemGuardRef = useRef({ menuItemId: "", ts: 0 });
@@ -269,7 +270,11 @@ const EditOrderModal = ({
       }
       
       // Set tableId if exists (for Eat Here orders)
-      if (editingOrder.tableId) {
+      if (editingOrder.source?.section && editingOrder.source?.number) {
+        const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
+        setSelectedTableId(val);
+        setInitialTableId(val);
+      } else if (editingOrder.tableId) {
         setSelectedTableId(editingOrder.tableId);
         setInitialTableId(editingOrder.tableId);
       }
@@ -665,9 +670,12 @@ const EditOrderModal = ({
         payload.status = currentStatus;
       }
 
-      // Add tableId for Eat Here
+      // Add source for Eat Here
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        payload.tableId = selectedTableId;
+        const [section, numStr] = selectedTableId.split(":");
+        const number = parseInt(numStr, 10) || 1;
+        const type = section === "rooms" ? "ROOM" : "TABLE";
+        payload.source = { section, number, type };
       }
 
       // Add address for Delivery
@@ -677,7 +685,7 @@ const EditOrderModal = ({
 
       // Clear tableId for Take Away (if exists from previous state)
       if (selectedOrderTypeKey === "take_away") {
-        payload.tableId = null;
+        payload.source = { section: null, number: null, type: "NONE" };
         payload.address = null;
       }
 
@@ -794,39 +802,83 @@ const EditOrderModal = ({
             </Select>
           </div>
 
-          {/* Table */}
-          {getOrderTypeKey(localOrderData.orderType) === "eat_here" && (
-            <div data-error={!!validationErrors.table}>
-              <label className={labelCls}>Select Table *</label>
-              <Select value={selectedTableId} onValueChange={handleTableChange}>
-                <SelectTrigger className={`h-10 w-full rounded-lg border px-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
-                  validationErrors.table
-                    ? "border-red-400 bg-red-50"
-                    : isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
-                }`}>
-                  {selectedTableId && currentTable
-                    ? <span>Table {currentTable.tableNumber || currentTable.name}</span>
-                    : <SelectValue placeholder="Select Table" />}
-                </SelectTrigger>
-                <SelectContent side="top" sideOffset={6} className={`${dropdownCls} w-[var(--radix-select-trigger-width)] max-h-[45dvh]`}>
-                  <SelectGroup>
-                    {availableTables.length > 0 ? availableTables.map((table) => (
-                      <SelectItem key={table._id} value={table._id}
-                        className={`cursor-pointer rounded-md py-2 text-sm ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
-                        Table {table.tableNumber || table.name}
-                        {table.capacity && <span className={`ml-2 text-xs ${textMut}`}>· {table.capacity} seats</span>}
-                      </SelectItem>
-                    )) : (
-                      <SelectItem value="no-tables" disabled className={textMut}>No tables available</SelectItem>
-                    )}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {validationErrors.table && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />{validationErrors.table}</p>
-              )}
-            </div>
-          )}
+          {/* Table / Room Selection - Eat Here */}
+          {getOrderTypeKey(localOrderData.orderType) === "eat_here" && (() => {
+            const restaurant = restaurantData?.restaurant || restaurantData || {};
+            const sec = restaurant.sections || {};
+            const indoorCount  = sec.indoor?.tables  || restaurant.tableNumbers || 0;
+            const outdoorCount = sec.outdoor?.tables || 0;
+            const rooftopCount = sec.rooftop?.tables || 0;
+            const roomsCount   = sec.rooms?.rooms    || 0;
+
+            const sectionDefs = [
+              { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
+              { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
+              { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
+              { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
+            ].filter(s => s.count > 0);
+
+            const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+
+            return (
+              <div data-error={!!validationErrors.table}>
+                <label className={labelCls}>Select Section & Table *</label>
+                {sectionDefs.length === 0 ? (
+                  <p className={`rounded-lg border border-dashed p-3 text-sm text-center ${isDarkMode ? "border-slate-600 text-slate-400" : "border-[#ede8e3] text-[#78716c]"}`}>
+                    No tables configured yet.
+                  </p>
+                ) : (
+                  <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {sectionDefs.map(({ key, label, count, unit }) => {
+                      const isSelected = selSection === key;
+                      return (
+                        <div key={key} className={`flex flex-col gap-1.5 ${isSelected ? "col-span-full" : ""}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleTableChange(isSelected ? "" : `${key}:1`)}
+                            className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
+                              isSelected
+                                ? "border-orange-500 bg-orange-500 text-white"
+                                : isDarkMode
+                                  ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-orange-400"
+                                  : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-orange-400 hover:bg-orange-50"
+                            }`}
+                          >
+                            <span className="flex-1 text-left">{label}</span>
+                            <span className={`text-xs font-normal ${isSelected ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+                              {count} {unit}{count > 1 ? "s" : ""}
+                            </span>
+                          </button>
+                          {isSelected && (
+                            <Select value={selNum || "1"} onValueChange={(v) => handleTableChange(`${key}:${v}`)}>
+                              <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+                                isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
+                              }`}>
+                                <SelectValue placeholder={`Select ${unit}`} />
+                              </SelectTrigger>
+                              <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${dropdownCls}`}>
+                                <SelectGroup>
+                                  {Array.from({ length: count }, (_, i) => (
+                                    <SelectItem key={i + 1} value={String(i + 1)}
+                                      className={`cursor-pointer rounded-md py-2 text-sm ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                                      {unit} {i + 1}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {validationErrors.table && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />{validationErrors.table}</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Address */}
           {getOrderTypeKey(localOrderData.orderType) === "delivery" && (

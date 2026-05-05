@@ -762,6 +762,7 @@ const Orders = () => {
             getFriendlyErrorMessage={getFriendlyOrderError}
             menuItems={menuItems}
             tables={tables}
+            restaurantData={restaurantData}
           />
         )}
         {showConfirmDelete && (

@@ -120,7 +120,10 @@ export default function ProfileDetails({ profileData }) {
           />
           <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
           <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Indoor Tables" value={profileData?.sections?.indoor?.tables ?? profileData?.tableNumbers ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Outdoor Tables" value={profileData?.sections?.outdoor?.tables ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooftop Tables" value={profileData?.sections?.rooftop?.tables ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooms" value={profileData?.sections?.rooms?.rooms ?? 0} />
           <div className="sm:col-span-2">
             <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
           </div>

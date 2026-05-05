@@ -50,13 +50,14 @@ const OrderRow = ({
   const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
   const tableLabel = formatOrderTableId(
     order.tableId || order.table || order.tableNumber ||
-    order?.table?.name || order?.table?.tableNumber || order?.table?.number
+    order?.table?.name || order?.table?.tableNumber || order?.table?.number,
+    order.source
   );
   const customerName = getOrderCustomerName(order);
   const customerPhone = getOrderCustomerPhone(order);
   const orderIdDisplay = getOrderIdShortValue(order);
 
-  const tdBase = `px-4 py-2 text-sm ${isDarkMode ? "text-slate-300" : "text-[#44403c]"}`;
+  const tdBase = `px-4 py-3 text-sm align-middle ${isDarkMode ? "text-slate-300" : "text-[#44403c]"}`;
 
   return (
     <tr className={`transition-colors ${isDarkMode ? "hover:bg-slate-700/30" : "hover:bg-[#faf7f4]"}`}>
@@ -69,7 +70,7 @@ const OrderRow = ({
       {tableType === "pending" ? (
         <>
           {/* ID */}
-          <td className="px-4 py-3">
+          <td className="px-4 py-3 align-middle">
             <span className={`font-mono text-xs font-bold px-2 py-1 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
               {orderIdDisplay || "—"}
             </span>
@@ -90,7 +91,7 @@ const OrderRow = ({
       )}
 
       {/* Order Type */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 align-middle">
         <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
           {getOrderTypeIcon(order.orderType)}
           {orderTypeLabel}
@@ -99,7 +100,7 @@ const OrderRow = ({
       </td>
 
       {/* View Items & Bill */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 align-middle">
         <button
           onClick={() => { if (onBillOpen) onBillOpen(); dispatch(showBill(order)); }}
           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${

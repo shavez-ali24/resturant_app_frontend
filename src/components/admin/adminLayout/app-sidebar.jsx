@@ -98,18 +98,6 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     ...(isAdmin
       ? [
           {
-            title: "Inventory",
-            url: "#",
-            icon: Boxes,
-            isActive: true,
-            roles: ["admin"],
-            items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? [
-          {
             title: "Analytics",
             url: "#",
             icon: TrendingUp,
@@ -119,6 +107,18 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
               { title: "Revenue", url: "/admin/revenue" },
               { title: "Sales", url: "/admin/sales" },
             ],
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            title: "Inventory",
+            url: "#",
+            icon: Boxes,
+            isActive: true,
+            roles: ["admin"],
+            items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
           },
         ]
       : []),

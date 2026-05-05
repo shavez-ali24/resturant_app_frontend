@@ -233,7 +233,18 @@ const KitchenDisplaySystem = () => {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const enableAudio = () => setAudioEnabled(true);
+    const enableAudio = () => {
+      setAudioEnabled(true);
+      // Pre-unlock audio context on first gesture so autoplay works later
+      if (notificationSound) {
+        notificationSound.volume = 0;
+        notificationSound.play().then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          notificationSound.volume = 1;
+        }).catch(() => {});
+      }
+    };
     window.addEventListener("click", enableAudio, { once: true });
     window.addEventListener("keydown", enableAudio, { once: true });
     window.addEventListener("touchstart", enableAudio, { once: true });
@@ -342,20 +353,24 @@ const KitchenDisplaySystem = () => {
         return next;
       });
 
-      if (audioEnabled && notificationSound) {
+      if (notificationSound) {
         try {
           notificationSound.currentTime = 0;
           const playPromise = notificationSound.play();
-          if (playPromise?.catch) playPromise.catch(() => {});
+          if (playPromise?.catch) {
+            playPromise.catch(() => {
+              // Autoplay blocked — will play on next user interaction
+            });
+          }
         } catch {
-          // Ignore autoplay interruptions.
+          // Ignore
         }
       }
 
       notify(`New kitchen order #${incomingId.slice(-4)} received.`, "success");
       knownOrderIds.current.add(incomingId);
     }
-  }, [audioEnabled, notificationSound, notify, sseEvent]);
+  }, [notificationSound, notify, sseEvent]);
 
   useEffect(() => {
     setEventOrdersById((prev) => {
@@ -418,7 +433,7 @@ const KitchenDisplaySystem = () => {
         return next;
       });
 
-      if (audioEnabled && notificationSound) {
+      if (notificationSound) {
         try {
           notificationSound.currentTime = 0;
           const playPromise = notificationSound.play();

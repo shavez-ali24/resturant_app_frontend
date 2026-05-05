@@ -25,6 +25,7 @@ export default function NotificationBell() {
   const [latestOrders, setLatestOrders] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const knownOrderIds = useRef(new Set());
+  const hasInitialized = useRef(false);
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const { sseEvent, sseConnected } = useNotification();
@@ -69,29 +70,44 @@ export default function NotificationBell() {
     if (!orders.length) return;
     const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const recent = sorted.slice(0, 15);
-    const fresh = recent.filter((o) => !o._id || (o.status === "pending" && !knownOrderIds.current.has(o._id)));
+
+    // First load — just mark all as known, don't play sound
+    if (!hasInitialized.current) {
+      recent.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
+      hasInitialized.current = true;
+      setLatestOrders(recent.slice(0, 10));
+      return;
+    }
+
+    const fresh = recent.filter((o) => o._id && o.status === "pending" && !knownOrderIds.current.has(o._id));
 
     if (fresh.length > 0) {
-      if (audioEnabled) {
-        try {
-          notificationSound.currentTime = 0;
-          const p = notificationSound.play();
-          if (p?.catch) p.catch(() => {});
-        } catch { /* ignore */ }
-      }
+      try {
+        notificationSound.currentTime = 0;
+        const p = notificationSound.play();
+        if (p?.catch) p.catch(() => {});
+      } catch { /* ignore */ }
       fresh.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
     }
 
     setLatestOrders(recent.slice(0, 10));
     const currentIds = new Set(recent.map((o) => o._id).filter(Boolean));
     knownOrderIds.current = new Set([...knownOrderIds.current].filter((id) => currentIds.has(id)));
-  }, [orders, notificationSound, audioEnabled]);
+  }, [orders, notificationSound]);
 
   useEffect(() => {
+    if (sseEvent?.type === "NEW_ORDER") {
+      // Bell directly on SSE event — same as KDS
+      try {
+        notificationSound.currentTime = 0;
+        const p = notificationSound.play();
+        if (p?.catch) p.catch(() => {});
+      } catch { /* ignore */ }
+    }
     if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
       refetchPending(); refetchPreparing();
     }
-  }, [sseEvent, refetchPending, refetchPreparing]);
+  }, [sseEvent, refetchPending, refetchPreparing, notificationSound]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -103,7 +119,18 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const enable = () => setAudioEnabled(true);
+    const enable = () => {
+      setAudioEnabled(true);
+      // Pre-unlock audio so autoplay works on next SSE event
+      if (notificationSound) {
+        notificationSound.volume = 0;
+        notificationSound.play().then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          notificationSound.volume = 1;
+        }).catch(() => {});
+      }
+    };
     window.addEventListener("click", enable, { once: true });
     window.addEventListener("keydown", enable, { once: true });
     window.addEventListener("touchstart", enable, { once: true });
@@ -112,7 +139,7 @@ export default function NotificationBell() {
       window.removeEventListener("keydown", enable);
       window.removeEventListener("touchstart", enable);
     };
-  }, []);
+  }, [notificationSound]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

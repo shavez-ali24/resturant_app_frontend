@@ -17,6 +17,67 @@ import UpdateBrandingForm from "./Components/UpdateBrandingForm";
 import UpdateFormActions from "./Components/UpdateFormActions";
 import { chipVariant } from "./Lib/motionVariants";
 
+// ── Inner edit form — only rendered after resData is loaded ──────────────────
+// Separate component so hooks always run with real data
+function ProfileEditForm({ resData, token, isDarkMode, onSuccess, onClose }) {
+  const form = useUpdateProfileForm(resData, token, onSuccess, onClose);
+
+  return (
+    <form onSubmit={form.handleSubmit} className="flex flex-1 min-h-0 flex-col">
+      <div className="flex-1 min-h-0 overflow-y-scroll px-3 pt-4 pb-2 md:px-6">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <UpdateCoreProfileForm formData={form.formData} handleChange={form.handleChange} />
+          <UpdateFinancialsForm
+            formData={form.formData}
+            handleChange={form.handleChange}
+            handleGstToggle={form.handleGstToggle}
+          />
+          <div className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b] p-3 flex flex-col gap-3">
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Order Modes</h3>
+              <UpdateOrderModeForm
+                formData={form.formData}
+                handleOrderModeToggle={form.handleOrderModeToggle}
+                activeModesCount={form.activeModesCount}
+                atLeastOneModeActive={form.atLeastOneModeActive}
+              />
+            </div>
+            <div className="border-t border-[#ede8e3] dark:border-slate-700 pt-3">
+              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo</h3>
+              <UpdateBrandingForm
+                file={form.file}
+                fileError={form.fileError}
+                handleFileChange={form.handleFileChange}
+                currentLogo={resData?.logo?.url || ""}
+              />
+            </div>
+          </div>
+          <div className="lg:col-span-1">
+            <UpdateCategoriesForm
+              categories={form.categories}
+              currentCategoryInput={form.currentCategoryInput}
+              setCurrentCategoryInput={form.setCurrentCategoryInput}
+              handleCategoryKeyDown={form.handleCategoryKeyDown}
+              handleAddCategory={form.handleAddCategory}
+              handleRemoveCategory={form.handleRemoveCategory}
+              categorySuggestions={form.categorySuggestions}
+              chipVariant={chipVariant}
+            />
+          </div>
+        </div>
+      </div>
+      <div className={`shrink-0 px-3 pt-4 pb-3 md:px-6 md:pb-5 border-t ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
+        <UpdateFormActions
+          isSubmitting={form.isSubmitting}
+          fileError={form.fileError}
+          onClose={onClose}
+        />
+      </div>
+    </form>
+  );
+}
+
+// ── Main Profile component ────────────────────────────────────────────────────
 const Profile = () => {
   const [token] = useState(() => localStorage.getItem("token") || "");
   const [isEditing, setIsEditing] = useState(false);
@@ -44,7 +105,6 @@ const Profile = () => {
   useAdminTour(TOUR_KEYS.profile, getProfileSteps, isDarkMode, 800);
 
   const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantProfileQuery();
-
   const resData = restaurant?.data || restaurant?.restaurant;
 
   const handleUpdateSuccess = () => {
@@ -55,16 +115,11 @@ const Profile = () => {
 
   const handleClose = () => setIsEditing(false);
 
-  // Hook always initialized — safe because resData may be undefined initially
-  const form = useUpdateProfileForm(resData || {}, token, handleUpdateSuccess, handleClose);
-
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage error={error?.data?.message || error?.message || "Failed to load profile"} />;
 
   return (
     <div className={`flex h-full flex-col overflow-hidden ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
-
-      {/* ── Header — always fixed ── */}
       <div className="shrink-0 p-3 pb-0 md:p-6 md:pb-0">
         <ProfileHeader
           onUpdateClick={() => setIsEditing((v) => !v)}
@@ -77,67 +132,16 @@ const Profile = () => {
       </div>
 
       {isEditing && isAdmin ? (
-        /* ── Edit mode: form scrolls, buttons pinned at bottom ── */
-        <form
-          onSubmit={form.handleSubmit}
-          className="flex flex-1 min-h-0 flex-col"
-        >
-          {/* Scrollable form fields */}
-          <div className="flex-1 min-h-0 overflow-y-scroll px-3 pt-4 pb-2 md:px-6">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <UpdateCoreProfileForm formData={form.formData} handleChange={form.handleChange} />
-              <UpdateFinancialsForm
-                formData={form.formData}
-                handleChange={form.handleChange}
-                handleGstToggle={form.handleGstToggle}
-              />
-              {/* Order Modes + Branding in one card */}
-              <div className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b] p-3 flex flex-col gap-3">
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Order Modes</h3>
-                  <UpdateOrderModeForm
-                    formData={form.formData}
-                    handleOrderModeToggle={form.handleOrderModeToggle}
-                    activeModesCount={form.activeModesCount}
-                    atLeastOneModeActive={form.atLeastOneModeActive}
-                  />
-                </div>
-                <div className="border-t border-[#ede8e3] dark:border-slate-700 pt-3">
-                  <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo</h3>
-                  <UpdateBrandingForm
-                    file={form.file}
-                    fileError={form.fileError}
-                    handleFileChange={form.handleFileChange}
-                    currentLogo={resData?.logo?.url || ""}
-                  />
-                </div>
-              </div>
-              <div className="lg:col-span-1">
-                <UpdateCategoriesForm
-                  categories={form.categories}
-                  currentCategoryInput={form.currentCategoryInput}
-                  setCurrentCategoryInput={form.setCurrentCategoryInput}
-                  handleCategoryKeyDown={form.handleCategoryKeyDown}
-                  handleAddCategory={form.handleAddCategory}
-                  handleRemoveCategory={form.handleRemoveCategory}
-                  categorySuggestions={form.categorySuggestions}
-                  chipVariant={chipVariant}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Pinned buttons */}
-          <div className={`shrink-0 px-3 pt-4 pb-3 md:px-6 md:pb-5 border-t ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
-            <UpdateFormActions
-              isSubmitting={form.isSubmitting}
-              fileError={form.fileError}
-              onClose={handleClose}
-            />
-          </div>
-        </form>
+        // key=resData._id forces full remount if data changes
+        <ProfileEditForm
+          key={resData?._id}
+          resData={resData}
+          token={token}
+          isDarkMode={isDarkMode}
+          onSuccess={handleUpdateSuccess}
+          onClose={handleClose}
+        />
       ) : (
-        /* ── View mode: profile details scroll ── */
         <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-6 md:px-6">
           <ProfileDetails profileData={resData} />
         </div>

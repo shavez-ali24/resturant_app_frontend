@@ -135,6 +135,15 @@ export default function Header({
 
   const normalizedOrderType = normalizeOrderType(orderType);
 
+  // ── Register vibration service worker once ──────────────────────────────
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw-vibration.js", { scope: "/" })
+        .catch(() => {}); // silent fail — not critical
+    }
+  }, []);
+
   // Cart bump animation on item add
   useEffect(() => {
     const previousCount = prevCartCountRef.current;
@@ -574,15 +583,48 @@ export default function Header({
 
   const triggerPreparingVibration = () => {
     if (typeof window === "undefined" || !window.navigator) return;
+
+    // ── Stronger vibration pattern ──────────────────────────────────────────
+    const pattern = [200, 100, 200, 100, 400]; // short-short-long
     try {
       const nav = window.navigator;
       const vibrateFn =
         nav.vibrate?.bind(nav) ||
         nav.webkitVibrate?.bind(nav) ||
         nav.mozVibrate?.bind(nav);
-      if (typeof vibrateFn === "function") vibrateFn([160, 80, 160]);
+      if (typeof vibrateFn === "function") vibrateFn(pattern);
     } catch (e) {
-      // vibration not supported on this device
+      // vibration not supported
+    }
+
+    // ── Background vibration via Notification API ───────────────────────────
+    // Works even when tab is in background (requires notification permission)
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+          // Send message to service worker to show notification with vibration
+          navigator.serviceWorker.controller.postMessage({
+            type: "PREPARING_VIBRATION",
+            pattern,
+          });
+        } else {
+          // Fallback: show notification directly (foreground only but triggers vibration)
+          const n = new Notification("🍳 Your order is being prepared!", {
+            body: "The kitchen has started preparing your order.",
+            icon: "/favicon.ico",
+            vibrate: pattern,
+            silent: false,
+            tag: "order-preparing",
+            renotify: true,
+          });
+          setTimeout(() => n.close(), 4000);
+        }
+      } else if ("Notification" in window && Notification.permission === "default") {
+        // Request permission silently — will be used next time
+        Notification.requestPermission().catch(() => {});
+      }
+    } catch (e) {
+      // Notification not supported
     }
   };
 
@@ -833,8 +875,13 @@ export default function Header({
         orderType: finalOrderType,
       };
 
-      if (finalOrderType === "Eat Here" && tableId)
-        orderData.tableId = tableId;
+      if (finalOrderType === "Eat Here" && tableId) {
+        // tableId format: "indoor:3" → source: { section: "indoor", number: 3, type: "TABLE" }
+        const [section, numStr] = tableId.split(":");
+        const number = parseInt(numStr, 10) || 1;
+        const type = section === "rooms" ? "ROOM" : "TABLE";
+        orderData.source = { section, number, type };
+      }
       if (finalOrderType === "Delivery" && trimmedAddress)
         orderData.address = trimmedAddress;
 
@@ -1601,10 +1648,18 @@ export default function Header({
                                   );
                                 })()}
 
-                                {/* Table badge */}
-                                {order.tableId && (
+                                {/* Table / Room badge */}
+                                {(order.source?.section || order.tableId) && (
                                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
-                                    Table {order.tableId}
+                                    {order.source?.section
+                                      ? (() => {
+                                          const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+                                          const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
+                                          const unit = order.source.type === "ROOM" ? "" : "Table";
+                                          return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
+                                        })()
+                                      : `Table ${order.tableId}`
+                                    }
                                   </span>
                                 )}
                               </div>

@@ -125,12 +125,13 @@ const getItemQuantity = (item) => {
        order?.tableNumber ||
        order?.table?.name ||
        order?.table?.tableNumber ||
-       order?.table?.number
+       order?.table?.number,
+     order?.source
    );
 
     const displayOrderType =
       orderTypeKey === "eat_here" && tableId
-        ? `${orderTypeLabel} • Table ${tableId}`
+        ? `${orderTypeLabel} • ${tableId}`
         : orderTypeLabel;
 
     // Timer for elapsed time calculation
