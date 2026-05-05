@@ -367,7 +367,7 @@ const KitchenDisplaySystem = () => {
         }
       }
 
-      notify(`New kitchen order #${incomingId.slice(-4)} received.`, "success");
+      notify(`New kitchen order ${incomingId.slice(-4)} received.`, "success");
       knownOrderIds.current.add(incomingId);
     }
   }, [notificationSound, notify, sseEvent]);
@@ -447,7 +447,7 @@ const KitchenDisplaySystem = () => {
       const latestIncomingOrderId = getOrderId(latestIncomingOrder);
       notify(
         freshPendingOrders.length === 1
-          ? `New kitchen order #${latestIncomingOrderId.slice(-4)} received.`
+          ? `New kitchen order ${latestIncomingOrderId.slice(-4)} received.`
           : `${freshPendingOrders.length} new kitchen orders received.`,
         "success"
       );
