@@ -47,11 +47,11 @@ export function NavMain({ items, isDarkMode = false }) {
           group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
           ${isActive
             ? isDarkMode
-              ? "bg-orange-500/15 text-orange-300 hover:bg-orange-500/20 hover:text-orange-300"
-              : "bg-orange-500 text-white shadow-sm hover:bg-orange-500 hover:text-white"
+              ? "!bg-orange-500/15 !text-orange-300 hover:!bg-orange-500/20 hover:!text-orange-300"
+              : "!bg-orange-500 !text-white shadow-sm hover:!bg-orange-500 hover:!text-white"
             : isDarkMode
-              ? "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-              : "text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+              ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
+              : "text-[#78716c] hover:!bg-[#f7f3ef] hover:!text-[#1c1917]"
           }
         `}
       >
@@ -59,7 +59,7 @@ export function NavMain({ items, isDarkMode = false }) {
           className={`
             mr-3 w-4 h-4 transition-colors duration-150 group-data-[collapsible=icon]:mr-0
             ${isActive
-              ? isDarkMode ? "text-orange-300" : "text-white"
+              ? isDarkMode ? "!text-orange-300" : "!text-white"
               : isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#a8a29e] group-hover:text-[#1c1917]"}
           `}
         />
@@ -71,7 +71,7 @@ export function NavMain({ items, isDarkMode = false }) {
             className={`
               w-4 h-4 transition-transform duration-150 group-data-[collapsible=icon]:hidden
               ${isActive
-                ? isDarkMode ? "rotate-90 text-orange-300" : "rotate-90 text-white"
+                ? isDarkMode ? "rotate-90 !text-orange-300" : "rotate-90 !text-white"
                 : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#a8a29e] group-data-[state=open]:rotate-90"}
             `}
           />
@@ -87,7 +87,6 @@ export function NavMain({ items, isDarkMode = false }) {
             const isSubActive = subItem.url === location.pathname;
             return (
               <SidebarMenuSubItem key={subItem.title}>
-                <SidebarMenuSubButton asChild>
                   <Link
                     to={subItem.url}
                     target={subItem.target || undefined}
@@ -96,17 +95,16 @@ export function NavMain({ items, isDarkMode = false }) {
                       block px-3 py-1.5 text-sm rounded-lg transition-colors duration-150
                       ${isSubActive
                         ? isDarkMode
-                          ? "bg-orange-500/15 text-orange-300 font-semibold hover:bg-orange-500/20 hover:text-orange-300"
-                          : "bg-orange-500 text-white font-semibold hover:bg-orange-500 hover:text-white"
+                          ? "!bg-orange-500/15 !text-orange-300 font-semibold hover:!bg-orange-500/20 hover:!text-orange-300"
+                          : "!bg-orange-500 !text-white font-semibold hover:!bg-orange-500 hover:!text-white"
                         : isDarkMode
-                          ? "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                          : "text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+                          ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
+                          : "text-[#78716c] hover:!bg-[#f7f3ef] hover:!text-[#1c1917]"
                       }
                     `}
                   >
                     {subItem.title}
                   </Link>
-                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             );
           })}

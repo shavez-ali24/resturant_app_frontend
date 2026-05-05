@@ -83,7 +83,7 @@
     --sidebar-foreground: 213 31% 91%;
     --sidebar-primary: 24 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 11%;
+    --sidebar-accent: 215 28% 17%;
     --sidebar-accent-foreground: 213 31% 91%;
     --sidebar-border: 222 47% 14%;
     --sidebar-ring: 24 95% 53%;
@@ -405,6 +405,19 @@
 }
 .admin-dark [class*="hover:bg-orange-600"]:hover {
   background-color: #c2410c !important;
+}
+
+/* ✅ Sidebar active nav items — keep orange on hover in dark mode */
+.admin-dark [data-sidebar="menu-button"]:hover,
+.admin-dark [data-sidebar="menu-sub-button"]:hover {
+  background-color: hsl(215 28% 17%) !important;
+  color: hsl(213 31% 91%) !important;
+}
+/* Active nav items stay orange on hover */
+.admin-dark button[class*="bg-orange-500"]:hover,
+.admin-dark a[class*="bg-orange-500"]:hover {
+  background-color: #f97316 !important;
+  color: #ffffff !important;
 }
 
 .admin-dark [class*="bg-gray-50"],

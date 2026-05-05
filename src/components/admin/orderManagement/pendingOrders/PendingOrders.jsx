@@ -43,7 +43,22 @@ import {
 
 const Orders = () => {
   const { notify, sseEvent, sseConnected } = useNotification();
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const showCreateOrder = searchParams.get("view") === "create";
   const openCreateOrder = () => setSearchParams({ view: "create" });

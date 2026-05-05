@@ -19,7 +19,23 @@ const selectItemCls =
   "cursor-pointer rounded-lg text-sm font-medium text-[#44403c] hover:bg-[#f7f3ef] data-[highlighted]:bg-[#f0ebe5] data-[highlighted]:text-[#1c1917] dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100";
 
 const CompletedOrders = () => {
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   useAdminTour(TOUR_KEYS.completed, getCompletedSteps, isDarkMode, 600);
 
   const [dateRange, setDateRange] = useState("7d");
