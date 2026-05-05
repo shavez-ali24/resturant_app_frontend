@@ -83,10 +83,10 @@ export function NavUser({ user, isDarkMode = false }) {
   };
 
   return (
-    <SidebarMenu className={`rounded-2xl border shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] transition-shadow duration-200 hover:shadow-md ${
+    <SidebarMenu className={`rounded-xl border transition-shadow duration-200 hover:shadow-sm ${
       isDarkMode
-        ? "border-slate-700 bg-slate-900/95"
-        : "border-orange-400 bg-orange-200/95"
+        ? "border-slate-700/60 bg-slate-800/60"
+        : "border-[#ede8e3] bg-[#f7f3ef]"
     }`}>
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

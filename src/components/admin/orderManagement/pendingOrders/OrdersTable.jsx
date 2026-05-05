@@ -54,6 +54,7 @@ const OrdersTable = ({
   tableType,
   onCustomizationsClick,
   latestOrderId,
+  isDarkMode = false,
   containerVariant = "card",
 }) => {
   const dispatch = useDispatch();
@@ -97,8 +98,8 @@ const OrdersTable = ({
 
   const containerClassName =
     containerVariant === "plain"
-      ? "min-h-[460px] md:min-h-[560px] rounded-2xl bg-transparent shadow-none"
-      : "min-h-[460px] md:min-h-[560px] rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none";
+      ? "h-full overflow-hidden rounded-xl bg-transparent"
+      : "h-full overflow-hidden rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-[#1e293b]";
 
   return (
     <div className={containerClassName}>
@@ -118,63 +119,53 @@ const OrdersTable = ({
       )}
 
       {/* Desktop / Tablet */}
-      <div className="hidden md:block">
+      <div className="hidden md:flex md:h-full md:flex-col">
+        <div className="overflow-auto flex-1">
         <table className="min-w-full">
-          <thead className="sticky top-0 z-10 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-xs uppercase tracking-wide text-white shadow-sm dark:from-orange-600 dark:via-orange-600 dark:to-orange-600 dark:text-white">
+          <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800/80" : "bg-[#f7f3ef]"}`}>
             <tr>
               {tableType === "pending" ? (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">ID</th>
+                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Order ID</th>
               ) : (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Date</th>
+                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Date</th>
               )}
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Placed At</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">
-                Customer
-              </th>
+              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Placed At</th>
+              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Customer</th>
+              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Phone</th>
+              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Type</th>
+              <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Order Details</th>
               {tableType === "pending" && (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
+                <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Note</th>
               )}
-              {tableType !== "pending" && (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Phone</th>
-              )}
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Type</th>
-              <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Order Details</th>
-              {tableType === "pending" && (
-                <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Kitchen Note</th>
-              )}
-
               {tableType === "pending" && (
                 <>
-                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Status</th>
-                  <th className="border border-orange-300 p-2 text-center text-sm font-semibold dark:border-orange-300/40 dark:!text-white">Manage</th>
+                  <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Status</th>
+                  <th className={`px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Manage</th>
                 </>
               )}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-orange-100 bg-white/95 dark:divide-slate-700 dark:bg-slate-900/95">
+          <tbody className={`divide-y ${isDarkMode ? "divide-slate-700/50" : "divide-[#f0ebe5]"}`}>
             {loading ? (
               skeletonRows.map((_, rowIndex) => (
                 <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
                   {Array.from({ length: columnCount }).map((__, colIndex) => (
-                    <td
-                      key={`skeleton-cell-${rowIndex}-${colIndex}`}
-                      className="border border-orange-100 px-2 py-3 dark:border-slate-700"
-                    >
-                      <div className="h-4 w-full rounded bg-orange-100/80 dark:bg-slate-800/80" />
+                    <td key={`skeleton-cell-${rowIndex}-${colIndex}`} className="px-4 py-3">
+                      <div className={`h-4 w-full rounded ${isDarkMode ? "bg-slate-700/60" : "bg-[#f0ebe5]"}`} />
                     </td>
                   ))}
                 </tr>
               ))
             ) : error ? (
               <tr>
-                <td colSpan={columnCount} className="py-6 text-center text-red-500 dark:text-red-400">
+                <td colSpan={columnCount} className="py-10 text-center text-sm text-red-500">
                   {error}
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={columnCount} className="py-6 text-center italic text-gray-500 dark:text-slate-300">
+                <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
                   No orders yet
                 </td>
               </tr>
@@ -193,6 +184,7 @@ const OrdersTable = ({
                   setOrderForBillModal={setOrderForBillModal}
                   updateOrder={updateOrder}
                   tableType={tableType}
+                  isDarkMode={isDarkMode}
                   onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
                   showBillAttention={isLatestUnseen(order)}
                   onBillOpen={() => markLatestSeen(order)}
@@ -201,137 +193,101 @@ const OrdersTable = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
-       {/* Mobile View */}
-       <div className="block md:hidden">
+       {/* Mobile View — scrollable */}
+       <div className="block md:hidden h-full overflow-y-auto p-3">
         {loading ? (
-          <div className="space-y-3.5 pb-2">
+          <div className="space-y-3">
             {mobileSkeletons.map((_, idx) => (
-              <div
-                key={`mobile-skeleton-${idx}`}
-                className="min-h-[240px] w-full space-y-3 rounded-2xl border border-orange-100 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none sm:p-3.5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="h-4 w-24 rounded bg-orange-100/80 dark:bg-slate-800/80" />
-                  <div className="h-5 w-28 rounded-full bg-orange-100/80 dark:bg-slate-800/80" />
-                </div>
-                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
-                  <div className="h-10 rounded-lg bg-orange-50/70 dark:bg-slate-800/70" />
-                </div>
-                <div className="h-9 w-44 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
-                  <div className="h-10 rounded-xl bg-orange-100/80 dark:bg-slate-800/80" />
-                </div>
-              </div>
+              <div key={`mobile-skeleton-${idx}`} className={`h-48 w-full rounded-xl animate-pulse ${isDarkMode ? "bg-slate-700/40" : "bg-[#f0ebe5]"}`} />
             ))}
           </div>
         ) : error ? (
-          <p className="py-6 text-center text-red-500 dark:text-red-400">{error}</p>
+          <p className="py-6 text-center text-sm text-red-500">{error}</p>
         ) : orders.length === 0 ? (
-          <p className="py-6 text-center italic text-gray-500 dark:text-slate-300">No orders yet</p>
+          <p className={`py-12 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>No orders yet</p>
         ) : (
-          <div className="space-y-3.5 pb-2">
+          <div className="space-y-3">
             {orders.map((order) => {
               const getOrderTypeIcon = (type) => {
                 switch (getOrderTypeKey(type)) {
-                  case "eat_here":
-                    return <Utensils size={14} />;
-                  case "take_away":
-                    return <House size={14} />;
-                  case "delivery":
-                    return <Truck size={14} />;
-                  default:
-                    return <Utensils size={14} />;
+                  case "eat_here": return <Utensils size={13} />;
+                  case "take_away": return <House size={13} />;
+                  case "delivery": return <Truck size={13} />;
+                  default: return <Utensils size={13} />;
                 }
               };
               const orderTypeLabel = getOrderTypeLabel(order.orderType);
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
               const tableLabel = formatOrderTableId(
-                order.tableId ||
-                  order.table ||
-                  order.tableNumber ||
-                  order?.table?.name ||
-                  order?.table?.tableNumber ||
-                  order?.table?.number
+                order.tableId || order.table || order.tableNumber ||
+                order?.table?.name || order?.table?.tableNumber || order?.table?.number
               );
-
-              const handlePendingCustomizationsClick =
-                onCustomizationsClick || handleCustomizationsClick;
+              const handlePendingCustomizationsClick = onCustomizationsClick || handleCustomizationsClick;
 
               return (
-               <div
-                 key={getOrderId(order) || order?.createdAt}
-                 className={`w-full space-y-3 rounded-2xl border border-orange-100 p-2.5 sm:p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:shadow-none ${getStatusRowClass(
-                   order.status
-                 )}`}
-               >
-                  <div className="flex items-center justify-between w-full gap-2">
-                    <h3 className="font-bold text-gray-900 text-[15px] leading-tight shrink-0">
+                <div
+                  key={getOrderId(order) || order?.createdAt}
+                  className={`w-full rounded-xl border p-3 space-y-2.5 ${
+                    isDarkMode
+                      ? "border-slate-700/60 bg-slate-800/60"
+                      : "border-[#ede8e3] bg-white"
+                  }`}
+                >
+                  {/* Row 1: ID + Time */}
+                  <div className="flex items-center justify-between">
+                    <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
+                      {getOrderIdShort(order)}
+                    </span>
+                    <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
                       {tableType === "pending"
-                        ? `ID: ${getOrderIdShort(order)}`
-                        : (getOrderCustomerName(order) || "Order")}
-                    </h3>
-                    <div className="flex items-center">
-                      <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        {tableType === "pending"
-                          ? formatTime(order.createdAt)
-                          : `${formatDate(order.createdAt)} | ${formatTime(order.createdAt)}`}
-                      </span>
+                        ? formatTime(order.createdAt)
+                        : `${formatDate(order.createdAt)} · ${formatTime(order.createdAt)}`}
+                    </span>
+                  </div>
+
+                  {/* Row 2: Name + Phone */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className={`rounded-lg px-3 py-2 ${isDarkMode ? "bg-slate-700/40" : "bg-[#f7f3ef]"}`}>
+                      <p className={`text-[10px] font-medium mb-0.5 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>Name</p>
+                      <p className={`text-sm font-semibold truncate ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{getOrderCustomerName(order)}</p>
+                    </div>
+                    <div className={`rounded-lg px-3 py-2 ${isDarkMode ? "bg-slate-700/40" : "bg-[#f7f3ef]"}`}>
+                      <p className={`text-[10px] font-medium mb-0.5 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>Phone</p>
+                      <p className={`text-sm font-semibold truncate ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{getOrderCustomerPhone(order)}</p>
                     </div>
                   </div>
 
-                   <div className="flex items-center justify-between gap-1.5 text-sm">
-                      <div className="flex-1 flex items-center rounded-lg bg-orange-50/50 px-2.5 py-1.5 dark:bg-slate-800/80">
-                        <span className="font-medium text-gray-600 dark:text-slate-300 text-sm">Name:</span>
-                        <p className="break-words text-gray-800 dark:text-slate-100 font-medium ml-1.5">
-                          {getOrderCustomerName(order) || "N/A"}
-                        </p>
-                      </div>
-                      <div className="flex-1 flex items-center rounded-lg bg-orange-50/50 px-2.5 py-1.5 dark:bg-slate-800/80">
-                        <span className="font-medium text-gray-600 dark:text-slate-300 text-sm">Phone:</span>
-                        <p className="break-all text-gray-800 dark:text-slate-100 font-medium ml-1.5">{getOrderCustomerPhone(order) || "N/A"}</p>
-                      </div>
-                    </div>
-
-                  <div className="flex flex-col gap-1.5 min-[360px]:flex-row min-[360px]:items-center">
-                    <span className="shrink-0 text-sm font-medium text-gray-600 dark:text-slate-300">Type:</span>
-                    <div
-                      className={`inline-flex h-9 w-40 items-center rounded-xl px-3 text-sm font-semibold ring-1 ring-black/5 dark:ring-white/10 ${orderTypeClass}`}
-                    >
-                      <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        {getOrderTypeIcon(order.orderType)}
-                        <span>{orderTypeLabel}</span>
-                        {isEatHereOrder(order.orderType) && tableLabel && (
-                          <span className="ml-0.5">: {tableLabel}</span>
-                        )}
-                      </div>
-                    </div>
+                  {/* Row 3: Type badge */}
+                  <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
+                    {getOrderTypeIcon(order.orderType)}
+                    <span>{orderTypeLabel}</span>
+                    {isEatHereOrder(order.orderType) && tableLabel && <span>: {tableLabel}</span>}
                   </div>
 
-                   <div className="grid grid-cols-2 gap-2">
+                  {/* Row 4: Note + View Bill */}
+                  <div className="grid grid-cols-2 gap-2">
                     {tableType === "pending" && (
                       <Suspense fallback={null}>
-                        <PendingOrderMobileNote
-                          order={order}
-                          onCustomizationsClick={handlePendingCustomizationsClick}
-                        />
+                        <PendingOrderMobileNote order={order} onCustomizationsClick={handlePendingCustomizationsClick} />
                       </Suspense>
                     )}
-
                     <button
-                      onClick={() => {
-                        markLatestSeen(order);
-                        dispatch(showBill(order));
-                      }}
-                      className={`flex h-10 items-center justify-center gap-1 rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 ${isLatestUnseen(order) ? "bill-border-animate" : ""}`}
+                      onClick={() => { markLatestSeen(order); dispatch(showBill(order)); }}
+                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                        isLatestUnseen(order) ? "bill-border-animate" : ""
+                      } ${isDarkMode
+                        ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                        : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
+                      } ${tableType !== "pending" ? "col-span-2" : ""}`}
                     >
-                      View Bill
+                      View Items & Bill
                     </button>
                   </div>
 
+                  {/* Row 5: Status + Edit/Delete */}
                   {tableType === "pending" && (
                     <Suspense fallback={null}>
                       <PendingOrderMobileControls
@@ -339,6 +295,7 @@ const OrdersTable = ({
                         updateOrder={updateOrder}
                         setEditingOrder={setEditingOrder}
                         setShowConfirmDelete={setShowConfirmDelete}
+                        isDarkMode={isDarkMode}
                       />
                     </Suspense>
                   )}

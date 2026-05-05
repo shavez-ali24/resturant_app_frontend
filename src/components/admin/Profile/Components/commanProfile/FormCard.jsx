@@ -4,27 +4,27 @@ import { motion } from "framer-motion";
 
 export const FormCard = ({ title, icon, children, customIndex }) => (
   <motion.div
-    className="rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-slate-950/40"
+    className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b]"
     variants={{
       hidden: { opacity: 0, y: 20 },
       visible: (i) => ({
         opacity: 1,
         y: 0,
-        transition: { delay: i * 0.05, duration: 0.4, ease: "easeOut" },
+        transition: { delay: i * 0.05, duration: 0.3, ease: "easeOut" },
       }),
     }}
     initial="hidden"
     animate="visible"
     custom={customIndex}
   >
-    <div className="p-4 sm:p-5">
+    <div className="p-3 sm:p-4">
       {(title || icon) && (
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-slate-100 sm:text-lg">
-          {icon ? <span className="text-orange-500 dark:text-orange-300">{icon}</span> : null}
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">
+          {icon ? <span className="text-orange-500">{icon}</span> : null}
           {title}
         </h3>
       )}
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-3">{children}</div>
     </div>
   </motion.div>
 );

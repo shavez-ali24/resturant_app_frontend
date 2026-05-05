@@ -38,11 +38,11 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
   const hoverOpenTimerRef = React.useRef(null);
   const hoverCloseTimerRef = React.useRef(null);
   const sidebarShellClass = isDarkMode
-    ? "border-r border-slate-700/70 bg-slate-950 [&_[data-sidebar=sidebar]]:bg-slate-950"
-    : "";
+    ? "border-r border-slate-700/70 bg-[#0f172a] [&_[data-sidebar=sidebar]]:bg-[#0f172a]"
+    : "border-r border-[#ede8e3] bg-white [&_[data-sidebar=sidebar]]:bg-white";
   const sidebarSectionClass = isDarkMode
-    ? "bg-slate-950"
-    : "bg-gradient-to-r from-orange-50 to-orange-100";
+    ? "bg-[#0f172a]"
+    : "bg-white";
 
   // Get user role from localStorage
   const userRole = localStorage.getItem("userRole") || "";

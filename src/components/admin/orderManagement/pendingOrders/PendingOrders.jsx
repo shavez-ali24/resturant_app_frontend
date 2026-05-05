@@ -568,9 +568,8 @@ const Orders = () => {
 
   if (showCreateOrder) {
     return (
-      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "bg-[#0d1629]" : "bg-[#fffaf4]"}`}>
-        {/* Back bar */}
-        <div className={`flex items-center gap-3 px-4 py-3 border-b shrink-0 ${isDarkMode ? "bg-slate-900 border-slate-700" : "bg-white border-orange-100"}`}>
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+        <div className={`flex items-center gap-3 px-4 py-3 border-b shrink-0 ${isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]"}`}>
           <button
             onClick={() => {
               closeCreateOrder();
@@ -578,7 +577,7 @@ const Orders = () => {
               refetchPreparingOrders();
               refetchReadyOrders();
             }}
-            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-700"}`}
+            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Live Orders
@@ -586,7 +585,7 @@ const Orders = () => {
         </div>
         <div className="flex-1 overflow-hidden">
           <Suspense fallback={
-            <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0d1629]" : "bg-white"}`}>
+            <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
               <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
             </div>
           }>
@@ -607,14 +606,20 @@ const Orders = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
-      {/* Header */}
-      <div data-tour="orders-heading" className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-row items-center justify-between gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4">
-        <Heading title="Live Orders" />
+    <div className={`flex h-screen flex-col overflow-hidden px-3 py-3 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+
+      {/* ── Header bar ── */}
+      <div
+        data-tour="orders-heading"
+        className="mb-2 flex flex-shrink-0 items-center justify-between gap-3 px-1 py-2"
+      >
+        <div className="flex items-center gap-2.5">
+          <Heading title="Live Orders" showDot />
+        </div>
         <button
           data-tour="orders-create-btn"
           onClick={() => openCreateOrder()}
-          className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-orange-600 active:scale-95"
+          className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-orange-600 active:scale-95"
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Create Order</span>
@@ -622,15 +627,21 @@ const Orders = () => {
         </button>
       </div>
 
-      {/* Orders Table */}
-      <div data-tour="orders-table" className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4 sm:mt-4">
+      {/* ── Table card — flex-1 fills remaining height, no scroll on laptop ── */}
+      <div
+        data-tour="orders-table"
+        className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
+          isDarkMode
+            ? "border-slate-700/60 bg-[#1e293b]"
+            : "border-[#ede8e3] bg-white"
+        }`}
+      >
         <Suspense
           fallback={
-            <div className="min-h-[420px] md:min-h-[520px] p-4">
-              <div className="h-6 w-40 rounded bg-orange-100/80 dark:bg-slate-800/80" />
-              <div className="mt-4 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
-              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
-              <div className="mt-2 h-4 w-full rounded bg-orange-100/70 dark:bg-slate-800/70" />
+            <div className="p-6 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
+              ))}
             </div>
           }
         >
@@ -645,6 +656,7 @@ const Orders = () => {
             tableType="pending"
             onCustomizationsClick={handleCustomizationsClick}
             containerVariant="plain"
+            isDarkMode={isDarkMode}
             latestOrderId={
               combinedOrders[0]?._id ||
               combinedOrders[0]?.id ||
@@ -655,85 +667,71 @@ const Orders = () => {
         </Suspense>
       </div>
 
-      {/* Server-side Pagination */}
-      <div className="flex flex-shrink-0 justify-center px-2 py-2 min-h-[44px]">
+      {/* ── Pagination ── */}
+      <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
         {totalPages > 1 && (
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
-              <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage > 1) handlePageChange(currentPage - 1);
-                  }}
-                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
-                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                  }`}
-                />
-              </PaginationItem>
-
-              {pageNumbers.map((pageNum, index) => {
-                if (typeof pageNum === "string") {
+              <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (currentPage > 1) handlePageChange(currentPage - 1); }}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${
+                      currentPage === 1 ? "pointer-events-none opacity-40" : ""
+                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                  />
+                </PaginationItem>
+                {pageNumbers.map((pageNum, index) => {
+                  if (typeof pageNum === "string") {
+                    return (
+                      <PaginationItem key={`${pageNum}-${index}`}>
+                        <PaginationEllipsis className="h-8 w-8" />
+                      </PaginationItem>
+                    );
+                  }
                   return (
-                    <PaginationItem key={`${pageNum}-${index}`}>
-                      <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
-                    </PaginationItem>
-                  );
-                }
-
-                return (
                     <PaginationItem key={pageNum}>
                       <PaginationLink
                         href="#"
                         isActive={currentPage === pageNum}
-                        className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
+                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm ${
                           currentPage === pageNum
-                            ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
-                            : "bg-white text-gray-700 hover:bg-orange-50"
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : isDarkMode
+                              ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
                         }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handlePageChange(pageNum);
-                      }}
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage < totalPages) handlePageChange(currentPage + 1);
-                  }}
-                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
-                    currentPage === totalPages ? "pointer-events-none opacity-50" : ""
-                  }`}
-                />
-              </PaginationItem>
+                        onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) handlePageChange(currentPage + 1); }}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${
+                      currentPage === totalPages ? "pointer-events-none opacity-40" : ""
+                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                  />
+                </PaginationItem>
               </PaginationContent>
             </Pagination>
           </div>
         )}
       </div>
 
-      {/* Modals */}
-      
+      {/* ── Modals ── */}
       <Suspense fallback={null}>
-        {/* Customizations Modal */}
         {selectedOrderForCustomizations && (
           <CustomizationsModal
             order={selectedOrderForCustomizations}
             onClose={() => setSelectedOrderForCustomizations(null)}
           />
         )}
-
-        {/* Items Modal */}
         {orderForBillModal && (
           <ItemsModal
             order={orderForBillModal}
@@ -741,8 +739,6 @@ const Orders = () => {
             onClose={() => setOrderForBillModal(null)}
           />
         )}
-
-        {/* Edit Order Modal */}
         {editingOrder && (
           <EditOrderModal
             editingOrder={editingOrder}
@@ -750,11 +746,9 @@ const Orders = () => {
             updateOrder={updateOrder}
             getFriendlyErrorMessage={getFriendlyOrderError}
             menuItems={menuItems}
-            tables={tables} // ✅ Passing tables from restaurant profile
+            tables={tables}
           />
         )}
-
-        {/* Delete Modal */}
         {showConfirmDelete && (
           <DeleteModal
             order={showConfirmDelete}

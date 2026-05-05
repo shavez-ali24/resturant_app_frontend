@@ -1,41 +1,28 @@
 // src/components/analytics/TopSellingAnalytics.jsx
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend,
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts";
-import { 
-  TrendingUp, 
-  Package, 
-  Tag, 
+import {
+  TrendingUp,
+  Package,
+  Tag,
   BarChart3,
   PieChart as PieChartIcon,
   Calendar,
@@ -43,11 +30,11 @@ import {
   CalendarDays,
   Clock,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
-import { 
+import {
   useGetTopSellingProductsQuery,
-  useGetTopSellingCategoriesQuery 
+  useGetTopSellingCategoriesQuery,
 } from "@/redux/adminRedux/adminAPI";
 import Heading from "../../common/Heading";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -150,7 +137,23 @@ const analyticsTabsTriggerClass =
   "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current";
 
 export default function TopSellingAnalytics() {
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   useAdminTour(TOUR_KEYS.sales, getSalesSteps, isDarkMode, 700);
   const [activeTab, setActiveTab] = useState("products");
   const [timeRange, setTimeRange] = useState("7d");
@@ -334,16 +337,31 @@ export default function TopSellingAnalytics() {
   };
 
   const secondaryButtonClass =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60";
   const primaryButtonClass =
-    "inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
   const selectTriggerClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
-  const selectContentClass = "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950";
+    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 focus:ring-orange-100 sm:w-[190px] ${
+      isDarkMode
+        ? "border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500"
+        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8]"
+    }`;
+  const selectContentClass =
+    `z-[10050] rounded-xl border p-1 shadow-xl ${
+      isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"
+    }`;
   const selectItemClass =
-    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-orange-200";
+    `cursor-pointer rounded-lg py-2 text-sm font-medium transition-colors ${
+      isDarkMode
+        ? "text-slate-200 data-[highlighted]:bg-slate-700 data-[highlighted]:text-slate-100"
+        : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] data-[highlighted]:text-[#1c1917]"
+    }`;
   const inputClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-orange-400 dark:focus:ring-orange-400/30";
+    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2 focus:ring-orange-100 ${
+      isDarkMode
+        ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 hover:border-slate-500 focus:border-orange-500"
+        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8] focus:border-orange-400"
+    }`;
 
   // Memoized data transformations
   const productsData = useMemo(() => {
@@ -469,7 +487,7 @@ export default function TopSellingAnalytics() {
   // Loading skeleton
   if (productsLoading || categoriesLoading) {
     return (
-      <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
+      <div className={`min-h-full p-4 sm:p-6 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
         <div className="mb-6">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-12 w-full max-w-md" />
@@ -494,138 +512,117 @@ export default function TopSellingAnalytics() {
     activeError?.message ||
     "Please try refreshing the page";
 
+
+  // ── theme helpers ──────────────────────────────────────────────────────────
+  const card = isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm";
+  const textPrimary = isDarkMode ? "text-slate-100" : "text-[#1c1917]";
+  const textSecondary = isDarkMode ? "text-slate-400" : "text-[#78716c]";
+  const divider = isDarkMode ? "border-slate-700" : "border-[#ede8e3]";
+  const chartGrid = isDarkMode ? "#334155" : "#ede8e3";
+  const chartTick = isDarkMode ? "#94a3b8" : "#78716c";
+  const tooltipStyle = {
+    backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+    border: `1px solid ${isDarkMode ? "#334155" : "#ede8e3"}`,
+    borderRadius: "12px",
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  };
+  const tableHeaderBg = isDarkMode ? "bg-slate-800" : "bg-[#f7f3ef]";
+  const tableRowHover = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-[#faf7f4]";
+  const tableRowBorder = isDarkMode ? "border-slate-700" : "border-[#f0ebe5]";
+
   return (
-    <div className="min-h-full bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 dark:bg-none dark:bg-slate-950 sm:p-6">
-      {/* Header */}
+    <div className={`min-h-full p-4 sm:p-6 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+
+      {/* ── Header ── */}
       <div className="mb-6">
-        <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
+        <div className={`rounded-2xl border p-4 sm:p-5 ${card}`}>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div data-tour="sales-heading">
               <Heading title="Top Selling Analytics" />
-              <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+              <p className={`mt-1 text-xs sm:text-sm ${textSecondary}`}>
                 Analyze your top selling products and categories
               </p>
             </div>
-            
+
             <div data-tour="sales-date-filter" className="flex flex-col sm:flex-row gap-3">
+              {/* Time Range */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
-                  <Calendar className="w-4 h-4 mr-2 text-orange-500" />
+                  <Calendar className="w-4 h-4 mr-2 shrink-0 text-orange-500" />
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
                 <SelectContent className={selectContentClass}>
-                  {timeRangeOptions.map((option) => (
-                    <SelectItem 
-                      key={option.value} 
-                      value={option.value}
-                      className={selectItemClass}
-                    >
-                      {option.label}
+                  {timeRangeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className={selectItemClass}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {/* Custom Date Picker Button */}
+              {/* Custom Range */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
-                    ${showDatePicker || isCustomRange
-                      ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
-                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all sm:w-auto ${
+                    showDatePicker || isCustomRange
+                      ? "border-orange-400 bg-orange-500 text-white"
+                      : isDarkMode
+                        ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                        : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] hover:border-[#d6cfc8]"
+                  }`}
                 >
-                  <CalendarDays className="w-4 h-4" />
+                  <CalendarDays className="w-4 h-4 shrink-0 text-orange-500" />
                   <span>Custom Range</span>
-                  {isCustomRange && (
-                    <span className="ml-1 text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full">
-                      ✓
-                    </span>
-                  )}
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+                  {isCustomRange && <span className="ml-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">✓</span>}
+                  <ChevronDown className={`w-4 h-4 shrink-0 text-current transition-transform ${showDatePicker ? "rotate-180" : ""}`} />
                 </button>
-                
+
                 {showDatePicker && (
-                  <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80 dark:border-slate-700 dark:bg-slate-900">
+                  <div className={`absolute right-0 top-12 z-[10050] w-full rounded-2xl border p-4 shadow-xl sm:w-80 ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
                     <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-800 dark:text-slate-100 text-center border-b border-orange-100 dark:border-slate-700 pb-2">Select Custom Date Range</h4>
-                      
+                      <h4 className={`font-semibold text-center border-b pb-2 ${isDarkMode ? `${textPrimary} ${divider}` : `${textPrimary} border-[#ede8e3]`}`}>
+                        Select Custom Date Range
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">From Date</label>
-                          <input 
-                            type="date" 
-                            className={inputClass}
-                            value={fromDate} 
-                            onChange={e => setFromDate(e.target.value)} 
-                            max={toDate}
-                          />
+                          <label className={`text-sm font-medium ${textSecondary}`}>From Date</label>
+                          <input type="date" className={inputClass} value={fromDate} onChange={e => setFromDate(e.target.value)} max={toDate} />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">To Date</label>
-                          <input 
-                            type="date" 
-                            className={inputClass}
-                            value={toDate} 
-                            onChange={e => setToDate(e.target.value)} 
-                            min={fromDate}
-                          />
+                          <label className={`text-sm font-medium ${textSecondary}`}>To Date</label>
+                          <input type="date" className={inputClass} value={toDate} onChange={e => setToDate(e.target.value)} min={fromDate} />
                         </div>
                       </div>
-                      
                       {isCustomRange && (
-                        <div className="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                        <div className={`p-3 rounded-lg border ${isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-50 border-orange-200"}`}>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Custom Range Active</span>
-                            <button 
-                              onClick={handleClearCustomRange}
-                              className="text-xs text-orange-600 hover:text-orange-800 underline dark:text-orange-400 dark:hover:text-orange-300"
-                            >
-                              Clear
-                            </button>
+                            <span className={`text-sm font-medium ${isDarkMode ? "text-orange-400" : "text-orange-700"}`}>Custom Range Active</span>
+                            <button onClick={handleClearCustomRange} className={`text-xs underline ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-800"}`}>Clear</button>
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">
-                            {formatFullDate(fromDate)} to {formatFullDate(toDate)}
-                          </p>
+                          <p className={`text-xs mt-1 ${textSecondary}`}>{formatFullDate(fromDate)} to {formatFullDate(toDate)}</p>
                         </div>
                       )}
-                      
-                      <div className="flex justify-end items-center pt-3 border-t border-orange-100 dark:border-slate-700">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => {
-                              setShowDatePicker(false);
-                              if (!isCustomRange) {
-                                handleResetDate();
-                              }
-                            }} 
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                          >
-                            Cancel
-                          </button>
-
-                          <button 
-                            onClick={handleCustomApply} 
-                            disabled={!fromDate || !toDate}
-                            className={primaryButtonClass}
-                          >
-                            Apply
-                          </button>
-                        </div>
+                      <div className={`flex justify-end gap-2 pt-3 border-t ${divider}`}>
+                        <button
+                          onClick={() => { setShowDatePicker(false); if (!isCustomRange) handleResetDate(); }}
+                          className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors ${isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                        >Cancel</button>
+                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass}>Apply</button>
                       </div>
-
                     </div>
                   </div>
                 )}
               </div>
 
+              {/* Refresh */}
               <button
                 data-tour="sales-refresh"
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
                 className={secondaryButtonClass}
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                 <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
               </button>
             </div>
@@ -633,537 +630,322 @@ export default function TopSellingAnalytics() {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* ── Error ── */}
       {hasError && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+        <div className={`mb-6 rounded-xl border p-4 ${isDarkMode ? "border-red-500/30 bg-red-500/10" : "border-red-200 bg-red-50"}`}>
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
             <div>
-              <p className="text-red-700 font-medium mb-1">
-                Error loading analytics data
-              </p>
-              <p className="text-red-600 text-sm">
-                {errorMessage}
-              </p>
+              <p className={`font-medium mb-1 ${isDarkMode ? "text-red-400" : "text-red-700"}`}>Error loading analytics data</p>
+              <p className={`text-sm ${isDarkMode ? "text-red-400/80" : "text-red-600"}`}>{errorMessage}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* ── Stat Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        {/* Total Days Card */}
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-xl">
-                <CalendarDays className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  {activeTab === "products" ? "Products Analysis Period" : "Categories Analysis Period"}
-                </p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {activeTab === "products" 
-                    ? (productsData?.totalDays || 0) 
-                    : (categoriesData?.totalDays || 0)} Days
-                </p>
-                <div className="mt-2 flex items-center text-xs text-orange-600">
-                  <Clock className="w-3 h-3 mr-1" />
-                  <span className="truncate">
-                    {activeTab === "products" 
-                      ? `${productsData?.from || 'N/A'} to ${productsData?.to || 'N/A'}`
-                      : `${categoriesData?.from || 'N/A'} to ${categoriesData?.to || 'N/A'}`
-                    }
-                  </span>
-                </div>
+        <div className={`rounded-2xl border p-4 ${card}`}>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-orange-100">
+              <CalendarDays className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium mb-1 ${textSecondary}`}>
+                {activeTab === "products" ? "Products Analysis Period" : "Categories Analysis Period"}
+              </p>
+              <p className={`text-2xl font-bold ${textPrimary}`}>
+                {activeTab === "products" ? (productsData?.totalDays || 0) : (categoriesData?.totalDays || 0)} Days
+              </p>
+              <div className="mt-2 flex items-center text-xs text-orange-600">
+                <Clock className="w-3 h-3 mr-1 text-orange-600" />
+                <span className="truncate">
+                  {activeTab === "products"
+                    ? `${productsData?.from || "N/A"} to ${productsData?.to || "N/A"}`
+                    : `${categoriesData?.from || "N/A"} to ${categoriesData?.to || "N/A"}`}
+                </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Time Range Card */}
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-amber-100 to-amber-200 rounded-xl">
-                <TrendingUp className="w-5 h-5 text-amber-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">Selected Time Range</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {getTimeRangeLabel()}
-                </p>
-                <div className="mt-2 flex items-center text-xs text-amber-600">
-                  <Calendar className="w-3 h-3 mr-1" />
-                  <span>
-                    {activeTab === "products" 
-                      ? `${getProductsChartData.length} data points`
-                      : `${getCategoriesChartData.length} data points`
-                    }
-                  </span>
-                </div>
+        <div className={`rounded-2xl border p-4 ${card}`}>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-orange-100">
+              <TrendingUp className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium mb-1 ${textSecondary}`}>Selected Time Range</p>
+              <p className={`text-2xl font-bold ${textPrimary}`}>{getTimeRangeLabel()}</p>
+              <div className="mt-2 flex items-center text-xs text-orange-600">
+                <Calendar className="w-3 h-3 mr-1 text-orange-600" />
+                <span>
+                  {activeTab === "products"
+                    ? `${getProductsChartData.length} data points`
+                    : `${getCategoriesChartData.length} data points`}
+                </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <Card data-tour="sales-chart" className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardHeader className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-lg font-semibold text-gray-800">
-                  {activeTab === "products" ? "Daily Top Selling Products" : "Daily Top Selling Categories"}
-                </CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  {getTimeRangeLabel()}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <TabsList className={analyticsTabsListClass}>
-                  <TabsTrigger 
-                    value="products" 
-                    className={analyticsTabsTriggerClass}
-                  >
-                    <Package className="w-4 h-4 mr-2" />
-                    Products
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="categories" 
-                    className={analyticsTabsTriggerClass}
-                  >
-                    <Tag className="w-4 h-4 mr-2" />
-                    Categories
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+      {/* ── Main Content ── */}
+      <div data-tour="sales-chart" className={`rounded-2xl border mb-6 ${card}`}>
+        {/* Card Header with tab switcher */}
+        <div className={`border-b p-4 ${divider}`}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h3 className={`text-lg font-semibold ${textPrimary}`}>
+                {activeTab === "products" ? "Daily Top Selling Products" : "Daily Top Selling Categories"}
+              </h3>
+              <p className={`text-sm mt-1 ${textSecondary}`}>{getTimeRangeLabel()}</p>
             </div>
-          </CardHeader>
+            <div className={`flex h-10 items-center gap-1 rounded-xl border p-1 ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+              {["products", "categories"].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
+                    activeTab === tab
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : isDarkMode
+                        ? "bg-transparent text-slate-400 hover:text-slate-100"
+                        : "bg-transparent text-[#78716c] hover:text-[#1c1917]"
+                  }`}
+                >
+                  {tab === "products"
+                    ? <><Package className="w-4 h-4 shrink-0" /><span>Products</span></>
+                    : <><Tag className="w-4 h-4 shrink-0" /><span>Categories</span></>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
-          <CardContent className="p-4">
-            {/* Products Tab */}
-            <TabsContent value="products" className="mt-0">
-              {getProductsChartData.length > 0 ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Daily Revenue Trend */}
-      <Card className="border border-orange-100">
-  <CardHeader className="pb-2">
-    <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-      <BarChart3 className="w-4 h-4 text-orange-600" />
-      Daily Top Product Sales
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={getProductsChartData.slice(0, 20)}
-          margin={{ top: 60, right: 30, left: 10, bottom: 10 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" strokeOpacity={0.5} />
-          <XAxis 
-            dataKey="date" 
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            fontSize={11}
-            tick={{ fill: '#92400e' }}
-          />
-          <YAxis 
-            tickFormatter={(value) => value.toLocaleString()}
-            fontSize={11}
-            tick={{ fill: '#92400e' }}
-            label={{ 
-              // value: 'Sales', 
-              angle: -90, 
-              position: 'insideLeft',
-              offset: 10,
-              style: { fill: '#92400e', fontSize: 12 }
-            }}
-          />
-          <Tooltip 
-            formatter={(value) => value.toLocaleString()} // सिर्फ value return करें
-            labelFormatter={(label, payload) => {
-              if (payload && payload[0]) {
-                return `Product: ${payload[0].payload.product}`;
-              }
-              return label;
-            }}
-            contentStyle={{ 
-              backgroundColor: 'white', 
-              border: '1px solid #fed7aa',
-              borderRadius: '8px'
-            }}
-          />
-          <Legend content={() => null} />
-          <Bar 
-            dataKey="quantity"
-            name=""
-            fill="#f97316"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
-
-                    {/* Top Products Distribution */}
-                    <Card className="border border-orange-100">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <PieChartIcon className="w-4 h-4 text-orange-600" />
-                          Top Products Distribution
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart margin={{ top: 18, right: 40, left: 40, bottom: 18 }}>
-                              <Pie
-                                data={getAggregatedProducts}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={(props) => renderDistributionLabel(props, 0.06)}
-                                outerRadius={72}
-                                fill="#f97316"
-                                dataKey="revenue"
-                              >
-                                {getAggregatedProducts.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={ORANGE_COLORS[index % ORANGE_COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip 
-                                formatter={(value) => [formatCurrency(value), 'Revenue']}
-                                contentStyle={{ 
-                                  backgroundColor: 'white', 
-                                  border: '1px solid #fed7aa',
-                                  borderRadius: '8px'
-                                }}
-                              />
-                              {/* <Legend 
-                                formatter={(value, entry, index) => {
-                                  const item = getAggregatedProducts[index];
-                                  return `${value} (${formatCurrency(item?.revenue || 0)})`;
-                                }}
-                              /> */}
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+        <div className="p-4">
+          {/* ── Products Tab ── */}
+          {activeTab === "products" && (
+            getProductsChartData.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bar Chart */}
+                  <div className={`rounded-xl border p-4 ${card}`}>
+                    <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
+                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                      Daily Top Product Sales
+                    </h4>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getProductsChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: 50 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} strokeOpacity={0.6} vertical={false} />
+                          <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={(v) => v.toLocaleString()} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            contentStyle={tooltipStyle}
+                            formatter={(value) => [value.toLocaleString(), "Qty"]}
+                            labelFormatter={(label, payload) => payload?.[0] ? `Product: ${payload[0].payload.product}` : label}
+                          />
+                          <Bar dataKey="quantity" fill="#f97316" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
 
-                  {/* Daily Top Products Table - SORTED BY REVENUE */}
-                  <Card className="border border-orange-100">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        Daily Top Selling Products (Sorted by Revenue)
-                      </CardTitle>
-                      <p className="text-xs text-gray-500">
-                        Showing top products sorted by highest revenue
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-orange-50">
-                            <tr>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Rank
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Date
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Top Product
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Quantity Sold
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                Revenue
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-orange-100">
-                            {getSortedProductsTableData.map((item, index) => (
-                              <tr key={index} className="hover:bg-orange-50/30">
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
-                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
-                                      'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
-                                    }`}>
-                                    #{index + 1}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <div className="flex items-center">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                                    <span className="font-medium text-gray-800">
-                                      {item.date}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className="font-medium text-gray-800">
-                                    {item.product}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200">
-                                    {item.quantity.toLocaleString()}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <span className="font-bold text-orange-700">
-                                    {formatCurrency(item.revenue)}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="h-64 flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                    <Package className="h-6 w-6" />
+                  {/* Pie Chart */}
+                  <div className={`rounded-xl border p-4 ${card}`}>
+                    <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
+                      <PieChartIcon className="w-4 h-4 text-orange-600" />
+                      Top Products Distribution
+                    </h4>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart margin={{ top: 18, right: 40, left: 40, bottom: 18 }}>
+                          <Pie data={getAggregatedProducts} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.06)} outerRadius={72} dataKey="revenue">
+                            {getAggregatedProducts.map((_, i) => <Cell key={i} fill={ORANGE_COLORS[i % ORANGE_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <p className="text-gray-800 font-bold text-lg mb-2">No Product Data Found</p>
-                  <p className="text-gray-600 text-center mb-4">
-                    No completed orders found for the selected time period.
-                  </p>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isRefreshQueued}
-                    className={secondaryButtonClass}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                    {isRefreshing ? "Refreshing..." : "Refresh Data"}
-                  </button>
                 </div>
-              )}
-            </TabsContent>
 
-            {/* Categories Tab */}
-            <TabsContent value="categories" className="mt-0">
-              {getCategoriesChartData.length > 0 ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Daily Category Revenue */}
-                    <Card className="border border-orange-100">
-  <CardHeader className="pb-2">
-    <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-      <BarChart3 className="w-4 h-4 text-orange-600" />
-      Daily Top Category Performance
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={getCategoriesChartData.slice(0, 20)}
-          margin={{  top: 60, right: 30, left: 10, bottom: 10  }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" strokeOpacity={0.5} />
-          <XAxis 
-            dataKey="date" 
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            fontSize={11}
-            tick={{ fill: '#92400e' }}
-          />
-          <YAxis 
-            tickFormatter={formatNumber}
-            fontSize={11}
-            tick={{ fill: '#92400e' }}
-          />
-          <Tooltip 
-            formatter={(value) => formatNumber(value)}
-            labelFormatter={(label, payload) => {
-              if (payload && payload[0]) {
-                return `Category: ${payload[0].payload.category}`;
-              }
-              return label;
-            }}
-            labelStyle={{ color: '#92400e', fontWeight: 'bold' }}
-            contentStyle={{ 
-              backgroundColor: 'white', 
-              border: '1px solid #fed7aa',
-              borderRadius: '8px'
-            }}
-          />
-          {/* Legend को हटा दें अगर नहीं चाहिए */}
-          <Bar 
-            dataKey="quantity" // quantity दिखाएं
-            fill="#f97316"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+                {/* Products Table */}
+                <div className={`rounded-xl border overflow-hidden ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
+                  <div className={`px-4 py-3 border-b ${divider}`}>
+                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Products (Sorted by Revenue)</h4>
+                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top products sorted by highest revenue</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className={tableHeaderBg}>
+                        <tr>
+                          {["Rank", "Date", "Top Product", "Quantity Sold", "Revenue"].map((h) => (
+                            <th key={h} className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${isDarkMode ? "divide-slate-700" : "divide-[#f0ebe5]"}`}>
+                        {getSortedProductsTableData.map((item, i) => (
+                          <tr key={i} className={`transition-colors ${tableRowHover}`}>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${
+                                i === 0 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
+                                i === 1 ? "bg-slate-100 text-slate-700 border-slate-300" :
+                                i === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
+                                "bg-orange-50 text-orange-700 border-orange-200"
+                              }`}>#{i + 1}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <span className={`font-medium ${textPrimary}`}>{item.date}</span>
+                              </div>
+                            </td>
+                            <td className={`py-3 px-4 font-medium ${textPrimary}`}>{item.product}</td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
+                                {item.quantity.toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-orange-500">{formatCurrency(item.revenue)}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`h-64 flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+                  <Package className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className={`font-bold text-lg mb-2 ${textPrimary}`}>No Product Data Found</p>
+                <p className={`text-center mb-4 text-sm ${textSecondary}`}>No completed orders found for the selected time period.</p>
+                <button onClick={handleRefresh} disabled={isRefreshing} className={secondaryButtonClass}>
+                  <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
+                  {isRefreshing ? "Refreshing..." : "Refresh Data"}
+                </button>
+              </div>
+            )
+          )}
 
-                    {/* Categories Distribution */}
-                    <Card className="border border-orange-100">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <PieChartIcon className="w-4 h-4 text-orange-600" />
-                          Top Categories Distribution
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={getAggregatedCategories}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={(props) => renderDistributionLabel(props, 0.05)}
-                                outerRadius={80}
-                                fill="#f97316"
-                                dataKey="revenue"
-                              >
-                                {getAggregatedCategories.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={ORANGE_COLORS[index % ORANGE_COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip 
-                                formatter={(value) => [formatCurrency(value), 'Revenue']}
-                                contentStyle={{ 
-                                  backgroundColor: 'white', 
-                                  border: '1px solid #fed7aa',
-                                  borderRadius: '8px'
-                                }}
-                              />
-                              {/* <Legend 
-                                formatter={(value, entry, index) => {
-                                  const item = getAggregatedCategories[index];
-                                  return `${value} (${formatCurrency(item?.revenue || 0)})`;
-                                }}
-                              /> */}
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+          {/* ── Categories Tab ── */}
+          {activeTab === "categories" && (
+            getCategoriesChartData.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bar Chart */}
+                  <div className={`rounded-xl border p-4 ${card}`}>
+                    <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
+                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                      Daily Top Category Performance
+                    </h4>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getCategoriesChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: 50 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} strokeOpacity={0.6} vertical={false} />
+                          <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={formatNumber} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            contentStyle={tooltipStyle}
+                            formatter={(v) => [formatNumber(v), "Qty"]}
+                            labelFormatter={(label, payload) => payload?.[0] ? `Category: ${payload[0].payload.category}` : label}
+                          />
+                          <Bar dataKey="quantity" fill="#f97316" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
 
-                  {/* Daily Top Categories Table - SORTED BY REVENUE */}
-                  <Card className="border border-orange-100">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        Daily Top Selling Categories (Sorted by Revenue)
-                      </CardTitle>
-                      <p className="text-xs text-gray-500">
-                        Showing top categories sorted by highest revenue
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-orange-50">
-                            <tr>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Rank
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Date
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Top Category
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider border-r border-orange-200">
-                                Quantity Sold
-                              </th>
-                              <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                Revenue
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-orange-100">
-                            {getSortedCategoriesTableData.map((item, index) => (
-                              <tr key={index} className="hover:bg-orange-50/30">
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                    ${index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300 dark:from-yellow-200 dark:to-yellow-300 dark:text-yellow-900 dark:border-yellow-400' :
-                                      index === 1 ? 'bg-[linear-gradient(90deg,#f3f4f6,#e5e7eb)] text-[#374151] border border-[#d1d5db] dark:bg-[linear-gradient(90deg,#cbd5e1,#94a3b8)] dark:text-[#0f172a] dark:border-[#94a3b8]' :
-                                      index === 2 ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-amber-800 border border-amber-300 dark:from-amber-200 dark:to-orange-200 dark:text-amber-900 dark:border-amber-400' :
-                                      'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border border-orange-200'
-                                    }`}>
-                                    #{index + 1}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <div className="flex items-center">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                                    <span className="font-medium text-gray-800">
-                                      {item.date}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className="font-medium text-gray-800">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 border-r border-orange-100">
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200">
-                                    {item.quantity.toLocaleString()}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <span className="font-bold text-orange-700">
-                                    {formatCurrency(item.revenue)}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="h-64 flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                    <Tag className="h-6 w-6" />
+                  {/* Pie Chart */}
+                  <div className={`rounded-xl border p-4 ${card}`}>
+                    <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
+                      <PieChartIcon className="w-4 h-4 text-orange-600" />
+                      Top Categories Distribution
+                    </h4>
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={getAggregatedCategories} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.05)} outerRadius={80} dataKey="revenue">
+                            {getAggregatedCategories.map((_, i) => <Cell key={i} fill={ORANGE_COLORS[i % ORANGE_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <p className="text-gray-800 font-bold text-lg mb-2">No Category Data Found</p>
-                  <p className="text-gray-600 text-center mb-4">
-                    No completed orders found for the selected time period.
-                  </p>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isRefreshQueued}
-                    className={secondaryButtonClass}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                    {isRefreshing ? "Refreshing..." : "Refresh Data"}
-                  </button>
                 </div>
-              )}
-            </TabsContent>
-          </CardContent>
-        </Card>
-      </Tabs>
+
+                {/* Categories Table */}
+                <div className={`rounded-xl border overflow-hidden ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
+                  <div className={`px-4 py-3 border-b ${divider}`}>
+                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Categories (Sorted by Revenue)</h4>
+                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top categories sorted by highest revenue</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className={tableHeaderBg}>
+                        <tr>
+                          {["Rank", "Date", "Top Category", "Quantity Sold", "Revenue"].map((h) => (
+                            <th key={h} className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${isDarkMode ? "divide-slate-700" : "divide-[#f0ebe5]"}`}>
+                        {getSortedCategoriesTableData.map((item, i) => (
+                          <tr key={i} className={`transition-colors ${tableRowHover}`}>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${
+                                i === 0 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
+                                i === 1 ? "bg-slate-100 text-slate-700 border-slate-300" :
+                                i === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
+                                "bg-orange-50 text-orange-700 border-orange-200"
+                              }`}>#{i + 1}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <span className={`font-medium ${textPrimary}`}>{item.date}</span>
+                              </div>
+                            </td>
+                            <td className={`py-3 px-4 font-medium ${textPrimary}`}>{item.category}</td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
+                                {item.quantity.toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-orange-500">{formatCurrency(item.revenue)}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`h-64 flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+                  <Tag className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className={`font-bold text-lg mb-2 ${textPrimary}`}>No Category Data Found</p>
+                <p className={`text-center mb-4 text-sm ${textSecondary}`}>No completed orders found for the selected time period.</p>
+                <button onClick={handleRefresh} disabled={isRefreshing} className={secondaryButtonClass}>
+                  <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
+                  {isRefreshing ? "Refreshing..." : "Refresh Data"}
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      </div>
     </div>
   );
 }

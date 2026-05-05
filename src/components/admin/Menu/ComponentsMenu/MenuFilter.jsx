@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
-// Icons
+// ── Icons ─────────────────────────────────────────────────────────────────────
 const SearchIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -22,35 +22,28 @@ const XIcon = (props) => (
   </svg>
 );
 
-// Shared options
-const initialFilters = {
-  search: "",
-  category: "all",
-  type: "all",
-  available: "all", // "all" | "true" | "false"
-};
+// ── Options ───────────────────────────────────────────────────────────────────
+const initialFilters = { search: "", category: "all", type: "all", available: "all" };
 
 const typeOptions = [
-  { value: "all", label: "All Types" },
-  { value: "veg", label: "Veg" },
+  { value: "all",     label: "All Types" },
+  { value: "veg",     label: "Veg" },
   { value: "non-veg", label: "Non-Veg" },
 ];
 
 const availabilityOptions = [
-  { value: "all", label: "Any Status" },
-  { value: "true", label: "Available" },
+  { value: "all",   label: "Any Status" },
+  { value: "true",  label: "Available" },
   { value: "false", label: "Unavailable" },
 ];
 
-// Dropdown
+// ── FilterDropdown ────────────────────────────────────────────────────────────
 function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onToggle, isInModal = false }) {
   const ref = useRef(null);
 
   useEffect(() => {
     function handlePointerDown(event) {
-      if (isOpen && ref.current && !ref.current.contains(event.target)) {
-        onToggle();
-      }
+      if (isOpen && ref.current && !ref.current.contains(event.target)) onToggle();
     }
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
@@ -58,37 +51,43 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
 
   const selectedOption = options.find((opt) => String(opt.value) === String(selectedValue));
   const displayLabel = selectedOption ? selectedOption.label : options[0]?.label || "All";
+  const isActive = selectedValue !== "all" && selectedValue !== "";
 
   return (
     <div className={`relative w-full flex-shrink-0 overflow-visible ${isInModal ? "" : "md:w-auto"}`} ref={ref}>
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-11 w-full items-center justify-between rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-slate-700"
+        className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-orange-200 ${
+          isActive
+            ? "border-orange-400 bg-orange-50 text-orange-600 dark:border-orange-500/60 dark:bg-orange-500/10 dark:text-orange-300"
+            : "border-[#ede8e3] bg-white text-[#44403c] hover:border-[#d6cfc8] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600"
+        }`}
       >
-        <span className="mr-2">
-          {label}: <span className="font-semibold text-gray-900">{displayLabel}</span>
+        <span className="truncate">
+          {label}: <span className="font-bold">{displayLabel}</span>
         </span>
-        <ChevronDownIcon className={`h-4 w-4 text-gray-500 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""} text-[#a8a29e] dark:text-slate-500`} />
       </button>
+
       {isOpen && (
-        <div className="absolute z-50 mt-2 max-h-60 w-full min-w-[200px] origin-top-right overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl focus:outline-none">
-          <div className="py-1">
-            {options.map((option) => (
-              <button
-                key={String(option.value)}
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => onSelect(option.value)}
-                className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm ${
-                  String(option.value) === String(selectedValue)
-                    ? "bg-orange-100 font-semibold text-orange-700"
-                    : "text-gray-700 hover:bg-orange-50"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+        <div className="absolute z-50 mt-1.5 w-full min-w-[160px] overflow-hidden rounded-lg border border-[#ede8e3] bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <div className="max-h-[160px] overflow-y-auto">
+          {options.map((option) => (
+            <button
+              key={String(option.value)}
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onSelect(option.value)}
+              className={`block w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
+                String(option.value) === String(selectedValue)
+                  ? "bg-[#f7f3ef] font-semibold text-orange-500 dark:bg-slate-800 dark:text-orange-300"
+                  : "text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
           </div>
         </div>
       )}
@@ -96,33 +95,29 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
   );
 }
 
-// Mobile modal
+// ── FilterModal (mobile) ──────────────────────────────────────────────────────
 function FilterModal({ isOpen, onClose, children }) {
   const modalRef = useRef(null);
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
-    if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
-  };
-
   return (
     <div
       className="fixed inset-0 z-40 flex items-start justify-center bg-black/45 pt-16 backdrop-blur-[2px] md:hidden"
-      onClick={handleOverlayClick}
+      onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target)) onClose(); }}
     >
       <div
         ref={modalRef}
-        className="relative mx-4 max-h-[82vh] w-full max-w-md overflow-y-auto rounded-2xl border border-orange-100 bg-white/95 p-5 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
-        onClick={(e) => e.stopPropagation()} // Stop propagation to prevent modal from closing when clicking inside
+        className="relative mx-4 max-h-[82vh] w-full max-w-md overflow-y-auto rounded-xl border border-[#ede8e3] bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-[#1e293b]"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100">Filters</h3>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-orange-100 hover:text-orange-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#a8a29e] hover:bg-[#f7f3ef] hover:text-[#1c1917] dark:hover:bg-slate-700 dark:hover:text-slate-100"
           >
-            <XIcon className="h-5 w-5" />
+            <XIcon className="h-4 w-4" />
           </button>
         </div>
         {children}
@@ -131,33 +126,27 @@ function FilterModal({ isOpen, onClose, children }) {
   );
 }
 
-// Filter controls row
+// ── FilterControls ────────────────────────────────────────────────────────────
 function FilterControls({
-  filters,
-  openDropdown,
-  handleSearchChange,
-  handleToggleDropdown,
-  handleSelectFilter,
-  handleResetFilters,
-  categoryOptions,
-  isInModal = false,
-  showSearch = true
+  filters, openDropdown, handleSearchChange, handleToggleDropdown,
+  handleSelectFilter, handleResetFilters, categoryOptions,
+  isInModal = false, showSearch = true,
 }) {
   return (
     <>
       {showSearch && (
-        <div className="relative flex-grow rounded-xl border border-orange-200 bg-white shadow-sm md:min-w-[250px]">
+        <div className="relative flex-grow md:min-w-[220px]">
           <label htmlFor="search" className="sr-only">Search</label>
+          <SearchIcon className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#a8a29e]" />
           <input
             type="search"
             name="search"
             id="search"
             value={filters.search}
             onChange={handleSearchChange}
-            className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 py-2 pl-10 text-sm outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            className="h-9 w-full rounded-lg border border-[#ede8e3] bg-white pl-9 pr-3 text-xs text-[#1c1917] outline-none transition hover:border-[#d6cfc8] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-500"
             placeholder="Search by name or category..."
           />
-          <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         </div>
       )}
 
@@ -172,7 +161,7 @@ function FilterControls({
       />
 
       <FilterDropdown
-        label="Food Type"
+        label="Type"
         options={typeOptions}
         selectedValue={filters.type}
         isOpen={openDropdown === "type"}
@@ -194,22 +183,17 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className="h-11 w-full flex-shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-orange-600 md:w-auto"
+        className="h-9 w-full flex-shrink-0 rounded-lg bg-orange-500 px-3 text-xs font-semibold text-white transition hover:bg-orange-600 dark:hover:bg-orange-600 md:w-auto"
       >
-        Reset Filters
+        Reset
       </button>
     </>
   );
 }
 
-// Main
+// ── Main export ───────────────────────────────────────────────────────────────
 export default function MenuFilter({
-  onFilterChange,
-  categories,
-  value,
-  onResetNotify,
-  layout = "auto",
-  showSearch = true,
+  onFilterChange, categories, value, onResetNotify, layout = "auto", showSearch = true,
 }) {
   const isControlled = value != null && typeof onFilterChange === "function";
   const isPanelLayout = layout === "panel";
@@ -218,10 +202,7 @@ export default function MenuFilter({
   const filters = isControlled ? value : uncontrolledFilters;
 
   const setFilters = useCallback(
-    (next) => {
-      if (isControlled) onFilterChange(next);
-      else setUncontrolledFilters(next);
-    },
+    (next) => { if (isControlled) onFilterChange(next); else setUncontrolledFilters(next); },
     [isControlled, onFilterChange]
   );
 
@@ -234,36 +215,20 @@ export default function MenuFilter({
   }, [filters, isControlled, onFilterChange]);
 
   const update = useCallback((partial) => setFilters({ ...filters, ...partial }), [filters, setFilters]);
-
-  const handleToggleDropdown = useCallback((name) => {
-    setOpenDropdown((prev) => (prev === name ? null : name));
-  }, []);
-
-  const handleMobileToggleDropdown = useCallback((name) => {
-    setMobileOpenDropdown((prev) => (prev === name ? null : name));
-  }, []);
-
-  const handleSelectFilter = useCallback(
-    (name, value) => {
-      const normalized = name === "available" ? String(value) : value;
-      update({ [name]: normalized });
-      setOpenDropdown(null);
-      setMobileOpenDropdown(null);
-      // Don't close modal when selecting filter in mobile
-    },
-    [update]
-  );
-
+  const handleToggleDropdown = useCallback((name) => setOpenDropdown((prev) => (prev === name ? null : name)), []);
+  const handleMobileToggleDropdown = useCallback((name) => setMobileOpenDropdown((prev) => (prev === name ? null : name)), []);
+  const handleSelectFilter = useCallback((name, value) => {
+    update({ [name]: name === "available" ? String(value) : value });
+    setOpenDropdown(null);
+    setMobileOpenDropdown(null);
+  }, [update]);
   const handleSearchChange = useCallback((e) => update({ search: e.target.value }), [update]);
-
   const handleResetFilters = useCallback(() => {
     update(initialFilters);
     setOpenDropdown(null);
     setMobileOpenDropdown(null);
     setIsModalOpen(false);
-    if (typeof onResetNotify === "function") {
-      onResetNotify();
-    }
+    if (typeof onResetNotify === "function") onResetNotify();
   }, [onResetNotify, update]);
 
   const categoryOptions = [
@@ -273,16 +238,12 @@ export default function MenuFilter({
 
   if (isPanelLayout) {
     return (
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-4">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
         <FilterControls
-          filters={filters}
-          openDropdown={openDropdown}
-          handleSearchChange={handleSearchChange}
-          handleToggleDropdown={handleToggleDropdown}
-          handleSelectFilter={handleSelectFilter}
-          handleResetFilters={handleResetFilters}
-          categoryOptions={categoryOptions}
-          showSearch={showSearch}
+          filters={filters} openDropdown={openDropdown}
+          handleSearchChange={handleSearchChange} handleToggleDropdown={handleToggleDropdown}
+          handleSelectFilter={handleSelectFilter} handleResetFilters={handleResetFilters}
+          categoryOptions={categoryOptions} showSearch={showSearch}
         />
       </div>
     );
@@ -290,47 +251,41 @@ export default function MenuFilter({
 
   return (
     <div>
-      <div className="hidden md:flex flex-wrap items-center gap-4 ">
+      {/* Desktop */}
+      <div className="hidden md:flex flex-wrap items-center gap-3">
         <FilterControls
-          filters={filters}
-          openDropdown={openDropdown}
-          handleSearchChange={handleSearchChange}
-          handleToggleDropdown={handleToggleDropdown}
-          handleSelectFilter={handleSelectFilter}
-          handleResetFilters={handleResetFilters}
-          categoryOptions={categoryOptions}
-          showSearch={showSearch}
+          filters={filters} openDropdown={openDropdown}
+          handleSearchChange={handleSearchChange} handleToggleDropdown={handleToggleDropdown}
+          handleSelectFilter={handleSelectFilter} handleResetFilters={handleResetFilters}
+          categoryOptions={categoryOptions} showSearch={showSearch}
         />
       </div>
 
+      {/* Mobile trigger */}
       <div className="md:hidden">
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:border-orange-300 hover:bg-orange-50"
+          className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#ede8e3] bg-white px-3 text-xs font-semibold text-[#78716c] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
         >
-          <FilterIcon className="h-4 w-4" />
+          <FilterIcon className="h-3.5 w-3.5" />
           Filters
         </button>
       </div>
 
+      {/* Mobile modal */}
       <FilterModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <FilterControls
-            filters={filters}
-            openDropdown={mobileOpenDropdown}
-            handleSearchChange={handleSearchChange}
-            handleToggleDropdown={handleMobileToggleDropdown}
-            handleSelectFilter={handleSelectFilter}
-            handleResetFilters={handleResetFilters}
-            categoryOptions={categoryOptions}
-            isInModal={true}
-            showSearch={showSearch}
+            filters={filters} openDropdown={mobileOpenDropdown}
+            handleSearchChange={handleSearchChange} handleToggleDropdown={handleMobileToggleDropdown}
+            handleSelectFilter={handleSelectFilter} handleResetFilters={handleResetFilters}
+            categoryOptions={categoryOptions} isInModal={true} showSearch={showSearch}
           />
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className="mt-2 h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-orange-600"
+            className="mt-1 h-9 w-full rounded-lg bg-orange-500 px-4 text-xs font-semibold text-white hover:bg-orange-600"
           >
             Apply Filters
           </button>

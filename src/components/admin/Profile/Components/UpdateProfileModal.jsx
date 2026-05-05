@@ -80,26 +80,26 @@ export const UpdateProfileModal = ({
         <motion.div
           variants={modalContentVariant}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-3xl rounded-2xl bg-gradient-to-br from-orange-100/60 via-orange-50/80 to-white p-[1px] shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
+          className="w-full max-w-3xl rounded-2xl border border-[#ede8e3] bg-white shadow-[0_20px_45px_-24px_rgba(249,115,22,0.4)] dark:border-slate-700 dark:bg-[#1e293b]"
         >
-          <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 dark:border-slate-700 dark:bg-slate-900/95 sm:max-h-[88vh]">
+          <div className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-[#1e293b] sm:max-h-[88vh]">
             <div className="p-4 sm:p-6 md:p-7">
-              <div className="mb-5 flex items-center gap-3 border-b border-orange-200 pb-4 dark:border-slate-700">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm">
+              <div className="mb-5 flex items-center gap-3 border-b border-[#ede8e3] pb-4 dark:border-slate-700">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500 shadow-sm">
                   <Building2 className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                  <h2 className="text-xl font-semibold text-[#1c1917] dark:text-slate-100">
                     Update Restaurant Profile
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-slate-300">
+                  <p className="text-sm text-[#78716c] dark:text-slate-400">
                     Keep profile details accurate for customers and staff.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-orange-300"
+                  className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[#f7f3ef] hover:text-orange-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-orange-300"
                   aria-label="Close profile modal"
                 >
                   <XCircleIcon className="h-6 w-6" />

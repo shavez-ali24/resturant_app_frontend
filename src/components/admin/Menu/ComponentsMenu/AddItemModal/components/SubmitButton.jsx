@@ -1,21 +1,22 @@
 import React from "react";
 
-const SubmitButton = ({ isAddingItem, onClose, submitText = "Add Product" }) => {
+const SubmitButton = ({ isAddingItem, onClose, submitText = "Add Product", loadingText }) => {
+  const busyText = loadingText || (submitText === "Save Changes" ? "Saving..." : "Adding...");
   return (
-    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button
         type="button"
         onClick={onClose}
-        className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 sm:w-auto"
+        className="h-9 w-full rounded-lg border border-[#ede8e3] bg-white px-4 text-sm font-semibold text-[#78716c] transition-colors hover:bg-[#f7f3ef] hover:text-[#1c1917] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 sm:w-auto"
       >
         Cancel
       </button>
       <button
         type="submit"
         disabled={isAddingItem}
-        className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className="h-9 w-full rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
-        {isAddingItem ? "Adding..." : submitText}
+        {isAddingItem ? busyText : submitText}
       </button>
     </div>
   );

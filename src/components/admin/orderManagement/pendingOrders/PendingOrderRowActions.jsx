@@ -12,6 +12,7 @@ const PendingOrderRowActions = ({
   setShowConfirmDelete,
   updateOrder,
   onCustomizationsClick,
+  isDarkMode = false,
 }) => {
   const orderItems = getOrderItemsList(order);
   const customizationCount = orderItems.filter((item) =>
@@ -21,50 +22,46 @@ const PendingOrderRowActions = ({
 
   return (
     <>
-      <td className="text-center border py-2">
+      {/* Kitchen Note */}
+      <td className="px-4 py-3">
         {hasCustomizations ? (
           <button
             onClick={() => onCustomizationsClick?.(order)}
-            className="mx-auto flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
+            className="inline-flex items-center gap-1 rounded-lg bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-orange-600"
             title={`${customizationCount} item(s) have customizations`}
           >
-            <Eye size={14} />
+            <Eye size={12} />
             Note
-            {customizationCount > 0 && (
-              <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold ml-1">
-                {customizationCount}
-              </span>
-            )}
+            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
+              {customizationCount}
+            </span>
           </button>
         ) : (
-          <span className="text-gray-500 italic text-xs" title="No customizations">
-            <Ban size={16} className="mx-auto opacity-50 text-orange-700" />
-          </span>
+          <Ban size={14} className={`mx-auto opacity-30 ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`} />
         )}
       </td>
 
-      <td className="border">
-        <div className="flex justify-center items-center w-full">
-          <StatusDropdown order={order} updateOrder={updateOrder} />
-        </div>
+      {/* Status */}
+      <td className="px-4 py-3">
+        <StatusDropdown order={order} updateOrder={updateOrder} />
       </td>
 
-      <td className="text-center border py-2">
-        <div className="flex items-center justify-center gap-1">
+      {/* Edit / Delete */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setEditingOrder?.(order)}
-            className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100"
+            className={`rounded-lg p-1.5 transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"}`}
             title="Edit order"
           >
-            <SquarePen size={16} />
+            <SquarePen size={15} />
           </button>
-
           <button
             onClick={() => setShowConfirmDelete?.(order)}
-            className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100"
+            className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
             title="Delete order"
           >
-            <Trash size={16} />
+            <Trash size={15} />
           </button>
         </div>
       </td>

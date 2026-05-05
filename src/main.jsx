@@ -16,6 +16,8 @@ const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const Menu = lazy(() => import("./components/admin/Menu/Menu.jsx"));
+const AddItemPage = lazy(() => import("./components/admin/Menu/AddItemPage.jsx"));
+const EditItemPage = lazy(() => import("./components/admin/Menu/EditItemPage.jsx"));
 const Filter = lazy(() => import("./components/Client/Filter"));
 const LoginPage = lazy(() => import("@/components/admin/adminLayout/LoginPage"));
 const Orders = lazy(() => import("./components/admin/orderManagement/pendingOrders/PendingOrders"));
@@ -145,6 +147,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             >
               <Route index element={<Admin />} />
               <Route path="menu" element={<Menu />} />
+              <Route path="menu/add" element={<AddItemPage />} />
+              <Route path="menu/edit/:itemId" element={<EditItemPage />} />
               {/* <Route path="orderlist" element={<OrdersList />} /> */}
               <Route path="completedorder" element={<CompletedOrders />} />
               <Route path="orders" element={<Orders />} />

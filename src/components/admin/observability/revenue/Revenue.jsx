@@ -1,26 +1,24 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  TableIcon, 
-  BarChartIcon, 
-  IndianRupee, 
-  ShoppingBag, 
-  TrendingUp, 
+import {
+  TableIcon,
+  BarChartIcon,
+  IndianRupee,
+  ShoppingBag,
+  TrendingUp,
   Clock,
   RefreshCw,
   CalendarDays,
   Calendar,
   ChevronDown,
   AlertCircle,
-  Receipt,
-  Percent,
 } from "lucide-react"
 import { useGetAnalyticsQuery } from "@/redux/adminRedux/adminAPI"
+import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice"
 import Heading from "../../common/Heading"
 import { useNotify } from "../../common/NotificationModal"
 import { useAdminTour } from "../../../../hooks/useAdminTour"
@@ -53,10 +51,7 @@ const getBackendDateParts = (value) => {
   }
 }
 
-const analyticsTabsListClass =
-  "h-12 rounded-2xl border border-orange-200/90 bg-slate-100 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_24px_-18px_rgba(15,23,42,0.45)] dark:border-slate-600 dark:bg-slate-900 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.2),0_10px_24px_-18px_rgba(2,6,23,0.9)]"
-const analyticsTabsTriggerClass =
-  "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current"
+
 
 // Format date for chart X-axis
 const formatChartDate = (dateString, range) => {
@@ -97,7 +92,23 @@ const groupChartDataByDate = (data, range) => {
 }
 
 export default function RevenueAnalytics() {
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark"
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false
+    const root = document.documentElement
+    return root.classList.contains("admin-dark") || root.classList.contains("dark")
+  })
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const root = document.documentElement
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"))
+    update()
+    const obs = new MutationObserver(update)
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => obs.disconnect()
+  }, [])
+
   useAdminTour(TOUR_KEYS.revenue, getRevenueSteps, isDarkMode, 700)
   // --- State ---
   const [timeRange, setTimeRange] = useState("7d")
@@ -294,27 +305,47 @@ export default function RevenueAnalytics() {
   }
 
   const secondaryButtonClass =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600"
+    "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
   const primaryButtonClass =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+    "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
   const inputClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2 focus:ring-orange-100 ${
+      isDarkMode
+        ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 hover:border-slate-500 focus:border-orange-500"
+        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8] focus:border-orange-400"
+    }`
   const selectTriggerClass =
-    "h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 sm:w-[190px]"
+    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 focus:ring-orange-100 sm:w-[190px] ${
+      isDarkMode
+        ? "border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500"
+        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8]"
+    }`
   const selectContentClass =
-    "z-[10050] rounded-xl border border-orange-200 bg-white p-1 shadow-xl"
+    `z-[10050] rounded-xl border p-1 shadow-xl ${
+      isDarkMode
+        ? "border-slate-700 bg-slate-900"
+        : "border-[#ede8e3] bg-white"
+    }`
   const selectItemClass =
-    "cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-700 hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
+    `cursor-pointer rounded-lg py-2 text-sm font-medium transition-colors ${
+      isDarkMode
+        ? "text-slate-200 data-[highlighted]:bg-slate-700 data-[highlighted]:text-slate-100"
+        : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] data-[highlighted]:text-[#1c1917]"
+    }`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 p-4 sm:p-6">
+    <div className={`min-h-screen p-4 sm:p-6 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
       {/* Header */}
       <div className="mb-6">
-        <div className="mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:p-5">
+        <div className={`mb-4 rounded-2xl border p-4 sm:p-5 ${
+          isDarkMode
+            ? "border-slate-700 bg-[#1e293b]"
+            : "border-[#ede8e3] bg-white shadow-sm"
+        }`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div data-tour="revenue-heading">
               <Heading title="Revenue Analytics" />
-              <p className="text-gray-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+              <p className={`mt-1 text-xs sm:text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                 Track your business earnings and growth
               </p>
             </div>
@@ -324,7 +355,7 @@ export default function RevenueAnalytics() {
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
                 <SelectTrigger className={selectTriggerClass}>
-                  <Calendar className="w-4 h-4 mr-2 text-orange-500" />
+                  <Calendar className="w-4 h-4 mr-2 shrink-0 text-orange-500" />
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
                 <SelectContent className={selectContentClass}>
@@ -338,86 +369,63 @@ export default function RevenueAnalytics() {
                 </SelectContent>
               </Select>
 
-              {/* Custom Date Range Button - Always Visible */}
+              {/* Custom Date Range Button */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all duration-200 sm:w-auto
-                    ${showDatePicker || isCustomRange
-                      ? 'border-orange-300 bg-orange-100 text-orange-700 shadow-inner' 
-                      : 'border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'}`}
+                  className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all sm:w-auto ${
+                    showDatePicker || isCustomRange
+                      ? "border-orange-400 bg-orange-500 text-white"
+                      : isDarkMode
+                        ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                        : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] hover:border-[#d6cfc8]"
+                  }`}
                 >
-                  <CalendarDays className="w-4 h-4" />
+                  <CalendarDays className="w-4 h-4 shrink-0 text-orange-500" />
                   <span>Custom Range</span>
                   {isCustomRange && (
-                    <span className="ml-1 text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full">
-                      ✓
-                    </span>
+                    <span className="ml-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">✓</span>
                   )}
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 shrink-0 text-current transition-transform ${showDatePicker ? "rotate-180" : ""}`} />
                 </button>
-                
+
                 {showDatePicker && (
-                  <div className="absolute right-0 top-12 z-[10050] w-full rounded-2xl border border-orange-200 bg-white p-4 shadow-xl sm:w-80 dark:border-slate-700 dark:bg-slate-900">
+                  <div className={`absolute right-0 top-12 z-[10050] w-full rounded-2xl border p-4 shadow-xl sm:w-80 ${
+                    isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+                  }`}>
                     <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-800 dark:text-slate-100 text-center border-b border-orange-100 dark:border-slate-700 pb-2">Select Custom Date Range</h4>
-                      
+                      <h4 className={`font-semibold text-center border-b pb-2 ${
+                        isDarkMode ? "text-slate-100 border-slate-700" : "text-[#1c1917] border-[#ede8e3]"
+                      }`}>Select Custom Date Range</h4>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">From Date</label>
-                          <input 
-                            type="date" 
-                            className={inputClass}
-                            value={fromDate} 
-                            onChange={e => setFromDate(e.target.value)} 
-                            max={toDate}
-                          />
+                          <label className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>From Date</label>
+                          <input type="date" className={inputClass} value={fromDate} onChange={e => setFromDate(e.target.value)} max={toDate} />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">To Date</label>
-                          <input 
-                            type="date" 
-                            className={inputClass}
-                            value={toDate} 
-                            onChange={e => setToDate(e.target.value)} 
-                            min={fromDate}
-                          />
+                          <label className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>To Date</label>
+                          <input type="date" className={inputClass} value={toDate} onChange={e => setToDate(e.target.value)} min={fromDate} />
                         </div>
                       </div>
-                      
+
                       {isCustomRange && (
-                        <div className="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                        <div className={`p-3 rounded-lg border ${isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-50 border-orange-200"}`}>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Custom Range Active</span>
-                            <button 
-                              onClick={handleClearCustomRange}
-                              className="text-xs text-orange-600 hover:text-orange-800 underline dark:text-orange-400 dark:hover:text-orange-300"
-                            >
-                              Clear
-                            </button>
+                            <span className={`text-sm font-medium ${isDarkMode ? "text-orange-400" : "text-orange-700"}`}>Custom Range Active</span>
+                            <button onClick={handleClearCustomRange} className={`text-xs underline ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-800"}`}>Clear</button>
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">
+                          <p className={`text-xs mt-1 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                             {formatFullDate(fromDate)} to {formatFullDate(toDate)}
                           </p>
                         </div>
                       )}
-                      
-                      <div className="flex justify-end items-center pt-3 border-t border-orange-100 dark:border-slate-700">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => setShowDatePicker(false)} 
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={handleCustomApply} 
-                            disabled={!fromDate || !toDate}
-                            className={primaryButtonClass}
-                          >
-                            Apply Range
-                          </button>
-                        </div>
+
+                      <div className={`flex justify-end gap-2 pt-3 border-t ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
+                        <button onClick={() => setShowDatePicker(false)} className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                          isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                        }`}>Cancel</button>
+                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass}>Apply Range</button>
                       </div>
                     </div>
                   </div>
@@ -429,192 +437,144 @@ export default function RevenueAnalytics() {
                 data-tour="revenue-refresh"
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
-                className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                className={secondaryButtonClass}
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                 <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
               </button>
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* Stats Cards - 2 Cards Only (Removed Avg Order Value) */}
+      {/* Stats Cards */}
       <div data-tour="revenue-cards" className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         {/* Total Revenue Card */}
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-xl">
-                <IndianRupee className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {formatCurrency(totalRevenue)}
-                </p>
-                <div className="mt-2 flex items-center text-xs text-orange-600">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  <span>From {totalOrders} orders</span>
-                </div>
+        <div className={`rounded-2xl border p-4 ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm"}`}>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-orange-100">
+              <IndianRupee className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium mb-1 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>Total Revenue</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+                {formatCurrency(totalRevenue)}
+              </p>
+              <div className="mt-2 flex items-center text-xs text-orange-600">
+                <TrendingUp className="w-3 h-3 mr-1 text-orange-600" />
+                <span>From {totalOrders} orders</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Total Orders Card */}
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-amber-100 to-amber-200 rounded-xl">
-                <ShoppingBag className="w-5 h-5 text-amber-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {totalOrders.toLocaleString()}
-                </p>
-                <div className="mt-2 flex items-center text-xs text-amber-600">
-                  <Clock className="w-3 h-3 mr-1" />
-                  <span>{timeRangeLabels[timeRange]}</span>
-                </div>
+        <div className={`rounded-2xl border p-4 ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm"}`}>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-orange-100">
+              <ShoppingBag className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium mb-1 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>Total Orders</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+                {totalOrders.toLocaleString()}
+              </p>
+              <div className="mt-2 flex items-center text-xs text-orange-600">
+                <Clock className="w-3 h-3 mr-1 text-orange-600" />
+                <span>{timeRangeLabels[timeRange]}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Main Chart/Table Section */}
       <Tabs defaultValue="chart" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-        <Card className="border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)]">
-          <CardHeader className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white p-4">
+        <div className={`rounded-2xl border ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm"}`}>
+          <div className={`border-b p-4 ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">
+                <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                   {timeRange === "1d" ? "Hourly Revenue" : "Revenue Trend"}
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className={`text-sm mt-1 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                   {getDisplayRangeText()}
                 </p>
               </div>
               
               <div className="flex items-center gap-4">
-                <TabsList className={analyticsTabsListClass}>
-                  <TabsTrigger 
-                    value="chart" 
-                    className={analyticsTabsTriggerClass}
-                  >
-                    <BarChartIcon className="w-4 h-4 mr-2" />
-                    Chart
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="table" 
-                    className={analyticsTabsTriggerClass}
-                  >
-                    <TableIcon className="w-4 h-4 mr-2" />
-                    Table
-                  </TabsTrigger>
-                  {/* <TabsTrigger 
-                    value="breakdown" 
-                    className="data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm px-4 py-2 rounded-lg font-medium"
-                  >
-                    <Receipt className="w-4 h-4 mr-2" />
-                    Breakdown
-                  </TabsTrigger> */}
-                </TabsList>
+                <div className={`flex h-10 items-center gap-1 rounded-xl border p-1 ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+                  {["chart", "table"].map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
+                        activeTab === tab
+                          ? "bg-orange-500 text-white shadow-sm"
+                          : isDarkMode
+                            ? "bg-transparent text-slate-400 hover:text-slate-100"
+                            : "bg-transparent text-[#78716c] hover:text-[#1c1917]"
+                      }`}
+                    >
+                      {tab === "chart" ? <BarChartIcon className="w-4 h-4 shrink-0" /> : <TableIcon className="w-4 h-4 shrink-0" />}
+                      {tab === "chart" ? "Chart" : "Table"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-4">
+          <div className="p-4">
             {/* Chart Tab */}
             <TabsContent value="chart" className="mt-0">
               {isLoading ? (
-                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
-                  <p className="text-gray-600 font-medium">Loading revenue data...</p>
-                  <p className="text-gray-500 text-sm mt-1">Please wait</p>
+                <div className={`h-[350px] flex flex-col items-center justify-center rounded-xl border ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-4"></div>
+                  <p className={`font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Loading revenue data...</p>
                 </div>
               ) : error ? (
-                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-                    <AlertCircle className="h-6 w-6" />
+                <div className={`h-[350px] flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-red-500/30 bg-red-500/10" : "border-red-200 bg-red-50"}`}>
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <AlertCircle className="h-6 w-6 text-red-500" />
                   </div>
-                  <p className="text-gray-800 font-bold text-lg mb-2">Failed to Load Data</p>
-                  <p className="text-gray-600 text-center mb-6">
-                    {error.message || "Unable to fetch revenue analytics."}
-                  </p>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isRefreshQueued}
-                    className={primaryButtonClass}
-                  >
-                    <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <p className={`font-bold text-lg mb-2 ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>Failed to Load Data</p>
+                  <p className={`text-center mb-6 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{error.message || "Unable to fetch revenue analytics."}</p>
+                  <button onClick={handleRefresh} disabled={isRefreshing} className={primaryButtonClass}>
+                    <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                     {isRefreshing ? "Refreshing..." : "Try Again"}
                   </button>
                 </div>
               ) : chartData.length > 0 ? (
                 <div className="h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart 
-                      data={chartData} 
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
+                    <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#f97316" stopOpacity={0.1} />
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid 
-                        strokeDasharray="3 3" 
-                        vertical={false} 
-                        stroke="#fed7aa" 
-                        strokeOpacity={0.5}
-                      />
-                      <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(tick) => formatChartDate(tick, timeRange)}
-                        axisLine={false} 
-                        tickLine={false}
-                        tick={{ fill: '#92400e', fontSize: 11 }}
-                        minTickGap={20}
-                      />
-                      <YAxis 
-                        tickFormatter={formatCompactNumber}
-                        axisLine={false} 
-                        tickLine={false}
-                        tick={{ fill: '#92400e', fontSize: 11 }}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#ede8e3"} />
+                      <XAxis dataKey="date" tickFormatter={(tick) => formatChartDate(tick, timeRange)} axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? "#94a3b8" : "#78716c", fontSize: 11 }} minTickGap={20} />
+                      <YAxis tickFormatter={formatCompactNumber} axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? "#94a3b8" : "#78716c", fontSize: 11 }} />
                       <Tooltip
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
-                            const data = payload[0].payload
+                            const d = payload[0].payload
                             return (
-                              <div className="bg-white p-3 border border-orange-200 shadow-lg rounded-lg min-w-[180px]">
-                                <p className="text-sm font-semibold text-gray-900 mb-2 border-b border-orange-100 pb-2">
-                                  {formatTableDate(label, timeRange)}
-                                </p>
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                      <span className="text-xs text-gray-600">Revenue:</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-orange-600">
-                                      {formatCurrency(data.revenue)}
-                                    </span>
+                              <div className={`p-3 border rounded-xl shadow-lg min-w-[180px] ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
+                                <p className={`text-sm font-semibold mb-2 border-b pb-2 ${isDarkMode ? "text-slate-100 border-slate-700" : "text-[#1c1917] border-[#ede8e3]"}`}>{formatTableDate(label, timeRange)}</p>
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between items-center gap-4">
+                                    <span className={`text-xs flex items-center gap-1.5 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}><span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>Revenue</span>
+                                    <span className="text-sm font-bold text-orange-500">{formatCurrency(d.revenue)}</span>
                                   </div>
-                                  {data.orders && (
-                                    <div className="flex justify-between items-center">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                        <span className="text-xs text-gray-600">Orders:</span>
-                                      </div>
-                                      <span className="text-sm font-medium text-gray-800">
-                                        {data.orders}
-                                      </span>
+                                  {d.orders && (
+                                    <div className="flex justify-between items-center gap-4">
+                                      <span className={`text-xs flex items-center gap-1.5 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}><span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Orders</span>
+                                      <span className={`text-sm font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{d.orders}</span>
                                     </div>
                                   )}
                                 </div>
@@ -623,57 +583,37 @@ export default function RevenueAnalytics() {
                           }
                           return null
                         }}
-                        cursor={{ stroke: '#f97316', strokeWidth: 2 }}
+                        cursor={{ stroke: "#f97316", strokeWidth: 1.5 }}
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="#f97316" 
-                        strokeWidth={3}
-                        fill="url(#revenueGradient)" 
-                        dot={{ r: 4, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
-                        activeDot={{ r: 6, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
-                      />
+                      <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2.5} fill="url(#revenueGradient)" dot={{ r: 3, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40 p-6">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                    <BarChartIcon className="h-6 w-6" />
+                <div className={`h-[350px] flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/20">
+                    <BarChartIcon className="h-6 w-6 text-orange-500" />
                   </div>
-                  <p className="text-gray-800 font-bold text-lg mb-2">No Revenue Data</p>
-                  <p className="text-gray-600 text-center mb-4">
+                  <p className={`font-bold text-lg mb-2 ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>No Revenue Data</p>
+                  <p className={`text-center mb-4 text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                     {timeRange === "custom" && fromDate && toDate
                       ? `No completed orders found between ${new Date(fromDate).toLocaleDateString()} and ${new Date(toDate).toLocaleDateString()}`
-                      : "No completed orders found for the selected time period."
-                    }
+                      : "No completed orders found for the selected time period."}
                   </p>
-                  <button
-                    onClick={() => setTimeRange("all")}
-                    className={secondaryButtonClass}
-                  >
-                    View All Time
-                  </button>
+                  <button onClick={() => setTimeRange("all")} className={secondaryButtonClass}>View All Time</button>
                 </div>
               )}
             </TabsContent>
 
             {/* Table Tab */}
             <TabsContent value="table" className="mt-0">
-              <div className="overflow-hidden rounded-xl border border-orange-200">
+              <div className={`overflow-hidden rounded-xl border ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
                 <Table containerClassName="max-h-[540px] overflow-x-auto overflow-y-auto">
-                  <TableHeader className="sticky top-0 z-10 bg-orange-50/70">
+                  <TableHeader className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800" : "bg-[#f7f3ef]"}`}>
                     <TableRow>
-                      <TableHead className="font-semibold text-gray-700 border-r border-orange-200">
-                        Date
-                      </TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-right border-r border-orange-200">
-                        Orders
-                      </TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-right">
-                        Revenue
-                      </TableHead>
+                      <TableHead className={`font-semibold ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Date</TableHead>
+                      <TableHead className={`font-semibold text-right ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Orders</TableHead>
+                      <TableHead className={`font-semibold text-right ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -681,34 +621,27 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mb-3"></div>
-                              <p className="text-sm font-medium text-gray-600">Loading table data...</p>
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-3"></div>
+                              <p className={`text-sm font-medium ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>Loading table data...</p>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : tableData.length > 0 ? (
                         tableData.map((row, index) => (
-                          <TableRow 
-                            key={index} 
-                            className="hover:bg-orange-50/30 border-b border-orange-100"
-                          >
-                            <TableCell className="py-3 border-r border-orange-100">
-                              <div className="flex items-center">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                                <span className="font-medium text-gray-800">
-                                  {row.displayDate}
-                                </span>
+                          <TableRow key={index} className={`border-b transition-colors ${isDarkMode ? "border-slate-700 hover:bg-slate-800/60" : "border-[#f0ebe5] hover:bg-[#faf7f4]"}`}>
+                            <TableCell className="py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <span className={`font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{row.displayDate}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right py-3 border-r border-orange-100">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200">
+                            <TableCell className="text-right py-3">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
                                 {row.orders}
                               </span>
                             </TableCell>
                             <TableCell className="text-right py-3">
-                              <span className="font-bold text-orange-700">
-                                {formatCurrency(row.revenue)}
-                              </span>
+                              <span className="font-bold text-orange-500">{formatCurrency(row.revenue)}</span>
                             </TableCell>
                           </TableRow>
                         ))
@@ -716,15 +649,14 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                                <TableIcon className="h-5 w-5" />
+                              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/20">
+                                <TableIcon className="h-5 w-5 text-orange-500" />
                               </div>
-                              <p className="mb-2 font-bold text-gray-700">No Data Available</p>
-                              <p className="max-w-md text-sm text-gray-600">
+                              <p className={`mb-2 font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>No Data Available</p>
+                              <p className={`max-w-md text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                                 {timeRange === "custom" && fromDate && toDate
                                   ? `No revenue records found between ${new Date(fromDate).toLocaleDateString()} and ${new Date(toDate).toLocaleDateString()}`
-                                  : "No revenue records found for the selected time period"
-                                }
+                                  : "No revenue records found for the selected time period"}
                               </p>
                             </div>
                           </TableCell>
@@ -735,67 +667,29 @@ export default function RevenueAnalytics() {
                 
                 {/* Table Footer */}
                 {tableData.length > 0 && (
-                  <div className="border-t border-orange-200 bg-gradient-to-r from-orange-50/70 to-amber-50/70 px-4 py-3">
+                  <div className={`border-t px-4 py-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="text-sm text-gray-600">
-                        Showing <span className="font-bold text-orange-700">{tableData.length}</span> records
+                      <div className={`text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
+                        Showing <span className="font-bold text-orange-500">{tableData.length}</span> records
                         {timeRange === "custom" && fromDate && toDate && (
                           <span className="ml-2 text-xs">
                             ({new Date(fromDate).toLocaleDateString()} - {new Date(toDate).toLocaleDateString()})
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-sm font-medium text-gray-700">
-                          Total Revenue:
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-orange-700">
-                            {formatCurrency(tableData.reduce((sum, row) => sum + row.revenue, 0))}
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Total Revenue:</span>
+                        <span className="text-lg font-bold text-orange-500">
+                          {formatCurrency(tableData.reduce((sum, row) => sum + row.revenue, 0))}
+                        </span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
             </TabsContent>
-
-            {/* Breakdown Tab */}
-            <TabsContent value="breakdown" className="mt-0">
-              {isLoading ? (
-                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50/40">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
-                  <p className="text-gray-600 font-medium">Loading breakdown data...</p>
-                  <p className="text-gray-500 text-sm mt-1">Please wait</p>
-                </div>
-              ) : error ? (
-                <div className="h-[350px] flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-                    <AlertCircle className="h-6 w-6" />
-                  </div>
-                  <p className="text-gray-800 font-bold text-lg mb-2">Failed to Load Breakdown</p>
-                  <p className="text-gray-600 text-center mb-6">
-                    {error.message || "Unable to fetch revenue breakdown."}
-                  </p>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isRefreshQueued}
-                    className={primaryButtonClass}
-                  >
-                    <RefreshCw className={`w-4 h-4 inline mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                    {isRefreshing ? "Refreshing..." : "Try Again"}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-              
-                 
-                </div>
-              )}
-            </TabsContent>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </Tabs>
     </div>
   )

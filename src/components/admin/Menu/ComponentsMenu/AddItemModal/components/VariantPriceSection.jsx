@@ -9,12 +9,12 @@ const VariantPriceSection = ({ variantRates, errors, handleChange, setFormData }
   
   return (
     <div data-field="variantRates">
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-500">
         Variant Prices (₹) *
       </label>
 
       {globalError && (
-        <p className="mb-2 flex items-center gap-1 text-xs text-red-600">
+        <p className="mb-2 flex items-center gap-1 text-xs text-red-500">
           <ExclamationCircleIcon className="h-4 w-4" />
           {globalError}
         </p>
@@ -33,7 +33,7 @@ const VariantPriceSection = ({ variantRates, errors, handleChange, setFormData }
         ))}
       </div>
       
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="mt-2 text-xs text-[#a8a29e] dark:text-slate-500">
         * At least one variant price is required
       </p>
     </div>

@@ -4,14 +4,16 @@ import { FormField } from './commanProfile/FormField';
 
 const UpdateCoreProfileForm = ({ formData, handleChange }) => (
     <FormCard title="Restaurant Details" customIndex={1}>
-        <FormField
-            label="Address"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            placeholder="e.g. 123 Main St, New Delhi"
-        />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="sm:col-span-2 lg:col-span-3">
+                <FormField
+                    label="Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="e.g. 123 Main St, New Delhi"
+                />
+            </div>
             <FormField
                 label="Phone Number"
                 name="phoneNumber"

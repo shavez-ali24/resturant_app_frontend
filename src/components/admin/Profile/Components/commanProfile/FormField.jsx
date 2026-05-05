@@ -19,15 +19,15 @@ export const FormField = ({
   };
 
   const hasError = Boolean(error);
-  const inputClassName = `h-11 w-full rounded-xl border bg-white px-3 text-sm text-gray-800 shadow-sm transition-all outline-none placeholder:text-gray-400 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 ${
+  const inputClassName = `h-9 w-full rounded-lg border bg-white px-3 text-sm text-[#1c1917] transition-all outline-none placeholder:text-[#a8a29e] dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 ${
     hasError
-      ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-200 dark:border-red-500/70 dark:focus:border-red-400"
-      : "border-orange-200 hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-600 dark:hover:border-orange-400"
+      ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:border-red-500/70 dark:focus:border-red-400"
+      : "border-[#ede8e3] hover:border-[#d6cfc8] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-600 dark:hover:border-slate-500 dark:focus:border-orange-500 dark:focus:ring-orange-500/20"
   }`;
 
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-slate-200">
+      <label className="mb-1 block text-xs font-semibold text-[#78716c] dark:text-slate-400">
         {label}
       </label>
       <input

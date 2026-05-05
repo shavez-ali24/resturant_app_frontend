@@ -933,10 +933,10 @@ const BillPage = ({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] ${
+        className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.4)] ${
           isDarkMode
-            ? "border-slate-700 bg-slate-950 text-slate-100 shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
-            : "border-orange-100 bg-white"
+            ? "border-slate-700 bg-[#1e293b] text-slate-100"
+            : "border-[#ede8e3] bg-white"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -944,12 +944,12 @@ const BillPage = ({
         <div
           className={`flex items-center justify-between border-b p-4 ${
             isDarkMode
-              ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800"
-              : "border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white"
+              ? "border-slate-700 bg-slate-800/60"
+              : "border-[#ede8e3] bg-[#f7f3ef]"
           }`}
         >
           <div className="flex items-center gap-2">
-            <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
+            <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
               Order Details & Bill
             </h3>
             {isStaff && !isEditMode && (
@@ -1370,16 +1370,16 @@ const BillPage = ({
         {/* Footer */}
         <div className={`flex justify-end gap-3 border-t p-4 ${
           isDarkMode
-            ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800"
-            : "border-orange-100 bg-gradient-to-r from-orange-50/70 to-white"
+            ? "border-slate-700 bg-slate-800/40"
+            : "border-[#ede8e3] bg-[#f7f3ef]"
         }`}>
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+              className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
                 isDarkMode
-                  ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
-                  : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50"
+                  ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                  : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
               }`}
             >
               Cancel
@@ -1388,10 +1388,10 @@ const BillPage = ({
           
           <button
             onClick={onClose}
-            className={`h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+            className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
               isDarkMode
-                ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
-                : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50"
+                ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
             }`}
           >
             Close
@@ -1399,7 +1399,7 @@ const BillPage = ({
 
           <button
             onClick={handlePrint}
-            className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
+            className="flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
           >
             Print Bill
           </button>

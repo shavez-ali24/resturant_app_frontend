@@ -113,8 +113,8 @@ export function SiteHeader({
       {/* Main Header */}
       <header className={`sticky top-0 z-30 w-full border-b shadow-sm backdrop-blur-sm ${
         isDarkMode
-          ? "border-slate-700 bg-gradient-to-r from-slate-950/95 via-slate-900/95 to-slate-900/95"
-          : "border-orange-200 bg-gradient-to-r from-orange-50/95 to-orange-200/95"
+          ? "border-slate-700/60 bg-[#0f172a]/95"
+          : "border-[#ede8e3] bg-white/95"
       }`}>
         <div className="flex h-14 w-full flex-wrap items-center justify-between gap-2 px-3 md:px-6">
           {/* Left Side - Menu Toggle */}

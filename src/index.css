@@ -31,17 +31,27 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-     --color-desktop: hsl(120, 70%, 50%); /* Green */
-  --color-mobile: hsl(30, 100%, 50%); /* Orange */
-  ;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --color-desktop: hsl(120, 70%, 50%);
+    --color-mobile: hsl(30, 100%, 50%);
+
+    /* ── Admin sidebar — warm white ── */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 28 10% 12%;
+    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 30% 96%;
+    --sidebar-accent-foreground: 28 10% 12%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 24 95% 53%;
+
+    /* ── Admin page background — warm cream ── */
+    --admin-bg: #f7f3ef;
+    --admin-card: #ffffff;
+    --admin-border: #ede8e3;
+    --admin-text: #1c1917;
+    --admin-text-muted: #78716c;
+  }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -66,16 +76,18 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
-  ;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --chart-5: 340 75% 55%;
+
+    /* ── Admin sidebar dark ── */
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 24 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-accent: 222 47% 11%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 222 47% 14%;
+    --sidebar-ring: 24 95% 53%;
+  }
 }
 
 @layer base {
@@ -593,6 +605,187 @@
   background-color: rgba(15, 23, 42, 0.95) !important;
   border-color: rgba(100, 116, 139, 0.35) !important;
 }
+
+/* ============================================================
+   ADMIN PREMIUM UI — Table, Cards, Buttons
+   ============================================================ */
+
+/* ── Add Item Page — always-visible scrollbar on col 2 ── */
+/* On laptop (lg+), grid rows must have a fixed height for overflow-y:scroll to work */
+@media (min-width: 1024px) {
+  .add-item-grid {
+    grid-template-rows: 1fr;
+  }
+  .add-item-grid > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+.add-item-col2-scroll {
+  overflow-y: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: #d6cfc8 #f0ebe5;
+}
+.add-item-col2-scroll::-webkit-scrollbar {
+  width: 6px;
+  display: block !important;
+}
+.add-item-col2-scroll::-webkit-scrollbar-track {
+  background: #f0ebe5;
+  border-radius: 999px;
+}
+.add-item-col2-scroll::-webkit-scrollbar-thumb {
+  background-color: #d6cfc8;
+  border-radius: 999px;
+  min-height: 40px;
+}
+.add-item-col2-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #a8a29e;
+}
+.admin-dark .add-item-col2-scroll {
+  scrollbar-color: #475569 #1e293b;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}
+
+/* ── Admin page wrapper ── */
+.admin-page-bg {
+  background-color: #f7f3ef;
+}
+.admin-dark .admin-page-bg {
+  background-color: #0f172a;
+}
+
+/* ── Premium admin table ── */
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ede8e3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+}
+.admin-table thead tr {
+  background: #f7f3ef;
+}
+.admin-table thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a8a29e;
+  border-bottom: 1px solid #ede8e3;
+  white-space: nowrap;
+}
+.admin-table tbody tr {
+  border-bottom: 1px solid #f5f0eb;
+  transition: background 0.1s ease;
+}
+.admin-table tbody tr:last-child {
+  border-bottom: none;
+}
+.admin-table tbody tr:hover {
+  background: #faf7f4;
+}
+.admin-table tbody td {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #1c1917;
+  vertical-align: middle;
+}
+
+/* Dark mode table */
+.admin-dark .admin-table {
+  background: #1e293b;
+  border-color: #334155;
+}
+.admin-dark .admin-table thead tr {
+  background: #0f172a;
+}
+.admin-dark .admin-table thead th {
+  color: #64748b;
+  border-bottom-color: #334155;
+}
+.admin-dark .admin-table tbody tr {
+  border-bottom-color: #1e293b;
+}
+.admin-dark .admin-table tbody tr:hover {
+  background: #263348;
+}
+.admin-dark .admin-table tbody td {
+  color: #e2e8f0;
+}
+
+/* ── Admin card ── */
+.admin-card {
+  background: #ffffff;
+  border: 1px solid #ede8e3;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.admin-dark .admin-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* ── Admin primary button ── */
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+.admin-btn-primary:hover {
+  background: #ea580c;
+  box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+}
+.admin-btn-primary:active {
+  background: #c2410c;
+}
+
+/* ── Status badges — premium pill style ── */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-badge-pending  { background: #fef9c3; color: #854d0e; }
+.admin-badge-preparing{ background: #dcfce7; color: #166534; }
+.admin-badge-ready    { background: #dbeafe; color: #1e40af; }
+.admin-badge-completed{ background: #f0fdf4; color: #15803d; }
+.admin-badge-cancelled{ background: #fef2f2; color: #991b1b; }
+
+.admin-dark .admin-badge-pending  { background: rgba(234,179,8,0.15);  color: #fde047; }
+.admin-dark .admin-badge-preparing{ background: rgba(34,197,94,0.15);  color: #4ade80; }
+.admin-dark .admin-badge-ready    { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.admin-dark .admin-badge-completed{ background: rgba(34,197,94,0.12);  color: #4ade80; }
+.admin-dark .admin-badge-cancelled{ background: rgba(239,68,68,0.15);  color: #f87171; }
 
 /* ✅ GLOBAL ADMIN MOBILE SCROLL FIXES */
 @layer utilities {
