@@ -82,18 +82,13 @@ export default function NotificationBell() {
     const fresh = recent.filter((o) => o._id && o.status === "pending" && !knownOrderIds.current.has(o._id));
 
     if (fresh.length > 0) {
-      try {
-        notificationSound.currentTime = 0;
-        const p = notificationSound.play();
-        if (p?.catch) p.catch(() => {});
-      } catch { /* ignore */ }
       fresh.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
     }
 
     setLatestOrders(recent.slice(0, 10));
     const currentIds = new Set(recent.map((o) => o._id).filter(Boolean));
     knownOrderIds.current = new Set([...knownOrderIds.current].filter((id) => currentIds.has(id)));
-  }, [orders, notificationSound]);
+  }, [orders]);
 
   useEffect(() => {
     if (sseEvent?.type === "NEW_ORDER") {
