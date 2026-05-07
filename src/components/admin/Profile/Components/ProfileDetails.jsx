@@ -35,12 +35,12 @@ export default function ProfileDetails({ profileData }) {
     .replace(/^-+|-+$/g, "");
 
   const cardClass =
-    "overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-slate-950/40";
+    "overflow-hidden rounded-2xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b]";
   const headerClass =
-    "border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800";
-  const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-orange-700 dark:text-orange-300";
+    "border-b border-[#ede8e3] bg-[#f7f3ef] p-4 dark:border-slate-700 dark:bg-slate-800/60";
+  const titleRowClass = "flex items-center gap-2 text-lg font-semibold text-[#1c1917] dark:text-slate-100";
   const iconBadgeClass =
-    "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm";
+    "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 text-white shadow-sm";
   const categoryCount = Array.isArray(profileData?.categories)
     ? profileData.categories.length
     : 0;
@@ -120,7 +120,10 @@ export default function ProfileDetails({ profileData }) {
           />
           <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
           <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Total Tables" value={profileData?.tableNumbers} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Indoor Tables" value={profileData?.sections?.indoor?.tables ?? profileData?.tableNumbers ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Outdoor Tables" value={profileData?.sections?.outdoor?.tables ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooftop Tables" value={profileData?.sections?.rooftop?.tables ?? 0} />
+          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooms" value={profileData?.sections?.rooms?.rooms ?? 0} />
           <div className="sm:col-span-2">
             <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
           </div>
@@ -129,7 +132,7 @@ export default function ProfileDetails({ profileData }) {
       </div>
 
       {/* Financial & Order Modes Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div data-tour="profile-settings" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className={cardClass}>
           <div className={headerClass}>
             <h2 className={titleRowClass}>
@@ -165,7 +168,7 @@ export default function ProfileDetails({ profileData }) {
       </div>
 
       {/* Logo, QR & Categories Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div data-tour="profile-branding" className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className={`${cardClass} flex flex-col`}>
           <div className={headerClass}>
             <h2 className={titleRowClass}>
@@ -205,7 +208,7 @@ export default function ProfileDetails({ profileData }) {
                 <img src={getFinalQR()} alt="QR Code" className="mx-auto mb-3 h-40 w-40 rounded-lg border border-orange-100 object-contain" />
                 <button
                   onClick={handleQRDownload}
-                  className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
+                  className="h-10 w-full rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
                 >
                   Download QR
                 </button>
@@ -219,7 +222,7 @@ export default function ProfileDetails({ profileData }) {
           </div>
         </div>
 
-        <div className={`${cardClass} lg:col-span-2`}>
+        <div data-tour="profile-categories" className={`${cardClass} lg:col-span-2`}>
           <div className={headerClass}>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className={titleRowClass}>
@@ -228,7 +231,7 @@ export default function ProfileDetails({ profileData }) {
                 </span>
                 Menu Categories
               </h2>
-              <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+              <span className="rounded-full border border-[#ede8e3] bg-white px-2 py-0.5 text-xs font-semibold text-[#78716c] shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 {categoryCount}
               </span>
             </div>

@@ -1,439 +1,236 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  PlusCircleIcon, 
-  TrashIcon, 
-  ExclamationTriangleIcon,
-  ChevronUpIcon,
-  ChevronDownIcon
-} from "@heroicons/react/24/solid";
+import { Plus, Trash2, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectGroup,
+  SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
 const ComboItemsManager = ({
-  comboItems = [],
-  setComboItems,
-  menuItems = [],
-  errors = {},
-  foodType = "mixed",
-  isLoadingMenu = false,
-  discount = null,
-  comboPrice = null
+  comboItems = [], setComboItems, menuItems = [],
+  errors = {}, foodType = "mixed", isLoadingMenu = false,
+  discount = null, comboPrice = null,
 }) => {
   const [availableMenuItems, setAvailableMenuItems] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const MotionDiv = motion.div;
 
-  // Filter menu items based on food type and availability
+  // ── Logic (unchanged) ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!menuItems || menuItems.length === 0) {
-      setAvailableMenuItems([]);
-      return;
-    }
-
-    // Filter out combo items, deleted items, and unavailable items
-    const filtered = menuItems.filter(item => {
-      if (!item) return false;
-      
-      if (!item._id && !item.id) return false;
-
-      const isDeleted = item.deleted === true;
-      const isCombo = item.pricingType === "combo";
-      const isUnavailable = item.available === false;
-      
-      return !isDeleted && !isCombo && !isUnavailable;
-    });
-
-    // Apply food type filter
-    const typeFiltered = foodType === "mixed" 
-      ? filtered 
-      : filtered.filter(item => {
-          if (!item.type) return true;
-          return item.type === foodType || item.type === "mixed";
-        });
-
+    if (!menuItems?.length) { setAvailableMenuItems([]); return; }
+    const filtered = menuItems.filter(item =>
+      item && (item._id || item.id) && !item.deleted && item.pricingType !== "combo" && item.available !== false
+    );
+    const typeFiltered = foodType === "mixed"
+      ? filtered
+      : filtered.filter(item => !item.type || item.type === foodType || item.type === "mixed");
     setAvailableMenuItems(typeFiltered);
   }, [menuItems, foodType]);
 
   const addComboItem = () => {
     if (isLoadingMenu) return;
-    
-    setComboItems(prev => [
-      ...prev,
-      { 
-        menuItemId: "", 
-        variant: "", 
-        quantity: 1,
-        name: ""
-      }
-    ]);
+    setComboItems(prev => [...prev, { menuItemId: "", variant: "", quantity: 1, name: "" }]);
     setExpandedIndex(comboItems.length);
   };
 
   const removeComboItem = (index) => {
     setComboItems(prev => prev.filter((_, i) => i !== index));
-    if (expandedIndex === index) {
-      setExpandedIndex(null);
-    } else if (expandedIndex > index) {
-      setExpandedIndex(prev => prev - 1);
-    }
+    if (expandedIndex === index) setExpandedIndex(null);
+    else if (expandedIndex > index) setExpandedIndex(p => p - 1);
   };
 
   const handleComboItemChange = (index, field, value) => {
     setComboItems(prev => {
       const updated = [...prev];
-      
       if (field === "menuItemId") {
-        const selectedItem = availableMenuItems.find(item => {
-          const itemId = item._id || item.id;
-          return itemId === value;
-        });
-        
-        updated[index] = {
-          ...updated[index],
-          [field]: value,
-          name: selectedItem ? selectedItem.name : "",
-          variant: selectedItem?.pricingType === "variant" ? "" : updated[index].variant
-        };
-      } else if (field === "variant") {
-        updated[index][field] = value;
+        const sel = availableMenuItems.find(i => (i._id || i.id) === value);
+        updated[index] = { ...updated[index], [field]: value, name: sel?.name || "",
+          variant: sel?.pricingType === "variant" ? "" : updated[index].variant };
       } else if (field === "quantity") {
-        const quantity = parseInt(value) || 1;
-        updated[index][field] = quantity > 0 ? quantity : 1;
+        const q = parseInt(value) || 1;
+        updated[index][field] = q > 0 ? q : 1;
+      } else {
+        updated[index][field] = value;
       }
-      
       return updated;
     });
   };
 
   const handleQuantityChange = (index, delta) => {
-    const currentQty = comboItems[index]?.quantity || 1;
-    const newQty = Math.max(1, currentQty + delta);
-    handleComboItemChange(index, "quantity", newQty);
-  };
-
-  const toggleExpand = (index) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
+    handleComboItemChange(index, "quantity", Math.max(1, (comboItems[index]?.quantity || 1) + delta));
   };
 
   const getMenuItemVariants = (menuItemId) => {
     if (!menuItemId) return [];
-    
-    const item = availableMenuItems.find(item => {
-      const itemId = item._id || item.id;
-      return itemId === menuItemId;
-    });
-    
+    const item = availableMenuItems.find(i => (i._id || i.id) === menuItemId);
     if (!item || item.pricingType !== "variant") return [];
-    
-    const variants = [];
-    if (item.variantRates?.quarter?.price) {
-      variants.push({ value: "quarter", label: "Quarter" });
-    }
-    if (item.variantRates?.half?.price) {
-      variants.push({ value: "half", label: "Half" });
-    }
-    if (item.variantRates?.full?.price) {
-      variants.push({ value: "full", label: "Full" });
-    }
-    
-    return variants;
+    return ["quarter","half","full"].filter(k => item.variantRates?.[k]?.price)
+      .map(k => ({ value: k, label: k.charAt(0).toUpperCase() + k.slice(1) }));
   };
 
-  const getMenuItemInfo = (menuItemId) => {
-    if (!menuItemId) return null;
-    
-    const item = availableMenuItems.find(item => {
-      const itemId = item._id || item.id;
-      return itemId === menuItemId;
-    });
-    
-    return item;
+  const getMenuItemInfo = (id) => id ? availableMenuItems.find(i => (i._id || i.id) === id) : null;
+  const getVariantPrice = (id, variant) => {
+    const item = getMenuItemInfo(id);
+    return (!item || !variant || item.pricingType !== "variant") ? 0 : (item.variantRates?.[variant]?.price || 0);
   };
-
-  const getVariantPrice = (menuItemId, variant) => {
-    const item = getMenuItemInfo(menuItemId);
-    if (!item || !variant || item.pricingType !== "variant") return 0;
-    
-    return item.variantRates?.[variant]?.price || 0;
-  };
-
   const calculateItemTotal = (item) => {
-    if (!item.menuItemId) return 0;
-    
-    const menuItem = getMenuItemInfo(item.menuItemId);
-    if (!menuItem) return 0;
-    
-    let price = 0;
-    
-    if (menuItem.pricingType === "single") {
-      price = Number(menuItem.price) || 0;
-    } else if (menuItem.pricingType === "variant" && item.variant) {
-      price = Number(getVariantPrice(item.menuItemId, item.variant)) || 0;
-    }
-    
+    const m = getMenuItemInfo(item.menuItemId);
+    if (!m) return 0;
+    const price = m.pricingType === "single" ? Number(m.price) || 0
+      : m.pricingType === "variant" && item.variant ? Number(getVariantPrice(item.menuItemId, item.variant)) : 0;
     return price * (item.quantity || 1);
   };
+  const calculateComboValue = () => comboItems.reduce((t, i) => t + calculateItemTotal(i), 0);
+  const isItemAlreadyAdded = (id) => comboItems.some(i => i.menuItemId === id);
+  const getAvailableCount = () => availableMenuItems.filter(i => !isItemAlreadyAdded(i._id || i.id)).length;
 
-  const calculateComboValue = () => {
-    return comboItems.reduce((total, item) => total + calculateItemTotal(item), 0);
-  };
-
-  const calculateComboDiscount = (comboPrice, discount) => {
-    if (!discount?.active || !discount?.value || !comboPrice) return 0;
-    
-    const price = Number(comboPrice) || 0;
-    const discountValue = Number(discount.value) || 0;
-    
-    if (discountValue <= 0) return 0;
-    
-    if (discount.type?.toLowerCase() === "percentage") {
-      return (price * discountValue / 100);
-    } else {
-      return discountValue;
-    }
-  };
-
-  const calculateFinalComboPrice = (comboPrice, discount) => {
-    if (!comboPrice) return 0;
-    
-    const price = parseFloat(comboPrice);
-    const discountAmount = calculateComboDiscount(comboPrice, discount);
-    
-    return Math.max(0, price - discountAmount);
-  };
-
-  const isItemAlreadyAdded = (menuItemId) => {
-    return comboItems.some(item => item.menuItemId === menuItemId);
-  };
-
-  const getAvailableItemsCount = () => {
-    return availableMenuItems.filter(item => {
-      const itemId = item._id || item.id;
-      return !isItemAlreadyAdded(itemId);
-    }).length;
-  };
+  // ── Shared classes ────────────────────────────────────────────────────────
+  const triggerCls = (hasErr) =>
+    `h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 ${
+      hasErr ? "border-red-400 bg-red-50" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600"
+    }`;
+  const dropdownCls = "rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900";
+  const itemCls = "cursor-pointer rounded-md text-sm text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] dark:text-slate-200 dark:data-[highlighted]:bg-slate-700";
+  const labelCls = "mb-1 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400";
 
   return (
-    <div className="space-y-4">
-      {/* Header Section */}
+    <div className="space-y-3">
+      {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Combo Items *
-          </label>
-          <p className="text-xs text-gray-500">
+          <label className={labelCls}>Combo Items <span className="text-orange-500">*</span></label>
+          <p className="text-xs text-[#a8a29e] dark:text-slate-500">
             {isLoadingMenu ? "Loading menu items..." : "Select items to include in this combo"}
           </p>
         </div>
-        
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
           {!isLoadingMenu && availableMenuItems.length > 0 && (
-            <span className="text-xs text-gray-600">
-              {getAvailableItemsCount()} items available
-            </span>
+            <span className="text-xs text-[#a8a29e] dark:text-slate-500">{getAvailableCount()} items available</span>
           )}
           <button
             type="button"
             onClick={addComboItem}
-            disabled={isLoadingMenu || getAvailableItemsCount() === 0}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            disabled={isLoadingMenu || getAvailableCount() === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-orange-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <PlusCircleIcon className="h-4 w-4" />
+            <Plus size={14} />
             {isLoadingMenu ? "Loading..." : "Add Item"}
           </button>
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Empty states */}
       {isLoadingMenu && (
-        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-          <p className="text-sm text-gray-500 mt-2">Loading menu items...</p>
+        <div className="rounded-lg border border-dashed border-[#ede8e3] py-8 text-center">
+          <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+          <p className="text-xs text-[#a8a29e] dark:text-slate-500">Loading menu items...</p>
         </div>
       )}
-
-      {/* No Items Available */}
       {!isLoadingMenu && menuItems.length === 0 && (
-        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
-          <p className="text-gray-500">No menu items found in database</p>
-          <p className="text-sm text-gray-400 mt-1">
-            Create some regular menu items first to add to combos
-          </p>
+        <div className="rounded-lg border border-dashed border-[#ede8e3] py-8 text-center">
+          <p className="text-sm text-[#78716c]">No menu items found</p>
+          <p className="mt-1 text-xs text-[#a8a29e]">Create regular menu items first</p>
         </div>
       )}
-
-      {/* No Available Items After Filter */}
       {!isLoadingMenu && menuItems.length > 0 && availableMenuItems.length === 0 && (
-        <div className="rounded-xl border border-dashed border-orange-200 bg-white/90 py-8 text-center">
-          <p className="text-gray-500">No available items for combo</p>
-          <p className="text-sm text-gray-400 mt-1">
-            All items are either combos, deleted, or unavailable
-          </p>
+        <div className="rounded-lg border border-dashed border-[#ede8e3] py-8 text-center">
+          <p className="text-sm text-[#78716c]">No available items for combo</p>
         </div>
       )}
 
-      {/* Stats Bar */}
+      {/* Stats bar */}
       {!isLoadingMenu && comboItems.length > 0 && (
-        <div className="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div>
-              <span className="text-sm font-semibold text-gray-800">
-                {comboItems.length} item{comboItems.length !== 1 ? 's' : ''} in combo
-              </span>
-              <span className="ml-4 text-sm text-gray-600">
-                Total value: ₹{calculateComboValue()}
-              </span>
-              {comboPrice && (
-                <>
-                  <span className="ml-4 text-sm text-gray-600">
-                    Combo price: ₹{comboPrice}
-                  </span>
-                  {discount?.active && (
-                    <>
-                      <span className="text-sm text-green-600 ml-4">
-                        You save: ₹{calculateComboDiscount(comboPrice, discount)}
-                      </span>
-                      <span className="text-sm font-bold text-green-700 ml-4">
-                        Final price: ₹{calculateFinalComboPrice(comboPrice, discount)}
-                      </span>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-            {errors.comboItems && typeof errors.comboItems === 'string' && (
-              <span className="text-sm text-red-600 flex items-center gap-1">
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                {errors.comboItems}
-              </span>
-            )}
-          </div>
+        <div className="rounded-lg border border-[#ede8e3] bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <span className="text-xs font-semibold text-[#1c1917] dark:text-slate-100">
+            {comboItems.length} item{comboItems.length !== 1 ? "s" : ""} in combo
+          </span>
+          <span className="ml-3 text-xs text-[#78716c]">Total value: ₹{calculateComboValue()}</span>
+          {comboPrice && <span className="ml-3 text-xs text-[#78716c]">Combo price: ₹{comboPrice}</span>}
         </div>
       )}
 
-      {/* Combo Items List */}
+      {/* Items list */}
       {!isLoadingMenu && comboItems.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {comboItems.map((item, index) => {
             const menuItem = getMenuItemInfo(item.menuItemId);
             const variants = getMenuItemVariants(item.menuItemId);
             const isExpanded = expandedIndex === index;
             const itemTotal = calculateItemTotal(item);
-            
+
             return (
               <MotionDiv
                 key={index}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="overflow-hidden rounded-xl border border-orange-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-lg border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800"
               >
-                {/* Item Header */}
-                <div 
-                  className="flex cursor-pointer items-center justify-between gap-2 bg-orange-50/60 p-4 transition-colors hover:bg-orange-50"
-                  onClick={() => toggleExpand(index)}
+                {/* Row header */}
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[#f7f3ef] dark:hover:bg-slate-700/60"
+                  onClick={() => setExpandedIndex(isExpanded ? null : index)}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center text-sm font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
                       {index + 1}
-                    </div>
+                    </span>
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <p className="text-sm font-semibold text-[#1c1917] dark:text-slate-100">
                         {menuItem ? menuItem.name : "Select menu item"}
                         {item.quantity > 1 && ` × ${item.quantity}`}
-                      </h4>
+                      </p>
                       {menuItem && (
-                        <p className="text-sm text-gray-500">
-                          {menuItem.pricingType === "single" 
-                            ? `₹${menuItem.price || 0}` 
-                            : item.variant 
+                        <p className="text-xs text-[#a8a29e] dark:text-slate-500">
+                          {menuItem.pricingType === "single"
+                            ? `₹${menuItem.price || 0}`
+                            : item.variant
                               ? `${item.variant} - ₹${getVariantPrice(item.menuItemId, item.variant)}`
                               : "Select variant"}
                         </p>
                       )}
                     </div>
                   </div>
-                  
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      ₹{itemTotal}
-                    </span>
+                    <span className="text-sm font-semibold text-orange-500">₹{itemTotal}</span>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeComboItem(index);
-                      }}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50"
+                      onClick={(e) => { e.stopPropagation(); removeComboItem(index); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-red-500 transition-colors hover:bg-red-50"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <Trash2 size={14} />
                     </button>
-                    {isExpanded ? (
-                      <ChevronUpIcon className="w-5 h-5 text-gray-500" />
-                    ) : (
-                      <ChevronDownIcon className="w-5 h-5 text-gray-500" />
-                    )}
+                    {isExpanded ? <ChevronUp size={14} className="text-[#a8a29e]" /> : <ChevronDown size={14} className="text-[#a8a29e]" />}
                   </div>
                 </div>
 
-                {/* Expanded Form */}
+                {/* Expanded form */}
                 {isExpanded && (
                   <MotionDiv
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
-                    className="border-t border-orange-100 bg-white p-4"
+                    className="border-t border-[#ede8e3] bg-[#f7f3ef] p-3 dark:border-slate-700 dark:bg-slate-900/60"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Menu Item Selection - FIXED */}
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {/* Menu Item */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Menu Item *
-                        </label>
+                        <label className={labelCls}>Menu Item *</label>
                         <Select
                           value={item.menuItemId || "none"}
-                          onValueChange={(val) => val !== "none" && handleComboItemChange(index, "menuItemId", val)}
+                          onValueChange={(v) => v !== "none" && handleComboItemChange(index, "menuItemId", v)}
                         >
-                          <SelectTrigger
-                            className={`h-11 w-full rounded-xl border px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
-                              !item.menuItemId
-                                ? "border-red-500 bg-red-50"
-                                : "border-orange-200 bg-white hover:border-orange-300"
-                            }`}
-                          >
+                          <SelectTrigger className={triggerCls(!item.menuItemId)}>
                             <SelectValue placeholder="Select an item" />
                           </SelectTrigger>
-                          <SelectContent className="max-h-60 overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
+                          <SelectContent className={`max-h-52 overflow-y-auto ${dropdownCls}`}>
                             <SelectGroup>
-                              <SelectItem value="none" disabled className="cursor-not-allowed rounded-lg text-sm text-gray-400 data-[disabled]:opacity-70">
-                                Select an item
-                              </SelectItem>
-                              {availableMenuItems.map(menuItem => {
-                                const itemId = menuItem._id || menuItem.id;
-                                const itemName = menuItem.name || "Unnamed Item";
-                                const itemPrice = menuItem.price || 0;
-                                const isVariant = menuItem.pricingType === "variant";
-                                const alreadyAdded = isItemAlreadyAdded(itemId);
-                                
+                              <SelectItem value="none" disabled className="text-xs text-[#a8a29e] dark:text-slate-500">Select an item</SelectItem>
+                              {availableMenuItems.map(m => {
+                                const id = m._id || m.id;
+                                const added = isItemAlreadyAdded(id) && item.menuItemId !== id;
                                 return (
-                                  <SelectItem 
-                                    key={itemId} 
-                                    value={itemId}
-                                    disabled={alreadyAdded && item.menuItemId !== itemId}
-                                    className="cursor-pointer rounded-lg text-sm text-gray-700 data-[disabled]:opacity-50 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
-                                  >
-                                    {itemName} 
-                                    {menuItem.pricingType === "single" 
-                                      ? ` (₹${itemPrice})` 
-                                      : isVariant
-                                        ? ` (Variant)`
-                                        : ""}
-                                    {alreadyAdded && item.menuItemId !== itemId && " - Already in combo"}
+                                  <SelectItem key={id} value={id} disabled={added} className={`${itemCls} text-xs`}>
+                                    {m.name}{m.pricingType === "single" ? ` (₹${m.price})` : m.pricingType === "variant" ? " (Variant)" : ""}
+                                    {added && " · Added"}
                                   </SelectItem>
                                 );
                               })}
@@ -441,129 +238,89 @@ const ComboItemsManager = ({
                           </SelectContent>
                         </Select>
                         {!item.menuItemId && (
-                          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <ExclamationTriangleIcon className="w-3.5 h-3.5" />
-                            Please select a menu item
-                          </p>
+                          <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />Select a menu item</p>
                         )}
                       </div>
 
-                      {/* Variant Selection - FIXED */}
+                      {/* Variant */}
                       {variants.length > 0 && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Variant *
-                          </label>
+                          <label className={labelCls}>Variant *</label>
                           <Select
                             value={item.variant || "none"}
-                            onValueChange={(val) => val !== "none" && handleComboItemChange(index, "variant", val)}
+                            onValueChange={(v) => v !== "none" && handleComboItemChange(index, "variant", v)}
                           >
-                            <SelectTrigger
-                              className={`h-11 w-full rounded-xl border px-3 text-sm font-medium text-gray-700 shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
-                                !item.variant
-                                  ? "border-red-500 bg-red-50"
-                                  : "border-orange-200 bg-white hover:border-orange-300"
-                              }`}
-                            >
+                            <SelectTrigger className={triggerCls(!item.variant)}>
                               <SelectValue placeholder="Select variant" />
                             </SelectTrigger>
-                            <SelectContent className="min-w-[140px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
+                            <SelectContent className={dropdownCls}>
                               <SelectGroup>
-                                <SelectItem value="none" disabled className="cursor-not-allowed rounded-lg text-sm text-gray-400 data-[disabled]:opacity-70">
-                                  Select variant
-                                </SelectItem>
-                                {variants.map(variant => (
-                                  <SelectItem 
-                                    key={variant.value} 
-                                    value={variant.value}
-                                    className="cursor-pointer rounded-lg text-sm text-gray-700 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
-                                  >
-                                    {variant.label} (₹{getVariantPrice(item.menuItemId, variant.value)})
+                                <SelectItem value="none" disabled className="text-xs text-[#a8a29e] dark:text-slate-500">Select variant</SelectItem>
+                                {variants.map(v => (
+                                  <SelectItem key={v.value} value={v.value} className={`${itemCls} text-xs`}>
+                                    {v.label} (₹{getVariantPrice(item.menuItemId, v.value)})
                                   </SelectItem>
                                 ))}
                               </SelectGroup>
                             </SelectContent>
                           </Select>
-                          {variants.length > 0 && !item.variant && (
-                            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                              <ExclamationTriangleIcon className="w-3.5 h-3.5" />
-                              Please select a variant for this item
-                            </p>
+                          {!item.variant && (
+                            <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />Select a variant</p>
                           )}
                         </div>
                       )}
 
                       {/* Quantity */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quantity
-                        </label>
+                        <label className={labelCls}>Quantity</label>
                         <div className="flex items-center">
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(index, -1)}
                             disabled={(item.quantity || 1) <= 1}
-                            className="flex h-11 w-11 items-center justify-center rounded-l-xl border border-orange-200 bg-white text-orange-700 transition-all duration-200 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-9 w-9 items-center justify-center rounded-l-lg border border-[#ede8e3] bg-white text-[#78716c] transition-colors hover:bg-[#f7f3ef] disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                             </svg>
                           </button>
-                          
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              value={item.quantity || 1}
-                              onChange={(e) => handleComboItemChange(index, "quantity", e.target.value)}
-                              min="1"
-                              className="h-11 w-full border-y border-orange-200 bg-white p-2.5 text-center text-sm font-medium outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-                            />
-                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                              <span className="text-xs text-gray-400 ml-3">Qty</span>
-                            </div>
-                          </div>
-                          
+                          <input
+                            type="number"
+                            value={item.quantity || 1}
+                            onChange={(e) => handleComboItemChange(index, "quantity", e.target.value)}
+                            min="1"
+                            className="h-9 w-full border-y border-[#ede8e3] bg-white text-center dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 text-sm font-semibold text-[#1c1917] outline-none focus:border-orange-400"
+                          />
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(index, 1)}
-                            className="flex h-11 w-11 items-center justify-center rounded-r-xl border border-orange-200 bg-white text-orange-700 transition-all duration-200 hover:bg-orange-50"
+                            className="flex h-9 w-9 items-center justify-center rounded-r-lg border border-[#ede8e3] bg-white text-[#78716c] transition-colors hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                           </button>
                         </div>
-                        <div className="flex justify-between items-center mt-1">
-                          <p className="text-xs text-gray-500">
-                            Quantity in combo
-                          </p>
-                          <p className="text-xs text-orange-600 font-medium">
-                            {item.quantity || 1} item{(item.quantity || 1) !== 1 ? 's' : ''}
-                          </p>
-                        </div>
+                        <p className="mt-1 text-right text-xs text-orange-500 font-medium">
+                          {item.quantity || 1} item{(item.quantity || 1) !== 1 ? "s" : ""}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Selected Item Info */}
+                    {/* Item info card */}
                     {menuItem && (
-                      <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/40 p-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{menuItem.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {menuItem.description?.substring(0, 80) || "No description"}...
+                      <div className="mt-3 rounded-lg border border-[#ede8e3] bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#1c1917] dark:text-slate-100">{menuItem.name}</p>
+                            <p className="mt-0.5 text-xs text-[#a8a29e] line-clamp-1 dark:text-slate-500">
+                              {menuItem.description?.substring(0, 80) || "No description"}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-orange-600">
-                              ₹{itemTotal}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {item.quantity || 1} × ₹{
-                                menuItem.pricingType === "single" 
-                                  ? menuItem.price 
-                                  : getVariantPrice(item.menuItemId, item.variant)
-                              }
+                          <div className="shrink-0 text-right">
+                            <p className="text-base font-bold text-orange-500">₹{itemTotal}</p>
+                            <p className="text-xs text-[#a8a29e] dark:text-slate-500">
+                              {item.quantity || 1} × ₹{menuItem.pricingType === "single" ? menuItem.price : getVariantPrice(item.menuItemId, item.variant)}
                             </p>
                           </div>
                         </div>
@@ -577,12 +334,11 @@ const ComboItemsManager = ({
         </div>
       )}
 
-      {/* Validation Error */}
-      {errors.comboItems && typeof errors.comboItems === 'string' && (
-        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-600 flex items-center gap-2">
-            <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">{errors.comboItems}</span>
+      {/* Validation error */}
+      {errors.comboItems && typeof errors.comboItems === "string" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+          <p className="flex items-center gap-1.5 text-xs text-red-500">
+            <AlertCircle size={12} />{errors.comboItems}
           </p>
         </div>
       )}

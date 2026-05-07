@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   CirclePlus,
@@ -16,10 +17,11 @@ import {
 } from "lucide-react";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
 import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
-import AddItemModal from "./ComponentsMenu/AddItemModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
 import { useNotify } from "../common/NotificationModal";
+import { useAdminTour } from "../../../hooks/useAdminTour";
+import { TOUR_KEYS, getMenuSteps } from "../../../utils/adminTour";
 
 import {
   useGetMenuQuery,
@@ -430,7 +432,7 @@ const TabButton = ({ active, onClick, children }) => (
     className={`relative px-3 pb-2 text-sm font-semibold transition ${
       active
         ? "text-orange-600"
-        : "text-gray-500 hover:text-gray-700 dark:text-slate-300 dark:hover:text-slate-100"
+        : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
     }`}
   >
     {children}
@@ -443,9 +445,15 @@ const TabButton = ({ active, onClick, children }) => (
 );
 
 const Menu = () => {
-  const { data: items = [], isLoading, refetch } = useGetMenuQuery();
+  const { data: items = [], isLoading, refetch } = useGetMenuQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: restaurantData } = useGetRestaurantProfileQuery();
-  
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const navigate = useNavigate();
+  const location = useLocation();
+  useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
+
   // Get user role
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
   const isAdmin = userRole === 'admin' || userRole === 'superadmin';
@@ -483,10 +491,26 @@ const Menu = () => {
   const [inventoryOpen, setInventoryOpen] = useState({});
   const [availabilityOverrides, setAvailabilityOverrides] = useState({});
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
+
+  // Refetch on every navigation to this page
+  useEffect(() => {
+    refetch();
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Store requested category from add/edit in a ref so categoryGroups effect can use it
+  const pendingCategoryRef = useRef(location.state?.selectCategory || "");
+
+  // Auto-select category passed from add/edit page — runs once on mount
+  useEffect(() => {
+    const cat = location.state?.selectCategory;
+    if (!cat) return;
+    pendingCategoryRef.current = cat;
+    // Clear state so browser back doesn't re-trigger
+    window.history.replaceState({}, "");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const notify = useNotify();
 
@@ -1104,6 +1128,20 @@ const Menu = () => {
       if (selectedCategory) setSelectedCategory("");
       return;
     }
+
+    // If we have a pending category from add/edit, try to select it first
+    if (pendingCategoryRef.current) {
+      const pending = pendingCategoryRef.current;
+      const match = categoryGroups.find(
+        (g) => normalizeCategoryKey(g.label) === normalizeCategoryKey(pending)
+      );
+      if (match) {
+        pendingCategoryRef.current = "";
+        setSelectedCategory(match.label);
+        return;
+      }
+    }
+
     const selectedKey = normalizeCategoryKey(selectedCategory);
     const exists = categoryGroups.some(
       (category) => normalizeCategoryKey(category.label) === selectedKey
@@ -1494,7 +1532,7 @@ const prepareFormData = (formData, file) => {
   );
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 px-2 py-3 dark:bg-none dark:bg-slate-950 sm:px-4 sm:py-4 md:px-6">
+    <div className="relative flex h-full min-h-0 flex-col bg-[#f7f3ef] px-2 py-3 dark:bg-[#0f172a] sm:px-4 sm:py-4 md:px-6">
       <MenuItemViewModal
         item={viewingItem}
         isOpen={!!viewingItem}
@@ -1509,38 +1547,14 @@ const prepareFormData = (formData, file) => {
         onConfirm={handleDeleteItem}
       />
 
-      <AddItemModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddItem}
-        restaurantCategories={restaurantCategories}
-        menuItems={normalizedItems}
-        onAddCategory={handleAddRestaurantCategory}
-        onRenameCategory={handleRenameRestaurantCategory}
-        onDeleteCategory={handleDeleteRestaurantCategory}
-      />
-
-      <AnimatePresence>
-        {editingItem && (
-          <EditItemModal
-            isOpen={!!editingItem}
-            item={editingItem}
-            onClose={() => setEditingItem(null)}
-            restaurantCategories={restaurantCategories}
-            menuItems={normalizedItems.filter((item) => item._id !== editingItem._id)}
-            onSubmit={handleUpdateItem}
-            onAddCategory={handleAddRestaurantCategory}
-            onRenameCategory={handleRenameRestaurantCategory}
-            onDeleteCategory={handleDeleteRestaurantCategory}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Normal menu content ── */}
+      <div className="contents">
 
       <div className="flex w-full flex-1 min-h-0 flex-col pb-6 px-4">
-        <div className="menu-no-anim mb-4 rounded-2xl border border-orange-100 bg-white/95 p-4 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
+        <div className="menu-no-anim mb-4 rounded-xl border border-[#ede8e3] bg-white p-4 dark:border-slate-700/60 dark:bg-[#1e293b]">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-bold text-gray-900 dark:text-slate-100">
+            <div data-tour="menu-heading" className="min-w-0 flex-1">
+              <h2 className="truncate text-lg font-bold text-[#1c1917] dark:text-slate-100">
                 Menu Management
               </h2>
             </div>
@@ -1552,24 +1566,25 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-12 w-full rounded-xl border border-orange-200 bg-white px-4 pl-10 text-xs text-gray-700 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-xs text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300 sm:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
                 aria-label="Toggle search"
               >
                 <Search size={18} />
               </button>
               <Button
+                data-tour="menu-filters-btn"
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                className={`inline-flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold shadow-sm transition-none sm:px-4 ${
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-none sm:px-4 ${
                   isFilterOpen
-                    ? "border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100"
-                    : "border-orange-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-orange-700"
+                    ? "border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
+                    : "border-orange-500 bg-orange-500 text-white hover:bg-orange-600"
                 }`}
               >
                 <SlidersHorizontal size={14} />
@@ -1586,12 +1601,12 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-12 w-full rounded-xl border border-orange-200 bg-white px-4 pl-10 text-base text-gray-700 shadow-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-sm text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
                 />
               </div>
             </div>
           )}
-          <div className="mt-4 flex flex-wrap items-center gap-4 border-b border-orange-100 pb-1 dark:border-slate-800">
+          <div className="mt-3 flex flex-wrap items-center gap-4 border-b border-[#ede8e3] pb-1 dark:border-slate-700/60">
             <TabButton
               active={activeTab === "editor"}
               onClick={() => setActiveTab("editor")}
@@ -1607,7 +1622,7 @@ const prepareFormData = (formData, file) => {
           </div>
 
           {isFilterOpen && (
-            <div className="mt-3 border-t border-orange-100 pt-3 dark:border-slate-800">
+            <div className="mt-3 border-t border-[#ede8e3] pt-3 dark:border-slate-700/60">
               <MenuFilter
                 value={filters}
                 onFilterChange={(v) =>
@@ -1623,14 +1638,14 @@ const prepareFormData = (formData, file) => {
         </div>
 
         {isAdmin && isCategoryManagerOpen && restaurantCategories.length > 1 && (
-          <div className="menu-no-anim mb-5 overflow-hidden rounded-3xl border border-orange-100 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(249,115,22,0.6)] dark:border-slate-800 dark:bg-slate-900/90 sm:p-5">
+          <div className="menu-no-anim mb-5 overflow-hidden rounded-xl border border-[#ede8e3] bg-white p-4 dark:border-slate-700/60 dark:bg-[#1e293b] sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
+                  <h3 className="text-base font-bold text-[#1c1917] dark:text-slate-100">
                     Manage Categories
                   </h3>
-                  <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                  <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {restaurantCategories.length}
                   </span>
                 </div>
@@ -1638,7 +1653,7 @@ const prepareFormData = (formData, file) => {
               <button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 aria-label="Close category manager"
                 title="Close"
               >
@@ -1654,11 +1669,11 @@ const prepareFormData = (formData, file) => {
                     <div
                       key={category}
                       data-category-chip={category}
-                      className={`group relative w-full max-w-none overflow-hidden rounded-md border px-2 py-1.5 shadow-sm transition ${
+                      className={`group relative w-full max-w-none overflow-hidden rounded-lg border px-2 py-1.5 transition ${
                         isActive
-                          ? "border-orange-400 bg-orange-50 shadow-md"
-                          : "border-orange-200 bg-white hover:border-orange-300 hover:shadow-md"
-                      } dark:border-slate-700 dark:bg-slate-950/60 dark:hover:border-slate-500`}
+                          ? "border-orange-400 bg-orange-50"
+                          : "border-[#ede8e3] bg-white hover:border-orange-300 hover:bg-[#f7f3ef]"
+                      } dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-slate-600`}
                     >
                       <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
                       <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
@@ -1666,12 +1681,14 @@ const prepareFormData = (formData, file) => {
                       <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
                         <button
                           type="button"
+                          data-tour="menu-drag-category"
                           onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                          className="order-1 inline-flex h-6 w-6 shrink-0 touch-none select-none items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/90 dark:text-orange-300 sm:order-2 sm:ml-auto"
-                          aria-label={`Drag ${category}`}
-                          title="Drag to reorder"
+                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-1.5 py-1 text-[#78716c] transition hover:bg-[#ede8e3] active:cursor-grabbing dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 sm:order-2 sm:ml-auto"
+                          aria-label={`Drag ${category} to reorder`}
+                          title="Hold and drag to reorder"
                         >
-                          <GripVertical size={12} />
+                          <GripVertical size={13} />
+                          <span className="text-[10px] font-semibold leading-none">drag</span>
                         </button>
                         <div className="order-2 min-w-0 flex-1 pr-3 sm:order-1">
                           <div className="truncate text-[13px] font-semibold text-gray-900 dark:text-slate-100">
@@ -1690,16 +1707,17 @@ const prepareFormData = (formData, file) => {
         <div className="flex flex-1 min-h-0 flex-col">
           {activeTab === "editor" ? (
             <div className="grid h-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:grid-cols-[280px_1fr] lg:grid-rows-1">
-              <div className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="flex items-center justify-between border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+              <div data-tour="menu-categories" className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
+              <div className="flex items-center justify-between border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#a8a29e] dark:text-slate-400">
                     Categories ({categoryGroups.length})
                   </p>
                 </div>
                 {isAdmin && (
                   <button
                     type="button"
+                    data-tour="menu-manage-btn"
                     onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
                     className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300"
                   >
@@ -1709,7 +1727,7 @@ const prepareFormData = (formData, file) => {
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {isLoading && categoryGroups.length === 0 ? (
-                  <div className="px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
+                  <div className="px-4 py-6 text-sm text-[#a8a29e] dark:text-slate-400">
                     Loading categories...
                   </div>
                 ) : (
@@ -1723,21 +1741,21 @@ const prepareFormData = (formData, file) => {
                           key={categoryKey}
                           type="button"
                           onClick={() => setSelectedCategory(category.label)}
-                          className={`group flex w-full items-center justify-between gap-3 border-l-4 px-4 py-3 text-left text-sm font-semibold transition ${
+                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 px-4 py-2.5 text-left text-sm font-semibold transition ${
                             isActive
-                              ? "border-orange-500 bg-orange-50/70 text-orange-700"
-                              : "border-transparent text-gray-700 hover:bg-orange-50/50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                              ? "border-orange-500 bg-[#fff7ed] text-orange-600"
+                              : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800/60"
                           }`}
                         >
-                          <span className="truncate">{category.label}</span>
-                          <span className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">{category.label}</span>
+                          <span className="shrink-0 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {category.items.length}
                           </span>
                         </button>
                       );
                     })}
                     {categoryGroups.length === 0 && (
-                      <div className="px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
+                      <div className="px-4 py-6 text-sm text-[#a8a29e] dark:text-slate-400">
                         No categories found yet.
                       </div>
                     )}
@@ -1746,12 +1764,12 @@ const prepareFormData = (formData, file) => {
               </div>
             </div>
 
-              <div className="flex min-h-0 flex-col rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+              <div className="flex min-h-0 flex-col rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
                   <div>
-                    <p className="text-base font-semibold text-gray-900 dark:text-slate-100">
+                    <p className="text-base font-semibold text-[#1c1917] dark:text-slate-100">
                       {selectedCategory || "All items"}
-                      <span className="ml-2 text-sm font-medium text-gray-500 dark:text-slate-400">
+                      <span className="ml-2 text-sm font-medium text-[#a8a29e] dark:text-slate-400">
                         ({menuEditorItems.length})
                       </span>
                     </p>
@@ -1760,8 +1778,9 @@ const prepareFormData = (formData, file) => {
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-700 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                        onClick={() => navigate("/admin/menu/add")}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500 bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 hover:border-orange-600"
+                        data-tour="menu-add-item-btn"
                       >
                         <CirclePlus size={14} />
                         Add New Item
@@ -1770,9 +1789,9 @@ const prepareFormData = (formData, file) => {
                   )}
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
+                <div data-tour="menu-item-list" className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#f0ebe5] pr-1 dark:divide-slate-700/60">
                   {isLoading ? (
-                    <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                    <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
                       Loading menu items...
                     </div>
                   ) : (
@@ -1820,18 +1839,19 @@ const prepareFormData = (formData, file) => {
                             onDragOver={(event) => handleDragOver(event, item._id)}
                             onDrop={(event) => event.preventDefault()}
                             onDragLeave={() => setDragOverId(null)}
-                            className={`group relative flex flex-col gap-3 px-4 py-3 pr-12 transition sm:flex-row sm:items-center sm:pr-4 ${
+                            className={`group relative flex min-w-0 flex-col gap-3 overflow-hidden px-4 py-3 pr-12 transition sm:flex-row sm:items-center sm:pr-4 ${
                               dragOverId === item._id
-                                ? "bg-orange-50/70"
-                                : "hover:bg-orange-50/60 dark:hover:bg-slate-800/60"
+                                ? "bg-[#f7f3ef]"
+                                : "hover:bg-[#faf7f4] dark:hover:bg-slate-800/60"
                             } cursor-pointer`}
                           >
                             {dragHandleProps && (
                               <button
                                 type="button"
+                                data-tour="menu-drag-item"
                                 {...dragHandleProps}
                                 onClick={(event) => event.stopPropagation()}
-                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-orange-200 bg-white/90 text-orange-600 shadow-sm transition hover:bg-orange-50 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300 sm:self-auto"
+                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
                                 aria-label="Drag to reorder"
                                 title="Drag to reorder"
                               >
@@ -1843,7 +1863,7 @@ const prepareFormData = (formData, file) => {
                               <img
                                 src={
                                   item?.image?.url ||
-                                  "https://via.placeholder.com/120x120?text=No+Image"
+                                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='11' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E"
                                 }
                                 alt={item?.name || "Menu item"}
                                 className="absolute inset-0 h-full w-full object-cover"
@@ -1853,11 +1873,11 @@ const prepareFormData = (formData, file) => {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <FoodTypeIndicator type={item?.type} />
-                                <span className="truncate text-sm font-semibold text-gray-900 dark:text-slate-100">
+                                <span className="truncate text-sm font-semibold text-[#1c1917] dark:text-slate-100 max-w-[140px] sm:max-w-none">
                                   {item?.name || "Unnamed Item"}
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                              <p className="text-xs text-[#a8a29e] dark:text-slate-400">
                                 {item?.pricingType === "variant"
                                   ? "Variant"
                                   : item?.pricingType === "combo"
@@ -1869,18 +1889,10 @@ const prepareFormData = (formData, file) => {
 
                             <div className="flex w-full flex-col items-start gap-1 sm:w-auto sm:items-end">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                                  {displayPrice || "—"}
-                                </span>
-                                {singleDetails?.hasDiscount && singleDetails.original != null && (
-                                  <span className="text-xs text-gray-400 line-through">
-                                    {formatCurrency(singleDetails.original)}
-                                  </span>
-                                )}
                                 <AvailabilityBadge available={isAvailable} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
-                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-gray-500 dark:text-slate-400">
+                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#a8a29e] dark:text-slate-400">
                                   {variantDetails.map((variant, index) => (
                                     <span key={variant.key} className="inline-flex items-center gap-1">
                                       <span>
@@ -1898,7 +1910,7 @@ const prepareFormData = (formData, file) => {
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-gray-500 dark:text-slate-400">
+                                <span className="text-[11px] text-[#a8a29e] dark:text-slate-400">
                                   {item?.pricingType === "combo" && comboPrice != null ? (
                                     <>Combo {formatCurrency(comboPrice)}</>
                                   ) : item?.pricingType === "single" && singleDetails?.current != null ? (
@@ -1924,11 +1936,11 @@ const prepareFormData = (formData, file) => {
                               >
                                 <button
                                   type="button"
-                                  onClick={() => setEditingItem(buildEditItem(item))}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm transition hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300"
+                                  onClick={() => navigate(`/admin/menu/edit/${item._id}`)}
+                                  className="rounded-lg p-1.5 text-[#78716c] transition-colors hover:bg-[#f7f3ef] hover:text-[#1c1917] dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                                   aria-label="Edit menu item"
                                 >
-                                  <Edit size={14} />
+                                  <Edit size={15} />
                                 </button>
                                 <button
                                   type="button"
@@ -1938,10 +1950,10 @@ const prepareFormData = (formData, file) => {
                                       name: item.name,
                                     })
                                   }
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-800 dark:bg-slate-950 dark:text-red-300"
+                                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-slate-700"
                                   aria-label="Delete menu item"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             )}
@@ -1950,7 +1962,7 @@ const prepareFormData = (formData, file) => {
                       })}
 
                       {menuEditorItems.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                        <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
                           No menu items found for this category.
                         </div>
                       )}
@@ -1960,16 +1972,16 @@ const prepareFormData = (formData, file) => {
               </div>
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="border-b border-orange-100 px-4 py-3 dark:border-slate-800">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
+              <div className="border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
                 <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                   Inventory
                 </p>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-orange-100 pr-1 dark:divide-slate-800">
+              <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#f0ebe5] pr-1 dark:divide-slate-700/60">
                 {isLoading ? (
-                  <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                  <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
                     Loading inventory...
                   </div>
                 ) : (
@@ -1987,7 +1999,7 @@ const prepareFormData = (formData, file) => {
                               onClick={() => toggleInventoryCategory(categoryKey)}
                               className="flex items-center gap-2 text-left"
                             >
-                              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                 {isOpen ? (
                                   <ChevronDown size={16} />
                                 ) : (
@@ -1997,7 +2009,7 @@ const prepareFormData = (formData, file) => {
                               <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                                 {category.label}
                               </span>
-                              <span className="text-xs text-gray-500 dark:text-slate-400">
+                              <span className="text-xs text-[#a8a29e] dark:text-slate-400">
                                 ({category.items.length})
                               </span>
                             </button>
@@ -2021,9 +2033,9 @@ const prepareFormData = (formData, file) => {
                           </div>
 
                           {isOpen && (
-                            <div className="border-t border-orange-100 bg-orange-50/40 dark:border-slate-800 dark:bg-slate-950/40">
+                            <div className="border-t border-[#ede8e3] bg-[#f7f3ef] dark:border-slate-700/60 dark:bg-slate-800/40">
                               {category.items.length === 0 ? (
-                                <div className="px-11 py-3 text-sm text-gray-500 dark:text-slate-400">
+                                <div className="px-11 py-3 text-sm text-[#a8a29e] dark:text-slate-400">
                                   No items inside this category yet.
                                 </div>
                               ) : (
@@ -2042,7 +2054,7 @@ const prepareFormData = (formData, file) => {
                                             {item?.name || "Unnamed Item"}
                                           </span>
                                         </div>
-                                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                                        <p className="text-xs text-[#a8a29e] dark:text-slate-400">
                                         {priceLabel || "—"} • {item?.pricingType === "variant"
                                           ? "Variant"
                                           : item?.pricingType === "combo"
@@ -2069,7 +2081,7 @@ const prepareFormData = (formData, file) => {
                     })}
 
                     {categoryGroups.length === 0 && (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                      <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
                         No categories found for inventory yet.
                       </div>
                     )}
@@ -2080,6 +2092,7 @@ const prepareFormData = (formData, file) => {
           )}
         </div>
       </div>
+      </div> {/* end: normal menu content wrapper */}
     </div>
   );
 

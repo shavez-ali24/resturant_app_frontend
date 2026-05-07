@@ -38,7 +38,9 @@ const StatusDropdown = ({ order, updateOrder }) => {
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
       <SelectTrigger
-        className={`h-10 w-full min-w-[140px] rounded-xl border border-transparent px-3 text-xs font-bold uppercase shadow-sm ring-1 ring-black/5 transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-9 md:w-[150px] ${getStatusBadge(
+        data-tour="orders-status-dropdown"
+        aria-label={`Change order status — currently ${order.status}`}
+        className={`h-9 w-full min-w-[130px] rounded-lg border px-3 text-xs font-semibold uppercase tracking-wide transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-8 md:w-[140px] ${getStatusBadge(
           order.status
         )}`}
       >
@@ -47,7 +49,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
         </span>
       </SelectTrigger>
 
-      <SelectContent className="min-w-[140px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+      <SelectContent className="min-w-[130px] rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
         <SelectGroup>
           {/* Item: Pending */}
           <SelectItem

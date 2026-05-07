@@ -7,7 +7,7 @@ import audio from "@/assets/orderRing.mp3";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
 import { useNotification } from "./NotificationContext";
 
-const POLLING_INTERVAL = 60000; // 60 seconds for notifications
+const POLLING_INTERVAL = 60000;
 
 const extractOrders = (response) => {
   if (!response) return [];
@@ -25,6 +25,7 @@ export default function NotificationBell() {
   const [latestOrders, setLatestOrders] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const knownOrderIds = useRef(new Set());
+  const hasInitialized = useRef(false);
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const { sseEvent, sseConnected } = useNotification();
@@ -37,420 +38,251 @@ export default function NotificationBell() {
   const pollingInterval = sseConnected ? 0 : POLLING_INTERVAL;
   const refetchOnAction = !sseConnected;
 
-  // ✅ RTK Query with polling disabled when SSE is connected
-  const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery({
-    status: "pending",
-    page: 1,
-    limit: 20, // Get more orders for notifications
-    range: "all"
-  }, {
-    pollingInterval,
-    refetchOnFocus: refetchOnAction,
-    refetchOnReconnect: refetchOnAction,
-  });
-  const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery({
-    status: "preparing",
-    page: 1,
-    limit: 20,
-    range: "all"
-  }, {
-    pollingInterval,
-    refetchOnFocus: refetchOnAction,
-    refetchOnReconnect: refetchOnAction,
-  });
+  const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery(
+    { status: "pending", page: 1, limit: 20, range: "all" },
+    { pollingInterval, refetchOnFocus: refetchOnAction, refetchOnReconnect: refetchOnAction }
+  );
+  const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery(
+    { status: "preparing", page: 1, limit: 20, range: "all" },
+    { pollingInterval, refetchOnFocus: refetchOnAction, refetchOnReconnect: refetchOnAction }
+  );
 
-  
-  const pendingOrders = useMemo(
-    () => extractOrders(pendingResponse),
-    [pendingResponse]
-  );
-  const preparingOrders = useMemo(
-    () => extractOrders(preparingResponse),
-    [preparingResponse]
-  );
+  const pendingOrders = useMemo(() => extractOrders(pendingResponse), [pendingResponse]);
+  const preparingOrders = useMemo(() => extractOrders(preparingResponse), [preparingResponse]);
 
   const orders = useMemo(() => {
     const combined = [...pendingOrders, ...preparingOrders];
     if (!combined.length) return [];
     const seen = new Set();
-    const deduped = [];
-    combined.forEach((order) => {
+    return combined.filter((order) => {
       const id = order?._id || order?.id || order?.orderId;
-      if (id) {
-        if (seen.has(id)) return;
-        seen.add(id);
-      }
-      deduped.push(order);
+      if (id) { if (seen.has(id)) return false; seen.add(id); }
+      return true;
     });
-    return deduped;
   }, [pendingOrders, preparingOrders]);
 
   const pendingOrdersCount = useMemo(() => {
-    if (typeof pendingResponse?.totalOrders === "number") {
-      return pendingResponse.totalOrders;
-    }
+    if (typeof pendingResponse?.totalOrders === "number") return pendingResponse.totalOrders;
     return pendingOrders.length;
   }, [pendingResponse, pendingOrders]);
 
   useEffect(() => {
     if (!orders.length) return;
+    const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const recent = sorted.slice(0, 15);
 
-    const sortedOrders = [...orders].sort(
-      (a, b) => new Date(b.createdAt || b.createdAt) - new Date(a.createdAt || a.createdAt)
-    );
-
-  
-    const recentOrders = sortedOrders.slice(0, 15);
-
-    
-    const freshOrders = recentOrders.filter((order) => {
-      if (!order._id || order.status !== "pending") return false;
-      
-      const isNew = !knownOrderIds.current.has(order._id);
-      return isNew;
-    });
-
-
-    if (freshOrders.length > 0) {
-      if (audioEnabled) {
-        try {
-          notificationSound.currentTime = 0;
-          const playPromise = notificationSound.play();
-          if (playPromise?.catch) {
-            playPromise.catch(() => {});
-          }
-        } catch (err) {
-          // Intentionally ignore autoplay errors.
-        }
-      }
-
-      // Mark these orders as known
-      freshOrders.forEach((order) => {
-        if (order._id) knownOrderIds.current.add(order._id);
-      });
+    // First load — just mark all as known, don't play sound
+    if (!hasInitialized.current) {
+      recent.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
+      hasInitialized.current = true;
+      setLatestOrders(recent.slice(0, 10));
+      return;
     }
 
-    // Keep dropdown aligned with latest pending orders.
-    setLatestOrders(recentOrders.slice(0, 10));
+    const fresh = recent.filter((o) => o._id && o.status === "pending" && !knownOrderIds.current.has(o._id));
 
-    const currentIds = new Set(recentOrders.map(o => o._id).filter(Boolean));
-    knownOrderIds.current = new Set(
-      [...knownOrderIds.current].filter(id => currentIds.has(id))
-    );
+    if (fresh.length > 0) {
+      fresh.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
+    }
 
-  }, [orders, notificationSound, audioEnabled]);
+    setLatestOrders(recent.slice(0, 10));
+    const currentIds = new Set(recent.map((o) => o._id).filter(Boolean));
+    knownOrderIds.current = new Set([...knownOrderIds.current].filter((id) => currentIds.has(id)));
+  }, [orders]);
 
   useEffect(() => {
-    if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
-      refetchPending();
-      refetchPreparing();
+    if (sseEvent?.type === "NEW_ORDER") {
+      // Bell directly on SSE event — same as KDS
+      try {
+        notificationSound.currentTime = 0;
+        const p = notificationSound.play();
+        if (p?.catch) p.catch(() => {});
+      } catch { /* ignore */ }
     }
-  }, [sseEvent, refetchPending, refetchPreparing]);
+    if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
+      refetchPending(); refetchPreparing();
+    }
+  }, [sseEvent, refetchPending, refetchPreparing, notificationSound]);
 
   useEffect(() => {
     const handler = (e) => {
-      if (bellRef.current && !bellRef.current.contains(e.target)) {
-        setIsDropdownOpen(false);
-      }
+      if (bellRef.current && !bellRef.current.contains(e.target)) setIsDropdownOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const enableAudio = () => setAudioEnabled(true);
-    window.addEventListener("click", enableAudio, { once: true });
-    window.addEventListener("keydown", enableAudio, { once: true });
-    window.addEventListener("touchstart", enableAudio, { once: true });
-    return () => {
-      window.removeEventListener("click", enableAudio);
-      window.removeEventListener("keydown", enableAudio);
-      window.removeEventListener("touchstart", enableAudio);
+    if (typeof window === "undefined") return;
+    const enable = () => {
+      setAudioEnabled(true);
+      // Pre-unlock audio so autoplay works on next SSE event
+      if (notificationSound) {
+        notificationSound.volume = 0;
+        notificationSound.play().then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          notificationSound.volume = 1;
+        }).catch(() => {});
+      }
     };
-  }, []);
+    window.addEventListener("click", enable, { once: true });
+    window.addEventListener("keydown", enable, { once: true });
+    window.addEventListener("touchstart", enable, { once: true });
+    return () => {
+      window.removeEventListener("click", enable);
+      window.removeEventListener("keydown", enable);
+      window.removeEventListener("touchstart", enable);
+    };
+  }, [notificationSound]);
 
   useEffect(() => {
-    if (typeof document === "undefined") return undefined;
+    if (typeof document === "undefined") return;
     const root = document.documentElement;
-    const updateMode = () =>
-      setIsDarkMode(
-        root.classList.contains("admin-dark") || root.classList.contains("dark")
-      );
-
-    updateMode();
-    const observer = new MutationObserver(updateMode);
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    const update = () => setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
   }, []);
 
-  const handleBellClick = () => {
-    setIsDropdownOpen((prev) => !prev);
+  const handleViewBill = (order) => { dispatch(showBill(order)); setIsDropdownOpen(false); };
+  const handleClearAll = () => { setLatestOrders([]); knownOrderIds.current.clear(); setIsDropdownOpen(false); };
+  const handleManualRefresh = () => { refetchPending(); refetchPreparing(); };
+
+  const displayCount = pendingOrdersCount > 99 ? "99+" : String(pendingOrdersCount);
+
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const bg       = isDarkMode ? "bg-[#0f172a]"  : "bg-white";
+  const border   = isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]";
+  const divider  = isDarkMode ? "divide-slate-700/60" : "divide-[#f0ebe5]";
+  const rowHover = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-[#faf7f4]";
+  const textPri  = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
+  const textSec  = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
+  const textMut  = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const footerBg = isDarkMode ? "bg-[#0f172a]"   : "bg-[#faf7f4]";
+
+  const statusBadge = (status) => {
+    const s = String(status || "").toLowerCase();
+    if (s === "preparing") return isDarkMode ? "bg-teal-500/15 text-teal-300" : "bg-teal-50 text-teal-700";
+    return isDarkMode ? "bg-yellow-500/15 text-yellow-300" : "bg-yellow-50 text-yellow-700";
   };
 
-  const handleViewBill = (order) => {
-   
-    dispatch(showBill(order));
-    setIsDropdownOpen(false);
+  const typeBadge = (type) => {
+    const t = String(type || "").toLowerCase().replace(/\s+/g, "");
+    if (t === "delivery")  return isDarkMode ? "bg-orange-500/15 text-orange-300" : "bg-orange-50 text-orange-700";
+    if (t === "takeaway")  return isDarkMode ? "bg-blue-500/15 text-blue-300"     : "bg-blue-50 text-blue-700";
+    if (t === "eathere")   return isDarkMode ? "bg-emerald-500/15 text-emerald-300" : "bg-emerald-50 text-emerald-700";
+    return isDarkMode ? "bg-slate-700 text-slate-300" : "bg-[#f7f3ef] text-[#78716c]";
   };
-
-  const handleClearAll = () => {
-    setLatestOrders([]);
-    knownOrderIds.current.clear();
-    setIsDropdownOpen(false);
-  };
-
-  const handleManualRefresh = () => {
-    refetchPending();
-    refetchPreparing();
-  };
-
-  const displayNotificationCount =
-    pendingOrdersCount > 99 ? "99+" : String(pendingOrdersCount);
 
   return (
     <div className="relative" ref={bellRef}>
+      {/* ── Bell button ── */}
       <button
-        onClick={handleBellClick}
-        className={`relative flex h-9 w-9 items-center justify-center overflow-visible rounded-full transition-colors duration-200 ${
+        onClick={() => setIsDropdownOpen((p) => !p)}
+        className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-200 ${
           isDarkMode
-            ? "border border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800 hover:text-orange-200"
-            : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-600"
+            ? "border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800"
+            : "border-orange-500/40 bg-white text-orange-500 hover:bg-orange-50"
         }`}
         title="Order Notifications"
       >
-        <Bell
-          size={18}
-          className={`relative z-0 ${isDarkMode ? "text-orange-300" : "text-orange-600"}`}
-        />
-        
-        {/* Notification counter badge */}
+        <Bell size={17} />
         {pendingOrdersCount > 0 && (
           <MotionSpan
             key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className={`pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-[11px] font-black leading-none shadow-md ring-2 ${
-              isDarkMode
-                ? "bg-slate-100 text-orange-600 ring-slate-950"
-                : "bg-red-700 text-white ring-white"
-            }`}
+            className="pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white dark:ring-slate-950"
           >
-            {displayNotificationCount}
+            {displayCount}
           </MotionSpan>
         )}
       </button>
 
+      {/* ── Dropdown ── */}
       <AnimatePresence>
         {isDropdownOpen && (
           <MotionDiv
-            initial={{ opacity: 0, y: -6, scale: 0.95 }}
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className={`absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] md:w-96 ${
-              isDarkMode
-                ? "border-slate-700 bg-slate-950 shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
-                : "border-orange-100 bg-white"
-            }`}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.14 }}
+            className={`absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-xl md:w-96 ${bg} ${border}`}
           >
             {/* Header */}
-            <div
-              className={`border-b p-4 ${
-                isDarkMode
-                  ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800"
-                  : "border-orange-100 bg-gradient-to-r from-orange-400 to-orange-500"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4
-                    className={`text-lg font-bold ${
-                      isDarkMode ? "text-slate-100" : "text-white"
-                    }`}
-                  >
-                    New Orders
-                  </h4>
-                  <p
-                    className={`mt-1 text-sm ${
-                      isDarkMode ? "text-slate-300" : "text-orange-50"
-                    }`}
-                  >
-                    Real-time notifications
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {pendingOrdersCount > 0 && (
-                    <span
-                      className={`rounded-full border px-3 py-1 text-sm font-bold ${
-                        isDarkMode
-                          ? "border-orange-500/40 bg-orange-500/15 text-orange-200"
-                          : "border-orange-200 bg-white text-orange-700"
-                      }`}
-                    >
-                      {displayNotificationCount} pending
-                    </span>
-                  )}
-                  {/* <button
-                    onClick={handleManualRefresh}
-                    className="text-white hover:text-orange-200 p-1"
-                    title="Refresh"
-                  >
-                    ↻
-                  </button> */}
-                </div>
+            <div className={`flex items-center justify-between border-b px-4 py-3 ${border} ${isDarkMode ? "bg-[#1e293b]" : "bg-[#f7f3ef]"}`}>
+              <div>
+                <h4 className={`text-sm font-bold ${textPri}`}>New Orders</h4>
+                <p className={`text-xs ${textMut}`}>Real-time notifications</p>
               </div>
+              {pendingOrdersCount > 0 && (
+                <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                  {displayCount} pending
+                </span>
+              )}
             </div>
 
             {/* Orders list */}
-            <div
-              className={`max-h-96 overflow-y-auto ${
-                isDarkMode ? "bg-slate-950" : "bg-white"
-              }`}
-            >
+            <div className={`max-h-[420px] overflow-y-auto ${bg}`}>
               {latestOrders.length > 0 ? (
-                <div
-                  className={`divide-y ${
-                    isDarkMode ? "divide-slate-700" : "divide-orange-100"
-                  }`}
-                >
+                <div className={`divide-y ${divider}`}>
                   {latestOrders.map((order, index) => (
                     <MotionDiv
                       key={order._id || index}
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`p-4 transition-colors duration-150 ${
-                        isDarkMode ? "hover:bg-slate-900" : "hover:bg-orange-50/70"
-                      }`}
+                      transition={{ delay: index * 0.04 }}
+                      className={`flex items-start justify-between gap-3 px-4 py-3 transition-colors ${rowHover}`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                String(order.status || "").toLowerCase() === "preparing"
-                                  ? isDarkMode
-                                    ? "bg-teal-500/20 text-teal-200"
-                                    : "bg-teal-100 text-teal-800"
-                                  : isDarkMode
-                                    ? "bg-emerald-500/20 text-emerald-300"
-                                    : "bg-green-100 text-green-800"
-                              }`}
-                            >
-                              {String(order.status || "").toLowerCase() === "preparing"
-                                ? "Preparing"
-                                : "Pending"}
-                            </span>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                (() => {
-                                  const raw = String(order.orderType || "").trim().toLowerCase();
-                                  const compact = raw.replace(/\s+/g, "");
-                                  if (raw === "delivery") {
-                                    return isDarkMode
-                                      ? "bg-orange-500/15 text-orange-200"
-                                      : "bg-orange-100 text-orange-700";
-                                  }
-                                  if (compact === "takeaway") {
-                                    return isDarkMode
-                                      ? "bg-blue-500/15 text-blue-200"
-                                      : "bg-blue-100 text-blue-700";
-                                  }
-                                  if (compact === "eathere") {
-                                    return isDarkMode
-                                      ? "bg-emerald-500/15 text-emerald-200"
-                                      : "bg-emerald-100 text-emerald-700";
-                                  }
-                                  return isDarkMode
-                                    ? "bg-slate-700/70 text-slate-200"
-                                    : "bg-slate-100 text-slate-700";
-                                })()
-                              }`}
-                            >
-                              {order.orderType || "Unknown"}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <p
-                              className={`font-medium ${
-                                isDarkMode ? "text-slate-100" : "text-gray-900"
-                              }`}
-                            >
-                              {order.customerName || "Guest"}
-                            </p>
-                            <p
-                              className={`text-sm ${
-                                isDarkMode ? "text-slate-300" : "text-gray-600"
-                              }`}
-                            >
-                              {order.customerPhone || "No phone"}
-                            </p>
-                            <p
-                              className={`text-xs ${
-                                isDarkMode ? "text-slate-400" : "text-gray-600"
-                              }`}
-                            >
-                              {order.createdAt ? (
-                                new Date(order.createdAt).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  second: '2-digit',
-                                  hour12: true
-                                })
-                              ) : 'Just now'}
-                            </p>
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        {/* Status + Type badges */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge(order.status)}`}>
+                            {String(order.status || "").toLowerCase() === "preparing" ? "Preparing" : "Pending"}
+                          </span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeBadge(order.orderType)}`}>
+                            {order.orderType || "Unknown"}
+                          </span>
                         </div>
-                        
-                        <button
-                          onClick={() => handleViewBill(order)}
-                          className={`ml-3 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold transition-colors duration-200 ${
-                            isDarkMode
-                              ? "border-orange-500/40 bg-orange-500/20 text-orange-200 hover:bg-orange-500/30"
-                              : "border-orange-200 bg-orange-100 text-orange-700 hover:bg-orange-200"
-                          }`}
-                        >
-                          View Bill
-                        </button>
+                        {/* Customer info */}
+                        <p className={`text-sm font-semibold ${textPri}`}>{order.customerName || "Guest"}</p>
+                        <p className={`text-xs ${textSec}`}>{order.customerPhone || "—"}</p>
+                        <p className={`text-xs ${textMut}`}>
+                          {order.createdAt
+                            ? new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
+                            : "Just now"}
+                        </p>
                       </div>
+
+                      {/* View Bill button */}
+                      <button
+                        onClick={() => handleViewBill(order)}
+                        className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          isDarkMode
+                            ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                            : "border-[#ede8e3] bg-white text-orange-600 hover:bg-orange-50 hover:border-orange-200"
+                        }`}
+                      >
+                        View Bill
+                      </button>
                     </MotionDiv>
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center">
-                  <div
-                    className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
-                      isDarkMode ? "bg-slate-800" : "bg-orange-100"
-                    }`}
-                  >
-                    <Bell
-                      size={24}
-                      className={isDarkMode ? "text-orange-300" : "text-orange-500"}
-                    />
+                <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                  <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${isDarkMode ? "bg-slate-800" : "bg-[#f7f3ef]"}`}>
+                    <Bell size={20} className={textMut} />
                   </div>
-                  <h3
-                    className={`mb-2 font-semibold ${
-                      isDarkMode ? "text-slate-100" : "text-gray-800"
-                    }`}
-                  >
-                    No new orders
-                  </h3>
-                  <p
-                    className={`mb-4 text-sm ${
-                      isDarkMode ? "text-slate-400" : "text-gray-500"
-                    }`}
-                  >
-                    New pending orders will appear here
-                  </p>
+                  <p className={`text-sm font-semibold ${textPri}`}>No new orders</p>
+                  <p className={`mt-1 text-xs ${textMut}`}>New pending orders will appear here</p>
                   <button
                     onClick={handleManualRefresh}
-                    className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`mt-4 rounded-lg border px-4 py-1.5 text-xs font-semibold transition-colors ${
                       isDarkMode
-                        ? "border-orange-500/40 bg-orange-500/10 text-orange-200 hover:bg-orange-500/20"
-                        : "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                        ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                        : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
                     }`}
                   >
                     Check for orders
@@ -460,36 +292,21 @@ export default function NotificationBell() {
             </div>
 
             {/* Footer */}
-            <div
-              className={`border-t ${
-                isDarkMode ? "border-slate-700 bg-slate-950" : "border-orange-100 bg-white"
-              }`}
-            >
-              <div className="flex items-center justify-between p-3">
-                <button
-                  onClick={handleClearAll}
-                  disabled={latestOrders.length === 0}
-                  className={`text-sm px-4 py-2 rounded-lg transition-colors ${
-                    latestOrders.length > 0 
-                      ? isDarkMode
-                        ? "font-semibold text-orange-200 hover:bg-orange-500/20 hover:text-orange-100"
-                        : "font-semibold text-orange-700 hover:bg-orange-200 hover:text-orange-900"
-                      : isDarkMode
-                        ? "cursor-not-allowed text-slate-500"
-                        : "text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  Clear all
-                </button>
-                
-                <div
-                  className={`text-xs font-medium ${
-                    isDarkMode ? "text-slate-300" : "text-gray-600"
-                  }`}
-                >
-                  {latestOrders.length} order{latestOrders.length !== 1 ? 's' : ''}
-                </div>
-              </div>
+            <div className={`flex items-center justify-between border-t px-4 py-2.5 ${border} ${footerBg}`}>
+              <button
+                onClick={handleClearAll}
+                disabled={latestOrders.length === 0}
+                className={`text-xs font-semibold transition-colors ${
+                  latestOrders.length > 0
+                    ? "text-orange-500 hover:text-orange-600"
+                    : `${textMut} cursor-not-allowed`
+                }`}
+              >
+                Clear all
+              </button>
+              <span className={`text-xs ${textMut}`}>
+                {latestOrders.length} order{latestOrders.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </MotionDiv>
         )}

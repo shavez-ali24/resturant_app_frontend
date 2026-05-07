@@ -38,6 +38,7 @@ const AddItemModal = ({
   onAddCategory,
   onRenameCategory,
   onDeleteCategory,
+  fullPage = false,
 }) => {
   const MotionDiv = motion.div;
   const MotionForm = motion.form;
@@ -164,6 +165,116 @@ const AddItemModal = ({
       scrollToFirstError
     );
 
+  // ── Shared form content ──────────────────────────────────────────────────
+  const formContent = (
+    <MotionForm onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
+      <ModalHeader onClose={onClose} />
+      {backendError && <ErrorDisplay error={backendError} />}
+      <div className="mt-5 space-y-5">
+        <FormInput
+          label="Product Name"
+          name="name"
+          value={addFormData.name}
+          onChange={handleChange}
+          error={formErrors.name}
+          required
+        />
+        <PricingTypeSelector
+          pricingType={addFormData.pricingType}
+          setPricingType={handlePricingTypeChange}
+        />
+        <CategoryTypeSelectors
+          category={addFormData.category}
+          type={addFormData.type}
+          restaurantCategories={restaurantCategories}
+          errors={formErrors}
+          setFormData={setAddFormData}
+          setFormErrors={setFormErrors}
+          onAddCategory={onAddCategory}
+          onRenameCategory={onRenameCategory}
+          onDeleteCategory={onDeleteCategory}
+        />
+        {addFormData.pricingType === "single" && (
+          <SinglePriceSection
+            price={addFormData.price}
+            discount={addFormData.discount}
+            errors={formErrors}
+            handleChange={handleChange}
+            setFormData={setAddFormData}
+          />
+        )}
+        {addFormData.pricingType === "variant" && (
+          <VariantPriceSection
+            variantRates={addFormData.variantRates}
+            errors={formErrors.variantRates}
+            handleChange={handleChange}
+            setFormData={setAddFormData}
+          />
+        )}
+        {addFormData.pricingType === "combo" && (
+          <ComboPriceSection
+            comboPrice={addFormData.comboPrice}
+            comboItems={comboItems}
+            menuItems={allMenuItems}
+            errors={formErrors}
+            handleChange={handleChange}
+            setComboItems={setComboItems}
+            setFormData={setAddFormData}
+            foodType={addFormData.type}
+            discount={addFormData.discount}
+            isLoadingMenu={isLoadingMenuItems}
+          />
+        )}
+        <ImageUpload
+          addFile={addFile}
+          addFileError={addFileError}
+          handleFileChange={handleFileChange}
+        />
+        <DescriptionField
+          value={addFormData.description}
+          onChange={handleChange}
+          error={formErrors.description}
+        />
+        <AvailabilityToggle
+          available={addFormData.available}
+          handleChange={handleChange}
+        />
+        <SubmitButton
+          isAddingItem={isAddingItem}
+          onClose={onClose}
+          submitText="Add Product"
+        />
+      </div>
+    </MotionForm>
+  );
+
+  // ── Full-page mode — renders inside the admin layout (no overlay) ─────────
+  if (fullPage) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <MotionDiv
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2 }}
+            className="h-full overflow-y-auto bg-[#f7f3ef] dark:bg-[#0f172a]"
+          >
+            <div className="mx-auto max-w-2xl px-4 py-6">
+              <div
+                ref={modalContentRef}
+                className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700/60 dark:bg-[#1e293b]"
+              >
+                {formContent}
+              </div>
+            </div>
+          </MotionDiv>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // ── Modal overlay mode (default) ──────────────────────────────────────────
   return (
     <AnimatePresence>
       {isOpen && (
@@ -181,96 +292,7 @@ const AddItemModal = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div ref={modalContentRef} className="max-h-[92dvh] overflow-y-auto rounded-[15px] border border-orange-100 bg-white/95 sm:max-h-[88vh]">
-              <MotionForm onSubmit={onSubmitHandler} className="p-4 sm:p-6 md:p-7">
-                <ModalHeader onClose={onClose} />
-                {backendError && <ErrorDisplay error={backendError} />}
-
-                <div className="mt-5 space-y-5">
-                  <FormInput
-                    label="Product Name"
-                    name="name"
-                    value={addFormData.name}
-                    onChange={handleChange}
-                    error={formErrors.name}
-                    required
-                  />
-
-                  <PricingTypeSelector
-                    pricingType={addFormData.pricingType}
-                    setPricingType={handlePricingTypeChange}
-                  />
-                  <CategoryTypeSelectors
-                    category={addFormData.category}
-                    type={addFormData.type}
-                    restaurantCategories={restaurantCategories}
-                    errors={formErrors}
-                    setFormData={setAddFormData}
-                    setFormErrors={setFormErrors}
-                    onAddCategory={onAddCategory}
-                    onRenameCategory={onRenameCategory}
-                    onDeleteCategory={onDeleteCategory}
-                  />
-
-                  {addFormData.pricingType === "single" && (
-                    <SinglePriceSection
-                      price={addFormData.price}
-                      discount={addFormData.discount}
-                      errors={formErrors}
-                      handleChange={handleChange}
-                      setFormData={setAddFormData}
-                    />
-                  )}
-
-                  {addFormData.pricingType === "variant" && (
-                    <VariantPriceSection
-                      variantRates={addFormData.variantRates}
-                      errors={formErrors.variantRates}
-                      handleChange={handleChange}
-                      setFormData={setAddFormData}
-                    />
-                  )}
-
-                  {addFormData.pricingType === "combo" && (
-                    <ComboPriceSection
-                      comboPrice={addFormData.comboPrice}
-                      comboItems={comboItems}
-                      menuItems={allMenuItems}
-                      errors={formErrors}
-                      handleChange={handleChange}
-                      setComboItems={setComboItems}
-                      setFormData={setAddFormData}
-                      foodType={addFormData.type}
-                      discount={addFormData.discount}
-                      isLoadingMenu={isLoadingMenuItems}
-                    />
-                  )}
-                  
-
-                 
-
-                  <ImageUpload
-                    addFile={addFile}
-                    addFileError={addFileError}
-                    handleFileChange={handleFileChange}
-                  />
-                    <DescriptionField
-                    value={addFormData.description}
-                    onChange={handleChange}
-                    error={formErrors.description}
-                  />
-
-                  <AvailabilityToggle
-                    available={addFormData.available}
-                    handleChange={handleChange}
-                  />
-
-                  <SubmitButton
-                    isAddingItem={isAddingItem}
-                    onClose={onClose}
-                    submitText="Add Product"
-                  />
-                </div>
-              </MotionForm>
+              {formContent}
             </div>
           </MotionDiv>
         </MotionDiv>

@@ -1,54 +1,48 @@
 import React, { useEffect, useMemo } from "react";
-import { CheckCircleIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import { CheckCircle, Image } from "lucide-react";
 import ErrorDisplay from "./ErrorDisplay";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_KB } from "../../../Lib/constants";
 
-const ImageUpload = ({ addFile, addFileError, handleFileChange }) => {
-  const previewUrl = useMemo(
+// existingImageUrl — optional: current image URL (used in edit mode)
+const ImageUpload = ({ addFile, addFileError, handleFileChange, existingImageUrl = null }) => {
+  const newPreviewUrl = useMemo(
     () => (addFile ? URL.createObjectURL(addFile) : ""),
     [addFile]
   );
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+    return () => { if (newPreviewUrl) URL.revokeObjectURL(newPreviewUrl); };
+  }, [newPreviewUrl]);
+
+  // Show new file preview first, then fall back to existing image
+  const displayUrl = newPreviewUrl || existingImageUrl || "";
 
   return (
-    <div className="space-y-3">
-      <label className="block text-sm font-semibold text-gray-700">
+    <div className="space-y-2">
+      <label className="block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400">
         Product Image
       </label>
 
       <label
-        className={`block w-full cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-colors ${
+        className={`block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed transition-colors ${
           addFileError
-            ? "border-red-500 bg-red-50"
-            : "border-orange-300 bg-orange-50/60 hover:bg-orange-100/60"
+            ? "border-red-400 bg-red-50 dark:bg-red-900/20"
+            : "border-[#d6cfc8] bg-[#f7f3ef] hover:border-orange-300 hover:bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-slate-500 dark:hover:bg-slate-700/60"
         }`}
       >
-        <div className="relative h-44 w-full sm:h-48">
-          {previewUrl ? (
-            <img
-              src={previewUrl}
-              alt="New product preview"
-              className="h-full w-full object-cover"
-            />
+        <div className="relative h-40 w-full">
+          {displayUrl ? (
+            <img src={displayUrl} alt="Preview" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-              <PhotoIcon
-                className={`h-10 w-10 ${addFileError ? "text-red-400" : "text-orange-300"}`}
-              />
-              <p className="text-sm font-medium text-gray-500">File preview will appear here</p>
+              <Image size={32} className={addFileError ? "text-red-400" : "text-[#d6cfc8] dark:text-slate-600"} />
+              <p className="text-xs text-[#a8a29e] dark:text-slate-500">Click to upload image</p>
             </div>
           )}
-
-          <div className="absolute inset-x-0 bottom-0 bg-black/45 px-3 py-2 text-center text-xs font-semibold text-white">
-            {previewUrl ? "Click to replace file" : "Click to upload product file"}
+          <div className="absolute inset-x-0 bottom-0 bg-black/40 px-3 py-1.5 text-center text-xs font-medium text-white">
+            {displayUrl ? "Click to replace" : "Click to upload"}
           </div>
         </div>
-
         <input
           type="file"
           className="hidden"
@@ -57,18 +51,22 @@ const ImageUpload = ({ addFile, addFileError, handleFileChange }) => {
         />
       </label>
 
-      <p className="text-xs text-gray-500">Max {MAX_IMAGE_KB}KB</p>
+      <p className="text-xs text-[#a8a29e] dark:text-slate-500">Max {MAX_IMAGE_KB}KB</p>
 
       {addFile && !addFileError && (
-        <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-          <CheckCircleIcon className="w-4 h-4" />
+        <p className="flex items-center gap-1 text-xs text-green-600">
+          <CheckCircle size={12} />
           {addFile.name} ({(addFile.size / 1024).toFixed(1)} KB)
         </p>
       )}
 
-      {addFileError && (
-        <ErrorDisplay error={addFileError} type="form" />
+      {!addFile && existingImageUrl && (
+        <p className="text-xs text-[#a8a29e] dark:text-slate-500">
+          Current image shown. Upload a new one to replace it.
+        </p>
       )}
+
+      {addFileError && <ErrorDisplay error={addFileError} type="form" />}
     </div>
   );
 };

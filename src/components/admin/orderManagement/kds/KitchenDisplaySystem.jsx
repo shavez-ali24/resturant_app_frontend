@@ -103,8 +103,12 @@ const KitchenDisplaySystem = () => {
   const [hiddenOrderIds, setHiddenOrderIds] = useState(new Set());
   const [newOrderIds, setNewOrderIds] = useState(new Set());
   const [optimisticStatusById, setOptimisticStatusById] = useState({});
-  const [isDarkMode, setIsDarkMode] = useState(readAdminTheme);
-  const [activeTab, setActiveTab] = useState("active"); // "active" (pending/preparing) or "ready"
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+  const [activeTab, setActiveTab] = useState("active");
   const [audioEnabled, setAudioEnabled] = useState(false);
   const knownOrderIds = useRef(new Set());
   const newOrderTimers = useRef(new Map());
@@ -115,34 +119,15 @@ const KitchenDisplaySystem = () => {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const syncTheme = () => setIsDarkMode(readAdminTheme());
-    syncTheme();
-    window.addEventListener("storage", syncTheme);
-
-    return () => window.removeEventListener("storage", syncTheme);
-  }, []);
-
-  useEffect(() => {
     if (typeof document === "undefined") return undefined;
-
     const root = document.documentElement;
-    const body = document.body;
-
-    if (isDarkMode) {
-      root.classList.add("admin-dark", "dark");
-      body.classList.add("admin-dark");
-    } else {
-      root.classList.remove("admin-dark", "dark");
-      body.classList.remove("admin-dark");
-    }
-
-    return () => {
-      root.classList.remove("admin-dark", "dark");
-      body.classList.remove("admin-dark");
-    };
-  }, [isDarkMode]);
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
 
   const pollingInterval = sseConnected ? 0 : POLLING_INTERVAL;
   const refetchOnAction = !sseConnected;
@@ -248,7 +233,18 @@ const KitchenDisplaySystem = () => {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const enableAudio = () => setAudioEnabled(true);
+    const enableAudio = () => {
+      setAudioEnabled(true);
+      // Pre-unlock audio context on first gesture so autoplay works later
+      if (notificationSound) {
+        notificationSound.volume = 0;
+        notificationSound.play().then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          notificationSound.volume = 1;
+        }).catch(() => {});
+      }
+    };
     window.addEventListener("click", enableAudio, { once: true });
     window.addEventListener("keydown", enableAudio, { once: true });
     window.addEventListener("touchstart", enableAudio, { once: true });
@@ -357,20 +353,24 @@ const KitchenDisplaySystem = () => {
         return next;
       });
 
-      if (audioEnabled && notificationSound) {
+      if (notificationSound) {
         try {
           notificationSound.currentTime = 0;
           const playPromise = notificationSound.play();
-          if (playPromise?.catch) playPromise.catch(() => {});
+          if (playPromise?.catch) {
+            playPromise.catch(() => {
+              // Autoplay blocked — will play on next user interaction
+            });
+          }
         } catch {
-          // Ignore autoplay interruptions.
+          // Ignore
         }
       }
 
-      notify(`New kitchen order #${incomingId.slice(-4)} received.`, "success");
+      notify(`New kitchen order ${incomingId.slice(-4)} received.`, "success");
       knownOrderIds.current.add(incomingId);
     }
-  }, [audioEnabled, notificationSound, notify, sseEvent]);
+  }, [notificationSound, notify, sseEvent]);
 
   useEffect(() => {
     setEventOrdersById((prev) => {
@@ -433,7 +433,7 @@ const KitchenDisplaySystem = () => {
         return next;
       });
 
-      if (audioEnabled && notificationSound) {
+      if (notificationSound) {
         try {
           notificationSound.currentTime = 0;
           const playPromise = notificationSound.play();
@@ -447,7 +447,7 @@ const KitchenDisplaySystem = () => {
       const latestIncomingOrderId = getOrderId(latestIncomingOrder);
       notify(
         freshPendingOrders.length === 1
-          ? `New kitchen order #${latestIncomingOrderId.slice(-4)} received.`
+          ? `New kitchen order ${latestIncomingOrderId.slice(-4)} received.`
           : `${freshPendingOrders.length} new kitchen orders received.`,
         "success"
       );
@@ -610,10 +610,8 @@ const KitchenDisplaySystem = () => {
 
   return (
     <div
-      className={`h-[100dvh] w-screen overflow-hidden font-mostrate overscroll-none select-none ${
-        isDarkMode
-          ? "bg-[#0a0a0a] text-white"
-          : "bg-[#FFF5F0] text-slate-900"
+      className={`h-[100dvh] w-screen overflow-hidden overscroll-none select-none ${
+        isDarkMode ? "bg-[#0f172a] text-slate-100" : "bg-[#f7f3ef] text-[#1c1917]"
       }`}
       style={{
         paddingTop: "env(safe-area-inset-top)",
@@ -623,150 +621,121 @@ const KitchenDisplaySystem = () => {
       }}
     >
       <div className="h-full w-full p-2 md:p-3 flex flex-col overflow-hidden">
-        <div
-          className={`flex flex-col gap-0 rounded-2xl border shadow-sm flex-1 min-h-0 overflow-hidden ${
-            isDarkMode
-              ? "border-slate-800 bg-[#141414]"
-              : "border-orange-200 bg-[#FFF8F3]"
-          }`}
-        >
-          {/* Header Area - Small & Compact (Fixed) */}
+        <div className={`flex flex-col gap-0 rounded-2xl border shadow-sm flex-1 min-h-0 overflow-hidden ${
+          isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+        }`}>
+
+          {/* ── Header ── */}
           <div className={`relative flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0 ${
-            isDarkMode ? "bg-[#1a1a1a] border-b border-slate-800" : "bg-[#FFF0E6] border-b border-orange-200"
+            isDarkMode ? "bg-[#1e293b] border-b border-slate-700" : "bg-[#f7f3ef] border-b border-[#ede8e3]"
           }`}>
-            {/* Left Section: Brand & View */}
+            {/* Left: Brand + Title */}
             <div className="flex flex-col shrink-0 md:w-[250px]">
-              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+              <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
                 TapnBite
               </div>
               <div className="flex items-center justify-between md:justify-start gap-4">
-              <div className={`text-xl font-black tracking-tight ${isDarkMode ? "text-white" : "text-slate-800"}`}>
-                {activeTab === "ready" ? "Ready Orders" : "Kitchen Display"}
-              </div>
-                {/* Time for mobile only */}
+                <div className={`text-xl font-black tracking-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+                  {activeTab === "ready" ? "Ready Orders" : "Kitchen Display"}
+                </div>
                 <div className="md:hidden">
-                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-white" : "text-slate-700"}`}>
+                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                     {formattedTime}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Global Time - Centered on MD+ */}
+            {/* Center: Time (md+) */}
             <div className="hidden md:flex md:absolute md:left-1/2 md:-translate-x-1/2 md:justify-center">
-              <div className={`text-2xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-white" : "text-slate-700"}`}>
+              <div className={`text-2xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                 {formattedTime}
               </div>
             </div>
 
-            {/* Right Section: Pagination & Stats */}
-            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end md:gap-6">
-              {/* Pagination Info & Buttons */}
+            {/* Right: Pagination + Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end md:gap-4">
+              {/* Pagination */}
               <div className="flex items-center gap-3">
-                <span className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
                   Page {currentPage}/{totalPages}
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                    className={`flex h-8 items-center gap-1 rounded-lg border-2 px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
-                      currentPage === 1
-                        ? isDarkMode
-                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                          : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : isDarkMode
-                          ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
-                          : "border-[#D32F2F] bg-white text-[#D32F2F] hover:bg-[#D32F2F] hover:text-white"
-                    }`}
-                  >
-                    <ChevronLeft size={14} strokeWidth={3} />
-                    <span>PREV</span>
-                  </button>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                    className={`flex h-8 items-center gap-1 rounded-lg border-2 px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
-                      currentPage === totalPages
-                        ? isDarkMode
-                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                          : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : isDarkMode
-                          ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
-                          : "border-[#D32F2F] bg-white text-[#D32F2F] hover:bg-[#D32F2F] hover:text-white"
-                    }`}
-                  >
-                    <span>NEXT</span>
-                    <ChevronRight size={14} strokeWidth={3} />
-                  </button>
+                  {[
+                    { label: "PREV", icon: <ChevronLeft size={14} strokeWidth={3} />, action: handlePrevPage, disabled: currentPage === 1, dir: "prev" },
+                    { label: "NEXT", icon: <ChevronRight size={14} strokeWidth={3} />, action: handleNextPage, disabled: currentPage === totalPages, dir: "next" },
+                  ].map(({ label, icon, action, disabled, dir }) => (
+                    <button
+                      key={dir}
+                      onClick={action}
+                      disabled={disabled}
+                      className={`flex h-8 items-center gap-1 rounded-lg border px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        disabled
+                          ? isDarkMode
+                            ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
+                            : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
+                          : isDarkMode
+                            ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
+                            : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+                      }`}
+                    >
+                      {dir === "prev" && icon}
+                      <span>{label}</span>
+                      {dir === "next" && icon}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-            <div className={`flex items-center gap-2 min-w-fit px-3 py-2 rounded-xl border ${
-              isDarkMode
-                ? "bg-[#1f1f1f] border-slate-800"
-                : "bg-slate-50 border-slate-200"
-            }`}>
-              <span className={`text-[11px] font-black tracking-wider uppercase ${
-                isDarkMode ? "text-slate-400" : "text-slate-500"
-              }`}>Orders</span>
-              <div className="flex items-center gap-2 ml-1">
-                  <button
-                    onClick={() => setActiveTab("active")}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                      activeTab === "active"
-                        ? "bg-green-500 text-white shadow-lg scale-105"
-                        : isDarkMode
-                          ? "bg-[#2a2a2a] text-slate-300 hover:bg-[#333333] hover:text-white"
-                          : "bg-white text-slate-600 hover:bg-slate-200 hover:text-slate-800 border border-slate-200"
-                    }`}
-                  >
-                    <span className="h-3 w-3 rounded-full bg-green-400 shadow-sm"></span>
-                    <span className="text-[13px] font-black uppercase tracking-wide">Active</span>
-                     <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                       activeTab === "active" ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600"
-                     }`}>
-                       {activeTabCount}
-                     </span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("ready")}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 relative ${
-                      activeTab === "ready"
-                        ? "bg-blue-500 text-white shadow-lg scale-105"
-                        : isDarkMode
-                          ? "bg-[#2a2a2a] text-slate-300 hover:bg-[#333333] hover:text-white"
-                          : "bg-white text-slate-600 hover:bg-slate-200 hover:text-slate-800 border border-slate-200"
-                    } ${readyCount > 0 ? "ring-2 ring-blue-400 ring-opacity-50" : ""}`}
-                  >
-                    <span className="h-3 w-3 rounded-full bg-blue-400 shadow-sm"></span>
-                    <span className="text-[13px] font-black uppercase tracking-wide">Ready</span>
-                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                      activeTab === "ready" ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600"
-                    }`}>
-                      {readyCount}
-                    </span>
-                  </button>
+              {/* Tab switcher */}
+              <div className={`flex items-center gap-1.5 rounded-xl border px-2 py-1.5 ${
+                isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
+              }`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest mr-1 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>Orders</span>
+                {[
+                  { key: "active", color: "green", count: activeTabCount, dot: "bg-green-500" },
+                  { key: "ready",  color: "blue",  count: readyCount,     dot: "bg-blue-500" },
+                ].map(({ key, color, count, dot }) => {
+                  const isActive = activeTab === key;
+                  const activeBg = color === "green" ? "bg-green-500" : "bg-blue-500";
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-black uppercase tracking-wide transition-all ${
+                        isActive
+                          ? `${activeBg} text-white shadow-sm`
+                          : isDarkMode
+                            ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+                            : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
+                      } ${key === "ready" && readyCount > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${dot}`}></span>
+                      <span>{key === "active" ? "Active" : "Ready"}</span>
+                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                        isActive ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-white text-[#78716c]"
+                      }`}>{count}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
             </div>
           </div>
 
-          <div
-            className={`m-2 rounded-xl border flex-1 min-h-0 flex flex-col ${
-              isDarkMode ? "border-slate-800/50 bg-[#0f0f0f]" : "border-orange-100 bg-white"
-            }`}
-          >
+          {/* ── Content ── */}
+          <div className={`m-2 rounded-xl border flex-1 min-h-0 flex flex-col ${
+            isDarkMode ? "border-slate-700/50 bg-[#0f172a]" : "border-[#ede8e3] bg-[#f7f3ef]"
+          }`}>
             {isLoading && (
-              <div className="mb-2 flex items-center justify-center gap-2 py-1 shrink-0">
+              <div className="flex items-center justify-center gap-2 py-2 shrink-0">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600">TapnBite Loading...</span>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>Loading...</span>
               </div>
             )}
 
-            <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
+            <div className="flex-1 w-full overflow-y-auto">
               {paginatedOrders.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 pb-10">
+                <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4 pb-10">
                   {paginatedOrders.map((order) => {
                     const orderId = getOrderId(order);
                     return (
@@ -784,21 +753,15 @@ const KitchenDisplaySystem = () => {
                   })}
                 </div>
               ) : (
-                <div
-                  className={`flex min-h-[360px] flex-col items-center justify-center rounded-3xl border border-dashed px-8 py-12 text-center ${
-                    isDarkMode
-                      ? "border-slate-700 bg-slate-900 text-slate-300"
-                      : "border-slate-300 bg-white text-slate-500"
-                  }`}
-                >
-                  <div
-                    className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
-                      isDarkMode ? "bg-slate-800 text-orange-300" : "bg-orange-100 text-orange-600"
-                    }`}
-                  >
+                <div className={`flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed m-3 px-8 py-12 text-center ${
+                  isDarkMode ? "border-slate-700 text-slate-400" : "border-[#d6cfc8] text-[#78716c]"
+                }`}>
+                  <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
+                    isDarkMode ? "bg-slate-800 text-orange-400" : "bg-orange-100 text-orange-600"
+                  }`}>
                     <Activity size={24} />
                   </div>
-                  <p className="text-lg font-bold">Kitchen queue is clear</p>
+                  <p className={`text-lg font-bold ${isDarkMode ? "text-slate-200" : "text-[#1c1917]"}`}>Kitchen queue is clear</p>
                   <p className="mt-2 max-w-md text-sm">
                     {isLoading
                       ? "Active orders are loading."

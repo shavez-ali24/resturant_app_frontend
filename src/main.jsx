@@ -16,6 +16,8 @@ const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const Menu = lazy(() => import("./components/admin/Menu/Menu.jsx"));
+const AddItemPage = lazy(() => import("./components/admin/Menu/AddItemPage.jsx"));
+const EditItemPage = lazy(() => import("./components/admin/Menu/EditItemPage.jsx"));
 const Filter = lazy(() => import("./components/Client/Filter"));
 const LoginPage = lazy(() => import("@/components/admin/adminLayout/LoginPage"));
 const Orders = lazy(() => import("./components/admin/orderManagement/pendingOrders/PendingOrders"));
@@ -32,6 +34,7 @@ const SuperAdminLayout = lazy(() => import("./layouts/SuperAdminLayout"));
 const SuperAdminProfile = lazy(() => import("./components/superAdmin/Pages/SuperAdminProfile"));
 const Sales = lazy(() => import("./components/admin/observability/sales/Sales"));
 const StaffManagement = lazy(() => import("./components/admin/Staff/StaffManagement"));
+const AdminOrderPanel = lazy(() => import("./components/admin/OrderPanel/AdminOrderPanel"));
 
 const RouteFallback = () => {
   const location = useLocation();
@@ -87,6 +90,19 @@ const RouteFallback = () => {
 };
 
 const SuperAdminPrivateRoute = ({ children }) => {
+  const allowedDomains = [
+    "app.flamendough.com",
+    "www.app.flamendough.com",
+    "localhost",
+  ];
+
+  const host =
+    typeof window !== "undefined" ? window.location.hostname : "";
+
+  if (!allowedDomains.includes(host)) {
+    return <ErrorPage />;
+  }
+
   return children;
 };
 
@@ -131,6 +147,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             >
               <Route index element={<Admin />} />
               <Route path="menu" element={<Menu />} />
+              <Route path="menu/add" element={<AddItemPage />} />
+              <Route path="menu/edit/:itemId" element={<EditItemPage />} />
               {/* <Route path="orderlist" element={<OrdersList />} /> */}
               <Route path="completedorder" element={<CompletedOrders />} />
               <Route path="orders" element={<Orders />} />
@@ -160,6 +178,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                     <StaffManagement />
                   </AdminOnlyRoute>
                 }
+              />
+              <Route 
+                path="order-panel" 
+                element={
+                  <AdminOnlyRoute>
+                    <AdminOrderPanel />
+                  </AdminOnlyRoute>
+                } 
               />
               <Route path="comingsoon" element={<ComingSoon />} />
             </Route>

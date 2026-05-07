@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Home, Truck, Utensils, AlertCircle, Plus, Minus } from "lucide-react";
-import { XCircleIcon } from "@heroicons/react/24/solid";
 
 const pickPrice = (...candidates) => {
   for (const value of candidates) {
@@ -196,7 +195,8 @@ const EditOrderModal = ({
   updateOrder, 
   getFriendlyErrorMessage,
   menuItems,
-  tables
+  tables,
+  restaurantData,
 }) => {
   const itemsContainerRef = useRef(null);
   const addItemGuardRef = useRef({ menuItemId: "", ts: 0 });
@@ -270,7 +270,11 @@ const EditOrderModal = ({
       }
       
       // Set tableId if exists (for Eat Here orders)
-      if (editingOrder.tableId) {
+      if (editingOrder.source?.section && editingOrder.source?.number) {
+        const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
+        setSelectedTableId(val);
+        setInitialTableId(val);
+      } else if (editingOrder.tableId) {
         setSelectedTableId(editingOrder.tableId);
         setInitialTableId(editingOrder.tableId);
       }
@@ -666,9 +670,12 @@ const EditOrderModal = ({
         payload.status = currentStatus;
       }
 
-      // Add tableId for Eat Here
+      // Add source for Eat Here
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        payload.tableId = selectedTableId;
+        const [section, numStr] = selectedTableId.split(":");
+        const number = parseInt(numStr, 10) || 1;
+        const type = section === "rooms" ? "ROOM" : "TABLE";
+        payload.source = { section, number, type };
       }
 
       // Add address for Delivery
@@ -678,7 +685,7 @@ const EditOrderModal = ({
 
       // Clear tableId for Take Away (if exists from previous state)
       if (selectedOrderTypeKey === "take_away") {
-        payload.tableId = null;
+        payload.source = { section: null, number: null, type: "NONE" };
         payload.address = null;
       }
 
@@ -703,299 +710,280 @@ const EditOrderModal = ({
     }
   };
 
+  // =============================
+  // UI
+  // =============================
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+
   const isUpdateDisabled = isSubmitting || localOrderData.items.length === 0 || !isDirty;
   const itemsSubtotal = recalcTotal(localOrderData?.items || []);
 
   const handleBackdropClick = (e) => {
-    if (e.target.id === "editOrderBackdrop") {
-      setEditingOrder(null);
-    }
+    if (e.target.id === "editOrderBackdrop") setEditingOrder(null);
   };
 
-  // =============================
-  // ORDER TYPE ICON HELPER
-  // =============================
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
-      case "eat_here":
-        return <Utensils size={16} />;
-      case "take_away":
-        return <Home size={16} />;
-      case "delivery":
-        return <Truck size={16} />;
-      default:
-        return <Utensils size={16} />;
+      case "eat_here": return <Utensils size={14} />;
+      case "take_away": return <Home size={14} />;
+      case "delivery": return <Truck size={14} />;
+      default: return <Utensils size={14} />;
     }
   };
-  const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
-  const getOrderTypeDropdownItemClass = (type) =>
-    getOrderTypeSelectItemClass(type);
 
-  // Format tables data (dynamic from props)
   const availableTables = Array.isArray(tables) ? tables : [];
-
-  // Find current table to display
-  const currentTable = availableTables.find(table => 
-    table._id === selectedTableId || table.tableNumber === selectedTableId
+  const currentTable = availableTables.find(
+    (t) => t._id === selectedTableId || t.tableNumber === selectedTableId
   );
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const modalBg   = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
+  const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const textPri   = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
+  const textSec   = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
+  const textMut   = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const labelCls  = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
+  const inputCls  = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+    isDarkMode
+      ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:border-orange-500"
+      : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] focus:border-orange-400"
+  }`;
+  const itemCardBg = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
+  const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-[#f7f3ef] border-[#ede8e3]";
+  const totalBg   = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
+  const footerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const dropdownCls = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
 
-  // =============================
-  // UI
-  // =============================
   return (
     <div
       id="editOrderBackdrop"
       onClick={handleBackdropClick}
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 z-[9999]"
+      className="fixed inset-0 bg-black/45 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-2 sm:p-4 z-[9999]"
     >
       <div
-        className="bg-white rounded-xl sm:rounded-2xl border-2 shadow-lg w-full max-w-[calc(100vw-1rem)] sm:max-w-md p-4 sm:p-6 max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto"
+        className={`w-full max-w-[calc(100vw-1rem)] sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl border shadow-xl flex flex-col ${modalBg}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with Close Button */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Edit Order</h3>
+        {/* ── Header ── */}
+        <div className={`flex shrink-0 items-center justify-between border-b px-5 py-4 ${headerBg}`}>
+          <h3 className={`text-base font-bold ${textPri}`}>Edit Order</h3>
           <button
             type="button"
             onClick={() => setEditingOrder(null)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
-            aria-label="Close edit order modal"
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#a8a29e] hover:bg-[#ede8e3] hover:text-[#1c1917]"
+            }`}
           >
-            <XCircleIcon className="h-6 w-6" />
+            <span className="text-lg leading-none">×</span>
           </button>
         </div>
 
-        {/* Order Type Dropdown */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Order Type
-          </label>
-          <Select
-            value={localOrderData.orderType}
-            onValueChange={handleOrderTypeChange}
-          >
-            <SelectTrigger className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadge(localOrderData.orderType)}`}>
-              <div className="flex items-center gap-2">
-                {getOrderTypeIcon(localOrderData.orderType)}
-                <span>{getOrderTypeLabel(localOrderData.orderType)}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent
-              side="top"
-              sideOffset={6}
-              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:max-h-[60vh]"
-            >
-              <SelectGroup>
-                <SelectItem 
-                  value="Eat Here" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Eat Here")}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Utensils size={16} />
-                    Eat Here
-                  </div>
-                </SelectItem>
-                <SelectItem 
-                  value="Take Away" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Take Away")}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Home size={16} />
-                    Take Away
-                  </div>
-                </SelectItem>
-                <SelectItem 
-                  value="Delivery" 
-                  className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeDropdownItemClass("Delivery")}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Truck size={16} />
-                    Delivery
-                  </div>
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-        {/* Table Selection - Only show when "Eat Here" is selected */}
-        {getOrderTypeKey(localOrderData.orderType) === "eat_here" && (
-          <div className="mb-4" data-error={!!validationErrors.table}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Table *
-            </label>
-            <Select
-              value={selectedTableId}
-              onValueChange={handleTableChange}
-            >
-              <SelectTrigger className={`h-11 w-full rounded-xl px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
-                validationErrors.table 
-                  ? 'border-red-500 bg-red-50' 
-                  : 'border-orange-200 bg-white hover:border-orange-300'
-              }`}>
-                {selectedTableId && currentTable ? (
-                  <span>Table {currentTable.tableNumber || currentTable.name}</span>
-                ) : (
-                  <SelectValue placeholder="Select Table" />
-                )}
+          {/* Order Type */}
+          <div>
+            <label className={labelCls}>Order Type</label>
+            <Select value={localOrderData.orderType} onValueChange={handleOrderTypeChange}>
+              <SelectTrigger className={`h-10 w-full rounded-lg border px-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadgeClass(localOrderData.orderType)}`}>
+                <div className="flex items-center gap-2">
+                  {getOrderTypeIcon(localOrderData.orderType)}
+                  <span>{getOrderTypeLabel(localOrderData.orderType)}</span>
+                </div>
               </SelectTrigger>
-              <SelectContent
-                side="top"
-                sideOffset={6}
-                className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[45dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950 sm:max-h-[60vh]"
-              >
+              <SelectContent side="top" sideOffset={6} className={`${dropdownCls} w-[var(--radix-select-trigger-width)] max-h-[45dvh]`}>
                 <SelectGroup>
-                  {availableTables.length > 0 ? (
-                    availableTables.map((table) => (
-                      <SelectItem
-                        key={table._id}
-                        value={table._id} // Use _id as value
-                        className="cursor-pointer rounded-lg bg-orange-50 text-orange-800 hover:bg-orange-100 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-900"
-                      >
-                        <div className="flex justify-between items-center w-full gap-4 pb-2 pt-1">
-                          <span>Table {table.tableNumber || table.name}</span>
-                          {table.capacity && (
-                            <span className="text-sm text-gray-600 gap-2 flex items-center text-orange-600">
-                              {table.capacity} seats
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-tables" disabled className="text-gray-400">
-                      No tables available
+                  {[["Eat Here", <Utensils size={14} />], ["Take Away", <Home size={14} />], ["Delivery", <Truck size={14} />]].map(([val, icon]) => (
+                    <SelectItem key={val} value={val} className={`cursor-pointer rounded-md py-2 text-sm font-medium ${getOrderTypeSelectItemClass(val)}`}>
+                      <div className="flex items-center gap-2">{icon}{val}</div>
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {validationErrors.table && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {validationErrors.table}
-              </p>
-            )}
           </div>
-        )}
 
-        {/* Address Input - Only show when "Delivery" is selected */}
-        {getOrderTypeKey(localOrderData.orderType) === "delivery" && (
-          <div className="mb-4" data-error={!!validationErrors.address}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Delivery Address *
-            </label>
-            <textarea
-              value={address}
-              onChange={handleAddressChange}
-              placeholder="Enter delivery address"
-              className={`w-full h-24 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 ${
-                validationErrors.address 
-                  ? 'border-red-500 bg-red-50 focus:border-red-500' 
-                  : 'border-orange-300 focus:border-orange-500'
-              }`}
-              required
-            />
-            {validationErrors.address && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {validationErrors.address}
-              </p>
-            )}
-          </div>
-        )}
+          {/* Table / Room Selection - Eat Here */}
+          {getOrderTypeKey(localOrderData.orderType) === "eat_here" && (() => {
+            const restaurant = restaurantData?.restaurant || restaurantData || {};
+            const sec = restaurant.sections || {};
+            const indoorCount  = sec.indoor?.tables  || restaurant.tableNumbers || 0;
+            const outdoorCount = sec.outdoor?.tables || 0;
+            const rooftopCount = sec.rooftop?.tables || 0;
+            const roomsCount   = sec.rooms?.rooms    || 0;
 
-        {/* Items Section */}
-        <div className="mb-4" data-error={!!validationErrors.items}>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Order Items
-            </label>
-            <span className={`text-xs ${
-              validationErrors.items || localOrderData.items.length === 0 
-                ? 'text-red-500' 
-                : 'text-gray-500'
-            }`}>
-              {localOrderData.items.length} item{localOrderData.items.length !== 1 ? 's' : ''}
-              {validationErrors.items && ` - ${validationErrors.items}`}
-            </span>
-          </div>
-          
-          <div
-            ref={itemsContainerRef}
-            className={`space-y-3 mb-4 max-h-52 sm:max-h-64 overflow-y-auto border rounded-lg p-3 ${
-              validationErrors.items 
-                ? 'border-red-300 bg-red-50' 
-                : 'border-orange-300 bg-gray-50'
-            }`}
-          >
-            {localOrderData.items.length === 0 ? (
-              <div className="text-center py-4 text-gray-500 italic">
-                No items in order. Please add at least one item.
-              </div>
-            ) : (
-              localOrderData.items.map((item, idx) => {
-                const unitPrice = Number(item.price || 0);
-                const quantity = Number(item.quantity ?? 1);
-                const originalUnitPrice = Number(item.originalUnitPrice || unitPrice);
-                const showOldPrice = originalUnitPrice > unitPrice;
-                const rowTotal = unitPrice * quantity;
-                const oldRowTotal = originalUnitPrice * quantity;
+            const sectionDefs = [
+              { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
+              { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
+              { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
+              { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
+            ].filter(s => s.count > 0);
 
-                return (
-                  <div
-                    key={`${item.menuItemId}-${idx}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-orange-300 shadow-sm"
+            const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+            const onlyOne = sectionDefs.length === 1;
+
+            return (
+              <div data-error={!!validationErrors.table}>
+                <label className={labelCls}>{onlyOne ? "Select Table *" : "Select Section & Table *"}</label>
+                {sectionDefs.length === 0 ? (
+                  <p className={`rounded-lg border border-dashed p-3 text-sm text-center ${isDarkMode ? "border-slate-600 text-slate-400" : "border-[#ede8e3] text-[#78716c]"}`}>
+                    No tables configured yet.
+                  </p>
+                ) : onlyOne ? (
+                  // Single section — show only number dropdown
+                  <Select
+                    value={selectedTableId || `${sectionDefs[0].key}:1`}
+                    onValueChange={(v) => handleTableChange(`${sectionDefs[0].key}:${v}`)}
                   >
-                    {/* Item Info */}
-                    <div className="flex-1 sm:mr-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium text-gray-800">
-                          {item.name}
-                        </span>
-                        <div className="ml-2 text-right">
-                          {showOldPrice && (
-                            <div className="text-xs text-gray-400 line-through">
-                              ₹{oldRowTotal.toFixed(2)}
-                            </div>
+                    <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+                      isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
+                    }`}>
+                      <SelectValue placeholder={`Select ${sectionDefs[0].unit}`}>
+                        {selNum ? `${sectionDefs[0].unit} ${selNum}` : `Select ${sectionDefs[0].unit}`}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${dropdownCls}`}>
+                      <SelectGroup>
+                        {Array.from({ length: sectionDefs[0].count }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}
+                            className={`cursor-pointer rounded-md py-2 text-sm ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                            {sectionDefs[0].unit} {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  // Multiple sections — section cards + number dropdown
+                  <div className="grid grid-cols-2 gap-2">
+                    {sectionDefs.map(({ key, label, count, unit }) => {
+                      const isSelected = selSection === key;
+                      return (
+                        <div key={key} className={`flex flex-col gap-1.5 ${isSelected ? "col-span-full" : ""}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleTableChange(isSelected ? "" : `${key}:1`)}
+                            className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
+                              isSelected
+                                ? "border-orange-500 bg-orange-500 text-white"
+                                : isDarkMode
+                                  ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-orange-400"
+                                  : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-orange-400 hover:bg-orange-50"
+                            }`}
+                          >
+                            <span className="flex-1 text-left">{label}</span>
+                            <span className={`text-xs font-normal ${isSelected ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+                              {count} {unit}{count > 1 ? "s" : ""}
+                            </span>
+                          </button>
+                          {isSelected && (
+                            <Select value={selNum || "1"} onValueChange={(v) => handleTableChange(`${key}:${v}`)}>
+                              <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+                                isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
+                              }`}>
+                                <SelectValue placeholder={`Select ${unit}`} />
+                              </SelectTrigger>
+                              <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${dropdownCls}`}>
+                                <SelectGroup>
+                                  {Array.from({ length: count }, (_, i) => (
+                                    <SelectItem key={i + 1} value={String(i + 1)}
+                                      className={`cursor-pointer rounded-md py-2 text-sm ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                                      {unit} {i + 1}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                           )}
-                          <span className="font-bold text-orange-600">
-                            ₹{rowTotal.toFixed(2)}
-                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {validationErrors.table && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />{validationErrors.table}</p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Address */}
+          {getOrderTypeKey(localOrderData.orderType) === "delivery" && (
+            <div data-error={!!validationErrors.address}>
+              <label className={labelCls}>Delivery Address *</label>
+              <textarea
+                value={address}
+                onChange={handleAddressChange}
+                placeholder="Enter delivery address"
+                rows={3}
+                className={`${inputCls} resize-none ${validationErrors.address ? "border-red-400 bg-red-50" : ""}`}
+              />
+              {validationErrors.address && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} />{validationErrors.address}</p>
+              )}
+            </div>
+          )}
+
+          {/* Order Items */}
+          <div data-error={!!validationErrors.items}>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelCls.replace("mb-1.5", "")}>Order Items</label>
+              <span className={`text-xs ${validationErrors.items ? "text-red-500" : textMut}`}>
+                {localOrderData.items.length} item{localOrderData.items.length !== 1 ? "s" : ""}
+                {validationErrors.items && ` — ${validationErrors.items}`}
+              </span>
+            </div>
+
+            <div
+              ref={itemsContainerRef}
+              className={`space-y-2 max-h-52 overflow-y-auto rounded-xl border p-3 ${
+                validationErrors.items ? "border-red-300 bg-red-50" : itemsContainerBg
+              }`}
+            >
+              {localOrderData.items.length === 0 ? (
+                <p className={`py-4 text-center text-sm italic ${textMut}`}>No items. Add at least one.</p>
+              ) : (
+                localOrderData.items.map((item, idx) => {
+                  const unitPrice = Number(item.price || 0);
+                  const quantity = Number(item.quantity ?? 1);
+                  const originalUnitPrice = Number(item.originalUnitPrice || unitPrice);
+                  const showOldPrice = originalUnitPrice > unitPrice;
+                  const rowTotal = unitPrice * quantity;
+                  const oldRowTotal = originalUnitPrice * quantity;
+
+                  return (
+                    <div key={`${item.menuItemId}-${idx}`} className={`rounded-xl border p-3 ${itemCardBg}`}>
+                      {/* Name + price */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
+                        <div className="text-right shrink-0">
+                          {showOldPrice && (
+                            <p className={`text-[11px] line-through ${textMut}`}>₹{oldRowTotal.toFixed(2)}</p>
+                          )}
+                          <p className="text-sm font-bold text-orange-500">₹{rowTotal.toFixed(2)}</p>
                         </div>
                       </div>
-                      
-                      {/* Variants Selector */}
-                      {item.pricingType === "variant" && item.variants && Object.keys(item.variants).length > 0 ? (
-                        <Select
-                          value={item.variantName || ""}
-                          onValueChange={(value) => handleVariantChange(idx, value)}
-                        >
-                          <SelectTrigger className="h-9 w-full rounded-lg border border-orange-200 bg-white text-xs shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 hover:border-orange-300 sm:max-w-[240px]">
+
+                      {/* Variant selector */}
+                      {item.pricingType === "variant" && item.variants && Object.keys(item.variants).length > 0 && (
+                        <Select value={item.variantName || ""} onValueChange={(v) => handleVariantChange(idx, v)}>
+                          <SelectTrigger className={`h-8 w-full max-w-[220px] rounded-lg border px-2.5 text-xs outline-none focus:ring-1 focus:ring-orange-200 ${
+                            isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-[#ede8e3] bg-[#f7f3ef] text-[#1c1917]"
+                          }`}>
                             <SelectValue placeholder="Select variant" />
                           </SelectTrigger>
-                          <SelectContent className="z-[10050] w-[var(--radix-select-trigger-width)] max-w-[240px] rounded-lg border border-orange-200 bg-white p-1 shadow-lg">
+                          <SelectContent className={`${dropdownCls} max-w-[220px]`}>
                             <SelectGroup>
-                              {item.variants && item.variants !== null && Object.entries(item.variants).map(([key, variantData]) => {
+                              {Object.entries(item.variants).map(([key, variantData]) => {
                                 if (!variantData) return null;
-                                const variantPriceMeta = getVariantDropdownPriceMeta(key, variantData);
+                                const meta = getVariantDropdownPriceMeta(key, variantData);
                                 return (
-                                  <SelectItem 
-                                    key={key} 
-                                    value={key}
-                                    className="cursor-pointer rounded-md text-[11px] hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800"
-                                  >
-                                    <div className="flex w-full items-center justify-between gap-3">
-                                      <span className="truncate text-[11px] sm:text-xs">{variantPriceMeta.label}</span>
-                                      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-orange-600 sm:text-xs">
-                                        {variantPriceMeta.showOldPrice && (
-                                          <span className="text-[10px] text-gray-400 line-through sm:text-[11px]">
-                                            {formatCurrency(variantPriceMeta.originalPrice)}
-                                          </span>
-                                        )}
-                                        <span className="font-semibold text-orange-600 text-[11px] sm:text-xs">
-                                          {formatCurrency(variantPriceMeta.finalPrice)}
-                                        </span>
+                                  <SelectItem key={key} value={key}
+                                    className={`cursor-pointer rounded-md text-xs ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                                    <div className="flex items-center justify-between gap-3 w-full">
+                                      <span>{meta.label}</span>
+                                      <span className="flex items-center gap-1 text-orange-500">
+                                        {meta.showOldPrice && <span className={`text-[10px] line-through ${textMut}`}>{formatCurrency(meta.originalPrice)}</span>}
+                                        <span className="font-semibold">{formatCurrency(meta.finalPrice)}</span>
                                       </span>
                                     </div>
                                   </SelectItem>
@@ -1004,137 +992,114 @@ const EditOrderModal = ({
                             </SelectGroup>
                           </SelectContent>
                         </Select>
-                      ) : null}
-                    </div>
+                      )}
 
-                    {/* Quantity Controls */}
-                    <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-start gap-2">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(idx, Math.max(1, quantity - 1))}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-orange-200 bg-white text-orange-700 transition-colors hover:bg-orange-50"
-                          title="Decrease quantity"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => handleQuantityChange(idx, e.target.value)}
-                          className="w-14 border rounded-lg px-2 py-1 text-center hover:border-orange-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(idx, quantity + 1)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-orange-200 bg-white text-orange-700 transition-colors hover:bg-orange-50"
-                          title="Increase quantity"
-                        >
-                          <Plus size={14} />
+                      {/* Qty + Remove */}
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button type="button" onClick={() => handleQuantityChange(idx, Math.max(1, quantity - 1))}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
+                              isDarkMode ? "border-slate-600 bg-slate-700 text-orange-300 hover:bg-slate-600" : "border-[#ede8e3] bg-white text-orange-500 hover:bg-orange-50"
+                            }`}>
+                            <Minus size={12} />
+                          </button>
+                          <input type="number" min="1" value={item.quantity}
+                            onChange={(e) => handleQuantityChange(idx, e.target.value)}
+                            className={`w-12 rounded-lg border px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-orange-200 ${
+                              isDarkMode ? "border-slate-600 bg-slate-700 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
+                            }`}
+                          />
+                          <button type="button" onClick={() => handleQuantityChange(idx, quantity + 1)}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
+                              isDarkMode ? "border-slate-600 bg-slate-700 text-orange-300 hover:bg-slate-600" : "border-[#ede8e3] bg-white text-orange-500 hover:bg-orange-50"
+                            }`}>
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                        <button onClick={() => handleRemoveItem(idx)}
+                          disabled={localOrderData.items.length <= 1}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                            localOrderData.items.length <= 1
+                              ? `cursor-not-allowed ${isDarkMode ? "bg-slate-700 text-slate-500" : "bg-[#f7f3ef] text-[#a8a29e]"}`
+                              : "bg-red-50 text-red-600 hover:bg-red-100"
+                          }`}>
+                          Remove
                         </button>
                       </div>
-                      
-                      {/* Remove Button - Disabled if only one item */}
-                      <button
-                        onClick={() => handleRemoveItem(idx)}
-                        disabled={localOrderData.items.length <= 1}
-                        className={`px-2 py-1 rounded text-xs ${
-                          localOrderData.items.length <= 1
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700'
-                        }`}
-                        title={localOrderData.items.length <= 1 ? "Minimum 1 item required" : "Remove item"}
-                      >
-                        Remove
-                      </button>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Add New Item */}
+          <div>
+            <Select value={addItemValue} onValueChange={handleAddItem}>
+              <SelectTrigger className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+                isDarkMode ? "border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500" : "border-[#ede8e3] bg-white text-[#78716c] hover:border-[#d6cfc8]"
+              }`}>
+                <SelectValue placeholder="+ Add New Item" />
+              </SelectTrigger>
+              <SelectContent side="top" sideOffset={6} className={`${dropdownCls} w-[var(--radix-select-trigger-width)] max-h-[36dvh]`}>
+                <SelectGroup>
+                  {menuItems.map((menu) => {
+                    const meta = getMenuDropdownPriceMeta(menu);
+                    return (
+                      <SelectItem key={menu._id} value={menu._id}
+                        className={`cursor-pointer rounded-md text-xs ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                        <div className="flex items-center justify-between gap-3 w-full py-0.5">
+                          <span className="truncate">{menu.name}</span>
+                          <span className="shrink-0 text-orange-500 font-semibold">
+                            {meta.isVariant ? "Variants" : (
+                              <>
+                                {meta.originalPrice > meta.finalPrice && (
+                                  <span className={`mr-1 text-[10px] line-through ${textMut}`}>{formatCurrency(meta.originalPrice)}</span>
+                                )}
+                                {formatCurrency(meta.finalPrice)}
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Items Total */}
+          <div className={`rounded-xl border px-4 py-3 ${totalBg}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${textPri}`}>Items Total</span>
+              <span className="text-lg font-bold text-orange-500">₹{itemsSubtotal}</span>
+            </div>
           </div>
         </div>
 
-        {/* Add New Item Dropdown */}
-        <div className="mb-4">
-          <Select value={addItemValue} onValueChange={handleAddItem}>
-            <SelectTrigger className="h-11 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm font-semibold shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 hover:border-orange-300">
-              <SelectValue placeholder="+ Add New Item" />
-            </SelectTrigger>
-            <SelectContent
-              side="top"
-              sideOffset={6}
-              className="z-[10050] w-[var(--radix-select-trigger-width)] max-h-[36dvh] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-[46vh]"
-            >
-              <SelectGroup>
-                {menuItems.map((menu) => (
-                  <SelectItem 
-                    key={menu._id} 
-                    value={menu._id} 
-                    className="cursor-pointer rounded-lg border-orange-300 text-[11px] hover:bg-orange-100 hover:text-orange-800 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 sm:text-xs"
-                  >
-                    <div className="flex justify-between items-center w-full gap-3 pb-2 pt-1">
-                      <span className="truncate text-[11px] sm:text-xs">{menu.name}</span>
-                      <span className="text-[11px] sm:text-xs text-gray-600 gap-1.5 flex items-center text-orange-600 shrink-0">
-                        {(() => {
-                          const menuPriceMeta = getMenuDropdownPriceMeta(menu);
-                          if (menuPriceMeta.isVariant) {
-                            return "Variants";
-                          }
-
-                          const showOldPrice = menuPriceMeta.originalPrice > menuPriceMeta.finalPrice;
-                          return (
-                            <>
-                              {showOldPrice && (
-                                <span className="text-[10px] text-gray-400 line-through sm:text-[11px]">
-                                  {formatCurrency(menuPriceMeta.originalPrice)}
-                                </span>
-                              )}
-                              <span className="font-semibold text-orange-600 text-[11px] sm:text-xs">
-                                {formatCurrency(menuPriceMeta.finalPrice)}
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Items Subtotal */}
-        <div className="mb-6 p-3 bg-orange-50 rounded-lg border border-orange-200">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-800">Items Total</span>
-            <span className="text-xl font-bold text-orange-600">
-              ₹{itemsSubtotal}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+        {/* ── Footer ── */}
+        <div className={`flex shrink-0 items-center justify-end gap-2.5 border-t px-5 py-3 ${footerBg}`}>
           <button
             onClick={() => setEditingOrder(null)}
-            className="h-11 w-full rounded-xl border border-orange-200 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 sm:w-auto"
+            className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+              isDarkMode
+                ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
+            }`}
           >
             Cancel
           </button>
-
           <button
             onClick={handleUpdateOrder}
             disabled={isUpdateDisabled}
-            className={`h-11 w-full rounded-xl px-4 text-sm font-semibold transition-colors sm:w-auto ${
+            className={`h-9 rounded-lg px-4 text-sm font-semibold transition-colors ${
               isUpdateDisabled
-                ? 'cursor-not-allowed bg-gray-300 text-gray-500'
-                : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm hover:from-orange-600 hover:to-orange-600'
+                ? `cursor-not-allowed ${isDarkMode ? "bg-slate-700 text-slate-500" : "bg-[#f0ebe5] text-[#a8a29e]"}`
+                : "bg-orange-500 text-white hover:bg-orange-600"
             }`}
           >
-            {isSubmitting ? 'Updating...' : 'Update Order'}
+            {isSubmitting ? "Updating..." : "Update Order"}
           </button>
         </div>
       </div>

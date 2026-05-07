@@ -1,90 +1,56 @@
 import React from 'react'
-import { FormCard } from './commanProfile/FormCard';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
-export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, handleOrderModeToggle, activeModesCount }) {
-    return (
-        <div>
-            <FormCard title="Order Mode" customIndex={3}>
-                <div className="space-y-4">
-                    {/* ✅ NEW: Error message if no mode is active */}
-                    {!atLeastOneModeActive && (
-                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
-                            <ExclamationTriangleIcon className="w-5 h-5" />
-                            <p className="text-sm font-medium">
-                                At least one order mode must be enabled.
-                            </p>
-                        </div>
-                    )}
+// Reusable toggle — works in both light and dark mode
+const Toggle = ({ id, checked, onChange, disabled }) => (
+    <label className="relative inline-flex cursor-pointer items-center">
+        <input
+            type="checkbox"
+            id={id}
+            className="sr-only peer"
+            checked={checked}
+            onChange={onChange}
+            disabled={disabled}
+        />
+        <div className={`
+            relative w-10 h-5 rounded-full transition-colors
+            bg-[#d6cfc8] peer-checked:bg-orange-500
+            dark:bg-slate-600 dark:peer-checked:bg-orange-500
+            peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
+            peer-focus:ring-2 peer-focus:ring-orange-300 peer-focus:ring-offset-1
+            after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+            after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow
+            after:transition-all peer-checked:after:translate-x-5
+        `}></div>
+    </label>
+);
 
-                    <div className="flex items-center rounded-xl justify-between border border-orange-200 p-4 bg-orange-50/30">
-                        <label
-                            htmlFor="eathere-toggle" 
-                            className="text-sm text-gray-700 font-semibold"
-                        >
-                             Eat Here
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                id="eathere-toggle" 
-                                className="sr-only peer"
-                                checked={formData.orderModes.eathere}
-                                onChange={() => handleOrderModeToggle("eathere")} // ✅ UPDATED
-                                // ✅ NEW: Disable if this is the last active toggle
-                                disabled={
-                                    formData.orderModes.eathere && activeModesCount === 1
-                                }
-                            />
-                            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-orange-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-                        </label>
-                    </div>
-                    <div className="flex items-center rounded-xl justify-between border border-orange-200 p-4 bg-orange-50/30">
-                        <label
-                            htmlFor="takeaway-toggle" // ✅ UPDATED: Unique ID
-                            className="text-sm text-gray-700 font-semibold"
-                        >
-                             Take Away
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                id="takeaway-toggle" // ✅ UPDATED: Unique ID
-                                className="sr-only peer"
-                                checked={formData.orderModes.takeaway}
-                                onChange={() => handleOrderModeToggle("takeaway")} // ✅ UPDATED
-                                // ✅ NEW: Disable if this is the last active toggle
-                                disabled={
-                                    formData.orderModes.takeaway && activeModesCount === 1
-                                }
-                            />
-                            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-orange-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-                        </label>
-                    </div>
-                    <div className="flex items-center rounded-xl justify-between border border-orange-200 p-4 bg-orange-50/30">
-                        <label
-                            htmlFor="delivery-toggle" // ✅ UPDATED: Unique ID
-                            className="text-sm text-gray-700 font-semibold"
-                        >
-                             Delivery
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                id="delivery-toggle" 
-                                className="sr-only peer"
-                                checked={formData.orderModes.delivery}
-                                onChange={() => handleOrderModeToggle("delivery")} // ✅ UPDATED
-                                // ✅ NEW: Disable if this is the last active toggle
-                                disabled={
-                                    formData.orderModes.delivery && activeModesCount === 1
-                                }
-                            />
-                            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-orange-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-                        </label>
-                    </div>
+export default function UpdateOrderModeForm({ atLeastOneModeActive, formData, handleOrderModeToggle, activeModesCount }) {
+    const modes = [
+        { id: "eathere-toggle", key: "eathere", label: "Eat Here" },
+        { id: "takeaway-toggle", key: "takeaway", label: "Take Away" },
+        { id: "delivery-toggle", key: "delivery", label: "Delivery" },
+    ];
+
+    return (
+        <div className="grid grid-cols-3 gap-2">
+            {!atLeastOneModeActive && (
+                <div className="col-span-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+                    <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
+                    <p className="text-xs font-medium">At least one mode must be enabled.</p>
                 </div>
-            </FormCard>
+            )}
+            {modes.map(({ id, key, label }) => (
+                <div key={key} className="flex flex-col items-center gap-2 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-3 dark:border-slate-600 dark:bg-slate-800/40">
+                    <span className="text-xs font-semibold text-[#1c1917] dark:text-slate-200">{label}</span>
+                    <Toggle
+                        id={id}
+                        checked={formData.orderModes[key]}
+                        onChange={() => handleOrderModeToggle(key)}
+                        disabled={formData.orderModes[key] && activeModesCount === 1}
+                    />
+                </div>
+            ))}
         </div>
-    )
+    );
 }

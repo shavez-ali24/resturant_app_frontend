@@ -1,33 +1,43 @@
-/* CancelledOrders.jsx */
-
 import React, { useMemo, useState } from "react";
 import Heading from "../../common/Heading";
-
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectGroup,
+  SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
-
+import { useAdminTour } from "../../../../hooks/useAdminTour";
+import { TOUR_KEYS, getCancelledSteps } from "../../../../utils/adminTour";
 import OrdersTable from "../pendingOrders/OrdersTable";
-
 import {
-  Pagination,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationContent,
-  PaginationEllipsis,
+  Pagination, PaginationItem, PaginationLink,
+  PaginationNext, PaginationPrevious,
+  PaginationContent, PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { getCompactPageNumbers } from "@/lib/pagination";
 
+const selectItemCls =
+  "cursor-pointer rounded-lg text-sm font-medium text-[#44403c] hover:bg-[#f7f3ef] data-[highlighted]:bg-[#f0ebe5] data-[highlighted]:text-[#1c1917] dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100";
+
 const CancelledOrders = () => {
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  useAdminTour(TOUR_KEYS.cancelled, getCancelledSteps, isDarkMode, 600);
+
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
@@ -35,74 +45,70 @@ const CancelledOrders = () => {
   const resolvedRange = dateRange === "1d" ? "24h" : dateRange;
 
   const { data: ordersResponse = {}, isLoading, isError } = useGetOrdersQuery(
-    {
-      status: "cancelled",
-      range: resolvedRange,
-      page: currentPage,
-      limit: ordersPerPage,
-    },
-    {
-      refetchOnMountOrArgChange: true,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-    }
+    { status: "cancelled", range: resolvedRange, page: currentPage, limit: ordersPerPage },
+    { refetchOnMountOrArgChange: true, refetchOnFocus: true, refetchOnReconnect: true }
   );
 
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalPages = ordersResponse?.totalPages || 1;
 
-  const handleDateRangeChange = (value) => {
-    setDateRange(value);
-    setCurrentPage(1);
-  };
-
-  const handlePageSizeChange = (value) => {
-    setOrdersPerPage(Number(value));
-    setCurrentPage(1);
-  };
+  const handleDateRangeChange = (v) => { setDateRange(v); setCurrentPage(1); };
+  const handlePageSizeChange = (v) => { setOrdersPerPage(Number(v)); setCurrentPage(1); };
 
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
   );
 
+  const triggerCls = `h-9 w-full rounded-lg border px-3 text-xs font-semibold text-[#44403c] outline-none transition-all hover:border-[#d6cfc8] focus:ring-2 focus:ring-orange-200 ${
+    isDarkMode
+      ? "border-slate-700 bg-slate-800 text-slate-200 hover:border-slate-600 focus:ring-slate-600"
+      : "border-[#ede8e3] bg-white"
+  }`;
+
+  const dropdownCls = `rounded-lg border p-1 shadow-lg ${
+    isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"
+  }`;
+
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-orange-50/40 via-orange-50/10 to-amber-50/30 sm:px-2 lg:px-2">
-      <div className="mx-2 mb-2 mt-2 flex flex-shrink-0 flex-col gap-3 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] sm:mx-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className={`flex h-screen flex-col overflow-hidden px-3 py-3 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+
+      {/* ── Header ── */}
+      <div
+        data-tour="cancelled-heading"
+        className="mb-2 flex flex-shrink-0 flex-col gap-2 px-1 py-2 sm:flex-row sm:items-center sm:justify-between"
+      >
         <Heading title="Cancelled Orders" />
 
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {/* Date range */}
           <Select value={dateRange} onValueChange={handleDateRangeChange}>
-            <SelectTrigger className="h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-600 sm:w-[145px]">
+            <SelectTrigger className={`${triggerCls} sm:w-[145px]`}>
               <SelectValue placeholder="Time Range" />
             </SelectTrigger>
-            <SelectContent className="min-w-[160px] rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+            <SelectContent className={dropdownCls}>
               <SelectGroup>
-                <SelectItem value="24h" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 24 Hours</SelectItem>
-                <SelectItem value="2d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 2 Days</SelectItem>
-                <SelectItem value="7d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 7 Days</SelectItem>
-                <SelectItem value="15d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 15 Days</SelectItem>
-                <SelectItem value="30d" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 30 Days</SelectItem>
-                <SelectItem value="6m" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 6 Months</SelectItem>
-                <SelectItem value="1y" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">Last 1 Year</SelectItem>
-                <SelectItem value="all" className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100">All Time</SelectItem>
+                {[
+                  ["24h", "Last 24 Hours"], ["2d", "Last 2 Days"], ["7d", "Last 7 Days"],
+                  ["15d", "Last 15 Days"], ["30d", "Last 30 Days"],
+                  ["6m", "Last 6 Months"], ["1y", "Last 1 Year"], ["all", "All Time"],
+                ].map(([v, label]) => (
+                  <SelectItem key={v} value={v} className={selectItemCls}>{label}</SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
 
+          {/* Per page */}
           <Select value={String(ordersPerPage)} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-xs font-semibold uppercase text-gray-700 shadow-sm transition-all outline-none hover:border-orange-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-600 sm:w-[120px]">
+            <SelectTrigger className={`${triggerCls} sm:w-[110px]`}>
               <SelectValue placeholder="Per Page" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border border-orange-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+            <SelectContent className={dropdownCls}>
               <SelectGroup>
-                {[10, 20, 30, 40, 50].map((size) => (
-                  <SelectItem
-                    key={size}
-                    value={String(size)}
-                    className="cursor-pointer rounded-lg text-sm font-medium text-gray-700 hover:bg-orange-100 data-[highlighted]:bg-orange-200 data-[highlighted]:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100"
-                  >
-                    {size} / Page
+                {[10, 20, 30, 40, 50].map((s) => (
+                  <SelectItem key={s} value={String(s)} className={selectItemCls}>
+                    {s} / Page
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -111,63 +117,68 @@ const CancelledOrders = () => {
         </div>
       </div>
 
-      <div className="mx-2 mt-2 flex-1 overflow-auto rounded-2xl border border-orange-100 bg-white/95 shadow-[0_14px_32px_-22px_rgba(249,115,22,0.45)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none sm:mx-4">
+      {/* ── Table card ── */}
+      <div
+        data-tour="cancelled-table"
+        className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
+          isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+        }`}
+      >
         <OrdersTable
           orders={orders}
           loading={isLoading}
           error={isError}
           tableType="cancelled"
           containerVariant="plain"
+          isDarkMode={isDarkMode}
         />
       </div>
 
+      {/* ── Pagination ── */}
       {totalPages > 1 && (
-        <div className="flex-shrink-0 flex justify-center px-2 py-2">
+        <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
-              <PaginationContent className="w-max min-w-max gap-1 rounded-xl border border-orange-200 bg-white/95 px-1.5 py-1 shadow-sm sm:px-2">
-
-              {/* Prev */}
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${currentPage === 1 ? "pointer-events-none opacity-50" : ""}`}
-                />
-              </PaginationItem>
-
-              {/* Page Button Logic */}
-              {pageNumbers.map((page, idx) => (
-                <PaginationItem key={idx}>
-                  {typeof page === "string" ? (
-                    <PaginationEllipsis className="h-7 w-7 cursor-pointer sm:h-9 sm:w-9" />
-                  ) : (
-                    <PaginationLink
-                      isActive={currentPage === page}
-                      className={`h-7 w-7 rounded-md border border-orange-200 p-0 text-[11px] cursor-pointer sm:h-9 sm:w-9 sm:rounded-lg sm:text-sm ${
-                        currentPage === page
-                          ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 hover:from-orange-600 hover:to-orange-600"
-                          : "bg-white text-gray-700 hover:bg-orange-50"
-                      }`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </PaginationLink>
-                  )}
+              <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${
+                isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+              }`}>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${
+                      currentPage === 1 ? "pointer-events-none opacity-40" : ""
+                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                  />
                 </PaginationItem>
-              ))}
-
-              {/* Next */}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    currentPage < totalPages && setCurrentPage(currentPage + 1)
-                  }
-                  className={`h-7 rounded-md border border-orange-200 bg-white px-1.5 text-xs hover:bg-orange-50 cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-9 sm:rounded-lg sm:px-3 sm:text-sm sm:[&>span]:inline sm:[&_svg]:h-4 sm:[&_svg]:w-4 ${
-                    currentPage === totalPages ? "pointer-events-none opacity-50" : ""
-                  }`}
-                />
-              </PaginationItem>
-
+                {pageNumbers.map((page, idx) => (
+                  <PaginationItem key={idx}>
+                    {typeof page === "string" ? (
+                      <PaginationEllipsis className="h-8 w-8" />
+                    ) : (
+                      <PaginationLink
+                        isActive={currentPage === page}
+                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm ${
+                          currentPage === page
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : isDarkMode
+                              ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                        }`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${
+                      currentPage === totalPages ? "pointer-events-none opacity-40" : ""
+                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                  />
+                </PaginationItem>
               </PaginationContent>
             </Pagination>
           </div>

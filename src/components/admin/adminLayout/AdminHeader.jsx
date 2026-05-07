@@ -87,7 +87,7 @@ export default function AdminHeader({
   const tables = extractTablesFromRestaurant();
 
   return (
-    <div className={`h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none ${isDarkMode ? "bg-slate-950 text-slate-100" : ""}`}>
+    <div className={`h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none ${isDarkMode ? "bg-[#0f172a] text-slate-100" : "bg-[#f7f3ef]"}`}>
       <SidebarProvider className="flex flex-col h-full">
         <Suspense
           fallback={
@@ -111,7 +111,7 @@ export default function AdminHeader({
 
           <SidebarInset className="flex flex-1 overflow-hidden min-h-0 overscroll-none">
             {/* ✅ GLOBAL SINGLE SCROLL CONTAINER - ALL PAGES SCROLL HERE */}
-            <div className="flex flex-1 flex-col overflow-y-auto overscroll-y-auto scroll-smooth [-webkit-overflow-scrolling:touch] [--admin-scroll-container:true]">
+            <div className={`flex flex-1 flex-col overflow-y-auto overscroll-y-auto scroll-smooth [-webkit-overflow-scrolling:touch] [--admin-scroll-container:true] ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
               {restaurantLoading && (
                 <p className={`p-4 ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                   Loading restaurant...

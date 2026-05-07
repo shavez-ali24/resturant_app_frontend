@@ -7,6 +7,7 @@ export default function Category({
   onCategoryClick,
   activeCategory,
   categoryImages = {},
+  hasActiveFilter = false,
 }) {
   const normalizeCategoryValue = (value) =>
     String(value || "")
@@ -70,7 +71,7 @@ export default function Category({
           type="button"
           onClick={() => onCategoryClick?.(null)}
           className={`h-7 flex-shrink-0 rounded-full px-3 text-xs font-semibold transition-all ${
-            activeCategory === null
+            activeCategory === null && !hasActiveFilter
               ? "client-add-button text-white"
               : "client-add-button-outline"
           }`}

@@ -31,17 +31,27 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-     --color-desktop: hsl(120, 70%, 50%); /* Green */
-  --color-mobile: hsl(30, 100%, 50%); /* Orange */
-  ;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --color-desktop: hsl(120, 70%, 50%);
+    --color-mobile: hsl(30, 100%, 50%);
+
+    /* ── Admin sidebar — warm white ── */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 28 10% 12%;
+    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 30% 96%;
+    --sidebar-accent-foreground: 28 10% 12%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 24 95% 53%;
+
+    /* ── Admin page background — warm cream ── */
+    --admin-bg: #f7f3ef;
+    --admin-card: #ffffff;
+    --admin-border: #ede8e3;
+    --admin-text: #1c1917;
+    --admin-text-muted: #78716c;
+  }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -66,16 +76,18 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
-  ;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --chart-5: 340 75% 55%;
+
+    /* ── Admin sidebar dark ── */
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 24 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 222 47% 14%;
+    --sidebar-ring: 24 95% 53%;
+  }
 }
 
 @layer base {
@@ -87,6 +99,8 @@
     height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
+    /* iOS: prevent elastic bounce on html level */
+    -webkit-overflow-scrolling: touch;
   }
   body {
     @apply bg-background text-foreground;
@@ -98,6 +112,8 @@
     margin: 0;
     padding: 0;
     overscroll-behavior-y: auto;
+    /* iOS momentum scrolling */
+    -webkit-overflow-scrolling: touch;
   }
   #root {
     height: 100%;
@@ -105,6 +121,7 @@
     overflow-x: hidden;
     overflow-y: auto;
     position: relative;
+    -webkit-overflow-scrolling: touch;
   }
 }
 .scroll-hidden {
@@ -373,6 +390,36 @@
   background-color: rgba(30, 41, 59, 0.9) !important;
 }
 
+/* ✅ PROTECT orange-500/600 — placed AFTER bg-orange-50 rule so last !important wins */
+.admin-dark [class*="bg-orange-500"] {
+  background-color: #f97316 !important;
+  color: #ffffff !important;
+}
+.admin-dark [class*="bg-orange-600"] {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+}
+/* Hover states for orange-500/600 buttons */
+.admin-dark [class*="hover:bg-orange-500"]:hover {
+  background-color: #ea580c !important;
+}
+.admin-dark [class*="hover:bg-orange-600"]:hover {
+  background-color: #c2410c !important;
+}
+
+/* ✅ Sidebar active nav items — keep orange on hover in dark mode */
+.admin-dark [data-sidebar="menu-button"]:hover,
+.admin-dark [data-sidebar="menu-sub-button"]:hover {
+  background-color: hsl(215 28% 17%) !important;
+  color: hsl(213 31% 91%) !important;
+}
+/* Active nav items stay orange on hover */
+.admin-dark button[class*="bg-orange-500"]:hover,
+.admin-dark a[class*="bg-orange-500"]:hover {
+  background-color: #f97316 !important;
+  color: #ffffff !important;
+}
+
 .admin-dark [class*="bg-gray-50"],
 .admin-dark [class*="bg-gray-100"],
 .admin-dark [class*="bg-gray-200"],
@@ -572,6 +619,187 @@
   border-color: rgba(100, 116, 139, 0.35) !important;
 }
 
+/* ============================================================
+   ADMIN PREMIUM UI — Table, Cards, Buttons
+   ============================================================ */
+
+/* ── Add Item Page — always-visible scrollbar on col 2 ── */
+/* On laptop (lg+), grid rows must have a fixed height for overflow-y:scroll to work */
+@media (min-width: 1024px) {
+  .add-item-grid {
+    grid-template-rows: 1fr;
+  }
+  .add-item-grid > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+.add-item-col2-scroll {
+  overflow-y: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: #d6cfc8 #f0ebe5;
+}
+.add-item-col2-scroll::-webkit-scrollbar {
+  width: 6px;
+  display: block !important;
+}
+.add-item-col2-scroll::-webkit-scrollbar-track {
+  background: #f0ebe5;
+  border-radius: 999px;
+}
+.add-item-col2-scroll::-webkit-scrollbar-thumb {
+  background-color: #d6cfc8;
+  border-radius: 999px;
+  min-height: 40px;
+}
+.add-item-col2-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #a8a29e;
+}
+.admin-dark .add-item-col2-scroll {
+  scrollbar-color: #475569 #1e293b;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+.admin-dark .add-item-col2-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}
+
+/* ── Admin page wrapper ── */
+.admin-page-bg {
+  background-color: #f7f3ef;
+}
+.admin-dark .admin-page-bg {
+  background-color: #0f172a;
+}
+
+/* ── Premium admin table ── */
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ede8e3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+}
+.admin-table thead tr {
+  background: #f7f3ef;
+}
+.admin-table thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a8a29e;
+  border-bottom: 1px solid #ede8e3;
+  white-space: nowrap;
+}
+.admin-table tbody tr {
+  border-bottom: 1px solid #f5f0eb;
+  transition: background 0.1s ease;
+}
+.admin-table tbody tr:last-child {
+  border-bottom: none;
+}
+.admin-table tbody tr:hover {
+  background: #faf7f4;
+}
+.admin-table tbody td {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #1c1917;
+  vertical-align: middle;
+}
+
+/* Dark mode table */
+.admin-dark .admin-table {
+  background: #1e293b;
+  border-color: #334155;
+}
+.admin-dark .admin-table thead tr {
+  background: #0f172a;
+}
+.admin-dark .admin-table thead th {
+  color: #64748b;
+  border-bottom-color: #334155;
+}
+.admin-dark .admin-table tbody tr {
+  border-bottom-color: #1e293b;
+}
+.admin-dark .admin-table tbody tr:hover {
+  background: #263348;
+}
+.admin-dark .admin-table tbody td {
+  color: #e2e8f0;
+}
+
+/* ── Admin card ── */
+.admin-card {
+  background: #ffffff;
+  border: 1px solid #ede8e3;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.admin-dark .admin-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* ── Admin primary button ── */
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+.admin-btn-primary:hover {
+  background: #ea580c;
+  box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+}
+.admin-btn-primary:active {
+  background: #c2410c;
+}
+
+/* ── Status badges — premium pill style ── */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-badge-pending  { background: #fef9c3; color: #854d0e; }
+.admin-badge-preparing{ background: #dcfce7; color: #166534; }
+.admin-badge-ready    { background: #dbeafe; color: #1e40af; }
+.admin-badge-completed{ background: #f0fdf4; color: #15803d; }
+.admin-badge-cancelled{ background: #fef2f2; color: #991b1b; }
+
+.admin-dark .admin-badge-pending  { background: rgba(234,179,8,0.15);  color: #fde047; }
+.admin-dark .admin-badge-preparing{ background: rgba(34,197,94,0.15);  color: #4ade80; }
+.admin-dark .admin-badge-ready    { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.admin-dark .admin-badge-completed{ background: rgba(34,197,94,0.12);  color: #4ade80; }
+.admin-dark .admin-badge-cancelled{ background: rgba(239,68,68,0.15);  color: #f87171; }
+
 /* ✅ GLOBAL ADMIN MOBILE SCROLL FIXES */
 @layer utilities {
   /* Remove all min-h-screen / h-screen from admin pages */
@@ -609,5 +837,361 @@
   [--admin-scroll-container=true] > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
+  }
+}
+
+/* ============================================================
+   iOS SAFARI SCROLL FIXES — Admin + Client
+   ============================================================ */
+
+/* 1. All scrollable containers get momentum scrolling on iOS */
+@supports (-webkit-touch-callout: none) {
+
+  /* Any element with overflow scroll/auto gets iOS momentum */
+  [class*="overflow-y-auto"],
+  [class*="overflow-y-scroll"],
+  [class*="overflow-auto"],
+  [class*="overflow-scroll"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent double-tap zoom on buttons/links — improves tap responsiveness */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Fix: iOS sometimes freezes scroll inside flex/grid children */
+  [class*="flex-1"],
+  [class*="flex-col"] {
+    min-height: 0;
+  }
+
+  /* Fix: h-screen on iOS includes browser chrome — use dvh */
+  [class*="h-screen"] {
+    height: 100dvh;
+  }
+  [class*="min-h-screen"] {
+    min-height: 100dvh;
+  }
+  [class*="max-h-screen"] {
+    max-height: 100dvh;
+  }
+
+  /* Fix: position:fixed elements on iOS Safari with keyboard open */
+  [class*="fixed"] {
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Admin sidebar scroll */
+  [data-sidebar="sidebar"],
+  [data-sidebar="content"] {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* Client side: food listing, cart, modals */
+  .client-scroll-area {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+
+  /* Prevent body scroll when modal/drawer is open */
+  body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+}
+
+/* 2. Safe area insets — notch/home bar on iPhone */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+
+  /* Bottom nav / action bars */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Fixed bottom elements */
+  [class*="bottom-0"][class*="fixed"],
+  [class*="bottom-0"][class*="sticky"] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Top notch */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* 3. Prevent iOS text size adjustment after orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 4. Smooth scroll globally */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 5. Input zoom fix — iOS zooms in on inputs with font-size < 16px */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
+   DRIVER.JS PREMIUM TOUR STYLES
+   ============================================================ */
+
+/* ── Overlay ── */
+#driver-page-overlay {
+  /* No backdrop-filter — it causes blur to leak into popover buttons */
+}
+
+/* ── Base popover ── */
+.driver-popover {
+  border-radius: 16px !important;
+  padding: 38px 22px 16px !important;
+  box-shadow: 0 24px 64px -12px rgba(0,0,0,0.35), 0 0 0 1px rgba(249,115,22,0.15) !important;
+  max-width: 320px !important;
+  font-family: inherit !important;
+  border: 1px solid rgba(249,115,22,0.2) !important;
+  animation: tour-pop-in 0.22s cubic-bezier(0.34,1.56,0.64,1) both !important;
+  z-index: 100001 !important;
+  /* position: fixed is set by driver.js — do NOT override with relative */
+}
+
+@keyframes tour-pop-in {
+  from { opacity:0; transform:scale(0.88) translateY(6px); }
+  to   { opacity:1; transform:scale(1)    translateY(0); }
+}
+
+/* ── Light theme ── */
+.admin-tour-light.driver-popover {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+.admin-tour-light .driver-popover-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin-bottom: 6px !important;
+  line-height: 1.3 !important;
+}
+.admin-tour-light .driver-popover-description {
+  font-size: 13px !important;
+  color: #475569 !important;
+  line-height: 1.55 !important;
+}
+.admin-tour-light .driver-popover-progress-text {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+}
+.admin-tour-light .driver-popover-footer {
+  margin-top: 14px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  gap: 8px !important;
+}
+
+/* ── Dark theme ── */
+.admin-tour-dark.driver-popover {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(249,115,22,0.25) !important;
+  box-shadow: 0 24px 64px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(249,115,22,0.2), 0 0 30px rgba(249,115,22,0.08) !important;
+}
+.admin-tour-dark .driver-popover-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+  margin-bottom: 6px !important;
+  line-height: 1.3 !important;
+}
+.admin-tour-dark .driver-popover-description {
+  font-size: 13px !important;
+  color: #94a3b8 !important;
+  line-height: 1.55 !important;
+}
+.admin-tour-dark .driver-popover-progress-text {
+  font-size: 11px !important;
+  color: #475569 !important;
+}
+.admin-tour-dark .driver-popover-footer {
+  margin-top: 14px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid #1e293b !important;
+  gap: 8px !important;
+}
+
+/* ── Buttons (both themes) ── */
+.driver-popover-footer {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+}
+.driver-popover-footer button {
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 5px 10px !important;
+  transition: background 0.15s ease, box-shadow 0.15s ease !important;
+  cursor: pointer !important;
+  border: none !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Next / Done button — orange */
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: #f97316 !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+.driver-popover-next-btn::before,
+.driver-popover-next-btn::after,
+.driver-popover-done-btn::before,
+.driver-popover-done-btn::after {
+  display: none !important;
+  content: none !important;
+}
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  background: #ea580c !important;
+  box-shadow: 0 4px 12px rgba(249,115,22,0.4) !important;
+}
+/* Prev button */
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: #f97316 !important;
+  border: 1px solid rgba(249,115,22,0.4) !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+.driver-popover-prev-btn::before,
+.driver-popover-prev-btn::after {
+  display: none !important;
+  content: none !important;
+}
+.driver-popover-prev-btn:hover {
+  background: rgba(249,115,22,0.08) !important;
+}
+/* Close X — hidden, replaced by Skip button in footer */
+.driver-popover-close-btn {
+  display: none !important;
+}
+
+/* ── Skip button — top-right corner of popover ── */
+/* position:fixed on popover (driver.js default) — skip button uses absolute
+   which is relative to the nearest positioned ancestor = the popover itself
+   since driver.js sets position:fixed, absolute children are relative to it */
+.driver-skip-btn {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #f97316 !important;
+  background: transparent !important;
+  color: #f97316 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  z-index: 10 !important;
+}
+.driver-skip-btn:hover {
+  border-color: #f97316 !important;
+  color: #ffffff !important;
+  background: #f97316 !important;
+}
+.admin-tour-dark .driver-skip-btn {
+  border-color: #f97316 !important;
+  color: #f97316 !important;
+}
+.admin-tour-dark .driver-skip-btn:hover {
+  color: #ffffff !important;
+  background: #f97316 !important;
+}
+
+/* ── Keep sidebar layout stable during tour ── */
+/* MutationObserver handles data-state in JS — CSS just ensures no transition glitch */
+html.driver-tour-active .group.peer[data-state="expanded"] > div:last-child {
+  left: 0 !important;
+  width: var(--sidebar-width) !important;
+}
+html.driver-tour-active .group.peer[data-state="expanded"] > div:first-child {
+  width: var(--sidebar-width) !important;
+}
+/* Override driver.js built-in: :not(body):has(>.driver-active-element){overflow:hidden}
+   This rule collapses the sidebar when an element inside it is highlighted */
+html.driver-tour-active :not(body):has(> .driver-active-element) {
+  overflow: visible !important;
+}
+html.driver-tour-active .group\/sidebar-wrapper {
+  overflow: visible !important;
+}
+
+/* ── Stage highlight ── */
+.driver-active-element {
+  border-radius: 10px !important;
+}
+
+/* ── Popover positioning — zero gap from highlighted element ── */
+/* Remove ALL margin overrides — popoverOffset:0 in JS handles the gap */
+.driver-popover {
+  margin: 0 !important;
+}
+
+/* ── Arrow — match popover background ── */
+.driver-popover-arrow {
+  display: block !important;
+}
+.admin-tour-light .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-top-color: #ffffff !important;
+}
+.admin-tour-light .driver-popover-arrow-side-top .driver-popover-arrow {
+  border-bottom-color: #ffffff !important;
+}
+.admin-tour-light .driver-popover-arrow-side-left .driver-popover-arrow {
+  border-right-color: #ffffff !important;
+}
+.admin-tour-light .driver-popover-arrow-side-right .driver-popover-arrow {
+  border-left-color: #ffffff !important;
+}
+.admin-tour-dark .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-top-color: #0f172a !important;
+}
+.admin-tour-dark .driver-popover-arrow-side-top .driver-popover-arrow {
+  border-bottom-color: #0f172a !important;
+}
+.admin-tour-dark .driver-popover-arrow-side-left .driver-popover-arrow {
+  border-right-color: #0f172a !important;
+}
+.admin-tour-dark .driver-popover-arrow-side-right .driver-popover-arrow {
+  border-left-color: #0f172a !important;
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 640px) {
+  .driver-popover {
+    max-width: calc(100vw - 32px) !important;
   }
 }

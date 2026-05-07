@@ -1,6 +1,5 @@
-// src/components/admin/orderManagement/CustomizationsModal.jsx
 import React from "react";
-import { XCircleIcon } from "@heroicons/react/24/solid";
+import { X } from "lucide-react";
 import {
   getItemCustomizationText,
   getOrderCustomerName,
@@ -9,138 +8,124 @@ import {
 } from "../commonOrderFile/utils";
 
 const CustomizationsModal = ({ order, onClose }) => {
+  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
   const orderItems = getOrderItemsList(order);
   if (!order || !orderItems.length) return null;
 
-  // Extract all customizations from order items
   const customizations = orderItems
     .filter((item) => getItemCustomizationText(item))
-    .map(item => ({
+    .map((item) => ({
       itemName: item.name || item.menuItem?.name || "Item",
       variant: item.variant || item.variantName,
-      customizations: getItemCustomizationText(item)
+      customizations: getItemCustomizationText(item),
     }));
 
-  // Handle backdrop click
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const modalBg    = isDarkMode ? "bg-[#1e293b] border-slate-700/60"  : "bg-white border-[#ede8e3]";
+  const headerBg   = isDarkMode ? "bg-[#0f172a] border-slate-700/60"  : "bg-[#f7f3ef] border-[#ede8e3]";
+  const textPri    = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
+  const textSec    = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
+  const textMut    = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const cardBg     = isDarkMode ? "bg-[#0f172a] border-slate-700/60"  : "bg-white border-[#ede8e3]";
+  const cardHeader = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-[#f7f3ef] border-[#ede8e3]";
+  const noteBg     = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
+  const summaryBg  = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#f7f3ef] border-[#ede8e3]";
+  const divider    = isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]";
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
-      onClick={handleBackdropClick}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div 
-        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
+      <div
+        className={`w-full max-w-lg max-h-[88vh] overflow-hidden rounded-2xl border shadow-xl ${modalBg}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Order Customizations</h2>
-          </div>
+        {/* ── Header ── */}
+        <div className={`flex items-center justify-between border-b px-5 py-4 ${headerBg}`}>
+          <h2 className={`text-base font-bold ${textPri}`}>Order Customizations</h2>
           <button
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700"
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#a8a29e] hover:bg-[#ede8e3] hover:text-[#1c1917]"
+            }`}
           >
-            <XCircleIcon className="h-6 w-6" />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
+        {/* ── Content ── */}
+        <div className="overflow-y-auto max-h-[calc(88vh-120px)] p-5 space-y-4">
           {customizations.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">No customizations in this order</p>
-            </div>
+            <p className={`py-8 text-center text-sm ${textMut}`}>No customizations in this order</p>
           ) : (
-            <div className="space-y-6">
-              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <h3 className="font-semibold text-gray-800 mb-2 text-lg">
+            <>
+              {/* Count banner */}
+              <div className={`rounded-xl border px-4 py-3 ${summaryBg}`}>
+                <p className={`text-sm font-semibold ${textPri}`}>
                   Items with Customizations ({customizations.length})
-                </h3>
-                {/* <p className="text-sm text-gray-600">
-                  Below are the custom requests for each menu item
-                </p> */}
+                </p>
               </div>
 
-              {/* Customizations List */}
-              <div className="space-y-4">
-                {customizations.map((item, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-200 rounded-xl overflow-hidden shadow-sm transition"
-                  >
-                    {/* Item Header */}
-                    <div className="border-b bg-gradient-to-r from-orange-50/70 to-white p-3">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-bold text-gray-800 text-lg">
-                          {item.itemName}
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          {item.variant && (
-                            <span className="rounded border border-orange-200 bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800">
-                              {item.variant}
-                            </span>
-                          )}
-                          <span className="text-sm text-gray-600">
-                            Item #{index + 1}
-                          </span>
-                        </div>
-                      </div>
+              {/* Items */}
+              {customizations.map((item, index) => (
+                <div key={index} className={`rounded-xl border overflow-hidden ${cardBg}`}>
+                  {/* Item header */}
+                  <div className={`flex items-center justify-between border-b px-4 py-3 ${cardHeader}`}>
+                    <h4 className={`text-sm font-bold ${textPri}`}>{item.itemName}</h4>
+                    <div className="flex items-center gap-2">
+                      {item.variant && (
+                        <span className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${
+                          isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-orange-200 bg-orange-50 text-orange-700"
+                        }`}>
+                          {item.variant}
+                        </span>
+                      )}
+                      <span className={`text-xs ${textMut}`}>Item #{index + 1}</span>
                     </div>
+                  </div>
 
-                    {/* Customizations Content */}
-                    <div className="p-4 bg-white">
-                      <div className="flex items-start space-x-3">
-                        <div className="mt-1 w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <h5 className="text-sm font-semibold text-gray-600 mb-2">
-                            Customer Request:
-                          </h5>
-                          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                            <p className="text-gray-800 whitespace-pre-wrap break-all text-sm leading-relaxed">
-                              {item.customizations}
-                            </p>
-                          </div>
+                  {/* Customization text */}
+                  <div className="px-4 py-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                      <div className="flex-1">
+                        <p className={`mb-2 text-xs font-semibold ${textSec}`}>Customer Request:</p>
+                        <div className={`rounded-lg border px-3 py-2.5 ${noteBg}`}>
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${textPri}`}>
+                            {item.customizations}
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
 
               {/* Summary */}
-              <div className="rounded-xl border border-orange-100 bg-orange-50/60 p-4">
+              <div className={`rounded-xl border px-4 py-3 ${summaryBg}`}>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-600">Order Details</h4>
-                    <p className="text-sm text-gray-800 mt-1">
-                      <span className="font-medium">Total Items:</span> {orderItems.length}
-                    </p>
-                    <p className="text-sm text-gray-800">
-                      <span className="font-medium">Customized Items:</span> {customizations.length}
-                    </p>
+                    <p className={`text-xs font-semibold mb-1.5 ${textMut}`}>Order Details</p>
+                    <p className={`text-sm ${textSec}`}>Total Items: <span className={`font-semibold ${textPri}`}>{orderItems.length}</span></p>
+                    <p className={`text-sm ${textSec}`}>Customized: <span className={`font-semibold ${textPri}`}>{customizations.length}</span></p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-600">Customer</h4>
-                    <p className="text-sm text-gray-800 mt-1">{getOrderCustomerName(order)}</p>
-                    <p className="text-sm text-gray-800">{getOrderCustomerPhone(order)}</p>
+                    <p className={`text-xs font-semibold mb-1.5 ${textMut}`}>Customer</p>
+                    <p className={`text-sm font-semibold ${textPri}`}>{getOrderCustomerName(order)}</p>
+                    <p className={`text-sm ${textSec}`}>{getOrderCustomerPhone(order)}</p>
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="flex justify-end border-t border-orange-100 p-4">
+        {/* ── Footer ── */}
+        <div className={`flex justify-end border-t px-5 py-3 ${divider} ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
           <button
             onClick={onClose}
-            className="h-11 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:from-orange-600 hover:to-orange-600"
+            className="rounded-lg bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
           >
             Close
           </button>

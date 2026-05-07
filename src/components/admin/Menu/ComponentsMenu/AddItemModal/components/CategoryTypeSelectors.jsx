@@ -6,7 +6,6 @@ import {
   Check,
   Loader2,
   Plus,
-  SquarePen,
   Trash,
   X,
 } from "lucide-react";
@@ -444,7 +443,7 @@ const CategoryTypeSelectors = ({
     <>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div data-field="category">
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+        <label className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
           Category *
         </label>
         <Select
@@ -467,8 +466,8 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
-              errors.category ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"
+            className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:text-slate-100 ${
+              errors.category ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
             }`}
           >
             <SelectValue placeholder="Select a Category" />
@@ -479,7 +478,7 @@ const CategoryTypeSelectors = ({
             align="start"
             sideOffset={4}
             collisionPadding={12}
-            className="w-[min(var(--radix-select-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] max-h-[min(50dvh,18rem)] overflow-y-auto rounded-xl border border-orange-200 bg-white p-1 shadow-xl sm:max-h-72"
+            className="w-[min(var(--radix-select-trigger-width),calc(100vw-1rem))] max-w-[calc(100vw-1rem)] max-h-[min(50dvh,18rem)] overflow-y-auto rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:max-h-72"
           >
             <SelectGroup>
               <SelectItem
@@ -504,7 +503,7 @@ const CategoryTypeSelectors = ({
                     return (
                       <div
                         key={cat}
-                        className="mx-1 my-1 rounded-lg border border-orange-200 bg-orange-50 p-1.5"
+                        className="mx-1 my-1 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-1.5"
                       >
                         <div className="flex items-center gap-1.5">
                           <Input
@@ -534,7 +533,7 @@ const CategoryTypeSelectors = ({
                           </button>
                           <button
                             type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-orange-200 bg-white text-orange-700 transition-colors hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#ede8e3] bg-white text-[#78716c] transition-colors hover:bg-[#f7f3ef] disabled:cursor-not-allowed disabled:opacity-50"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={resetEditState}
                             disabled={!!activeCategoryAction}
@@ -554,25 +553,11 @@ const CategoryTypeSelectors = ({
                     <div key={cat} className="group relative">
                       <SelectItem
                         value={cat}
-                        className="pr-20 data-[highlighted]:bg-orange-200 [&>span:first-child]:hidden"
+                        className="pr-20 data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200 [&>span:first-child]:hidden"
                       >
                         <span className="block max-w-full truncate">{cat}</span>
                       </SelectItem>
                       <div className="absolute inset-y-0 right-1 z-10 flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          className="rounded-lg p-1.5 text-orange-700 transition-colors hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          onPointerDown={(event) => handleActionIconClick(event, () => {})}
-                          onClick={(event) =>
-                            handleActionIconClick(event, () => handleStartRename(cat))
-                          }
-                          disabled={isSavingCategory || !!activeCategoryAction}
-                          aria-label={`Edit ${cat}`}
-                          title="Edit category"
-                        >
-                          <SquarePen size={16} />
-                        </button>
-
                         <button
                           type="button"
                           className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -600,7 +585,7 @@ const CategoryTypeSelectors = ({
         </Select>
 
         {showAddCategoryInput && (
-          <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50/70 p-2.5">
+          <div className="mt-2 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-2.5">
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 value={newCategoryInput}
@@ -610,7 +595,7 @@ const CategoryTypeSelectors = ({
                 }}
                 onKeyDown={handleCategoryInputKeyDown}
                 placeholder="Type category name"
-                className="h-10 border-orange-200 bg-white text-sm focus-visible:ring-orange-300"
+                className="h-9 border-[#ede8e3] bg-white text-sm focus-visible:ring-orange-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 disabled={isSavingCategory || !!activeCategoryAction}
               />
               <div className="flex gap-2">
@@ -638,7 +623,7 @@ const CategoryTypeSelectors = ({
                     setNewCategoryError("");
                   }}
                   disabled={isSavingCategory || !!activeCategoryAction}
-                  className="h-10 rounded-lg border border-orange-200 px-3 text-sm text-orange-700 hover:bg-orange-100 hover:text-orange-800"
+                  className="h-9 rounded-lg border border-[#ede8e3] px-3 text-sm text-[#78716c] hover:bg-[#f7f3ef]"
                 >
                   Cancel
                 </Button>
@@ -662,7 +647,7 @@ const CategoryTypeSelectors = ({
         </div>
 
         <div data-field="type">
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+          <label className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
             Food Type *
           </label>
           <Select
@@ -673,17 +658,17 @@ const CategoryTypeSelectors = ({
             }}
           >
             <SelectTrigger
-              className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200 ${
-                errors.type ? "border-red-500 bg-red-50" : "border-orange-200 bg-white hover:border-orange-300"
+              className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:text-slate-100 ${
+                errors.type ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
               }`}
             >
               <SelectValue placeholder="Select Food Type" />
             </SelectTrigger>
-            <SelectContent className="min-w-[140px] cursor-pointer rounded-xl border border-orange-200 bg-white p-1 shadow-xl">
+            <SelectContent className="min-w-[140px] cursor-pointer rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
               <SelectGroup>
-                <SelectItem value="veg" className="data-[highlighted]:bg-orange-200">Veg</SelectItem>
-                <SelectItem value="non-veg" className="data-[highlighted]:bg-orange-200">Non-Veg</SelectItem>
-                <SelectItem value="mixed" className="data-[highlighted]:bg-orange-200">Mixed</SelectItem>
+                <SelectItem value="veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Veg</SelectItem>
+                <SelectItem value="non-veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Non-Veg</SelectItem>
+                <SelectItem value="mixed" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Mixed</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -703,18 +688,18 @@ const CategoryTypeSelectors = ({
             onClick={handleCancelDeleteCategory}
           >
             <div
-              className="w-full max-w-md rounded-2xl border border-orange-100 bg-white/95 p-6 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
+              className="w-full max-w-md rounded-2xl border border-[#ede8e3] bg-white p-6 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)]"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-6 flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-100">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#f7f3ef]">
                   <AlertTriangle className="h-6 w-6 text-orange-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="mb-1 text-lg font-bold text-gray-900">
+                  <h3 className="mb-1 text-lg font-bold text-[#1c1917]">
                     Delete Category?
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-[#78716c]">
                     Are you sure you want to delete
                     {" "}
                     <span className="font-semibold text-gray-800">
@@ -725,19 +710,19 @@ const CategoryTypeSelectors = ({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-orange-100 pt-4 sm:flex-row">
+              <div className="flex flex-col gap-3 border-t border-[#ede8e3] pt-4 sm:flex-row">
                 <Button
                   onClick={handleCancelDeleteCategory}
                   variant="outline"
                   disabled={!!activeCategoryAction}
-                  className="h-11 flex-1 rounded-xl border border-orange-200 bg-white text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50"
+                  className="h-9 flex-1 rounded-lg border border-[#ede8e3] bg-white text-sm font-semibold text-[#78716c] transition-colors hover:bg-[#f7f3ef]"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleConfirmDeleteCategory}
                   disabled={!!activeCategoryAction}
-                  className="h-11 flex-1 rounded-xl border border-red-600 bg-gradient-to-r from-red-500 to-red-500 text-sm font-semibold text-white transition-all duration-200 hover:from-red-600 hover:to-red-600"
+                  className="h-9 flex-1 rounded-lg bg-red-500 text-sm font-semibold text-white transition-colors hover:bg-red-600"
                 >
                   {activeCategoryAction === `delete:${deleteConfirmCategory}` ? (
                     <span className="flex items-center justify-center gap-2">
