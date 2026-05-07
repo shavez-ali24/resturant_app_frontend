@@ -42,6 +42,7 @@ const PendingOrderRowActions = ({
       </td>
 
       {/* Status */}
+      {/* status  */}
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center">
           <StatusDropdown order={order} updateOrder={updateOrder} />
