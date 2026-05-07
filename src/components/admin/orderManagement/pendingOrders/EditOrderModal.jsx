@@ -819,16 +819,42 @@ const EditOrderModal = ({
             ].filter(s => s.count > 0);
 
             const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+            const onlyOne = sectionDefs.length === 1;
 
             return (
               <div data-error={!!validationErrors.table}>
-                <label className={labelCls}>Select Section & Table *</label>
+                <label className={labelCls}>{onlyOne ? "Select Table *" : "Select Section & Table *"}</label>
                 {sectionDefs.length === 0 ? (
                   <p className={`rounded-lg border border-dashed p-3 text-sm text-center ${isDarkMode ? "border-slate-600 text-slate-400" : "border-[#ede8e3] text-[#78716c]"}`}>
                     No tables configured yet.
                   </p>
+                ) : onlyOne ? (
+                  // Single section — show only number dropdown
+                  <Select
+                    value={selectedTableId || `${sectionDefs[0].key}:1`}
+                    onValueChange={(v) => handleTableChange(`${sectionDefs[0].key}:${v}`)}
+                  >
+                    <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+                      isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
+                    }`}>
+                      <SelectValue placeholder={`Select ${sectionDefs[0].unit}`}>
+                        {selNum ? `${sectionDefs[0].unit} ${selNum}` : `Select ${sectionDefs[0].unit}`}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${dropdownCls}`}>
+                      <SelectGroup>
+                        {Array.from({ length: sectionDefs[0].count }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}
+                            className={`cursor-pointer rounded-md py-2 text-sm ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                            {sectionDefs[0].unit} {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                  // Multiple sections — section cards + number dropdown
+                  <div className="grid grid-cols-2 gap-2">
                     {sectionDefs.map(({ key, label, count, unit }) => {
                       const isSelected = selSection === key;
                       return (

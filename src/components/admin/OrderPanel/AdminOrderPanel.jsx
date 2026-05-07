@@ -448,26 +448,40 @@ function OrderSummaryPanel({
           const sectionKeys = Object.keys(sec);
           const sectionLabels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Rooms" };
           const [selSection, selNum] = tableId ? tableId.split(":") : ["", ""];
+          const onlyOne = sectionKeys.length === 1;
 
           return (
             <div className="space-y-2">
-              {/* Section select */}
-              <StyledSelect
-                value={selSection || ""}
-                onChange={(v) => setTableId(v ? `${v}:1` : "")}
-                options={sectionKeys.map((k) => ({ value: k, label: sectionLabels[k] || k }))}
-                placeholder="Select Section *"
-                isDarkMode={isDarkMode}
-              />
-              {/* Number select — only when section chosen */}
-              {selSection && sec[selSection] && (
+              {onlyOne ? (
+                // Single section — show only number dropdown directly
                 <StyledSelect
                   value={tableId}
                   onChange={setTableId}
-                  options={sec[selSection]}
-                  placeholder={`Select ${selSection === "rooms" ? "Room" : "Table"} *`}
+                  options={sec[sectionKeys[0]]}
+                  placeholder={`Select ${sectionKeys[0] === "rooms" ? "Room" : "Table"} *`}
                   isDarkMode={isDarkMode}
                 />
+              ) : (
+                <>
+                  {/* Section select */}
+                  <StyledSelect
+                    value={selSection || ""}
+                    onChange={(v) => setTableId(v ? `${v}:1` : "")}
+                    options={sectionKeys.map((k) => ({ value: k, label: sectionLabels[k] || k }))}
+                    placeholder="Select Section *"
+                    isDarkMode={isDarkMode}
+                  />
+                  {/* Number select — only when section chosen */}
+                  {selSection && sec[selSection] && (
+                    <StyledSelect
+                      value={tableId}
+                      onChange={setTableId}
+                      options={sec[selSection]}
+                      placeholder={`Select ${selSection === "rooms" ? "Room" : "Table"} *`}
+                      isDarkMode={isDarkMode}
+                    />
+                  )}
+                </>
               )}
             </div>
           );

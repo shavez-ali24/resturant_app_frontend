@@ -49,6 +49,22 @@ export default function OrderFormModal({
   // ✅ Get delivery charges from restaurant data (only for display)
   const deliveryCharges = Number(restaurantData?.restaurant?.deliveryCharges || 0);
 
+  // Auto-select section when only one section exists and Eat Here is chosen
+  useEffect(() => {
+    if (orderType !== "Eat Here") return;
+    const sections = restaurantData?.restaurant?.sections || {};
+    const defs = [
+      { key: "indoor",  count: sections.indoor?.tables  || restaurantData?.restaurant?.tableNumbers || 0 },
+      { key: "outdoor", count: sections.outdoor?.tables || 0 },
+      { key: "rooftop", count: sections.rooftop?.tables || 0 },
+      { key: "rooms",   count: sections.rooms?.rooms    || 0 },
+    ].filter(s => s.count > 0);
+
+    if (defs.length === 1 && !tableId) {
+      setTableId(`${defs[0].key}:1`);
+    }
+  }, [orderType, restaurantData, tableId, setTableId]);
+
   // Get cart items array
   const cartItemsArray = Object.values(cartItems);
 
@@ -341,22 +357,45 @@ export default function OrderFormModal({
 
                   // Parse selected: "indoor:3" → { section: "indoor", number: 3 }
                   const [selSection, selNum] = tableId ? tableId.split(":") : ["", ""];
+                  const onlyOne = sectionDefs.length === 1;
 
                   return (
                     <div className="animate-fade-in space-y-3">
                       <label className={`block text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-gray-700"}`}>
-                        Select Section & Table *
+                        {onlyOne ? "Select Table *" : "Select Section & Table *"}
                       </label>
 
                       {sectionDefs.length === 0 ? (
                         <p className={`rounded-xl border border-dashed p-3 text-sm text-center ${isDarkMode ? "border-slate-600 text-slate-400" : "border-orange-200 text-gray-500"}`}>
                           No tables configured yet.
                         </p>
+                      ) : onlyOne ? (
+                        // Single section — skip section button, show only number dropdown
+                        <Select
+                          value={tableId || `${sectionDefs[0].key}:1`}
+                          onValueChange={(v) => setTableId(`${sectionDefs[0].key}:${v}`)}
+                        >
+                          <SelectTrigger className={`h-11 w-full rounded-xl border text-sm font-medium ${isDarkMode ? "border-orange-500 bg-slate-900 text-slate-100" : "border-primary bg-white text-gray-800"}`}>
+                            <SelectValue placeholder={`Select ${sectionDefs[0].unit}`}>
+                              {selNum ? `${sectionDefs[0].unit} ${selNum}` : `Select ${sectionDefs[0].unit}`}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200 bg-white"}`}>
+                            <SelectGroup>
+                              {Array.from({ length: sectionDefs[0].count }, (_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)}
+                                  className={`cursor-pointer py-2 text-sm font-medium ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white" : "text-gray-700 data-[highlighted]:bg-orange-500 data-[highlighted]:text-white"}`}>
+                                  {sectionDefs[0].unit} {i + 1}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       ) : (
-                        <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        // Multiple sections — show section cards + number dropdown
+                        <div className="grid grid-cols-2 gap-2">
                           {sectionDefs.map(({ key, label, count, unit }) => {
                             const isSelected = selSection === key;
-                            // If selected and only 1 section, or selected in 2-col grid → span full width
                             const spanFull = isSelected;
                             return (
                               <div key={key} className={`flex flex-col gap-1.5 ${spanFull ? "col-span-full" : ""}`}>
@@ -423,9 +462,10 @@ export default function OrderFormModal({
 
                       {tableId && (
                         <p className={`text-xs font-medium ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>
-                          ✓ {selSection?.charAt(0).toUpperCase() + selSection?.slice(1)} — {
-                            sectionDefs.find(s => s.key === selSection)?.unit
-                          } {selNum} selected
+                          ✓ {onlyOne
+                            ? `${sectionDefs[0]?.unit} ${selNum} selected`
+                            : `${selSection?.charAt(0).toUpperCase() + selSection?.slice(1)} — ${sectionDefs.find(s => s.key === selSection)?.unit} ${selNum} selected`
+                          }
                         </p>
                       )}
                     </div>

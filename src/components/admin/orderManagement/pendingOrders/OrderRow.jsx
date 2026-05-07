@@ -64,34 +64,34 @@ const OrderRow = ({
 
       {/* Date (non-pending) */}
       {tableType !== "pending" && (
-        <td className={tdBase}>{order.formattedDate || "—"}</td>
+        <td className={`${tdBase} text-center`}>{order.formattedDate || "—"}</td>
       )}
 
       {tableType === "pending" ? (
         <>
           {/* ID */}
-          <td className="px-4 py-3 align-middle">
+          <td className="px-4 py-3 align-middle text-center">
             <span className={`font-mono text-xs font-bold px-2 py-1 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
               {orderIdDisplay || "—"}
             </span>
           </td>
           {/* Time */}
-          <td className={`${tdBase} whitespace-nowrap`}>{order.formattedTime || "—"}</td>
+          <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
           {/* Customer */}
-          <td className={`${tdBase} font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
+          <td className={`${tdBase} font-medium text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
           {/* Phone */}
-          <td className={`${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
+          <td className={`text-center ${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
         </>
       ) : (
         <>
-          <td className={`${tdBase} whitespace-nowrap`}>{order.formattedTime || "—"}</td>
-          <td className={`${tdBase} font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
-          <td className={`${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
+          <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
+          <td className={`${tdBase} font-medium text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
+          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
         </>
       )}
 
       {/* Order Type */}
-      <td className="px-4 py-3 align-middle">
+      <td className="px-4 py-3 align-middle text-center">
         <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
           {getOrderTypeIcon(order.orderType)}
           {orderTypeLabel}
@@ -100,7 +100,7 @@ const OrderRow = ({
       </td>
 
       {/* View Items & Bill */}
-      <td className="px-4 py-3 align-middle">
+      <td className="px-4 py-3 align-middle text-center">
         <button
           onClick={() => { if (onBillOpen) onBillOpen(); dispatch(showBill(order)); }}
           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${

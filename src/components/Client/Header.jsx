@@ -95,6 +95,19 @@ export default function Header({
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [sseRetryKey, setSseRetryKey] = useState(0);
 
+  // Auto-select table when only one section exists and Eat Here is chosen
+  useEffect(() => {
+    if (orderType !== "Eat Here" || tableId) return;
+    const sections = restaurantData?.restaurant?.sections || {};
+    const defs = [
+      { key: "indoor",  count: sections.indoor?.tables  || restaurantData?.restaurant?.tableNumbers || 0 },
+      { key: "outdoor", count: sections.outdoor?.tables || 0 },
+      { key: "rooftop", count: sections.rooftop?.tables || 0 },
+      { key: "rooms",   count: sections.rooms?.rooms    || 0 },
+    ].filter(s => s.count > 0);
+    if (defs.length === 1) setTableId(`${defs[0].key}:1`);
+  }, [orderType, restaurantData, tableId]);
+
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
 

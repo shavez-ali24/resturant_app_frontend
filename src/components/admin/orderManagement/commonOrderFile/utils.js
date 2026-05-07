@@ -423,16 +423,10 @@ export const getOrderTypeItemClass = (value) => {
 export const formatOrderTableId = (tableId, source) => {
   // ✅ New source object: { section: "indoor", number: 3, type: "TABLE" }
   if (source && source.section && source.number) {
-    const sectionLabels = {
-      indoor:  "Indoor",
-      outdoor: "Outdoor",
-      rooftop: "Rooftop",
-      rooms:   "Room",
-    };
-    const section = sectionLabels[String(source.section).toLowerCase()] || 
-                    (String(source.section).charAt(0).toUpperCase() + String(source.section).slice(1));
-    const unit = source.type === "ROOM" ? "" : "Table";
-    return unit ? `${section} ${unit} ${source.number}` : `${section} ${source.number}`;
+    const SHORT = { indoor: "IND", outdoor: "OUT", rooftop: "ROOF", rooms: "RM" };
+    const short = SHORT[String(source.section).toLowerCase()] || String(source.section).toUpperCase();
+    const unit  = source.type === "ROOM" ? "" : "TBL";
+    return unit ? `${short} ${unit} ${source.number}` : `${short} ${source.number}`;
   }
 
   if (!tableId) return "";

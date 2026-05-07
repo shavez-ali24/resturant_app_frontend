@@ -125,22 +125,22 @@ const OrdersTable = ({
           <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800" : "bg-orange-50"}`}>
             <tr className={`border-b ${isDarkMode ? "border-slate-700" : "border-orange-100"}`}>
               {tableType === "pending" ? (
-                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order ID</th>
+                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order ID</th>
               ) : (
-                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Date</th>
+                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Date</th>
               )}
-              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Placed At</th>
-              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Customer</th>
-              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Phone</th>
-              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Type</th>
-              <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order Details</th>
+              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Placed At</th>
+              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Customer</th>
+              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Phone</th>
+              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Type</th>
+              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order Details</th>
               {tableType === "pending" && (
-                <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Note</th>
+                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Note</th>
               )}
               {tableType === "pending" && (
                 <>
-                  <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Status</th>
-                  <th className={`px-4 py-2.5 text-left align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Manage</th>
+                  <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Status</th>
+                  <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Manage</th>
                 </>
               )}
             </tr>

@@ -1170,18 +1170,39 @@ const BillPage = ({
                   ].filter(s => s.count > 0);
 
                   const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+                  const onlyOne = sectionDefs.length === 1;
 
                   return (
                     <div>
                       <label className={`mb-2 block text-sm font-medium ${billMutedTextClass}`}>
-                        Select Section & Table *
+                        {onlyOne ? "Select Table *" : "Select Section & Table *"}
                       </label>
                       {sectionDefs.length === 0 ? (
                         <p className={`rounded-xl border border-dashed p-3 text-sm text-center ${billInputClass}`}>
                           No tables configured yet.
                         </p>
+                      ) : onlyOne ? (
+                        <Select
+                          value={selectedTableId || `${sectionDefs[0].key}:1`}
+                          onValueChange={(v) => handleTableChange(`${sectionDefs[0].key}:${v}`)}
+                        >
+                          <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-medium ${billInputClass}`}>
+                            <SelectValue placeholder={`Select ${sectionDefs[0].unit}`}>
+                              {selNum ? `${sectionDefs[0].unit} ${selNum}` : `Select ${sectionDefs[0].unit}`}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
+                            <SelectGroup>
+                              {Array.from({ length: sectionDefs[0].count }, (_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)} className={`cursor-pointer py-2 text-sm font-medium ${billSelectItemClass}`}>
+                                  {sectionDefs[0].unit} {i + 1}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       ) : (
-                        <div className={`grid gap-2 ${sectionDefs.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        <div className="grid grid-cols-2 gap-2">
                           {sectionDefs.map(({ key, label, count, unit }) => {
                             const isSelected = selSection === key;
                             return (

@@ -11,8 +11,8 @@ const PendingOrderMobileControls = ({
   return (
     <>
       {/* Status */}
-      <div className="flex flex-col gap-1.5">
-        <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
+      <div className="flex flex-col items-center gap-1.5">
+        <span className={`text-center text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
           Status
         </span>
         <div data-tour="orders-mobile-status" className="w-full">
