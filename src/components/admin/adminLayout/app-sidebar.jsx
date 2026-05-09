@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/tapNbite-176x96.png";
-// import logo from "@/assets/loader.gif";
 
 import { useSidebar } from "@/components/ui/sidebar";
 

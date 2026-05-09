@@ -223,7 +223,6 @@ const EditOrderModal = ({
   useEffect(() => {
     if (editingOrder) {
       const normalizedItems = editingOrder.items.map(item => {
-        // Look up the menu item from menuItems prop to get variantRates
         const menuItem = menuItems.find(m => m._id === (item.menuItemId || item.menuItem?._id || item._id));
         const selectedVariant = item.variantName || item.variant || null;
         const resolvedPricingType =
@@ -246,30 +245,29 @@ const EditOrderModal = ({
           discountedUnitPrice: priceMeta.finalPrice,
           quantity: item.quantity ?? 1,
           pricingType: resolvedPricingType,
-          // Ensure variantName is set for variant items
           variantName: selectedVariant,
           variant: selectedVariant,
-          // Keep variants only for variant-pricing items
           variants: resolvedVariants,
-          customizations: item.customizations || ""
+          customizations: item.customizations || "",
+          // ✅ FIX: Preserve isReady from backend when initializing
+          isReady: item.isReady === true ? true : false,
         };
       });
+
       const newLocalOrderData = {
         ...editingOrder,
         items: normalizedItems
       };
       
       setLocalOrderData(newLocalOrderData);
-      setInitialOrderData(JSON.parse(JSON.stringify(newLocalOrderData))); // Deep copy for comparison
+      setInitialOrderData(JSON.parse(JSON.stringify(newLocalOrderData)));
       setRemovedItemIds([]);
       
-      // Set address if exists (for Delivery orders)
       if (editingOrder.address) {
         setAddress(editingOrder.address);
         setInitialAddress(editingOrder.address);
       }
       
-      // Set tableId if exists (for Eat Here orders)
       if (editingOrder.source?.section && editingOrder.source?.number) {
         const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
         setSelectedTableId(val);
@@ -282,11 +280,7 @@ const EditOrderModal = ({
       setIsDirty(false);
       setHasUserChanges(false);
       setAddItemValue("");
-      setValidationErrors({
-        table: "",
-        address: "",
-        items: ""
-      });
+      setValidationErrors({ table: "", address: "", items: "" });
     }
   }, [editingOrder, menuItems]);
 
@@ -294,16 +288,9 @@ const EditOrderModal = ({
   useEffect(() => {
     if (!localOrderData || !initialOrderData) return;
     
-    // Check order type change
     const orderTypeChanged = localOrderData.orderType !== initialOrderData.orderType;
-    
-    // Check items changes
     const itemsChanged = JSON.stringify(localOrderData.items) !== JSON.stringify(initialOrderData.items);
-    
-    // Check address change
     const addressChanged = address !== initialAddress;
-    
-    // Check table change
     const tableChanged = selectedTableId !== initialTableId;
     
     const hasChanges = orderTypeChanged || itemsChanged || addressChanged || tableChanged;
@@ -313,14 +300,12 @@ const EditOrderModal = ({
 
   useEffect(() => {
     if (itemsContainerRef.current && localOrderData?.items) {
-      itemsContainerRef.current.scrollTop =
-        itemsContainerRef.current.scrollHeight;
+      itemsContainerRef.current.scrollTop = itemsContainerRef.current.scrollHeight;
     }
   }, [localOrderData?.items]);
 
   if (!editingOrder) return null;
 
-  // Show loading state while data is initializing
   if (!localOrderData) {
     return (
       <div
@@ -344,8 +329,7 @@ const EditOrderModal = ({
 
     const now = Date.now();
     const guard = addItemGuardRef.current;
-    const isDuplicateEvent =
-      guard.menuItemId === menuItemId && now - guard.ts < 300;
+    const isDuplicateEvent = guard.menuItemId === menuItemId && now - guard.ts < 300;
     if (isDuplicateEvent) return;
 
     addItemGuardRef.current = { menuItemId, ts: now };
@@ -359,7 +343,6 @@ const EditOrderModal = ({
     let newItem;
 
     if (selected.pricingType === "variant" && selected.variantRates) {
-      // Get first variant key
       const firstVariantKey = Object.keys(selected.variantRates)[0];
       const firstVariantData = selected.variantRates[firstVariantKey];
       const firstVariantMeta = getVariantPriceMeta(firstVariantData);
@@ -374,7 +357,9 @@ const EditOrderModal = ({
         price: firstVariantMeta.finalPrice,
         originalUnitPrice: firstVariantMeta.originalPrice,
         discountedUnitPrice: firstVariantMeta.finalPrice,
-        customizations: ""
+        customizations: "",
+        // ✅ New items always start as not ready
+        isReady: false,
       };
     } else {
       const itemPriceMeta = getItemPriceMeta(selected, selected);
@@ -388,24 +373,20 @@ const EditOrderModal = ({
         price: itemPriceMeta.finalPrice,
         originalUnitPrice: itemPriceMeta.originalPrice,
         discountedUnitPrice: itemPriceMeta.finalPrice,
-        customizations: ""
+        customizations: "",
+        // ✅ New items always start as not ready
+        isReady: false,
       };
     }
-    // console.log("Adding Item:", newItem);
 
     setLocalOrderData(prev => {
       if (!prev) return prev;
       const items = [...(prev.items || []), newItem];
-      return {
-        ...prev,
-        items,
-        totalAmount: recalcTotal(items)
-      };
+      return { ...prev, items, totalAmount: recalcTotal(items) };
     });
     setHasUserChanges(true);
     setAddItemValue("");
     
-    // Clear items validation error when adding item
     if (validationErrors.items) {
       setValidationErrors(prev => ({ ...prev, items: "" }));
     }
@@ -415,8 +396,6 @@ const EditOrderModal = ({
         addItemGuardRef.current = { menuItemId: "", ts: 0 };
       }
     }, 350);
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -433,6 +412,8 @@ const EditOrderModal = ({
     item.price = variantMeta.finalPrice;
     item.originalUnitPrice = variantMeta.originalPrice;
     item.discountedUnitPrice = variantMeta.finalPrice;
+    // ✅ FIX: Preserve isReady when changing variant
+    // isReady stays as-is, don't reset it
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -440,7 +421,6 @@ const EditOrderModal = ({
       totalAmount: recalcTotal(items)
     }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -456,6 +436,7 @@ const EditOrderModal = ({
       if (Number.isNaN(parsedQuantity)) return;
       items[idx].quantity = Math.max(0, parsedQuantity);
     }
+    // ✅ FIX: isReady NOT touched here — quantity change should not reset ready state
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -463,7 +444,6 @@ const EditOrderModal = ({
       totalAmount: recalcTotal(items)
     }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -471,10 +451,7 @@ const EditOrderModal = ({
   // =============================
   const handleRemoveItem = (idx) => {
     if (localOrderData.items.length <= 1) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        items: "Minimum 1 item required" 
-      }));
+      setValidationErrors(prev => ({ ...prev, items: "Minimum 1 item required" }));
       return;
     }
 
@@ -495,12 +472,9 @@ const EditOrderModal = ({
     }));
     setHasUserChanges(true);
     
-    // Clear items validation error if items exist
     if (items.length > 0 && validationErrors.items) {
       setValidationErrors(prev => ({ ...prev, items: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -510,33 +484,17 @@ const EditOrderModal = ({
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
     
-    // Clear fields based on transition
-    if (
-      currentType === "delivery" &&
-      (newType === "eat_here" || newType === "take_away")
-    ) {
+    if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
       setAddress("");
     }
-    if (
-      currentType === "eat_here" &&
-      (newType === "take_away" || newType === "delivery")
-    ) {
+    if (currentType === "eat_here" && (newType === "take_away" || newType === "delivery")) {
       setSelectedTableId("");
     }
 
-    // Clear validation errors when order type changes
-    setValidationErrors({
-      table: "",
-      address: "",
-      items: validationErrors.items // Keep items error if any
-    });
+    setValidationErrors({ table: "", address: "", items: validationErrors.items });
 
-    setLocalOrderData(prev => ({
-      ...prev,
-      orderType
-    }));
+    setLocalOrderData(prev => ({ ...prev, orderType }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -546,12 +504,9 @@ const EditOrderModal = ({
     setSelectedTableId(tableId);
     setHasUserChanges(true);
     
-    // Clear table validation error when user selects a table
     if (tableId && validationErrors.table) {
       setValidationErrors(prev => ({ ...prev, table: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -562,29 +517,20 @@ const EditOrderModal = ({
     setAddress(value);
     setHasUserChanges(true);
     
-    // Clear address validation error when user starts typing
     if (value.trim() && validationErrors.address) {
       setValidationErrors(prev => ({ ...prev, address: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
-  // 🔥 FIXED: FINAL UPDATE ORDER (WITHOUT ALERT)
+  // ✅ FIXED: FINAL UPDATE ORDER — isReady PRESERVED
   // =============================
   const handleUpdateOrder = async () => {
     if (isSubmitting || !isDirty) return;
     
-    // Validate based on order type
-    let errors = {
-      table: "",
-      address: "",
-      items: ""
-    };
+    let errors = { table: "", address: "", items: "" };
     let hasError = false;
 
-    // Items validation
     if (localOrderData.items.length === 0) {
       errors.items = "Minimum 1 item required";
       hasError = true;
@@ -613,14 +559,10 @@ const EditOrderModal = ({
     setValidationErrors(errors);
     
     if (hasError) {
-      // Scroll to first error
       setTimeout(() => {
         const errorElements = document.querySelectorAll('[data-error="true"]');
         if (errorElements.length > 0) {
-          errorElements[0].scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
+          errorElements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
       return;
@@ -637,13 +579,11 @@ const EditOrderModal = ({
       const netNewItems = currentItemCount - (initialItemCount - removedCount);
       const isAddingNewItems = netNewItems > 0;
 
-      // Determine if status needs to be sent explicitly
       let shouldSetPreparing = false;
       if (initialStatus === "ready" && isAddingNewItems) {
         shouldSetPreparing = true;
       }
 
-      // Build payload - only include fields that changed
       const payload = {
         orderType: localOrderData.orderType,
         replaceItems: true,
@@ -654,23 +594,29 @@ const EditOrderModal = ({
             menuItemId: item.menuItemId,
             quantity: Number(item.quantity),
             variant: variantValue,
-            customizations: item.customizations || ""
+            customizations: item.customizations || "",
           };
+
           if (item._id) {
             payloadItem._id = item._id;
+            // ✅ KEY FIX: Send isReady so backend preserves the ready state
+            // Previously MISSING — backend was setting undefined/false for all items
+            // Now existing items keep their isReady value
+            // New items (no _id) correctly default to false
+            payloadItem.isReady = item.isReady === true ? true : false;
           }
+          // Note: new items without _id don't send isReady → backend defaults to false ✅
+
           return payloadItem;
         })
       };
 
-      // Include status if it changed OR we need to force preparing
       if (shouldSetPreparing) {
         payload.status = "preparing";
       } else if (currentStatus !== initialStatus) {
         payload.status = currentStatus;
       }
 
-      // Add source for Eat Here
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
         const [section, numStr] = selectedTableId.split(":");
         const number = parseInt(numStr, 10) || 1;
@@ -678,33 +624,26 @@ const EditOrderModal = ({
         payload.source = { section, number, type };
       }
 
-      // Add address for Delivery
       if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
       }
 
-      // Clear tableId for Take Away (if exists from previous state)
       if (selectedOrderTypeKey === "take_away") {
         payload.source = { section: null, number: null, type: "NONE" };
         payload.address = null;
       }
 
-      // ✅ FIXED: Call updateOrder with correct parameters
       await updateOrder(localOrderData._id, payload);
       setRemovedItemIds([]);
-      
       setEditingOrder(null);
+
     } catch (err) {
       console.error("Update Order Failed:", err);
       const errorMsg =
         typeof getFriendlyErrorMessage === "function"
           ? getFriendlyErrorMessage(err, "update")
           : "Unable to update order right now.";
-      // Show error in items section
-      setValidationErrors(prev => ({
-        ...prev,
-        items: errorMsg
-      }));
+      setValidationErrors(prev => ({ ...prev, items: errorMsg }));
     } finally {
       setIsSubmitting(false);
     }
@@ -732,9 +671,7 @@ const EditOrderModal = ({
   };
 
   const availableTables = Array.isArray(tables) ? tables : [];
-  const currentTable = availableTables.find(
-    (t) => t._id === selectedTableId || t.tableNumber === selectedTableId
-  );
+
   // ── Theme tokens ──────────────────────────────────────────────────────────
   const modalBg   = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
   const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
@@ -829,7 +766,6 @@ const EditOrderModal = ({
                     No tables configured yet.
                   </p>
                 ) : onlyOne ? (
-                  // Single section — show only number dropdown
                   <Select
                     value={selectedTableId || `${sectionDefs[0].key}:1`}
                     onValueChange={(v) => handleTableChange(`${sectionDefs[0].key}:${v}`)}
@@ -853,7 +789,6 @@ const EditOrderModal = ({
                     </SelectContent>
                   </Select>
                 ) : (
-                  // Multiple sections — section cards + number dropdown
                   <div className="grid grid-cols-2 gap-2">
                     {sectionDefs.map(({ key, label, count, unit }) => {
                       const isSelected = selSection === key;
@@ -954,7 +889,15 @@ const EditOrderModal = ({
                     <div key={`${item.menuItemId}-${idx}`} className={`rounded-xl border p-3 ${itemCardBg}`}>
                       {/* Name + price */}
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
+                          {/* ✅ Show isReady indicator so user can see current state */}
+                          {item.isReady && (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                              ✓ Ready
+                            </span>
+                          )}
+                        </div>
                         <div className="text-right shrink-0">
                           {showOldPrice && (
                             <p className={`text-[11px] line-through ${textMut}`}>₹{oldRowTotal.toFixed(2)}</p>

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
@@ -68,13 +68,12 @@ const BillPage = ({
   const billRef = useRef();
   const user = useSelector((state) => state.admin.user);
   const isStaff = user?.role === "staff";
-  // const { sseEvent } = useNotification();
-  
-   const [isEditMode, setIsEditMode] = useState(false);
-   const [localOrderData, setLocalOrderData] = useState(null);
-   const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
-   const [selectedTableId, setSelectedTableId] = useState("");
-   const [address, setAddress] = useState("");
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [localOrderData, setLocalOrderData] = useState(null);
+  const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
+  const [selectedTableId, setSelectedTableId] = useState("");
+  const [address, setAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -84,13 +83,21 @@ const BillPage = ({
   });
   const [itemChecks, setItemChecks] = useState({});
   const [toggleItemReady] = useToggleItemReadyMutation();
+
+  // ✅ FIX: Ref to block SSE overwrite during post-save restore window
+  const restoringRef = useRef(false);
+
+  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+
+  // ✅ FIX: Use activeOrder.status so checkboxes don't disappear after edit
   const showItemChecks = ["pending", "preparing", "ready"].includes(
-    String(order?.status || "").toLowerCase()
+    String(activeOrder?.status || "").toLowerCase()
   );
 
   const orderStorageKey =
     order?._id || order?.orderId || order?.id || "";
 
+  // Helper to build a stable key for an item (for matching across edit saves)
   const buildItemCheckBase = (item) => {
     const baseId =
       item?.menuItemId ||
@@ -100,13 +107,6 @@ const BillPage = ({
     const variant = item?.variantName || item?.variant || "";
     const customizations = item?.customizations || "";
     return `${baseId}::${variant}::${customizations}`;
-  };
-
-  const resolveItemCheckKey = (item, index) => {
-    if (item?.billItemKey) return String(item.billItemKey);
-    const baseKey = buildItemCheckBase(item);
-    if (index === undefined || index === null) return baseKey;
-    return `${baseKey}::${index}`;
   };
 
   const normalizeItemsWithBillKeys = (items = [], previousItems = []) => {
@@ -159,45 +159,6 @@ const BillPage = ({
   };
 
   useEffect(() => {
-    if (!showItemChecks) return;
-    const activeItems = localOrderData?.items || order?.items || [];
-    if (!Array.isArray(activeItems) || activeItems.length === 0) return;
-
-    setItemChecks((prev) => {
-      if (!prev || typeof prev !== "object") return prev;
-      const next = {};
-      const existingKeys = Object.keys(prev);
-      let changed = false;
-
-      activeItems.forEach((item, index) => {
-        const baseKey = buildItemCheckBase(item);
-        const nextKey = resolveItemCheckKey(item, index);
-        if (!nextKey) return;
-
-        const candidateKeys = [
-          nextKey,
-          baseKey && index !== undefined ? `${baseKey}::${index}` : null,
-          baseKey,
-          item?._id ? String(item._id) : null,
-        ].filter(Boolean);
-
-        const matchedKey = candidateKeys.find((key) => prev[key] !== undefined);
-
-        if (matchedKey !== undefined) {
-          next[nextKey] = prev[matchedKey];
-          if (matchedKey !== nextKey) changed = true;
-        }
-      });
-
-      if (!changed && Object.keys(next).length === Object.keys(prev).length) {
-        return prev;
-      }
-
-      return next;
-    });
-  }, [isEditMode, localOrderData?.items, order?.items, showItemChecks]);
-
-  useEffect(() => {
     if (typeof document === "undefined") return undefined;
     const root = document.documentElement;
     const updateMode = () =>
@@ -211,91 +172,76 @@ const BillPage = ({
     return () => observer.disconnect();
   }, []);
 
-   // Initialize local order data and capture initial snapshot
-   useEffect(() => {
-     if (order) {
-       const orderItems = Array.isArray(order.items) ? order.items : [];
-       const normalizedItems = normalizeItemsWithBillKeys(
-         orderItems.map((item) => ({
-           ...item,
-           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
-           name: item.name || item.menuItem?.name || "",
-           price: item.discountedPrice || item.price || 0,
-           quantity: item.quantity || 1,
-           variantName: item.variant || item.variantName || null,
-           variants: item.variants || item.menuItem?.variantRates || null,
-           customizations: item.customizations || ""
-         })),
-         localOrderData?.items || []
-       );
-
-       const newLocalOrderData = {
-         ...order,
-         items: normalizedItems,
-       };
-
-       setLocalOrderData(newLocalOrderData);
-       // Initialize from source (new) or tableId (legacy)
-       if (order.source?.section && order.source?.number) {
-         setSelectedTableId(`${order.source.section}:${order.source.number}`);
-       } else {
-         setSelectedTableId(order.tableId || "");
-       }
-       setAddress(order.address || "");
-
-       // Capture initial snapshot for comparison on save
-       setInitialOrderSnapshot({
-         status: newLocalOrderData.status,
-         items: newLocalOrderData.items.map(item => ({
-           _id: item._id,
-           menuItemId: item.menuItemId
-         })),
-         itemCount: newLocalOrderData.items.length
-       });
-     }
-   }, [order]);
-
+  // Initialize local order data
   useEffect(() => {
-    if (!orderStorageKey || typeof window === "undefined") return;
-    if (!showItemChecks) {
-      localStorage.removeItem(`bill-item-checks:${orderStorageKey}`);
+    if (order) {
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      const normalizedItems = normalizeItemsWithBillKeys(
+        orderItems.map((item) => ({
+          ...item,
+          menuItemId: item.menuItemId || item.menuItem?._id || item._id,
+          name: item.name || item.menuItem?.name || "",
+          price: item.discountedPrice || item.price || 0,
+          quantity: item.quantity || 1,
+          variantName: item.variant || item.variantName || null,
+          variants: item.variants || item.menuItem?.variantRates || null,
+          customizations: item.customizations || "",
+          // ✅ FIX: Preserve isReady when normalizing
+          isReady: item.isReady || false,
+        })),
+        localOrderData?.items || []
+      );
+
+      const newLocalOrderData = {
+        ...order,
+        items: normalizedItems,
+      };
+
+      setLocalOrderData(newLocalOrderData);
+
+      if (order.source?.section && order.source?.number) {
+        setSelectedTableId(`${order.source.section}:${order.source.number}`);
+      } else {
+        setSelectedTableId(order.tableId || "");
+      }
+      setAddress(order.address || "");
+
+      setInitialOrderSnapshot({
+        status: newLocalOrderData.status,
+        items: newLocalOrderData.items.map(item => ({
+          _id: item._id,
+          menuItemId: item.menuItemId,
+          isReady: item.isReady || false,
+        })),
+        itemCount: newLocalOrderData.items.length
+      });
+    }
+  }, [order]);
+
+  // ✅ FIX: itemChecks — only update from backend when NOT in edit mode
+  // AND not in restore window (restoringRef)
+  useEffect(() => {
+    // Do NOT overwrite during edit mode — user is actively editing
+    if (isEditMode) return;
+    // Do NOT overwrite during restore window after save
+    if (restoringRef.current) return;
+
+    if (!showItemChecks || !orderStorageKey) {
       setItemChecks({});
       return;
     }
 
-    // Initialize from order data's isReady field using item._id as key
-    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
-    const orderChecks = {};
-
-    (activeOrder?.items || []).forEach((item) => {
+    const checks = {};
+    (order?.items || []).forEach((item) => {
       if (item._id) {
-        orderChecks[item._id] = !!item?.isReady;
+        checks[item._id] = !!item?.isReady;
       }
     });
 
-    // Load from localStorage if available, but prioritize order data
-    try {
-      const saved = localStorage.getItem(
-        `bill-item-checks:${orderStorageKey}`
-      );
-      if (saved) {
-        const savedChecks = JSON.parse(saved);
-        // Merge: use order data as source of truth, but keep any additional UI state from localStorage
-        const mergedChecks = { ...savedChecks };
-        Object.keys(orderChecks).forEach(key => {
-          mergedChecks[key] = orderChecks[key];
-        });
-        setItemChecks(mergedChecks);
-      } else {
-        setItemChecks(orderChecks);
-      }
-    } catch (err) {
-      console.error("Error loading item checks:", err);
-      setItemChecks(orderChecks);
-    }
-  }, [orderStorageKey, showItemChecks, order, localOrderData, isEditMode]);
+    setItemChecks(checks);
+  }, [order, showItemChecks, orderStorageKey, isEditMode]);
 
-  // Handle real-time updates from SSE
+  // ✅ FIX: SSE updates — skip during edit mode and restore window
   useEffect(() => {
     if (
       sseEvent?.type !== "ORDER_UPDATED" ||
@@ -305,76 +251,52 @@ const BillPage = ({
       return;
     }
 
+    // Skip SSE overwrite during restore window
+    if (restoringRef.current) return;
+    // Skip SSE overwrite during edit mode
+    if (isEditMode) return;
+
     const updatedOrder = sseEvent.data;
     const updatedOrderId = updatedOrder._id || updatedOrder.id || updatedOrder.orderId;
 
     if (String(updatedOrderId) === String(orderStorageKey)) {
-      // Update checkbox states based on the new order data
       if (updatedOrder.items && showItemChecks) {
-        const newChecks = {};
+        const sseChecks = {};
         updatedOrder.items.forEach(item => {
           if (item._id) {
-            newChecks[item._id] = !!item.isReady;
+            sseChecks[item._id] = !!item.isReady;
           }
         });
 
-        // Update localStorage
-        try {
-          localStorage.setItem(`bill-item-checks:${orderStorageKey}`, JSON.stringify(newChecks));
-        } catch (err) {
-          console.error("Error updating localStorage:", err);
-        }
-
-        setItemChecks(newChecks);
+        setItemChecks(prev => {
+          const merged = { ...prev };
+          Object.keys(sseChecks).forEach(key => {
+            merged[key] = sseChecks[key];
+          });
+          return merged;
+        });
       }
     }
-  }, [sseEvent, orderStorageKey, showItemChecks]);
-
-  // Update checkbox states when order data changes
-  useEffect(() => {
-    if (!showItemChecks || !orderStorageKey) return;
-
-    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
-    const orderChecks = {};
-
-    (activeOrder?.items || []).forEach((item) => {
-      if (item._id) {
-        orderChecks[item._id] = !!item?.isReady;
-      }
-    });
-
-    setItemChecks(prev => {
-      const merged = { ...prev };
-      Object.keys(orderChecks).forEach(key => {
-        merged[key] = orderChecks[key];
-      });
-      return merged;
-    });
-  }, [order, localOrderData, isEditMode, showItemChecks, orderStorageKey]);
+  }, [sseEvent, orderStorageKey, showItemChecks, isEditMode]);
 
   const toggleItemCheck = async (itemKey) => {
     const currentValue = itemChecks[itemKey] || false;
     const newValue = !currentValue;
 
-    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
-    const item = (activeOrder?.items || []).find(item => item._id === itemKey);
+    const currentActiveOrder = isEditMode && localOrderData ? localOrderData : order;
+    const item = (currentActiveOrder?.items || []).find(item => item._id === itemKey);
 
     if (item && item._id) {
       try {
-        // Update local state immediately for UI responsiveness
         setItemChecks((prev) => ({
           ...prev,
           [itemKey]: newValue,
         }));
 
-        // Call backend API to update the order
         await toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap();
-
-        // Broadcast to other tabs/windows using item._id as key
         broadcastItemReady(orderStorageKey, item._id, newValue);
       } catch (err) {
         console.error("Failed to toggle item ready status:", err);
-        // Revert local state on error
         setItemChecks((prev) => ({
           ...prev,
           [itemKey]: currentValue,
@@ -383,6 +305,7 @@ const BillPage = ({
     }
   };
 
+  // Listen for BroadcastChannel updates from other tabs
   useEffect(() => {
     if (!showItemChecks || !orderStorageKey) return () => {};
 
@@ -403,45 +326,40 @@ const BillPage = ({
 
     const cleanup = listenForOrderStatus(({ orderId, status }) => {
       if (String(orderId) === String(orderStorageKey)) {
-        // Update local order data if in edit mode, or just log
         setLocalOrderData((prev) => {
           if (!prev) return prev;
           if (String(prev.status) === String(status)) return prev;
           return { ...prev, status };
         });
-        // Also update the original order prop (will be overwritten by parent state but helps immediate UI)
-        // The parent component should update via SSE anyway
       }
     });
     return cleanup;
   }, [orderStorageKey]);
 
-  // When order status becomes "ready", mark all items as ready
+  // When order status becomes "ready" via SSE, auto-mark all items as ready
   useEffect(() => {
-    const activeOrder = isEditMode && localOrderData ? localOrderData : order;
-    if (activeOrder?.status === "ready" && activeOrder?.items) {
-      const unreadyItems = activeOrder.items.filter(item => item._id && !item.isReady);
-      if (unreadyItems.length > 0) {
-        // Mark all unready items as ready
-        Promise.all(
-          unreadyItems.map(item =>
-            toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap()
-          )
-        ).then(() => {
-          // Update local state after successful API calls
-          const newChecks = {};
-          activeOrder.items.forEach(item => {
-            if (item._id) {
-              newChecks[item._id] = true;
-            }
-          });
-          setItemChecks(newChecks);
-        }).catch(console.error);
-      }
-    }
-  }, [order?.status, localOrderData?.status, orderStorageKey, isEditMode]);
+    const currentActiveOrder = isEditMode && localOrderData ? localOrderData : order;
+    if (!currentActiveOrder?.status || !currentActiveOrder?.items) return;
+    if (String(currentActiveOrder.status).toLowerCase() !== "ready") return;
 
-  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+    const unreadyItems = currentActiveOrder.items.filter(item => item._id && !item.isReady);
+    if (unreadyItems.length === 0) return;
+
+    Promise.all(
+      unreadyItems.map(item =>
+        toggleItemReady({ orderId: orderStorageKey, itemId: item._id }).unwrap()
+      )
+    ).then(() => {
+      const newChecks = {};
+      currentActiveOrder.items.forEach(item => {
+        if (item._id) {
+          newChecks[item._id] = true;
+        }
+      });
+      setItemChecks(newChecks);
+    }).catch(console.error);
+  }, [order?.status, localOrderData?.status]);
+
   const activeOrderTypeKey = getOrderTypeKey(activeOrder?.orderType);
 
   const parseAmount = (value) => {
@@ -473,7 +391,6 @@ const BillPage = ({
   const hasBackendSubtotal =
     Number.isFinite(backendSubtotal) && backendSubtotal > 0;
 
-  // Subtotal should respect backend when provided; otherwise fallback to items sum
   const displaySubtotal = isEditMode
     ? itemsSubtotal
     : (hasBackendSubtotal ? backendSubtotal : itemsSubtotal);
@@ -501,7 +418,6 @@ const BillPage = ({
     if (diff <= 0.01) {
       displayGrandTotal = backendGrandTotal;
     } else if (Math.abs(backendGrandTotal - displaySubtotal) <= 0.01) {
-      // Backend total excludes GST/delivery, so show computed total
       displayGrandTotal = computedGrandTotal;
     } else {
       displayGrandTotal = backendGrandTotal;
@@ -576,7 +492,6 @@ const BillPage = ({
   // EDIT MODE FUNCTIONS
   // =============================
 
-  // Add item
   const handleAddItem = (menuItemId) => {
     if (!localOrderData) return;
     const selected = menuItems.find(m => m._id === menuItemId);
@@ -600,7 +515,8 @@ const BillPage = ({
         variants: selected.variantRates,
         price: selected.variantRates[firstVariant],
         customizations: "",
-        billItemKey: nextKey
+        billItemKey: nextKey,
+        isReady: false, // new item — always false
       };
     } else {
       newItem = {
@@ -611,7 +527,8 @@ const BillPage = ({
         variants: null,
         price: selected.price,
         customizations: "",
-        billItemKey: nextKey
+        billItemKey: nextKey,
+        isReady: false, // new item — always false
       };
     }
 
@@ -624,7 +541,6 @@ const BillPage = ({
     }));
   };
 
-  // Remove item
   const handleRemoveItem = (idx) => {
     if (!localOrderData) return;
     if (localOrderData.items.length <= 1) {
@@ -642,12 +558,11 @@ const BillPage = ({
     setError("");
   };
 
-  // Update quantity
   const handleQuantityChange = (idx, qty) => {
     if (!localOrderData) return;
     const quantity = Math.max(1, parseInt(qty) || 1);
     const items = [...localOrderData.items];
-    items[idx].quantity = quantity;
+    items[idx] = { ...items[idx], quantity };
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -656,17 +571,17 @@ const BillPage = ({
     }));
   };
 
-  // Update variant
   const handleVariantChange = (idx, variant) => {
     if (!localOrderData) return;
     const items = [...localOrderData.items];
-    const item = items[idx];
+    const item = { ...items[idx] };
 
     if (!item.variants || !item.variants[variant]) return;
 
     item.variantName = variant;
     item.price = item.variants[variant];
     item.billItemKey = buildItemCheckBase(item) || item.billItemKey;
+    items[idx] = item;
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -675,7 +590,6 @@ const BillPage = ({
     }));
   };
 
-  // Order type change
   const handleOrderTypeChange = (orderType) => {
     if (!localOrderData) return;
     const currentType = getOrderTypeKey(localOrderData.orderType);
@@ -685,8 +599,7 @@ const BillPage = ({
       order?.deliveryCharges ??
       restaurantDetails?.deliveryCharges
     );
-    
-    // Clear fields based on transition
+
     if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
       setAddress("");
     }
@@ -701,118 +614,179 @@ const BillPage = ({
     }));
   };
 
-  // Table change
   const handleTableChange = (tableId) => {
     setSelectedTableId(tableId);
   };
 
-  // Address change
   const handleAddressChange = (e) => {
     setAddress(e.target.value);
   };
 
-   // Save changes
-   const handleSaveChanges = async () => {
-     if (isSubmitting || !localOrderData) return;
-     
-     // Validation
-     if (localOrderData.items.length === 0) {
-       setError("Minimum 1 item required");
-       return;
-     }
+  // =============================
+  // SAVE CHANGES — MAIN FIX HERE
+  // =============================
+  const handleSaveChanges = async () => {
+    if (isSubmitting || !localOrderData) return;
 
-     const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
-     
-     if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
-       setError("Please select a table for Eat Here order");
-       return;
-     }
-     
-     if (selectedOrderTypeKey === "delivery" && !address.trim()) {
-       setError("Please enter address for Delivery order");
-       return;
-     }
+    if (localOrderData.items.length === 0) {
+      setError("Minimum 1 item required");
+      return;
+    }
 
-     setIsSubmitting(true);
-     setError("");
+    const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
 
-     try {
-       const initialStatus = initialOrderSnapshot?.status;
-       const currentStatus = localOrderData.status;
-       const initialItemCount = initialOrderSnapshot?.itemCount || 0;
-       const currentItemCount = localOrderData.items.length;
-       const isAddingNewItems = currentItemCount > initialItemCount;
+    if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
+      setError("Please select a table for Eat Here order");
+      return;
+    }
 
-       const payload = {
-         orderType: localOrderData.orderType,
-         items: localOrderData.items.map(item => {
-           const payloadItem = {
-             menuItemId: item.menuItemId,
-             quantity: item.quantity,
-             variant: item.variantName || null,
-             customizations: item.customizations || ""
-           };
-           if (item._id) {
-             payloadItem._id = item._id;
-           }
-           return payloadItem;
-         })
-       };
+    if (selectedOrderTypeKey === "delivery" && !address.trim()) {
+      setError("Please enter address for Delivery order");
+      return;
+    }
 
-       // Include status if it changed OR we need to force preparing
-       let statusChanged = false;
-       if (initialStatus === "ready" && isAddingNewItems) {
-         payload.status = "preparing";
-         statusChanged = true;
-       } else if (currentStatus !== initialStatus) {
-         payload.status = currentStatus;
-         statusChanged = true;
-       }
+    setIsSubmitting(true);
+    setError("");
 
-       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-         // selectedTableId format: "indoor:3" → source object
-         const [section, numStr] = selectedTableId.split(":");
-         const number = parseInt(numStr, 10) || 1;
-         const type = section === "rooms" ? "ROOM" : "TABLE";
-         payload.source = { section, number, type };
-       }
+    try {
+      const initialStatus = initialOrderSnapshot?.status;
+      const currentStatus = localOrderData.status;
+      const initialItemCount = initialOrderSnapshot?.itemCount || 0;
+      const currentItemCount = localOrderData.items.length;
+      const isAddingNewItems = currentItemCount > initialItemCount;
 
-       if (selectedOrderTypeKey === "delivery" && address.trim()) {
-         payload.address = address.trim();
-         payload.deliveryCharges =
-           parseAmount(localOrderData?.deliveryCharges) ||
-           parseAmount(restaurantDetails?.deliveryCharges) ||
-           0;
-       }
+      // ✅ FIX 1: Capture ready items by STABLE KEY before save
+      // Backend gives new _id after edit — so we match by menuItemId+variant+customizations
+      const readyStableKeys = new Set();
+      (order?.items || []).forEach(item => {
+        if (item.isReady === true && item._id) {
+          readyStableKeys.add(buildItemCheckBase(item));
+        }
+      });
 
-       if (selectedOrderTypeKey === "take_away") {
-         payload.source = { section: null, number: null, type: "NONE" };
-         payload.address = null;
-       }
+      // ✅ FIX 2: Send isReady in payload for existing items
+      // This preserves isReady on backend even if backend resets it
+      const payload = {
+        orderType: localOrderData.orderType,
+         replaceItems: true,
+        items: localOrderData.items.map(item => {
+          const payloadItem = {
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            variant: item.variantName || null,
+            customizations: item.customizations || "",
+          };
 
-       await updateOrder({
-         orderId: localOrderData._id,
-         updatedData: payload,
-       }).unwrap();
-       
-       // Broadcast order status change if status was updated
-       if (statusChanged && payload.status) {
-         broadcastOrderStatus(localOrderData._id, payload.status);
-       }
-       
-       setIsEditMode(false);
-     } catch (err) {
-       console.error("Update Order Failed:", err);
-       setError(err?.data?.message || "Failed to update order");
-     } finally {
-       setIsSubmitting(false);
-     }
-   };
+          if (item._id) {
+            payloadItem._id = item._id;
+            // ✅ KEY FIX: Send isReady so backend preserves it
+            // Previously this was MISSING — causing undefined/false on backend
+            payloadItem.isReady = item.isReady === true ? true : false;
+          }
 
-  // Cancel edit
+          return payloadItem;
+        })
+      };
+
+      let statusChanged = false;
+      if (initialStatus === "ready" && isAddingNewItems) {
+        payload.status = "preparing";
+        statusChanged = true;
+      } else if (currentStatus !== initialStatus) {
+        payload.status = currentStatus;
+        statusChanged = true;
+      }
+
+      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
+        const [section, numStr] = selectedTableId.split(":");
+        const number = parseInt(numStr, 10) || 1;
+        const type = section === "rooms" ? "ROOM" : "TABLE";
+        payload.source = { section, number, type };
+      }
+
+      if (selectedOrderTypeKey === "delivery" && address.trim()) {
+        payload.address = address.trim();
+        payload.deliveryCharges =
+          parseAmount(localOrderData?.deliveryCharges) ||
+          parseAmount(restaurantDetails?.deliveryCharges) ||
+          0;
+      }
+
+      if (selectedOrderTypeKey === "take_away") {
+        payload.source = { section: null, number: null, type: "NONE" };
+        payload.address = null;
+      }
+
+      const saveResult = await updateOrder({
+        orderId: localOrderData._id,
+        updatedData: payload,
+      }).unwrap();
+
+      if (statusChanged && payload.status) {
+        broadcastOrderStatus(localOrderData._id, payload.status);
+      }
+
+      // ✅ FIX 3: Restore isReady for previously-ready items
+      // Match by stable key because backend assigns new _id after edit
+      if (readyStableKeys.size > 0) {
+        // Try all possible response formats from updateOrder API
+        const savedItems =
+          saveResult?.order?.items ||
+          saveResult?.items ||
+          saveResult?.data?.items ||
+          saveResult?.data?.order?.items ||
+          [];
+
+        const itemsToRestore = savedItems.filter(
+          newItem => newItem._id && readyStableKeys.has(buildItemCheckBase(newItem))
+        );
+
+        if (itemsToRestore.length > 0) {
+          // ✅ FIX 4: Block SSE + itemChecks useEffect during restore window
+          restoringRef.current = true;
+
+          // Optimistically set restored items as checked in UI immediately
+          setItemChecks(prev => {
+            const next = { ...prev };
+            itemsToRestore.forEach(item => {
+              next[item._id] = true;
+            });
+            return next;
+          });
+
+          try {
+            await Promise.all(
+              itemsToRestore.map(item =>
+                toggleItemReady({
+                  orderId: localOrderData._id,
+                  itemId: item._id
+                }).unwrap().then(() => {
+                  broadcastItemReady(localOrderData._id, item._id, true);
+                })
+              )
+            );
+          } catch (err) {
+            console.warn("Failed to restore some item ready states:", err);
+          } finally {
+            // Release restore lock after 600ms so SSE can resume
+            setTimeout(() => {
+              restoringRef.current = false;
+            }, 600);
+          }
+        }
+      }
+
+      setIsEditMode(false);
+    } catch (err) {
+      console.error("Update Order Failed:", err);
+      setError(err?.data?.message || "Failed to update order");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleCancelEdit = () => {
     const orderItems = Array.isArray(order?.items) ? order.items : [];
-    // Reset to original data
     const normalizedItems = normalizeItemsWithBillKeys(
       orderItems.map((item) => ({
         ...item,
@@ -822,7 +796,8 @@ const BillPage = ({
         quantity: item.quantity || 1,
         variantName: item.variant || item.variantName || null,
         variants: item.variants || item.menuItem?.variantRates || null,
-        customizations: item.customizations || ""
+        customizations: item.customizations || "",
+        isReady: item.isReady || false,
       })),
       localOrderData?.items || []
     );
@@ -831,7 +806,7 @@ const BillPage = ({
       ...order,
       items: normalizedItems,
     };
-    
+
     setLocalOrderData(newLocalOrderData);
     setSelectedTableId(order.tableId || "");
     setAddress(order.address || "");
@@ -1293,7 +1268,7 @@ const BillPage = ({
                   const itemKey = item._id;
                   const isChecked = !!itemChecks[itemKey];
                   const itemVariant = item.variantName || item.variant;
-                  
+
                   return (
                     <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
@@ -1408,8 +1383,8 @@ const BillPage = ({
                           <div className="flex items-center justify-between">
                             <span>{item.name}</span>
                             <span className={`ml-2 text-xs ${billTextClass}`}>
-                              {item.pricingType === "variant" 
-                                ? "Variant" 
+                              {item.pricingType === "variant"
+                                ? "Variant"
                                 : `₹${item.price || 0}`}
                             </span>
                           </div>
@@ -1421,7 +1396,7 @@ const BillPage = ({
               </div>
             )}
 
-            {/* Totals - Use backend data directly */}
+            {/* Totals */}
             <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -1449,7 +1424,7 @@ const BillPage = ({
             </div>
 
             <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
-             Hope to serve you again soon! 😊🍽️ 
+              Hope to serve you again soon! 😊🍽️
             </p>
           </div>
         </div>
@@ -1472,7 +1447,7 @@ const BillPage = ({
               Cancel
             </button>
           )}
-          
+
           <button
             onClick={onClose}
             className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
