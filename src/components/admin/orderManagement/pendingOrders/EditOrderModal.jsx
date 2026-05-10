@@ -218,7 +218,7 @@ const EditOrderModal = ({
   });
 
   // =============================
-  // INIT ORDER DATA (SAFE)
+  // INIT ORDER DATA
   // =============================
   useEffect(() => {
     if (editingOrder) {
@@ -238,19 +238,25 @@ const EditOrderModal = ({
 
         return {
           ...item,
+          // _id preserve karo — backend ko existing item identify karne ke liye chahiye
+          _id: item._id || null,
           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
           name: item.name || item.menuItem?.name || menuItem?.name || "",
           price: priceMeta.finalPrice,
           originalUnitPrice: priceMeta.originalPrice,
           discountedUnitPrice: priceMeta.finalPrice,
           quantity: item.quantity ?? 1,
+          // Original quantity save karo — baad mein diff nikalne ke liye
+          _originalQuantity: item.quantity ?? 1,
           pricingType: resolvedPricingType,
           variantName: selectedVariant,
           variant: selectedVariant,
           variants: resolvedVariants,
           customizations: item.customizations || "",
-          // ✅ FIX: Preserve isReady from backend when initializing
-          isReady: item.isReady === true ? true : false,
+          // isReady backend se preserve karo
+          isReady: item.isReady === true,
+          // Yeh item naya hai ya existing — _id se pata lagega
+          _isNew: false,
         };
       });
 
@@ -284,7 +290,7 @@ const EditOrderModal = ({
     }
   }, [editingOrder, menuItems]);
 
-  // Check if any changes were made
+  // Dirty check
   useEffect(() => {
     if (!localOrderData || !initialOrderData) return;
     
@@ -348,34 +354,42 @@ const EditOrderModal = ({
       const firstVariantMeta = getVariantPriceMeta(firstVariantData);
       
       newItem = {
+        // _id nahi — naya item hai
+        _id: null,
         menuItemId: selected._id,
         name: selected.name,
         quantity: 1,
+        _originalQuantity: 0, // naya item tha hi nahi pehle
         pricingType: "variant",
         variantName: firstVariantKey,
+        variant: firstVariantKey,
         variants: selected.variantRates,
         price: firstVariantMeta.finalPrice,
         originalUnitPrice: firstVariantMeta.originalPrice,
         discountedUnitPrice: firstVariantMeta.finalPrice,
         customizations: "",
-        // ✅ New items always start as not ready
-        isReady: false,
+        isReady: false, // naya item — hamesha false
+        _isNew: true,   // flag: yeh naya item hai
       };
     } else {
       const itemPriceMeta = getItemPriceMeta(selected, selected);
       newItem = {
+        // _id nahi — naya item hai
+        _id: null,
         menuItemId: selected._id,
         name: selected.name,
         quantity: 1,
+        _originalQuantity: 0, // naya item tha hi nahi pehle
         pricingType: "single",
         variantName: null,
+        variant: null,
         variants: null,
         price: itemPriceMeta.finalPrice,
         originalUnitPrice: itemPriceMeta.originalPrice,
         discountedUnitPrice: itemPriceMeta.finalPrice,
         customizations: "",
-        // ✅ New items always start as not ready
-        isReady: false,
+        isReady: false, // naya item — hamesha false
+        _isNew: true,   // flag: yeh naya item hai
       };
     }
 
@@ -408,12 +422,15 @@ const EditOrderModal = ({
     if (!item.variants || !item.variants[variant]) return;
 
     const variantMeta = getVariantPriceMeta(item.variants[variant]);
-    item.variantName = variant;
-    item.price = variantMeta.finalPrice;
-    item.originalUnitPrice = variantMeta.originalPrice;
-    item.discountedUnitPrice = variantMeta.finalPrice;
-    // ✅ FIX: Preserve isReady when changing variant
-    // isReady stays as-is, don't reset it
+    items[idx] = {
+      ...item,
+      variantName: variant,
+      variant: variant,
+      price: variantMeta.finalPrice,
+      originalUnitPrice: variantMeta.originalPrice,
+      discountedUnitPrice: variantMeta.finalPrice,
+      // isReady touch nahi karo — sirf variant badla hai
+    };
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -430,13 +447,13 @@ const EditOrderModal = ({
     const items = [...localOrderData.items];
 
     if (qty === "") {
-      items[idx].quantity = "";
+      items[idx] = { ...items[idx], quantity: "" };
     } else {
       const parsedQuantity = parseInt(qty, 10);
       if (Number.isNaN(parsedQuantity)) return;
-      items[idx].quantity = Math.max(0, parsedQuantity);
+      items[idx] = { ...items[idx], quantity: Math.max(0, parsedQuantity) };
     }
-    // ✅ FIX: isReady NOT touched here — quantity change should not reset ready state
+    // isReady touch nahi karo — quantity change se ready state reset nahi honi chahiye
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -447,7 +464,7 @@ const EditOrderModal = ({
   };
 
   // =============================
-  // REMOVE ITEM (MIN 1)
+  // REMOVE ITEM
   // =============================
   const handleRemoveItem = (idx) => {
     if (localOrderData.items.length <= 1) {
@@ -456,7 +473,10 @@ const EditOrderModal = ({
     }
 
     const removedItem = localOrderData.items[idx];
-    if (removedItem?._id) {
+
+    // Sirf existing items (jinke paas _id hai) ko removeItemIds mein daalo
+    // Naye items (_isNew: true) ko bas array se hata do — backend mein the hi nahi
+    if (removedItem?._id && !removedItem._isNew) {
       const removedId = String(removedItem._id);
       setRemovedItemIds((prev) =>
         prev.includes(removedId) ? prev : [...prev, removedId]
@@ -492,13 +512,12 @@ const EditOrderModal = ({
     }
 
     setValidationErrors({ table: "", address: "", items: validationErrors.items });
-
     setLocalOrderData(prev => ({ ...prev, orderType }));
     setHasUserChanges(true);
   };
 
   // =============================
-  // TABLE SELECTION CHANGE
+  // TABLE CHANGE
   // =============================
   const handleTableChange = (tableId) => {
     setSelectedTableId(tableId);
@@ -523,7 +542,17 @@ const EditOrderModal = ({
   };
 
   // =============================
-  // ✅ FIXED: FINAL UPDATE ORDER — isReady PRESERVED
+  // UPDATE ORDER — PAYLOAD FIX
+  //
+  // Backend ab replaceItems support nahi karta.
+  // Teeen alag operations bhejne hain:
+  //
+  // 1. items       → sirf NAYE items jo user ne add kiye (_isNew: true)
+  // 2. updateQuantities → existing items jinki quantity BADLI hai
+  // 3. removeItemIds    → existing items jo user ne HATAYE hain
+  //
+  // Is tarah isReady kabhi disturb nahi hoga — 
+  // backend existing items ko touch nahi karta jab tak explicitly nahi kaha
   // =============================
   const handleUpdateOrder = async () => {
     if (isSubmitting || !isDirty) return;
@@ -573,50 +602,70 @@ const EditOrderModal = ({
     try {
       const initialStatus = initialOrderData?.status;
       const currentStatus = localOrderData.status;
-      const initialItemCount = initialOrderData?.items?.length || 0;
-      const currentItemCount = localOrderData.items.length;
-      const removedCount = removedItemIds.length;
-      const netNewItems = currentItemCount - (initialItemCount - removedCount);
-      const isAddingNewItems = netNewItems > 0;
 
-      let shouldSetPreparing = false;
-      if (initialStatus === "ready" && isAddingNewItems) {
-        shouldSetPreparing = true;
-      }
+      // =====================================================
+      // PAYLOAD BUILD — Teen parts
+      // =====================================================
 
       const payload = {
         orderType: localOrderData.orderType,
-        replaceItems: true,
-        removeItemIds: removedItemIds,
-        items: localOrderData.items.map(item => {
-          const variantValue = item.variantName || item.variant || null;
-          const payloadItem = {
+      };
+
+      // ─── PART 1: NAYE ITEMS ───────────────────────────
+      // Sirf woh items jo _isNew: true hain ya jinke paas _id nahi hai
+      // Backend inhe fresh add karta hai isReady: false ke saath
+      const newItems = localOrderData.items.filter(item => item._isNew || !item._id);
+
+      if (newItems.length > 0) {
+        payload.items = newItems.map(item => {
+          const itemPayload = {
             menuItemId: item.menuItemId,
             quantity: Number(item.quantity),
-            variant: variantValue,
             customizations: item.customizations || "",
           };
 
-          if (item._id) {
-            payloadItem._id = item._id;
-            // ✅ KEY FIX: Send isReady so backend preserves the ready state
-            // Previously MISSING — backend was setting undefined/false for all items
-            // Now existing items keep their isReady value
-            // New items (no _id) correctly default to false
-            payloadItem.isReady = item.isReady === true ? true : false;
+          // Variant sirf tab bhejo jab ho
+          if (item.variantName || item.variant) {
+            itemPayload.variant = item.variantName || item.variant;
           }
-          // Note: new items without _id don't send isReady → backend defaults to false ✅
 
-          return payloadItem;
-        })
-      };
+          return itemPayload;
+        });
+      }
 
-      if (shouldSetPreparing) {
+      // ─── PART 2: QUANTITY CHANGES ─────────────────────
+      // Existing items (_id hai, _isNew nahi) jinki quantity badli hai
+      // _originalQuantity se compare karo
+      const quantityChanges = localOrderData.items.filter(item => {
+        // Naye items skip karo
+        if (item._isNew || !item._id) return false;
+        // Quantity badli hai toh include karo
+        return Number(item.quantity) !== Number(item._originalQuantity);
+      });
+
+      if (quantityChanges.length > 0) {
+        payload.updateQuantities = quantityChanges.map(item => ({
+          itemId: String(item._id),
+          quantity: Number(item.quantity),
+        }));
+      }
+
+      // ─── PART 3: REMOVED ITEMS ────────────────────────
+      // handleRemoveItem mein already removedItemIds state mein save ho rahe hain
+      if (removedItemIds.length > 0) {
+        payload.removeItemIds = removedItemIds;
+      }
+
+      // ─── STATUS ───────────────────────────────────────
+      // Agar ready order mein naya item add kiya toh preparing ho jayega
+      const isAddingNewItems = newItems.length > 0;
+      if (initialStatus === "ready" && isAddingNewItems) {
         payload.status = "preparing";
       } else if (currentStatus !== initialStatus) {
         payload.status = currentStatus;
       }
 
+      // ─── SOURCE (TABLE) ───────────────────────────────
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
         const [section, numStr] = selectedTableId.split(":");
         const number = parseInt(numStr, 10) || 1;
@@ -624,6 +673,7 @@ const EditOrderModal = ({
         payload.source = { section, number, type };
       }
 
+      // ─── ADDRESS ──────────────────────────────────────
       if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
       }
@@ -633,7 +683,9 @@ const EditOrderModal = ({
         payload.address = null;
       }
 
+      // ─── API CALL ─────────────────────────────────────
       await updateOrder(localOrderData._id, payload);
+
       setRemovedItemIds([]);
       setEditingOrder(null);
 
@@ -670,25 +722,23 @@ const EditOrderModal = ({
     }
   };
 
-  const availableTables = Array.isArray(tables) ? tables : [];
-
-  // ── Theme tokens ──────────────────────────────────────────────────────────
-  const modalBg   = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
-  const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const textPri   = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
-  const textSec   = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
-  const textMut   = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
-  const labelCls  = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
-  const inputCls  = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+  // ── Theme tokens ─────────────────────────────────────────────────────────
+  const modalBg        = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
+  const headerBg       = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const textPri        = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
+  const textSec        = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
+  const textMut        = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const labelCls       = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
+  const inputCls       = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
     isDarkMode
       ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:border-orange-500"
       : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] focus:border-orange-400"
   }`;
-  const itemCardBg = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
+  const itemCardBg     = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
   const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-[#f7f3ef] border-[#ede8e3]";
-  const totalBg   = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
-  const footerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const dropdownCls = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
+  const totalBg        = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
+  const footerBg       = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const dropdownCls    = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
 
   return (
     <div
@@ -889,12 +939,20 @@ const EditOrderModal = ({
                     <div key={`${item.menuItemId}-${idx}`} className={`rounded-xl border p-3 ${itemCardBg}`}>
                       {/* Name + price */}
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
-                          {/* ✅ Show isReady indicator so user can see current state */}
-                          {item.isReady && (
+
+                          {/* Existing ready item badge */}
+                          {item.isReady && !item._isNew && (
                             <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
                               ✓ Ready
+                            </span>
+                          )}
+
+                          {/* New item badge */}
+                          {item._isNew && (
+                            <span className="inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600">
+                              New
                             </span>
                           )}
                         </div>
