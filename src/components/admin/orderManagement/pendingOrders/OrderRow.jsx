@@ -64,7 +64,7 @@ const OrderRow = ({
 
       {/* Date (non-pending) */}
       {tableType !== "pending" && (
-        <td className={tdBase}>{order.formattedDate || "—"}</td>
+        <td className={`${tdBase} text-center`}>{order.formattedDate || "—"}</td>
       )}
 
       {tableType === "pending" ? (
@@ -84,9 +84,9 @@ const OrderRow = ({
         </>
       ) : (
         <>
-          <td className={`${tdBase} whitespace-nowrap `}>{order.formattedTime || "—"}</td>
-          <td className={`${tdBase} font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
-          <td className={`${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
+          <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
+          <td className={`${tdBase} font-medium text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
+          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
         </>
       )}
 

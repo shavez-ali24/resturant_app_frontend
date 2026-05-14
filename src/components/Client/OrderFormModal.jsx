@@ -50,6 +50,7 @@ export default function OrderFormModal({
   const deliveryCharges = Number(restaurantData?.restaurant?.deliveryCharges || 0);
 
   // Auto-select section when only one section exists and Eat Here is chosen
+  // NOTE: We only auto-select the section, NOT the table/room number
   useEffect(() => {
     if (orderType !== "Eat Here") return;
     const sections = restaurantData?.restaurant?.sections || {};
@@ -60,8 +61,9 @@ export default function OrderFormModal({
       { key: "rooms",   count: sections.rooms?.rooms    || 0 },
     ].filter(s => s.count > 0);
 
+    // Only auto-select section (with empty table number) when there's exactly one section
     if (defs.length === 1 && !tableId) {
-      setTableId(`${defs[0].key}:1`);
+      setTableId(`${defs[0].key}:`);
     }
   }, [orderType, restaurantData, tableId, setTableId]);
 
@@ -153,8 +155,11 @@ export default function OrderFormModal({
     }
 
     switch (orderType) {
-      case "Eat Here":
-        return !!tableId;
+      case "Eat Here": {
+        // tableId must have both section and a non-empty table number e.g. "indoor:2"
+        const [sec, num] = (tableId || "").split(":");
+        return !!(sec && num);
+      }
       case "Take Away":
         return true;
       case "Delivery":
@@ -372,13 +377,11 @@ export default function OrderFormModal({
                       ) : onlyOne ? (
                         // Single section — skip section button, show only number dropdown
                         <Select
-                          value={tableId || `${sectionDefs[0].key}:1`}
+                          value={selNum || ""}
                           onValueChange={(v) => setTableId(`${sectionDefs[0].key}:${v}`)}
                         >
                           <SelectTrigger className={`h-11 w-full rounded-xl border text-sm font-medium ${isDarkMode ? "border-orange-500 bg-slate-900 text-slate-100" : "border-primary bg-white text-gray-800"}`}>
-                            <SelectValue placeholder={`Select ${sectionDefs[0].unit}`}>
-                              {selNum ? `${sectionDefs[0].unit} ${selNum}` : `Select ${sectionDefs[0].unit}`}
-                            </SelectValue>
+                            <SelectValue placeholder={`Select ${sectionDefs[0].unit}`} />
                           </SelectTrigger>
                           <SelectContent className={`max-h-[180px] overflow-y-auto rounded-xl border shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200 bg-white"}`}>
                             <SelectGroup>
@@ -404,7 +407,7 @@ export default function OrderFormModal({
                                   type="button"
                                   onClick={() => {
                                     if (isSelected) setTableId("");
-                                    else setTableId(`${key}:1`);
+                                    else setTableId(`${key}:`);
                                   }}
                                   className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all ${
                                     isSelected
@@ -423,7 +426,7 @@ export default function OrderFormModal({
                                 {/* Dropdown — full width when selected */}
                                 {isSelected && (
                                   <Select
-                                    value={selNum || "1"}
+                                    value={selNum || ""}
                                     onValueChange={(v) => setTableId(`${key}:${v}`)}
                                   >
                                     <SelectTrigger className={`h-9 w-full rounded-lg border text-sm font-medium ${
@@ -460,7 +463,7 @@ export default function OrderFormModal({
                         </div>
                       )}
 
-                      {tableId && (
+                      {tableId && selNum && (
                         <p className={`text-xs font-medium ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>
                           ✓ {onlyOne
                             ? `${sectionDefs[0]?.unit} ${selNum} selected`

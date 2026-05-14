@@ -11,6 +11,17 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
         typeof restaurantName === "string"
             ? restaurantName
             : String(restaurantName || "").trim();
+
+    // Auto font size: longer name → smaller font, shorter name → bigger font
+    // Capped at 25 characters display
+    const displayName = safeRestaurantName.slice(0, 25);
+    const len = displayName.length;
+    const autoFontSize =
+        len <= 8  ? 22 :
+        len <= 12 ? 20 :
+        len <= 16 ? 18 :
+        len <= 20 ? 16 :
+                    14;
     
     return (
         <div data-tour="profile-heading" className="rounded-2xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b]">
@@ -25,7 +36,12 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
                             </div>
                         )}
                     </div>
-                    <h1 className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">{safeRestaurantName || "My Restaurant"}</h1>
+                    <h1
+                        style={{ fontSize: `${autoFontSize}px` }}
+                        className="font-bold text-white leading-tight"
+                    >
+                        {displayName || "My Restaurant"}
+                    </h1>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
                     {showStaffButton && isAdmin && (

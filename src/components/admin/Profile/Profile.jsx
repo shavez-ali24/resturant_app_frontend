@@ -43,7 +43,7 @@ function ProfileEditForm({ resData, token, isDarkMode, onSuccess, onClose }) {
               />
             </div>
             <div className="border-t border-[#ede8e3] dark:border-slate-700 pt-3">
-              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo</h3>
+              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo & Branding</h3>
               <UpdateBrandingForm
                 file={form.file}
                 fileError={form.fileError}

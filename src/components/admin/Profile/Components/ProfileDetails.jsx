@@ -65,14 +65,38 @@ export default function ProfileDetails({ profileData }) {
     return `data:image/png;base64,${cleanedQR}`;
   };
 
-  const handleQRDownload = () => {
+  const handleQRDownload = async () => {
     const qrUrl = getFinalQR();
-    const link = document.createElement("a");
-    link.href = qrUrl;
-    link.download = `${restaurantSlug || "restaurant"}-qr.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!qrUrl) return;
+
+    // If it's already a data-URL (base64), download directly
+    if (qrUrl.startsWith("data:image")) {
+      const link = document.createElement("a");
+      link.href = qrUrl;
+      link.download = `${restaurantSlug || "restaurant"}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    // For Cloudinary / external URLs: fetch as blob first to force download
+    // (browser blocks <a download> on cross-origin URLs — opens new tab instead)
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${restaurantSlug || "restaurant"}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      // Fallback: open in new tab if fetch fails (e.g. CORS)
+      window.open(qrUrl, "_blank");
+    }
   };
 
   if (isStaff) {
