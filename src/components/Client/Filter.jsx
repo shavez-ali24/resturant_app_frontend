@@ -1,17 +1,15 @@
 import { motion } from "framer-motion";
 
 export default function Filter({
-  filters = { veg: false, nonVeg: false, mixed: false, combo: false },
+  filters = { veg: false, nonVeg: false, combo: false },
   onChange = () => {},
   isDarkMode = false,
 }) {
   const currentMode =
-    filters.veg && !filters.nonVeg && !filters.mixed
+    filters.veg && !filters.nonVeg
       ? "veg"
-      : filters.nonVeg && !filters.veg && !filters.mixed
+      : filters.nonVeg && !filters.veg
       ? "nonVeg"
-      : filters.mixed
-      ? "mixed"
       : filters.combo
       ? "combo"
       : "all";
@@ -20,19 +18,12 @@ export default function Filter({
     if (mode === "veg") {
       onChange("veg", true);
       onChange("nonVeg", false);
-      onChange("mixed", false);
     } else if (mode === "nonVeg") {
       onChange("veg", false);
       onChange("nonVeg", true);
-      onChange("mixed", false);
-    } else if (mode === "mixed") {
-      onChange("veg", false);
-      onChange("nonVeg", false);
-      onChange("mixed", true);
     } else {
       onChange("veg", false);
       onChange("nonVeg", false);
-      onChange("mixed", false);
     }
   };
 
@@ -93,21 +84,6 @@ export default function Filter({
             }`}
           >
             Non-Veg
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("mixed")}
-            className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
-              currentMode === "mixed"
-                ? isDarkMode
-                  ? "bg-orange-600 text-white shadow"
-                  : "bg-orange-500 text-white shadow"
-                : isDarkMode
-                ? "text-orange-300 hover:bg-slate-800"
-                : "text-orange-700 hover:bg-orange-50/90"
-            }`}
-          >
-            Mixed
           </button>
         </div>
       </div>
