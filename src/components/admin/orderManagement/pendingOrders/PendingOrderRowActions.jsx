@@ -43,12 +43,14 @@ const PendingOrderRowActions = ({
 
       {/* Status */}
       <td className="px-4 py-3 text-center">
-        <StatusDropdown order={order} updateOrder={updateOrder} />
+        <div className="flex items-center justify-center">
+          <StatusDropdown order={order} updateOrder={updateOrder} />
+        </div>
       </td>
 
       {/* Edit / Delete */}
       <td className="px-4 py-3 text-center">
-        <div className="flex items-center gap-1 text-center">
+        <div className="flex items-center justify-center gap-1">
           <button
             onClick={() => setEditingOrder?.(order)}
             className={`rounded-lg p-1.5 transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"}`}
