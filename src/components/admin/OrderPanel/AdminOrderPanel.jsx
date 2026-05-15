@@ -466,7 +466,7 @@ function OrderSummaryPanel({
                   {/* Section select */}
                   <StyledSelect
                     value={selSection || ""}
-                    onChange={(v) => setTableId(v ? `${v}:1` : "")}
+                    onChange={(v) => setTableId(v ? `${v}:` : "")}
                     options={sectionKeys.map((k) => ({ value: k, label: sectionLabels[k] || k }))}
                     placeholder="Select Section *"
                     isDarkMode={isDarkMode}
@@ -474,7 +474,7 @@ function OrderSummaryPanel({
                   {/* Number select — only when section chosen */}
                   {selSection && sec[selSection] && (
                     <StyledSelect
-                      value={tableId}
+                      value={selNum ? tableId : ""}
                       onChange={setTableId}
                       options={sec[selSection]}
                       placeholder={`Select ${selSection === "rooms" ? "Room" : "Table"} *`}
@@ -560,7 +560,8 @@ function OrderSummaryPanel({
             isSubmitting ||
             !isRestaurantOpen ||
             !customerName.trim() ||
-            !PHONE_VALID_PATTERN.test(customerPhone)
+            !PHONE_VALID_PATTERN.test(customerPhone) ||
+            (orderType === "Dine In" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
           }
           className="flex-1 py-2 rounded-lg bg-orange-500 text-sm font-semibold text-white transition-all duration-200 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -719,6 +720,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     else if (!NAME_VALID_PATTERN.test(trimmedName)) errorMessage = "Name can only have letters and spaces.";
     else if (!PHONE_VALID_PATTERN.test(customerPhone)) errorMessage = "Please enter a valid 10-digit phone number.";
     else if (normalizedOrderType === "Eat Here" && !tableId) errorMessage = "Please select a table.";
+    else if (normalizedOrderType === "Eat Here" && tableId) {
+      const [sec, num] = tableId.split(":");
+      if (!sec || !num) errorMessage = "Please select a table/room number.";
+    }
     else if (normalizedOrderType === "Delivery" && !trimmedAddress) errorMessage = "Please enter delivery address.";
     if (errorMessage) { showError(errorMessage); return; }
 

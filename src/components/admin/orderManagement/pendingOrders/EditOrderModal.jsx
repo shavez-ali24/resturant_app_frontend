@@ -189,10 +189,10 @@ const getItemPriceMeta = (item = {}, menuItem = null, variantName = null) => {
   return { originalPrice: fallback, finalPrice: fallback };
 };
 
-const EditOrderModal = ({ 
-  editingOrder, 
-  setEditingOrder, 
-  updateOrder, 
+const EditOrderModal = ({
+  editingOrder,
+  setEditingOrder,
+  updateOrder,
   getFriendlyErrorMessage,
   menuItems,
   tables,
@@ -218,12 +218,11 @@ const EditOrderModal = ({
   });
 
   // =============================
-  // INIT ORDER DATA (SAFE)
+  // INIT ORDER DATA
   // =============================
   useEffect(() => {
     if (editingOrder) {
       const normalizedItems = editingOrder.items.map(item => {
-        // Look up the menu item from menuItems prop to get variantRates
         const menuItem = menuItems.find(m => m._id === (item.menuItemId || item.menuItem?._id || item._id));
         const selectedVariant = item.variantName || item.variant || null;
         const resolvedPricingType =
@@ -239,37 +238,39 @@ const EditOrderModal = ({
 
         return {
           ...item,
+          _id: item._id || null,
           menuItemId: item.menuItemId || item.menuItem?._id || item._id,
           name: item.name || item.menuItem?.name || menuItem?.name || "",
           price: priceMeta.finalPrice,
           originalUnitPrice: priceMeta.originalPrice,
           discountedUnitPrice: priceMeta.finalPrice,
           quantity: item.quantity ?? 1,
+          _originalQuantity: item.quantity ?? 1,
           pricingType: resolvedPricingType,
-          // Ensure variantName is set for variant items
           variantName: selectedVariant,
           variant: selectedVariant,
-          // Keep variants only for variant-pricing items
           variants: resolvedVariants,
-          customizations: item.customizations || ""
+          customizations: item.customizations || "",
+          isReady: item.isReady === true,
+          // Existing items — _isNew is false
+          _isNew: false,
         };
       });
+
       const newLocalOrderData = {
         ...editingOrder,
         items: normalizedItems
       };
-      
+
       setLocalOrderData(newLocalOrderData);
-      setInitialOrderData(JSON.parse(JSON.stringify(newLocalOrderData))); // Deep copy for comparison
+      setInitialOrderData(JSON.parse(JSON.stringify(newLocalOrderData)));
       setRemovedItemIds([]);
-      
-      // Set address if exists (for Delivery orders)
+
       if (editingOrder.address) {
         setAddress(editingOrder.address);
         setInitialAddress(editingOrder.address);
       }
-      
-      // Set tableId if exists (for Eat Here orders)
+
       if (editingOrder.source?.section && editingOrder.source?.number) {
         const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
         setSelectedTableId(val);
@@ -278,49 +279,36 @@ const EditOrderModal = ({
         setSelectedTableId(editingOrder.tableId);
         setInitialTableId(editingOrder.tableId);
       }
-      
+
       setIsDirty(false);
       setHasUserChanges(false);
       setAddItemValue("");
-      setValidationErrors({
-        table: "",
-        address: "",
-        items: ""
-      });
+      setValidationErrors({ table: "", address: "", items: "" });
     }
   }, [editingOrder, menuItems]);
 
-  // Check if any changes were made
+  // Dirty check
   useEffect(() => {
     if (!localOrderData || !initialOrderData) return;
-    
-    // Check order type change
+
     const orderTypeChanged = localOrderData.orderType !== initialOrderData.orderType;
-    
-    // Check items changes
     const itemsChanged = JSON.stringify(localOrderData.items) !== JSON.stringify(initialOrderData.items);
-    
-    // Check address change
     const addressChanged = address !== initialAddress;
-    
-    // Check table change
     const tableChanged = selectedTableId !== initialTableId;
-    
+
     const hasChanges = orderTypeChanged || itemsChanged || addressChanged || tableChanged;
     setIsDirty(hasChanges || hasUserChanges);
-    
+
   }, [localOrderData, initialOrderData, address, selectedTableId, initialAddress, initialTableId, hasUserChanges]);
 
   useEffect(() => {
     if (itemsContainerRef.current && localOrderData?.items) {
-      itemsContainerRef.current.scrollTop =
-        itemsContainerRef.current.scrollHeight;
+      itemsContainerRef.current.scrollTop = itemsContainerRef.current.scrollHeight;
     }
   }, [localOrderData?.items]);
 
   if (!editingOrder) return null;
 
-  // Show loading state while data is initializing
   if (!localOrderData) {
     return (
       <div
@@ -344,8 +332,7 @@ const EditOrderModal = ({
 
     const now = Date.now();
     const guard = addItemGuardRef.current;
-    const isDuplicateEvent =
-      guard.menuItemId === menuItemId && now - guard.ts < 300;
+    const isDuplicateEvent = guard.menuItemId === menuItemId && now - guard.ts < 300;
     if (isDuplicateEvent) return;
 
     addItemGuardRef.current = { menuItemId, ts: now };
@@ -359,53 +346,56 @@ const EditOrderModal = ({
     let newItem;
 
     if (selected.pricingType === "variant" && selected.variantRates) {
-      // Get first variant key
       const firstVariantKey = Object.keys(selected.variantRates)[0];
       const firstVariantData = selected.variantRates[firstVariantKey];
       const firstVariantMeta = getVariantPriceMeta(firstVariantData);
-      
+
       newItem = {
+        _id: null,
         menuItemId: selected._id,
         name: selected.name,
         quantity: 1,
+        _originalQuantity: 0,
         pricingType: "variant",
         variantName: firstVariantKey,
+        variant: firstVariantKey,
         variants: selected.variantRates,
         price: firstVariantMeta.finalPrice,
         originalUnitPrice: firstVariantMeta.originalPrice,
         discountedUnitPrice: firstVariantMeta.finalPrice,
-        customizations: ""
+        customizations: "",
+        isReady: false,
+        _isNew: true, // naya item — variant dropdown dikhega
       };
     } else {
       const itemPriceMeta = getItemPriceMeta(selected, selected);
       newItem = {
+        _id: null,
         menuItemId: selected._id,
         name: selected.name,
         quantity: 1,
+        _originalQuantity: 0,
         pricingType: "single",
         variantName: null,
+        variant: null,
         variants: null,
         price: itemPriceMeta.finalPrice,
         originalUnitPrice: itemPriceMeta.originalPrice,
         discountedUnitPrice: itemPriceMeta.finalPrice,
-        customizations: ""
+        customizations: "",
+        isReady: false,
+        _isNew: true, // naya item
       };
     }
-    // console.log("Adding Item:", newItem);
 
     setLocalOrderData(prev => {
       if (!prev) return prev;
       const items = [...(prev.items || []), newItem];
-      return {
-        ...prev,
-        items,
-        totalAmount: recalcTotal(items)
-      };
+      return { ...prev, items, totalAmount: recalcTotal(items) };
     });
     setHasUserChanges(true);
     setAddItemValue("");
-    
-    // Clear items validation error when adding item
+
     if (validationErrors.items) {
       setValidationErrors(prev => ({ ...prev, items: "" }));
     }
@@ -415,24 +405,28 @@ const EditOrderModal = ({
         addItemGuardRef.current = { menuItemId: "", ts: 0 };
       }
     }, 350);
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
-  // VARIANT CHANGE
+  // VARIANT CHANGE — sirf _isNew items pe kaam karta hai
   // =============================
   const handleVariantChange = (idx, variant) => {
     const items = [...localOrderData.items];
     const item = items[idx];
 
+    // Existing items ka variant change nahi hona chahiye
+    if (!item._isNew) return;
     if (!item.variants || !item.variants[variant]) return;
 
     const variantMeta = getVariantPriceMeta(item.variants[variant]);
-    item.variantName = variant;
-    item.price = variantMeta.finalPrice;
-    item.originalUnitPrice = variantMeta.originalPrice;
-    item.discountedUnitPrice = variantMeta.finalPrice;
+    items[idx] = {
+      ...item,
+      variantName: variant,
+      variant: variant,
+      price: variantMeta.finalPrice,
+      originalUnitPrice: variantMeta.originalPrice,
+      discountedUnitPrice: variantMeta.finalPrice,
+    };
 
     setLocalOrderData(prev => ({
       ...prev,
@@ -440,7 +434,6 @@ const EditOrderModal = ({
       totalAmount: recalcTotal(items)
     }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -450,11 +443,11 @@ const EditOrderModal = ({
     const items = [...localOrderData.items];
 
     if (qty === "") {
-      items[idx].quantity = "";
+      items[idx] = { ...items[idx], quantity: "" };
     } else {
       const parsedQuantity = parseInt(qty, 10);
       if (Number.isNaN(parsedQuantity)) return;
-      items[idx].quantity = Math.max(0, parsedQuantity);
+      items[idx] = { ...items[idx], quantity: Math.max(0, parsedQuantity) };
     }
 
     setLocalOrderData(prev => ({
@@ -463,23 +456,21 @@ const EditOrderModal = ({
       totalAmount: recalcTotal(items)
     }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
-  // REMOVE ITEM (MIN 1)
+  // REMOVE ITEM
   // =============================
   const handleRemoveItem = (idx) => {
     if (localOrderData.items.length <= 1) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        items: "Minimum 1 item required" 
-      }));
+      setValidationErrors(prev => ({ ...prev, items: "Minimum 1 item required" }));
       return;
     }
 
     const removedItem = localOrderData.items[idx];
-    if (removedItem?._id) {
+
+    // Sirf existing items (_id hai, _isNew nahi) ko removeItemIds mein daalo
+    if (removedItem?._id && !removedItem._isNew) {
       const removedId = String(removedItem._id);
       setRemovedItemIds((prev) =>
         prev.includes(removedId) ? prev : [...prev, removedId]
@@ -494,13 +485,10 @@ const EditOrderModal = ({
       totalAmount: recalcTotal(items)
     }));
     setHasUserChanges(true);
-    
-    // Clear items validation error if items exist
+
     if (items.length > 0 && validationErrors.items) {
       setValidationErrors(prev => ({ ...prev, items: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -509,49 +497,29 @@ const EditOrderModal = ({
   const handleOrderTypeChange = (orderType) => {
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
-    
-    // Clear fields based on transition
-    if (
-      currentType === "delivery" &&
-      (newType === "eat_here" || newType === "take_away")
-    ) {
+
+    if (currentType === "delivery" && (newType === "eat_here" || newType === "take_away")) {
       setAddress("");
     }
-    if (
-      currentType === "eat_here" &&
-      (newType === "take_away" || newType === "delivery")
-    ) {
+    if (currentType === "eat_here" && (newType === "take_away" || newType === "delivery")) {
       setSelectedTableId("");
     }
 
-    // Clear validation errors when order type changes
-    setValidationErrors({
-      table: "",
-      address: "",
-      items: validationErrors.items // Keep items error if any
-    });
-
-    setLocalOrderData(prev => ({
-      ...prev,
-      orderType
-    }));
+    setValidationErrors({ table: "", address: "", items: validationErrors.items });
+    setLocalOrderData(prev => ({ ...prev, orderType }));
     setHasUserChanges(true);
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
-  // TABLE SELECTION CHANGE
+  // TABLE CHANGE
   // =============================
   const handleTableChange = (tableId) => {
     setSelectedTableId(tableId);
     setHasUserChanges(true);
-    
-    // Clear table validation error when user selects a table
+
     if (tableId && validationErrors.table) {
       setValidationErrors(prev => ({ ...prev, table: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
@@ -561,30 +529,21 @@ const EditOrderModal = ({
     const value = e.target.value;
     setAddress(value);
     setHasUserChanges(true);
-    
-    // Clear address validation error when user starts typing
+
     if (value.trim() && validationErrors.address) {
       setValidationErrors(prev => ({ ...prev, address: "" }));
     }
-    
-    // setIsDirty(true); // Automatically set by useEffect
   };
 
   // =============================
-  // 🔥 FIXED: FINAL UPDATE ORDER (WITHOUT ALERT)
+  // UPDATE ORDER
   // =============================
   const handleUpdateOrder = async () => {
     if (isSubmitting || !isDirty) return;
-    
-    // Validate based on order type
-    let errors = {
-      table: "",
-      address: "",
-      items: ""
-    };
+
+    let errors = { table: "", address: "", items: "" };
     let hasError = false;
 
-    // Items validation
     if (localOrderData.items.length === 0) {
       errors.items = "Minimum 1 item required";
       hasError = true;
@@ -597,80 +556,87 @@ const EditOrderModal = ({
       errors.items = "Quantity must be greater than 0 for all items";
       hasError = true;
     }
-    
+
     const selectedOrderTypeKey = getOrderTypeKey(localOrderData.orderType);
 
     if (selectedOrderTypeKey === "eat_here" && !selectedTableId) {
       errors.table = "Please select a table for Eat Here order";
       hasError = true;
     }
-    
+
     if (selectedOrderTypeKey === "delivery" && !address.trim()) {
       errors.address = "Please enter address for Delivery order";
       hasError = true;
     }
-    
+
     setValidationErrors(errors);
-    
+
     if (hasError) {
-      // Scroll to first error
       setTimeout(() => {
         const errorElements = document.querySelectorAll('[data-error="true"]');
         if (errorElements.length > 0) {
-          errorElements[0].scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
+          errorElements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
       return;
     }
-    
+
     setIsSubmitting(true);
 
     try {
       const initialStatus = initialOrderData?.status;
       const currentStatus = localOrderData.status;
-      const initialItemCount = initialOrderData?.items?.length || 0;
-      const currentItemCount = localOrderData.items.length;
-      const removedCount = removedItemIds.length;
-      const netNewItems = currentItemCount - (initialItemCount - removedCount);
-      const isAddingNewItems = netNewItems > 0;
 
-      // Determine if status needs to be sent explicitly
-      let shouldSetPreparing = false;
-      if (initialStatus === "ready" && isAddingNewItems) {
-        shouldSetPreparing = true;
-      }
-
-      // Build payload - only include fields that changed
       const payload = {
         orderType: localOrderData.orderType,
-        replaceItems: true,
-        removeItemIds: removedItemIds,
-        items: localOrderData.items.map(item => {
-          const variantValue = item.variantName || item.variant || null;
-          const payloadItem = {
-            menuItemId: item.menuItemId,
-            quantity: Number(item.quantity),
-            variant: variantValue,
-            customizations: item.customizations || ""
-          };
-          if (item._id) {
-            payloadItem._id = item._id;
-          }
-          return payloadItem;
-        })
       };
 
-      // Include status if it changed OR we need to force preparing
-      if (shouldSetPreparing) {
+      // ─── PART 1: NAYE ITEMS ───────────────────────────
+      const newItems = localOrderData.items.filter(item => item._isNew || !item._id);
+
+      if (newItems.length > 0) {
+        payload.items = newItems.map(item => {
+          const itemPayload = {
+            menuItemId: item.menuItemId,
+            quantity: Number(item.quantity),
+            customizations: item.customizations || "",
+          };
+
+          if (item.variantName || item.variant) {
+            itemPayload.variant = item.variantName || item.variant;
+          }
+
+          return itemPayload;
+        });
+      }
+
+      // ─── PART 2: QUANTITY CHANGES ─────────────────────
+      const quantityChanges = localOrderData.items.filter(item => {
+        if (item._isNew || !item._id) return false;
+        return Number(item.quantity) !== Number(item._originalQuantity);
+      });
+
+      if (quantityChanges.length > 0) {
+        payload.updateQuantities = quantityChanges.map(item => ({
+          itemId: String(item._id),
+          quantity: Number(item.quantity),
+        }));
+      }
+
+      // ─── PART 3: REMOVED ITEMS ────────────────────────
+      if (removedItemIds.length > 0) {
+        payload.removeItemIds = removedItemIds;
+      }
+
+      // ─── STATUS ───────────────────────────────────────
+      const isAddingNewItems = newItems.length > 0;
+      if (initialStatus === "ready" && isAddingNewItems) {
         payload.status = "preparing";
       } else if (currentStatus !== initialStatus) {
         payload.status = currentStatus;
       }
 
-      // Add source for Eat Here
+      // ─── SOURCE (TABLE) ───────────────────────────────
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
         const [section, numStr] = selectedTableId.split(":");
         const number = parseInt(numStr, 10) || 1;
@@ -678,33 +644,28 @@ const EditOrderModal = ({
         payload.source = { section, number, type };
       }
 
-      // Add address for Delivery
+      // ─── ADDRESS ──────────────────────────────────────
       if (selectedOrderTypeKey === "delivery" && address.trim()) {
         payload.address = address.trim();
       }
 
-      // Clear tableId for Take Away (if exists from previous state)
       if (selectedOrderTypeKey === "take_away") {
         payload.source = { section: null, number: null, type: "NONE" };
         payload.address = null;
       }
 
-      // ✅ FIXED: Call updateOrder with correct parameters
       await updateOrder(localOrderData._id, payload);
+
       setRemovedItemIds([]);
-      
       setEditingOrder(null);
+
     } catch (err) {
       console.error("Update Order Failed:", err);
       const errorMsg =
         typeof getFriendlyErrorMessage === "function"
           ? getFriendlyErrorMessage(err, "update")
           : "Unable to update order right now.";
-      // Show error in items section
-      setValidationErrors(prev => ({
-        ...prev,
-        items: errorMsg
-      }));
+      setValidationErrors(prev => ({ ...prev, items: errorMsg }));
     } finally {
       setIsSubmitting(false);
     }
@@ -731,27 +692,25 @@ const EditOrderModal = ({
     }
   };
 
-  const availableTables = Array.isArray(tables) ? tables : [];
-  const currentTable = availableTables.find(
-    (t) => t._id === selectedTableId || t.tableNumber === selectedTableId
-  );
   // ── Theme tokens ──────────────────────────────────────────────────────────
-  const modalBg   = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
-  const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const textPri   = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
-  const textSec   = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
-  const textMut   = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
-  const labelCls  = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
-  const inputCls  = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+  const modalBg          = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
+  const headerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const textPri          = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
+  const textMut          = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const labelCls         = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
+  const inputCls         = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
     isDarkMode
       ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:border-orange-500"
       : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] focus:border-orange-400"
   }`;
-  const itemCardBg = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
-  const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-[#f7f3ef] border-[#ede8e3]";
-  const totalBg   = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
-  const footerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const dropdownCls = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
+  const itemCardBg       = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
+  const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const totalBg          = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
+  const footerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
+  const dropdownCls      = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
+  const variantPillCls   = isDarkMode
+    ? "bg-slate-700 text-slate-300 border border-slate-600"
+    : "bg-[#f7f3ef] text-[#78716c] border border-[#e7e1db]";
 
   return (
     <div
@@ -829,7 +788,6 @@ const EditOrderModal = ({
                     No tables configured yet.
                   </p>
                 ) : onlyOne ? (
-                  // Single section — show only number dropdown
                   <Select
                     value={selectedTableId || `${sectionDefs[0].key}:1`}
                     onValueChange={(v) => handleTableChange(`${sectionDefs[0].key}:${v}`)}
@@ -853,7 +811,6 @@ const EditOrderModal = ({
                     </SelectContent>
                   </Select>
                 ) : (
-                  // Multiple sections — section cards + number dropdown
                   <div className="grid grid-cols-2 gap-2">
                     {sectionDefs.map(({ key, label, count, unit }) => {
                       const isSelected = selSection === key;
@@ -952,9 +909,27 @@ const EditOrderModal = ({
 
                   return (
                     <div key={`${item.menuItemId}-${idx}`} className={`rounded-xl border p-3 ${itemCardBg}`}>
-                      {/* Name + price */}
+
+                      {/* ── Name + badges + price ── */}
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-sm font-semibold ${textPri}`}>{item.name}</span>
+
+                          {/* Ready badge — existing items only */}
+                          {item.isReady && !item._isNew && (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                              ✓ Ready
+                            </span>
+                          )}
+
+                          {/* New item badge */}
+                          {item._isNew && (
+                            <span className="inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600">
+                              New
+                            </span>
+                          )}
+                        </div>
+
                         <div className="text-right shrink-0">
                           {showOldPrice && (
                             <p className={`text-[11px] line-through ${textMut}`}>₹{oldRowTotal.toFixed(2)}</p>
@@ -963,38 +938,50 @@ const EditOrderModal = ({
                         </div>
                       </div>
 
-                      {/* Variant selector */}
-                      {item.pricingType === "variant" && item.variants && Object.keys(item.variants).length > 0 && (
-                        <Select value={item.variantName || ""} onValueChange={(v) => handleVariantChange(idx, v)}>
-                          <SelectTrigger className={`h-8 w-full max-w-[220px] rounded-lg border px-2.5 text-xs outline-none focus:ring-1 focus:ring-orange-200 ${
-                            isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-[#ede8e3] bg-[#f7f3ef] text-[#1c1917]"
-                          }`}>
-                            <SelectValue placeholder="Select variant" />
-                          </SelectTrigger>
-                          <SelectContent className={`${dropdownCls} max-w-[220px]`}>
-                            <SelectGroup>
-                              {Object.entries(item.variants).map(([key, variantData]) => {
-                                if (!variantData) return null;
-                                const meta = getVariantDropdownPriceMeta(key, variantData);
-                                return (
-                                  <SelectItem key={key} value={key}
-                                    className={`cursor-pointer rounded-md text-xs ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
-                                    <div className="flex items-center justify-between gap-3 w-full">
-                                      <span>{meta.label}</span>
-                                      <span className="flex items-center gap-1 text-orange-500">
-                                        {meta.showOldPrice && <span className={`text-[10px] line-through ${textMut}`}>{formatCurrency(meta.originalPrice)}</span>}
-                                        <span className="font-semibold">{formatCurrency(meta.finalPrice)}</span>
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
+                      {/* ── Variant ── */}
+                      {item.pricingType === "variant" && (
+                        item._isNew && item.variants && Object.keys(item.variants).length > 0 ? (
+                          // NAYA item — variant dropdown dikhao, user change kar sakta hai
+                          <Select value={item.variantName || ""} onValueChange={(v) => handleVariantChange(idx, v)}>
+                            <SelectTrigger className={`h-8 w-full max-w-[220px] rounded-lg border px-2.5 text-xs outline-none focus:ring-1 focus:ring-orange-200 ${
+                              isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-[#ede8e3] bg-[#f7f3ef] text-[#1c1917]"
+                            }`}>
+                              <SelectValue placeholder="Select variant" />
+                            </SelectTrigger>
+                            <SelectContent className={`${dropdownCls} max-w-[220px]`}>
+                              <SelectGroup>
+                                {Object.entries(item.variants).map(([key, variantData]) => {
+                                  if (!variantData) return null;
+                                  const meta = getVariantDropdownPriceMeta(key, variantData);
+                                  return (
+                                    <SelectItem key={key} value={key}
+                                      className={`cursor-pointer rounded-md text-xs ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
+                                      <div className="flex items-center justify-between gap-3 w-full">
+                                        <span>{meta.label}</span>
+                                        <span className="flex items-center gap-1 text-orange-500">
+                                          {meta.showOldPrice && (
+                                            <span className={`text-[10px] line-through ${textMut}`}>{formatCurrency(meta.originalPrice)}</span>
+                                          )}
+                                          <span className="font-semibold">{formatCurrency(meta.finalPrice)}</span>
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          // EXISTING item — sirf text pill, dropdown nahi
+                          item.variantName && (
+                            <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${variantPillCls}`}>
+                              {formatVariantLabel(item.variantName)}
+                            </span>
+                          )
+                        )
                       )}
 
-                      {/* Qty + Remove */}
+                      {/* ── Qty + Remove ── */}
                       <div className="mt-2.5 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                           <button type="button" onClick={() => handleQuantityChange(idx, Math.max(1, quantity - 1))}

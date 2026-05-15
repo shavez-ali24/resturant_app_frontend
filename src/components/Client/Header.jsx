@@ -1337,7 +1337,16 @@ export default function Header({
           <Link to="/" className="flex items-center space-x-2">
             {logo && <img src={logo} alt="Logo" className="h-12 w-auto" />}
             <span
-              className={`font-fredoka text-xl font-semibold tracking-wide sm:text-2xl ${
+              style={{
+                fontSize:
+                  (siteName?.length || 0) <= 8  ? "22px" :
+                  (siteName?.length || 0) <= 12 ? "20px" :
+                  (siteName?.length || 0) <= 16 ? "18px" :
+                  (siteName?.length || 0) <= 20 ? "16px" :
+                  (siteName?.length || 0) <= 25 ? "14px" :
+                                                  "12px",
+              }}
+              className={`font-fredoka font-semibold tracking-wide ${
                 isDarkMode
                   ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]"
                   : "text-orange-600 drop-shadow-[0_0_8px_rgba(234,88,12,0.4)]"

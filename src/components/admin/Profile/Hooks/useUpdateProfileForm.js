@@ -95,6 +95,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const [updateRestaurantProfile, { isLoading: isSubmitting }] = useUpdateRestaurantProfileMutation();
 
     const [formData, setFormData] = useState({
+        restaurantName: initialData.restaurantName || initialData.name || "",
         phoneNumber: initialData.phoneNumber || "",
         address: initialData.address || "",
         gstNumber: initialData.gstNumber || "",
@@ -124,6 +125,23 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
     const [currentCategoryInput, setCurrentCategoryInput] = useState("");
     const [file, setFile] = useState(null);
     const [fileError, setFileError] = useState("");
+
+    // ── Name display style (frontend-only, stored in localStorage) ──────────
+    const [nameStyle, setNameStyle] = useState(() => {
+        try {
+            const saved = localStorage.getItem("restaurantNameStyle");
+            return saved ? JSON.parse(saved) : { fontSize: 24, align: "left" };
+        } catch {
+            return { fontSize: 24, align: "left" };
+        }
+    });
+
+    const handleNameStyleChange = (newStyle) => {
+        setNameStyle(newStyle);
+        try {
+            localStorage.setItem("restaurantNameStyle", JSON.stringify(newStyle));
+        } catch { /* ignore */ }
+    };
 
     const [notification, setNotification] = useState({
         show: false,
@@ -172,6 +190,8 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
             if (processedValue.length > 10) {
                 processedValue = processedValue.slice(0, 10);
             }
+        } else if (name === "restaurantName") {
+            processedValue = value.slice(0, 30);
         } else if (name === "gstRate") {
             processedValue = value
                 .replace(/[^0-9.]/g, "")
@@ -465,5 +485,7 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         handleRemoveCategory, 
         handleSubmit, 
         closeNotification,
+        nameStyle,
+        handleNameStyleChange,
     };
 };

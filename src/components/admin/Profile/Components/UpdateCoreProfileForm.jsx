@@ -7,6 +7,19 @@ const UpdateCoreProfileForm = ({ formData, handleChange }) => (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="sm:col-span-2 lg:col-span-3">
                 <FormField
+                    label="Restaurant Name"
+                    name="restaurantName"
+                    value={formData.restaurantName}
+                    onChange={handleChange}
+                    placeholder="e.g. Spice Garden"
+                    maxLength={30}
+                />
+                <p className="mt-1 text-[11px] text-[#a8a29e] dark:text-slate-500">
+                    Max 30 characters ({30 - (formData.restaurantName?.length || 0)} left)
+                </p>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3">
+                <FormField
                     label="Address"
                     name="address"
                     value={formData.address}
