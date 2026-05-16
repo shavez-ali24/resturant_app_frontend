@@ -1,15 +1,17 @@
 import { motion } from "framer-motion";
 
 export default function Filter({
-  filters = { veg: false, nonVeg: false, combo: false },
+  filters = { veg: false, nonVeg: false, mixed: false, combo: false },
   onChange = () => {},
   isDarkMode = false,
 }) {
   const currentMode =
-    filters.veg && !filters.nonVeg
+    filters.veg && !filters.nonVeg && !filters.mixed
       ? "veg"
-      : filters.nonVeg && !filters.veg
+      : filters.nonVeg && !filters.veg && !filters.mixed
       ? "nonVeg"
+      : filters.mixed
+      ? "mixed"
       : filters.combo
       ? "combo"
       : "all";
@@ -18,12 +20,19 @@ export default function Filter({
     if (mode === "veg") {
       onChange("veg", true);
       onChange("nonVeg", false);
+      onChange("mixed", false);
     } else if (mode === "nonVeg") {
       onChange("veg", false);
       onChange("nonVeg", true);
+      onChange("mixed", false);
+    } else if (mode === "mixed") {
+      onChange("veg", false);
+      onChange("nonVeg", false);
+      onChange("mixed", true);
     } else {
       onChange("veg", false);
       onChange("nonVeg", false);
+      onChange("mixed", false);
     }
   };
 
