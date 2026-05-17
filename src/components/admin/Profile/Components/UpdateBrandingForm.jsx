@@ -66,22 +66,22 @@ export default function UpdateBrandingForm({
 
   return (
     <>
-      <div className="flex flex-col gap-2">
+      <div className={`${displayImage ? "flex flex-col w-fit" : "flex flex-col"} gap-2`}>
         <p className="text-xs font-semibold text-[#78716c] dark:text-slate-300">
           Restaurant Logo
         </p>
 
         <div
-          className={`relative block w-full cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
             fileError
               ? "border-red-400 bg-red-50 dark:bg-red-500/10"
               : "border-[#d6cfc8] bg-[#f7f3ef] hover:border-orange-400 hover:bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-orange-500"
-          }`}
+          } ${displayImage ? "flex w-fit" : "flex w-full"}`}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="relative h-36 w-full">
+          <div className={`relative ${displayImage ? "" : "h-36 w-full"}`}>
             {displayImage ? (
-              <img src={displayImage} alt="Logo" className="h-full w-full object-cover" />
+              <img src={displayImage} alt="Logo" className="block max-h-36 w-auto rounded-lg" />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-1">
                 <PhotoIcon className={`h-8 w-8 ${fileError ? "text-red-400" : "text-[#d6cfc8] dark:text-slate-600"}`} />

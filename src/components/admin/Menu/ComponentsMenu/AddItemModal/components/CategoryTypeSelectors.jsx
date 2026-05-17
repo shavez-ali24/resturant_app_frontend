@@ -668,7 +668,6 @@ const CategoryTypeSelectors = ({
               <SelectGroup>
                 <SelectItem value="veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Veg</SelectItem>
                 <SelectItem value="non-veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Non-Veg</SelectItem>
-                <SelectItem value="mixed" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Mixed</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

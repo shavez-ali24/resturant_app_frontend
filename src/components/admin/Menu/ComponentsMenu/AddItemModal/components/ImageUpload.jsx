@@ -105,29 +105,27 @@ const ImageUpload = ({
 
   return (
     <>
-      <div className="space-y-2">
+      <div className={`${displayUrl ? "flex flex-col w-fit" : ""} space-y-2`}>
         <label className="block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400">
           Product Image
         </label>
 
         {/* Upload / preview area */}
         <div
-          className={`relative block w-full cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
             addFileError
               ? "border-red-400 bg-red-50 dark:bg-red-900/20"
               : "border-[#d6cfc8] bg-[#f7f3ef] hover:border-orange-400 hover:bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-orange-500 dark:hover:bg-slate-700/60"
-          }`}
+          } ${displayUrl ? "flex w-fit" : "flex w-full"}`}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="relative h-44 w-full">
+          <div className={`relative ${displayUrl ? "" : "flex items-center justify-center min-h-[100px] max-h-44 w-full"}`}>
             {displayUrl ? (
-              <>
-                <img
-                  src={displayUrl}
-                  alt="Preview"
-                  className="h-full w-full object-cover"
-                />
-              </>
+              <img
+                src={displayUrl}
+                alt="Preview"
+                className="max-h-44 w-auto rounded-lg"
+              />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
                 <div className={`rounded-xl p-3 ${addFileError ? "bg-red-100 dark:bg-red-900/30" : "bg-white dark:bg-slate-700"}`}>
