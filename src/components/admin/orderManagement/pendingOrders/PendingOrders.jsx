@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo, Suspense, lazy } from "react";
+import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTour } from "../../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
@@ -31,6 +31,7 @@ const DeleteModal = lazy(() => import("./DeleteModal"));
 const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
 const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
 const AdminOrderPanel = lazy(() => import("../../OrderPanel/AdminOrderPanel"));
+const LayoutView = lazy(() => import("./LayoutView/LayoutView"));
 
 import {
   useGetOrdersQuery,
@@ -102,6 +103,10 @@ const Orders = () => {
     const saved = localStorage.getItem("autoRefresh");
     return ["1", "2", "5"].includes(saved) ? saved : "1";
   });
+  const [viewMode, setViewMode] = useState(() => {
+    const saved = localStorage.getItem("orderViewMode");
+    return saved === "layout" || saved === "table" ? saved : "table";
+  }); // "table" | "layout"
   const itemsPerPage = 10;
   const combinedFetchLimit = itemsPerPage * 25;
   const autoRefreshMinutes = useMemo(() => {
@@ -397,6 +402,90 @@ const Orders = () => {
     );
   }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
 
+  // ── Derive layout sections from restaurant profile + active orders ─────
+  const SECTION_LABELS = {
+    indoor:  "Indoor",
+    outdoor: "Outdoor",
+    rooftop: "Rooftop",
+    hall:    "Hall",
+    rooms:   "Rooms",
+    deluxe:  "Deluxe Room",
+  };
+
+  const getTableStatusFromOrder = (orderStatus) => {
+    const map = {
+      pending:   "running",
+      preparing: "running_kot",
+      ready:     "printed",
+      completed: "paid",
+    };
+    return map[orderStatus] || "blank";
+  };
+
+  const layoutSections = useMemo(() => {
+    if (!restaurantData) return [];
+
+    const restaurant = restaurantData.restaurant || restaurantData;
+    const sec = restaurant.sections || {};
+
+    // Section configs from restaurant profile
+    const sectionConfigs = [
+      { key: "indoor",  count: sec.indoor?.tables  || restaurant.tableNumbers || 0 },
+      { key: "outdoor", count: sec.outdoor?.tables || 0 },
+      { key: "rooftop", count: sec.rooftop?.tables || 0 },
+      { key: "hall",    count: sec.hall?.tables    || 0 },
+      { key: "rooms",   count: sec.rooms?.rooms    || 0 },
+    ];
+
+    return sectionConfigs
+      .filter((cfg) => cfg.count > 0)
+      .map((cfg) => {
+        const sectionName = SECTION_LABELS[cfg.key] || cfg.key;
+        const tables = [];
+        for (let i = 1; i <= cfg.count; i++) {
+          // Find active order for this table+section
+          const order = combinedOrders.find((o) => {
+            const src = o.source || {};
+            return (
+              String(src.section || "").toLowerCase() === cfg.key &&
+              Number(src.number) === i
+            );
+          });
+
+          if (order) {
+            const createdAt = new Date(order.createdAt).getTime();
+            const runningMinutes = Math.floor((Date.now() - createdAt) / 60000);
+            const orderItems = Array.isArray(order.items) ? order.items : [];
+            const total = orderItems.reduce((sum, item) => {
+              const price = Number(item.discountedPrice || item.price || 0);
+              return sum + price * (item.quantity || 1);
+            }, 0);
+
+            tables.push({
+              tableId: `${cfg.key}:${i}`,
+              tableNumber: i,
+              sectionName: cfg.key,
+              status: getTableStatusFromOrder(String(order.status || "").toLowerCase()),
+              runningMinutes,
+              currentAmount: total,
+              orderId: order._id || order.id || order.orderId,
+            });
+          } else {
+            tables.push({
+              tableId: `${cfg.key}:${i}`,
+              tableNumber: i,
+              sectionName: cfg.key,
+              status: "blank",
+              runningMinutes: null,
+              currentAmount: null,
+              orderId: null,
+            });
+          }
+        }
+        return { sectionId: cfg.key, sectionName, tables };
+      });
+  }, [restaurantData, combinedOrders]);
+
   const totalPages = Math.max(
     1,
     Math.ceil(combinedOrders.length / itemsPerPage)
@@ -570,6 +659,58 @@ const Orders = () => {
     setCurrentPage(newPage);
   };
 
+  // ---
+  // --- Layout View callbacks ---
+  // When user clicks an active table in LayoutView → open ItemsModal for that order
+  const handleViewOrder = useCallback((tableInfo) => {
+    if (tableInfo?.orderId) {
+      // Find the order from combinedOrders by source.section + source.number
+      const section = tableInfo.sectionName || "";
+      const number = Number(tableInfo.tableNumber);
+      const order = combinedOrders.find((o) => {
+        const src = o.source || {};
+        return (
+          String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
+          Number(src.number) === number
+        );
+      });
+      if (order) {
+        setOrderForBillModal(order);
+      } else {
+        notify("Order details not found. Try refreshing.", "error");
+      }
+    }
+  }, [combinedOrders, notify]);
+
+  // When user selects a blank table → navigate to Create Order with pre-filled table
+  const handleCreateOrderFromLayout = useCallback((tableInfo) => {
+    // Store table selection in sessionStorage so AdminOrderPanel can pick it up
+    try {
+      sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
+    } catch (_) { /* ignore */ }
+    setSearchParams({ view: "create", tableId: tableInfo.tableId || tableInfo.tableNumber });
+  }, [setSearchParams]);
+
+  // When user clicks edit pencil in LayoutView → open EditOrderModal for that order
+  const handleEditOrderFromLayout = useCallback((tableInfo) => {
+    if (tableInfo?.orderId) {
+      const section = tableInfo.sectionName || "";
+      const number = Number(tableInfo.tableNumber);
+      const order = combinedOrders.find((o) => {
+        const src = o.source || {};
+        return (
+          String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
+          Number(src.number) === Number(tableInfo.tableNumber)
+        );
+      });
+      if (order) {
+        setEditingOrder(order);
+      } else {
+        notify("Order not found for editing. Try refreshing.", "error");
+      }
+    }
+  }, [combinedOrders, notify]);
+
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
@@ -631,60 +772,124 @@ const Orders = () => {
         <div className="flex items-center gap-2.5">
           <Heading title="Live Orders" showDot />
         </div>
-        <button
-          data-tour="orders-create-btn"
-          onClick={() => openCreateOrder()}
-          className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-orange-600 active:scale-95"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Create Order</span>
-          <span className="sm:hidden">New</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* ── View Toggle ── */}
+          <div className={`flex items-center rounded-lg border p-0.5 ${isDarkMode ? "border-slate-700/60 bg-slate-800" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+            <button
+              onClick={() => { localStorage.setItem("orderViewMode", "table"); setViewMode("table"); }}
+              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all sm:px-2.5 sm:text-sm ${
+                viewMode === "table"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : isDarkMode
+                    ? "text-slate-400 hover:text-slate-200"
+                    : "text-[#78716c] hover:text-[#44403c]"
+              }`}
+              title="Table View"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <span>Table</span>
+            </button>
+            <button
+              onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
+              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all sm:px-2.5 sm:text-sm ${
+                viewMode === "layout"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : isDarkMode
+                    ? "text-slate-400 hover:text-slate-200"
+                    : "text-[#78716c] hover:text-[#44403c]"
+              }`}
+              title="Layout View"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span>Layout</span>
+            </button>
+          </div>
+
+          <button
+            data-tour="orders-create-btn"
+            onClick={() => openCreateOrder()}
+            className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-orange-600 active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Create Order</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── Table card — flex-1 fills remaining height, no scroll on laptop ── */}
-      <div
-        data-tour="orders-table"
-        className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
-          isDarkMode
-            ? "border-slate-700/60 bg-[#1e293b]"
-            : "border-[#ede8e3] bg-white"
-        }`}
-      >
-        <Suspense
-          fallback={
-            <div className="p-6 space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
-              ))}
-            </div>
-          }
-        >
-          <OrdersTable
-            orders={orders}
-            loading={loading}
-            error={error}
-            setEditingOrder={setEditingOrder}
-            setShowConfirmDelete={setShowConfirmDelete}
-            setOrderForBillModal={setOrderForBillModal}
-            updateOrder={updateOrder}
-            tableType="pending"
-            onCustomizationsClick={handleCustomizationsClick}
-            containerVariant="plain"
-            isDarkMode={isDarkMode}
-            latestOrderId={
-              combinedOrders[0]?._id ||
-              combinedOrders[0]?.id ||
-              combinedOrders[0]?.orderId ||
-              combinedOrders[0]?.createdAt
+      {/* ── Content Area (Table View or Layout View) ── */}
+      {viewMode === "layout" ? (
+        <div className="flex-1 min-h-0 overflow-auto">
+          <Suspense
+            fallback={
+              <div className="p-6 space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
+                ))}
+              </div>
             }
-          />
-        </Suspense>
-      </div>
+          >
+            <LayoutView
+              sections={layoutSections}
+              isLoading={restaurantLoading}
+              error={
+                restaurantError
+                  ? getFriendlyOrderError(restaurantError, "fetch")
+                  : null
+              }
+              onRetry={refetchRestaurant}
+              isDarkMode={isDarkMode}
+              onViewOrder={handleViewOrder}
+              onCreateOrder={handleCreateOrderFromLayout}
+              onEditOrder={handleEditOrderFromLayout}
+            />
+          </Suspense>
+        </div>
+      ) : (
+        <div
+          data-tour="orders-table"
+          className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
+            isDarkMode
+              ? "border-slate-700/60 bg-[#1e293b]"
+              : "border-[#ede8e3] bg-white"
+          }`}
+        >
+          <Suspense
+            fallback={
+              <div className="p-6 space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
+                ))}
+              </div>
+            }
+          >
+            <OrdersTable
+              orders={orders}
+              loading={loading}
+              error={error}
+              setEditingOrder={setEditingOrder}
+              setShowConfirmDelete={setShowConfirmDelete}
+              setOrderForBillModal={setOrderForBillModal}
+              updateOrder={updateOrder}
+              tableType="pending"
+              onCustomizationsClick={handleCustomizationsClick}
+              containerVariant="plain"
+              isDarkMode={isDarkMode}
+              latestOrderId={
+                combinedOrders[0]?._id ||
+                combinedOrders[0]?.id ||
+                combinedOrders[0]?.orderId ||
+                combinedOrders[0]?.createdAt
+              }
+            />
+          </Suspense>
+        </div>
+      )}
 
-      {/* ── Pagination ── */}
-      <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
-        {totalPages > 1 && (
+      {/* ── Pagination (only in table view) ── */}
+      {viewMode === "table" && (
+        <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
+          {totalPages > 1 && (
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
               <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
@@ -738,6 +943,7 @@ const Orders = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* ── Modals ── */}
       <Suspense fallback={null}>

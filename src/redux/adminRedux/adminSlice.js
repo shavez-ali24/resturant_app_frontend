@@ -5,7 +5,7 @@ import { createSlice } from '@reduxjs/toolkit';
 // Import these in any component: import { ADMIN_COLORS } from '@/redux/adminRedux/adminSlice'
 export const ADMIN_COLORS = {
   // ── Brand ──────────────────────────────────────────────────────────────────
-  primary:        '#f97316',   // orange-500  — buttons, active states, accents
+  primary:        '#f97316',   // orange-500range-500  — buttons, active states, accents
   primaryHover:   '#ea580c',   // orange-600  — button hover
   primaryLight:   '#fff7ed',   // orange-50   — light bg tint
   primaryMid:     '#fed7aa',   // orange-200  — borders, dividers
@@ -46,8 +46,8 @@ export const ADMIN_COLORS = {
 };
 
 const initialState = {
-  adminInfo: localStorage.getItem('adminInfo') 
-    ? JSON.parse(localStorage.getItem('adminInfo')) 
+  adminInfo: localStorage.getItem('adminInfo')
+    ? JSON.parse(localStorage.getItem('adminInfo'))
     : null,
   token: localStorage.getItem('token') || null,
   loading: false,
@@ -76,7 +76,7 @@ const adminSlice = createSlice({
       localStorage.removeItem('userEmail');
       localStorage.removeItem('restaurantName');
       localStorage.removeItem('qrCode');
-      localStorage.removeItem('userPassword');
+      localStorage.removeItem('serPassword');
     },
     setLoading: (state, action) => {
       state.loading = action.payload;

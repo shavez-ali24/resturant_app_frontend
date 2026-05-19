@@ -270,6 +270,59 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
   );
 }
 
+// ─── VariantPills ────────────────────────────────────────────────────────────
+// Big tappable buttons — instant selection, no dropdown
+function VariantPills({ item, value, onChange, isDarkMode }) {
+  const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v != null);
+
+  const getVariantDisplay = (key, v) => {
+    const vBasePrice = Number(v.price) || 0;
+   0;
+    const vDiscount = v.discount;
+    let vFinalPrice = vBasePrice;
+    if (vDiscount?.active && vDiscount?.value && Number(vDiscount.value) > 0) {
+      const dv = Number(vDiscount.value);
+      vFinalPrice = vDiscount.type?.toLowerCase() === "percentage"
+        ? vBasePrice - (vBasePrice * dv) / 100
+        : vBasePrice - dv;
+    }
+    return { label: formatVariantLabel(key), finalPrice: vFinalPrice, basePrice: vBasePrice, hasDisc: vFinalPrice < vBasePrice };
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
+      {variantEntries.map(([key, v]) => {
+        const d = getVariantDisplay(key, v);
+        const isSelected = value === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onChange(key); }}
+            className={`flex-1 min-w-[80px] flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 ${
+              isSelected
+                ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20"
+                : isDarkMode
+                  ? "bg-slate-800 border-slate-600 text-slate-200 hover:border-orange-400 hover:bg-slate-700"
+                  : "bg-[#f7f3ef] border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-white"
+            }`}
+          >
+            <span className="text-base">{d.label}</span>
+            <span className={`text-xs font-bold ${isSelected ? "text-white/90" : "text-orange-500"}`}>
+              ₹{d.finalPrice.toFixed(0)}
+              {d.hasDisc && (
+                <span className={`ml-1 line-through text-[10px] ${isSelected ? "text-white/60" : isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                  ₹{d.basePrice.toFixed(0)}
+                </span>
+              )}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── OrderSummaryPanel ────────────────────────────────────────────────────────
 // !! CRITICAL: Defined at MODULE LEVEL — NOT inside AdminOrderPanel !!
 // If defined inside as `const X = () => ...`, React treats it as a NEW component
@@ -290,13 +343,13 @@ function OrderSummaryPanel({
 
       {/* Order Type Tabs */}
       <div className={`p-3 border-b shrink-0 ${border}`}>
-        <div className={`flex rounded-lg overflow-hidden border ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
+        <div className={`flex rounded-xl overflow-hidden border ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
           {["Dine In", "Delivery", "Take Away"].map((type) => (
             <button
               key={type}
               onClick={() => { setOrderType(type); setTableId(""); setAddress(""); }}
               style={orderType === type ? { backgroundColor: "#f97316", color: "#ffffff" } : {}}
-              className={`flex-1 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`flex-1 py-3 text-sm font-bold transition-all duration-200 ${
                 orderType === type
                   ? ""
                   : isDarkMode
@@ -324,51 +377,51 @@ function OrderSummaryPanel({
             return (
               <div
                 key={id}
-                className={`flex items-center gap-2 rounded-lg p-2 border ${
+                className={`flex items-center gap-3 rounded-xl p-3 border ${
                   isDarkMode ? "border-slate-700/60 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold line-clamp-1 ${textPrimary}`}>{item.name}</p>
+                  <p className={`text-sm font-bold line-clamp-1 ${textPrimary}`}>{item.name}</p>
                   {item.variantLabel && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md mt-0.5 inline-block ${
+                    <span className={`text-xs px-2 py-0.5 rounded-md mt-1 inline-block font-semibold ${
                       isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
                     }`}>
                       {item.variantLabel}
                     </span>
                   )}
-                  <p className={`text-[10px] mt-0.5 ${textSecondary}`}>
+                  <p className={`text-sm mt-1 ${textSecondary}`}>
                     ₹{(item.price || 0).toFixed(2)} × {item.quantity} ={" "}
-                    <span className={`font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
+                    <span className={`font-bold ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
                       ₹{itemTotal.toFixed(2)}
                     </span>
                   </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => dispatch(removeFromCart(id))}
-                    className={`h-5 w-5 rounded-md border flex items-center justify-center ${
+                    className={`h-8 w-8 rounded-lg border flex items-center justify-center ${
                       isDarkMode ? "border-slate-600 bg-slate-700 text-orange-400" : "border-[#ede8e3] bg-white text-orange-500"
                     }`}
                   >
-                    <Minus className="h-2.5 w-2.5" />
+                    <Minus className="h-4 w-4" />
                   </button>
-                  <span className={`w-4 text-center text-xs font-bold ${textPrimary}`}>{item.quantity}</span>
+                  <span className={`w-5 text-center text-sm font-bold ${textPrimary}`}>{item.quantity}</span>
                   <button
                     onClick={() => dispatch(addToCart({ id, item, quantity: 1 }))}
-                    className={`h-5 w-5 rounded-md border flex items-center justify-center ${
+                    className={`h-8 w-8 rounded-lg border flex items-center justify-center ${
                       isDarkMode ? "border-slate-600 bg-slate-700 text-orange-400" : "border-[#ede8e3] bg-orange-500 text-white"
                     }`}
                   >
-                    <Plus className="h-2.5 w-2.5" />
+                    <Plus className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleRemoveAll(id, item.quantity)}
-                    className={`h-5 w-5 rounded-lg flex items-center justify-center ml-0.5 ${
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center ${
                       isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"
                     }`}
                   >
-                    <Trash2 className="h-2.5 w-2.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -378,28 +431,28 @@ function OrderSummaryPanel({
       </div>
 
       {/* Price Breakdown */}
-      <div className={`px-3 py-2 space-y-1.5 border-t border-b shrink-0 ${
+      <div className={`px-4 py-3 space-y-2 border-t border-b shrink-0 ${
         isDarkMode ? "border-slate-700/60 bg-slate-800/30" : "border-[#ede8e3] bg-[#f7f3ef]"
       }`}>
         <div className="flex justify-between">
-          <span className={`text-xs ${textSecondary}`}>Subtotal</span>
-          <span className={`text-xs font-medium ${textPrimary}`}>₹{subtotal.toFixed(2)}</span>
+          <span className={`text-sm ${textSecondary}`}>Subtotal</span>
+          <span className={`text-sm font-semibold ${textPrimary}`}>₹{subtotal.toFixed(2)}</span>
         </div>
         {gstEnabled && gstAmount > 0 && (
           <div className="flex justify-between">
-            <span className={`text-xs ${textSecondary}`}>GST ({gstRate}%)</span>
-            <span className={`text-xs font-medium ${textPrimary}`}>+ ₹{gstAmount.toFixed(2)}</span>
+            <span className={`text-sm ${textSecondary}`}>GST ({gstRate}%)</span>
+            <span className={`text-sm font-semibold ${textPrimary}`}>+ ₹{gstAmount.toFixed(2)}</span>
           </div>
         )}
         {orderType === "Delivery" && deliveryCharges > 0 && (
           <div className="flex justify-between">
-            <span className={`text-xs ${textSecondary}`}>Delivery</span>
-            <span className={`text-xs font-medium ${textPrimary}`}>+ ₹{deliveryCharges.toFixed(2)}</span>
+            <span className={`text-sm ${textSecondary}`}>Delivery</span>
+            <span className={`text-sm font-semibold ${textPrimary}`}>+ ₹{deliveryCharges.toFixed(2)}</span>
           </div>
         )}
-        <div className={`flex justify-between pt-1.5 border-t ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
-          <span className={`font-bold text-sm ${textPrimary}`}>Total</span>
-          <span className="font-bold text-base text-orange-500">₹{total.toFixed(2)}</span>
+        <div className={`flex justify-between pt-2 border-t ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
+          <span className={`font-bold text-base ${textPrimary}`}>Total</span>
+          <span className="font-bold text-lg text-orange-500">₹{total.toFixed(2)}</span>
         </div>
       </div>
 
@@ -596,6 +649,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedVariants, setSelectedVariants] = useState({});
+  const [variantPickerItem, setVariantPickerItem] = useState(null);
   const [orderType, setOrderType] = useState("Dine In");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -603,6 +657,22 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // ── Pre-fill from CreateOrderModal (Layout View) ──────────────────────────
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("selectedTable");
+      if (stored) {
+        const tableInfo = JSON.parse(stored);
+        if (tableInfo.sectionName && tableInfo.tableNumber) {
+          setTableId(`${tableInfo.sectionName.toLowerCase()}:${tableInfo.tableNumber}`);
+        }
+        if (tableInfo.customerName) setCustomerName(tableInfo.customerName);
+        if (tableInfo.customerPhone) setCustomerPhone(tableInfo.customerPhone);
+        sessionStorage.removeItem("selectedTable");
+      }
+    } catch (_) { /* ignore parse errors */ }
+  }, []);
 
   // ── Menu Data ────────────────────────────────────────────────────────────────
   const menuItems = menuData?.menu || [];
@@ -623,20 +693,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     }
   }, [categories.join(",")]);
 
-  useEffect(() => {
-    if (!menuItems.length) return;
-    setSelectedVariants((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      menuItems.forEach((item) => {
-        if (item.pricingType === "variant" && !next[item._id]) {
-          const first = Object.keys(item.variantRates || {})[0];
-          if (first) { next[item._id] = first; changed = true; }
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [menuItems.length]);
+  // Removed auto-select — user picks variant via the modal
 
   const selectedCategoryKey = String(selectedCategory || "").trim().toLowerCase();
   const currentItems = groupedMenu[selectedCategoryKey] || [];
@@ -943,7 +1000,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {currentItems.map((item) => {
                 const { cartKey, quantity, selectedVariant } = getCartKeyAndQty(item);
                 let basePrice = Number(item.price) || 0;
@@ -979,7 +1036,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     )}
 
                     <div className="flex flex-wrap items-center gap-1 mb-1.5">
-                      {hasDiscount ? (
+                      {item.pricingType === "variant" ? (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                          isDarkMode ? "bg-slate-700 text-slate-300" : "bg-[#f7f3ef] text-[#78716c]"
+                        }`}>
+                          Variant
+                        </span>
+                      ) : hasDiscount ? (
                         <>
                           <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
                             ₹{basePrice.toFixed(2)}
@@ -996,15 +1059,6 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       )}
                     </div>
 
-                    {item.pricingType === "variant" && Object.keys(item.variantRates || {}).length > 0 && (
-                      <VariantSelect
-                        item={item}
-                        value={selectedVariants[item._id] || ""}
-                        onChange={(val) => setSelectedVariants((prev) => ({ ...prev, [item._id]: val }))}
-                        isDarkMode={isDarkMode}
-                      />
-                    )}
-
                     {isUnavailable && (
                       <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center">
                         <span className="text-[10px] font-semibold text-white bg-black/50 px-2 py-1 rounded-full">
@@ -1014,7 +1068,15 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     )}
 
                     <div className="mt-auto">
-                      {quantity === 0 ? (
+                      {item.pricingType === "variant" && Object.keys(item.variantRates || {}).length > 0 ? (
+                        <button
+                          onClick={() => setVariantPickerItem(item)}
+                          disabled={!isRestaurantOpen}
+                          className="w-full py-2 rounded-lg bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          + Add
+                        </button>
+                      ) : quantity === 0 ? (
                         <button
                           onClick={() => handleAddItem(item)}
                           disabled={!isRestaurantOpen}
@@ -1053,7 +1115,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         {/* DESKTOP: Order Summary sidebar */}
         <div
           data-tour="orderpanel-summary"
-          className={`hidden md:flex md:flex-col w-80 shrink-0 border-l overflow-hidden ${
+          className={`hidden md:flex md:flex-col w-[440px] shrink-0 border-l overflow-hidden ${
             isDarkMode ? `border-slate-700/60 ${summaryBg}` : `border-[#ede8e3] ${summaryBg}`
           }`}
         >
@@ -1063,12 +1125,99 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       {/* MOBILE: Order Summary */}
       <div
-        className={`md:hidden border-t shrink-0 max-h-[55vh] overflow-hidden flex flex-col ${
+        className={`md:hidden border-t shrink-0 max-h-[45vh] overflow-hidden flex flex-col ${
           isDarkMode ? `border-slate-700/60 ${summaryBg}` : `border-[#ede8e3] ${summaryBg}`
         }`}
       >
         <OrderSummaryPanel {...summaryProps} />
       </div>
+
+      {/* ── Variant Picker Modal ── */}
+      {variantPickerItem && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50"
+          onClick={() => setVariantPickerItem(null)}
+        >
+          <div
+            className={`w-[90%] max-w-sm rounded-2xl border p-6 shadow-2xl ${
+              isDarkMode ? "bg-[#1e293b] border-slate-600" : "bg-white border-[#ede8e3]"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className={`text-lg font-bold mb-1 text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+              {variantPickerItem.name}
+            </h4>
+            <p className={`text-xs text-center mb-4 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
+              Select a variant
+            </p>
+
+            <div className="flex flex-col gap-3">
+              {Object.entries(variantPickerItem.variantRates || {}).filter(([, v]) => v != null).map(([key, v]) => {
+                const vBasePrice = Number(v.price) || 0;
+                const vDiscount = v.discount;
+                let vFinal = vBasePrice;
+                if (vDiscount?.active && vDiscount?.value && Number(vDiscount.value) > 0) {
+                  const dv = Number(vDiscount.value);
+                  vFinal = vDiscount.type?.toLowerCase() === "percentage"
+                    ? vBasePrice - (vBasePrice * dv) / 100
+                    : vBasePrice - dv;
+                }
+                const hasDisc = vFinal < vBasePrice;
+                const label = formatVariantLabel(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVariants((prev) => ({ ...prev, [variantPickerItem._id]: key }));
+                      setVariantPickerItem(null);
+                      // Direct add with chosen variant
+                      const cartKey = `${variantPickerItem._id}-${key}`;
+                      let basePrice = Number(v.price) || 0;
+                      const discountedPrice = calculateDiscountedPrice(variantPickerItem, key);
+                      const hasDiscount = hasActiveDiscount(variantPickerItem, key);
+                      dispatch(addToCart({
+                        id: cartKey,
+                        item: {
+                          ...variantPickerItem,
+                          price: discountedPrice || basePrice,
+                          originalPrice: basePrice,
+                          hasDiscount,
+                          variantKey: key,
+                          variantLabel: formatVariantLabel(key),
+                          customizations: "",
+                        },
+                        quantity: 1,
+                      }));
+                    }}
+                    className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl text-base font-bold bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all active:scale-[0.97]"
+                  >
+                    <span>{label}</span>
+                    <span className="text-right">
+                      ₹{vFinal.toFixed(0)}
+                      {hasDisc && (
+                        <span className="ml-2 line-through text-sm text-white/60">₹{vBasePrice.toFixed(0)}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setVariantPickerItem(null)}
+              className={`w-full mt-3 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                isDarkMode
+                  ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  : "bg-[#f7f3ef] text-[#78716c] hover:bg-[#ede8e3]"
+              }`}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

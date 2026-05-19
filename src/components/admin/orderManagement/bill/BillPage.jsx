@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X } from "lucide-react";
+import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, ClipboardList, ListChecks } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass,
@@ -18,6 +18,7 @@ import {
   getOrderTypeLabel,
   recalcTotal,
 } from "../commonOrderFile/utils";
+import OrderDetailView from "./OrderDetailView";
 
 const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
 const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
@@ -70,6 +71,7 @@ const BillPage = ({
   const isStaff = user?.role === "staff";
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showDetailView, setShowDetailView] = useState(false);
   const [localOrderData, setLocalOrderData] = useState(null);
   const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState("");
@@ -440,7 +442,7 @@ const BillPage = ({
     normalizedGstin && restaurantDetails?.gstEnabled !== false
       ? normalizedGstin
       : null;
-  const displayAddress = isEditMode ? address : order?.address;
+  const displayAddress = isEditMode ? address : activeOrder?.address;
   const forceLightBill = true;
   const billThemeIsDark = isDarkMode && !forceLightBill;
   const billSurfaceClass = billThemeIsDark
@@ -887,6 +889,106 @@ const BillPage = ({
     };
   };
 
+  const handleKOTPrint = () => {
+    const kotRestName =
+      restaurantDetails?.restaurantName ||
+      restaurantDetails?.name ||
+      "Restaurant";
+    const kotOrderId = activeOrder?.orderId || activeOrder?._id?.slice(-4) || "N/A";
+    const kotItems = activeOrder?.items || [];
+
+    // Build type info with location
+    const orderType = activeOrder?.orderType || "";
+    const section = activeOrder?.source?.section;
+    const number = activeOrder?.source?.number;
+    let typeInfo = orderType || "N/A";
+    if (section && number != null) {
+      const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+      const secLabel = labels[section] || (section.charAt(0).toUpperCase() + section.slice(1));
+      const unit = activeOrder?.source?.type === "ROOM" ? "" : "Table";
+      const loc = unit ? `${secLabel} ${unit} ${number}` : `${secLabel} ${number}`;
+      typeInfo = `${orderType} · ${loc}`;
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="padding:24px;font-family:monospace;font-size:14px;max-width:400px;margin:0 auto;color:#000">
+        <div style="text-align:center;margin-bottom:16px">
+          <h2 style="margin:0;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000">${kotRestName}</h2>
+          <hr style="width:75%;margin:8px auto;border:none;border-top:1px solid #000" />
+          <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#000">Kitchen Order Ticket</p>
+        </div>
+
+        <div style="margin-bottom:12px;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:8px 0;font-size:12px;color:#000">
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Order ID</span><span>${kotOrderId}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Name</span><span>${activeOrder?.customerName || "Guest"}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Type</span><span>${typeInfo}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Time</span><span>${activeOrder?.createdAt ? new Date(activeOrder.createdAt).toLocaleString("en-IN", { hour12: true }) : "N/A"}</span></div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#000">
+          <thead>
+            <tr style="border-bottom:1px solid #000">
+              <th style="padding:4px 0;text-align:left;font-weight:600;color:#000">Item</th>
+              <th style="padding:4px 0;text-align:right;font-weight:600;color:#000">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${kotItems.map(item => `
+              <tr style="border-bottom:1px dotted #000">
+                <td style="padding:4px 0;color:#000">${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}</td>
+                <td style="padding:4px 0;text-align:right;font-weight:500;color:#000">${item.quantity || 1}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+
+      </div>
+    `;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+
+    document.body.appendChild(printFrame);
+    const doc = printFrame.contentWindow.document;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: #fff; color: #000; font-family: monospace; padding: 20px; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${container.innerHTML}</body>
+      </html>
+    `);
+    doc.close();
+
+    printFrame.onload = () => {
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+      }, 300);
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    };
+  };
+
+  const getItemName = (item) => {
+    return item?.name || item?.menuItem?.name || "Item";
+  };
+
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
       case "eat_here":
@@ -1049,32 +1151,32 @@ const BillPage = ({
             {/* Customer & Order Info */}
             <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
               <p>
-                <strong>Customer:</strong> {order?.customerName || "Guest"}
+                <strong>Customer:</strong> {activeOrder?.customerName || "Guest"}
               </p>
               <p>
-                <strong>Phone:</strong> {order?.customerPhone || "N/A"}
+                <strong>Phone:</strong> {activeOrder?.customerPhone || "N/A"}
               </p>
-              {(order?.source?.section || order?.tableId) && (
+              {(activeOrder?.source?.section || activeOrder?.tableId) && (
                 <p>
                   <strong>
-                    {order?.source?.type === "ROOM" ? "Room:" : "Table:"}
+                    {activeOrder?.source?.type === "ROOM" ? "Room:" : "Table:"}
                   </strong>{" "}
-                  {order?.source?.section
+                  {activeOrder?.source?.section
                     ? (() => {
                         const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-                        const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
-                        const unit = order.source.type === "ROOM" ? "" : "Table";
-                        return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
+                        const sec = labels[activeOrder.source.section] || (activeOrder.source.section.charAt(0).toUpperCase() + activeOrder.source.section.slice(1));
+                        const unit = activeOrder.source.type === "ROOM" ? "" : "Table";
+                        return unit ? `${sec} ${unit} ${activeOrder.source.number}` : `${sec} ${activeOrder.source.number}`;
                       })()
-                    : order.tableId
+                    : activeOrder.tableId
                   }
                 </p>
               )}
               <p>
                 <strong>Time:</strong>{" "}
-                {new Date(order?.createdAt).toLocaleTimeString([], {
-                  hour12: true
-                })}
+                {activeOrder?.createdAt
+                  ? new Date(activeOrder.createdAt).toLocaleTimeString([], { hour12: true })
+                  : "N/A"}
               </p>
               <p>
                 <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
@@ -1256,7 +1358,7 @@ const BillPage = ({
                 </tr>
               </thead>
               <tbody>
-                {(localOrderData?.items || order?.items || [])?.map((item, i) => {
+                {(activeOrder?.items || [])?.map((item, i) => {
                   const itemPrice = parseAmount(
                     item.discountedPrice ??
                     item.price ??
@@ -1273,7 +1375,7 @@ const BillPage = ({
                     <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
                         <div>
-                          {item.name}
+                          {getItemName(item)}
                           {itemVariant && (
                             <div className={`text-xs ${billTextClass}`}>({itemVariant})</div>
                           )}
@@ -1341,7 +1443,7 @@ const BillPage = ({
                             checked={isChecked}
                             onChange={() => toggleItemCheck(itemKey)}
                             className={`h-4 w-4 cursor-pointer rounded border transition-colors ${billCheckboxClass}`}
-                            aria-label={`Mark ${item.name} as sent`}
+                            aria-label={`Mark ${getItemName(item)} as sent`}
                           />
                         </td>
                       )}
@@ -1429,8 +1531,8 @@ const BillPage = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={`flex justify-end gap-3 border-t p-4 ${
+        {/* Footer - Responsive buttons */}
+        <div className={`flex flex-wrap items-center justify-end gap-2 border-t p-3 sm:p-4 ${
           isDarkMode
             ? "border-slate-700 bg-slate-800/40"
             : "border-[#ede8e3] bg-[#f7f3ef]"
@@ -1438,7 +1540,7 @@ const BillPage = ({
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+              className={`flex h-8 sm:h-9 items-center rounded-lg border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold transition-colors ${
                 isDarkMode
                   ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
                   : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
@@ -1449,8 +1551,29 @@ const BillPage = ({
           )}
 
           <button
+            onClick={handleKOTPrint}
+            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+          >
+            KOT
+          </button>
+
+          <button
+            onClick={() => setShowDetailView(true)}
+            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+          >
+            Detail
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+          >
+            Print
+          </button>
+
+          <button
             onClick={onClose}
-            className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+            className={`flex h-8 sm:h-9 items-center rounded-lg border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold transition-colors sm:ml-auto ${
               isDarkMode
                 ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
                 : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
@@ -1458,17 +1581,19 @@ const BillPage = ({
           >
             Close
           </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            Print Bill
-          </button>
         </div>
+
+        {/* Order Detail View overlay */}
+        {showDetailView && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={() => setShowDetailView(false)}>
+            <div onClick={(e) => e.stopPropagation()}>
+              <OrderDetailView order={activeOrder} restaurantDetails={restaurantDetails} onClose={() => setShowDetailView(false)} />
+            </div>
+          </div>
+        )}
       </MotionDiv>
     </MotionDiv>
   );
 };
 
-export default BillPage;
+export default React.memo(BillPage);
