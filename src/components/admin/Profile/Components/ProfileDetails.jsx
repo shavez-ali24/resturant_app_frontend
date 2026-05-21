@@ -3,17 +3,14 @@ import { CategoryChips } from './commanProfile/CategoryChips';
 import { OrderModeStatus } from './commanProfile/OrderModeStatus';
 import {
   Image,
-  QrCode,
   Tag,
   Mail,
   Phone,
   MapPin,
   Globe,
-  Hash,
   Building,
   Store,
   Users,
-  ScanLine,
   SlidersHorizontal,
   Layers3,
 } from 'lucide-react';
@@ -29,11 +26,6 @@ export default function ProfileDetails({ profileData }) {
       : "") ||
     (typeof profileData?.name === "string" ? profileData.name.trim() : "") ||
     "Restaurant";
-  const restaurantSlug = restaurantName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
   const cardClass =
     "overflow-hidden rounded-2xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b]";
   const headerClass =
@@ -44,60 +36,6 @@ export default function ProfileDetails({ profileData }) {
   const categoryCount = Array.isArray(profileData?.categories)
     ? profileData.categories.length
     : 0;
-
-  const getFinalQR = () => {
-    const rawQR =
-      (typeof profileData?.qrCode === "string" ||
-      typeof profileData?.qrCode === "number")
-        ? String(profileData?.qrCode)
-        : (
-            profileData?.qrCode?.url ||
-            profileData?.qrCode?.secure_url ||
-            profileData?.qrCode?.secureUrl ||
-            profileData?.qrCode?.path ||
-            profileData?.qrCode?.base64 ||
-            ""
-          );
-    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
-    if (!cleanedQR) return "";
-    if (cleanedQR.startsWith("data:image")) return cleanedQR;
-    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
-    return `data:image/png;base64,${cleanedQR}`;
-  };
-
-  const handleQRDownload = async () => {
-    const qrUrl = getFinalQR();
-    if (!qrUrl) return;
-
-    // If it's already a data-URL (base64), download directly
-    if (qrUrl.startsWith("data:image")) {
-      const link = document.createElement("a");
-      link.href = qrUrl;
-      link.download = `${restaurantSlug || "restaurant"}-qr.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
-    }
-
-    // For Cloudinary / external URLs: fetch as blob first to force download
-    // (browser blocks <a download> on cross-origin URLs — opens new tab instead)
-    try {
-      const response = await fetch(qrUrl);
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `${restaurantSlug || "restaurant"}-qr.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
-    } catch (err) {
-      // Fallback: open in new tab if fetch fails (e.g. CORS)
-      window.open(qrUrl, "_blank");
-    }
-  };
 
   if (isStaff) {
     return (
@@ -144,10 +82,6 @@ export default function ProfileDetails({ profileData }) {
           />
           <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
           <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Indoor Tables" value={profileData?.sections?.indoor?.tables ?? profileData?.tableNumbers ?? 0} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Outdoor Tables" value={profileData?.sections?.outdoor?.tables ?? 0} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooftop Tables" value={profileData?.sections?.rooftop?.tables ?? 0} />
-          <ProfileField icon={<Hash className="w-4 h-4" />} label="Rooms" value={profileData?.sections?.rooms?.rooms ?? 0} />
           <div className="sm:col-span-2">
             <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
           </div>
@@ -191,7 +125,7 @@ export default function ProfileDetails({ profileData }) {
         </div>
       </div>
 
-      {/* Logo, QR & Categories Row */}
+      {/* Logo & Categories Row */}
       <div data-tour="profile-branding" className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className={`${cardClass} flex flex-col`}>
           <div className={headerClass}>
@@ -212,35 +146,6 @@ export default function ProfileDetails({ profileData }) {
             ) : (
               <div className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-orange-200 bg-orange-50">
                 <Image className="h-8 w-8 text-orange-300" />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={`${cardClass} flex flex-col`}>
-          <div className={headerClass}>
-            <h2 className={titleRowClass}>
-              <span className={iconBadgeClass}>
-                <ScanLine className="h-4 w-4" />
-              </span>
-              Digital Menu QR
-            </h2>
-          </div>
-          <div className="flex flex-1 items-center justify-center p-4">
-            {getFinalQR() ? (
-              <div className="w-full text-center">
-                <img src={getFinalQR()} alt="QR Code" className="mx-auto mb-3 h-40 w-40 rounded-lg border border-orange-100 object-contain" />
-                <button
-                  onClick={handleQRDownload}
-                  className="h-10 w-full rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-                >
-                  Download QR
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-8">
-                <QrCode className="mb-2 h-16 w-16 text-orange-200" />
-                <p className="text-sm text-gray-400 dark:text-slate-400">QR Not Generated</p>
               </div>
             )}
           </div>

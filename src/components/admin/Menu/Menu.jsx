@@ -531,8 +531,8 @@ const Menu = () => {
     const status = errorObj?.status || errorObj?.originalStatus;
     const rawMessage = getRawErrorText(errorObj).toLowerCase();
 
-    if (status === 401) return "Your session has expired. Please login again.";
-    if (status === 403) return "You do not have permission for this action.";
+    if (status === 401) return "Your session has expired. Please log in again";
+    if (status === 403) return "You don't have permission to perform this action";
     if (status === 404) return "Menu item not found. Please refresh and try again.";
     if (status === 409) return "This menu item already exists.";
     if (status === 413) return "Image size is too large. Please upload a smaller image.";

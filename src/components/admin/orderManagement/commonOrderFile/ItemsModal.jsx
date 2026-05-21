@@ -1,7 +1,7 @@
 import React from "react";
 import BillPage from "../bill/BillPage";
 
-const ItemsModal = ({ order, restaurantDetails, onClose }) => {
+const ItemsModal = ({ order, restaurantDetails, onClose, autoPrint = false }) => {
   if (!order) return null;
 
   return (
@@ -9,7 +9,8 @@ const ItemsModal = ({ order, restaurantDetails, onClose }) => {
       <BillPage 
         order={order} 
         restaurantDetails={restaurantDetails} 
-        onClose={onClose} 
+        onClose={onClose}
+        autoPrint={autoPrint}
       />
     </div>
   );

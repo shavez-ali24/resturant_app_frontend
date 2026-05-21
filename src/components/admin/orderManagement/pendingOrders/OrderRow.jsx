@@ -94,8 +94,7 @@ const OrderRow = ({
       <td className="px-4 py-3 align-middle text-center">
         <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
           {getOrderTypeIcon(order.orderType)}
-          {orderTypeLabel}
-          {isEatHereOrder(order.orderType) && tableLabel && ` : ${tableLabel}`}
+          {isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}
         </span>
       </td>
 

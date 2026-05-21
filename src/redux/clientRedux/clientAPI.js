@@ -35,12 +35,18 @@ export const clientApi = createApi({
       }),
       providesTags: ['Order'],
     }),
+    // Table/Room live status for client
+    getLiveUnitStatus: builder.query({
+      query: () => '/api/restaurant/units/live-status',
+      providesTags: ['Restaurant'],
+    }),
   }),
 });
 
-export const { 
-  useGetRestaurantQuery, 
-  useGetMenuQuery, 
+export const {
+  useGetRestaurantQuery,
+  useGetMenuQuery,
   useCreateOrderMutation,
-  useGetOrdersByFingerprintQuery
+  useGetOrdersByFingerprintQuery,
+  useGetLiveUnitStatusQuery,
 } = clientApi;

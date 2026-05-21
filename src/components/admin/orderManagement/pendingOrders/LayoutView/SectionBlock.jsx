@@ -13,6 +13,8 @@ const SectionBlock = React.memo(function SectionBlock({
   onPrint,
   onView,
   onEdit,
+  onRoomClick,
+  roomActionLoadingId,
   isDarkMode = false,
 }) {
   if (!tables || tables.length === 0) return null;
@@ -80,6 +82,8 @@ const SectionBlock = React.memo(function SectionBlock({
             onPrint={onPrint}
             onView={onView}
             onEdit={onEdit}
+            onRoomClick={onRoomClick}
+            isLoading={roomActionLoadingId === table.unitId}
             isDarkMode={isDarkMode}
           />
         ))}

@@ -422,11 +422,17 @@ export const getOrderTypeItemClass = (value) => {
 
 export const formatOrderTableId = (tableId, source) => {
   // ✅ New source object: { section: "indoor", number: 3, type: "TABLE" }
-  if (source && source.section && source.number) {
-    const SHORT = { indoor: "IND", outdoor: "OUT", rooftop: "ROOF", rooms: "RM" };
-    const short = SHORT[String(source.section).toLowerCase()] || String(source.section).toUpperCase();
-    const unit  = source.type === "ROOM" ? "" : "TBL";
-    return unit ? `${short} ${unit} ${source.number}` : `${short} ${source.number}`;
+  if (source && source.section && source.number != null) {
+    const FULL = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+    const full = FULL[String(source.section).toLowerCase()] || (String(source.section).charAt(0).toUpperCase() + String(source.section).slice(1));
+    const unit = source.type === "ROOM" ? "" : "Table";
+    return unit ? `${full} ${unit} ${source.number}` : `${full} ${source.number}`;
+  }
+
+  // ✅ QR / client order source: { sectionName, unitName, type }
+  if (source && source.sectionName && source.unitName) {
+    const unit = source.type === "ROOM" ? "" : "Table";
+    return unit ? `${source.sectionName} ${unit} ${source.unitName}` : `${source.sectionName} ${source.unitName}`;
   }
 
   if (!tableId) return "";

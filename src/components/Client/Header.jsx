@@ -94,18 +94,18 @@ export default function Header({
   const [address, setAddress] = useState("");
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [sseRetryKey, setSseRetryKey] = useState(0);
+  
+  // Read unitId from QR scan URL
+  const qrUnitId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("unitId") : null;
 
   // Auto-select table when only one section exists and Eat Here is chosen
   useEffect(() => {
     if (orderType !== "Eat Here" || tableId) return;
-    const sections = restaurantData?.restaurant?.sections || {};
-    const defs = [
-      { key: "indoor",  count: sections.indoor?.tables  || restaurantData?.restaurant?.tableNumbers || 0 },
-      { key: "outdoor", count: sections.outdoor?.tables || 0 },
-      { key: "rooftop", count: sections.rooftop?.tables || 0 },
-      { key: "rooms",   count: sections.rooms?.rooms    || 0 },
-    ].filter(s => s.count > 0);
-    if (defs.length === 1) setTableId(`${defs[0].key}:1`);
+    const sections = Array.isArray(restaurantData?.restaurant?.sections) ? restaurantData.restaurant.sections : [];
+    const allUnits = sections.flatMap(s => Array.isArray(s.units) ? s.units.filter(u => u.isActive !== false) : []);
+    if (allUnits.length === 1) {
+      setTableId(`${sections[0].name}:${allUnits[0].name}`);
+    }
   }, [orderType, restaurantData, tableId]);
 
   const dispatch = useDispatch();
@@ -791,7 +791,7 @@ export default function Header({
     if (!PHONE_VALID_PATTERN.test(customerPhone)) return false;
     switch (normalizedOrderType) {
       case "Eat Here":
-        return !!tableId;
+        return !!tableId || !!qrUnitId;
       case "Take Away":
         return true;
       case "Delivery":
@@ -888,11 +888,14 @@ export default function Header({
         orderType: finalOrderType,
       };
 
-      if (finalOrderType === "Eat Here" && tableId) {
-        // tableId format: "indoor:3" → source: { section: "indoor", number: 3, type: "TABLE" }
+      if (finalOrderType === "Eat Here" && qrUnitId) {
+        // QR scanned: pass the unitId from URL directly
+        orderData.source = { unitId: qrUnitId };
+      } else if (finalOrderType === "Eat Here" && tableId) {
+        // Manual table selection: pass section, number from tableId
         const [section, numStr] = tableId.split(":");
         const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
+        const type = section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
         orderData.source = { section, number, type };
       }
       if (finalOrderType === "Delivery" && trimmedAddress)
@@ -901,28 +904,17 @@ export default function Header({
       await createOrder(orderData).unwrap();
 
       showSuccessMessage();
-
-      setCurrentPage(1);
-      setAllOrders([]);
-      setHasMore(true);
-
-      if (fp) setTimeout(() => refetch(), 500);
-
-      setShowModal(false);
-      setIsCartOpen(false);
-      onSidebarToggle?.(false);
-      setOrderType("");
-      setAddress("");
-      setUseCurrentLocation(false);
-      setCustomerName("");
-      setCustomerPhone("");
-      setTableId("");
-
-      setTimeout(() => dispatch(clearCart()), 300);
+      resetForm();
+      dispatch(clearCart());
     } catch (error) {
       console.error("Order error:", error);
-      let errorMessage =
-        error.data?.message || "Failed to place order. Please try again.";
+      let errorMessage = error.data?.message || "Failed to place order. Please try again.";
+      
+      // Check for table/room already occupied error
+      if (error?.status === 403 || error?.originalStatus === 403) {
+        errorMessage = "This table is already booked. Please place your order from the same phone that was used for the first order.";
+      }
+      
       if (error.data?.error) errorMessage += ` - ${error.data.error}`;
       showErrorMessage(errorMessage);
     }
@@ -1672,16 +1664,13 @@ export default function Header({
                                 })()}
 
                                 {/* Table / Room badge */}
-                                {(order.source?.section || order.tableId) && (
+                                {(order.source?.sectionName || order.source?.section || order.tableId) && (
                                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
-                                    {order.source?.section
-                                      ? (() => {
-                                          const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-                                          const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
-                                          const unit = order.source.type === "ROOM" ? "" : "Table";
-                                          return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
-                                        })()
-                                      : `Table ${order.tableId}`
+                                    {order.source?.sectionName
+                                      ? `${order.source.sectionName} ${order.source.unitName || order.source.number || ""}`
+                                      : order.source?.section
+                                        ? `${order.source.section} ${order.source.unitName || order.source.number || ""}`
+                                        : `Table ${order.tableId}`
                                     }
                                   </span>
                                 )}

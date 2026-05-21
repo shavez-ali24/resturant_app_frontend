@@ -3,18 +3,14 @@ import React from "react";
 
 const LEGEND_ITEMS = [
   { label: "Available", swatchBg: "#ffffff", swatchBorder: "1.5px dashed #d6cfc8" },
-  { label: "Running", swatchBg: "#FFFDE7", swatchBorder: "1.5px solid #FDE047" },
-  { label: "Printed", swatchBg: "#EBF5FF", swatchBorder: "1.5px solid #93C5FD" },
-  { label: "Paid", swatchBg: "#EFFFEF", swatchBorder: "1.5px solid #86EFAC" },
-  { label: "Running KOT", swatchBg: "#f97316", swatchBorder: "1.5px solid #ea580c" },
+  { label: "Occupied", swatchBg: "#fefce8", swatchBorder: "1.5px solid #fde047" },
+  { label: "Billed", swatchBg: "#dcfce7", swatchBorder: "1.5px solid #4ade80" },
 ];
 
 const DARK_LEGEND_ITEMS = [
   { label: "Available", swatchBg: "#334155", swatchBorder: "1.5px dashed #475569" },
-  { label: "Running", swatchBg: "#422006", swatchBorder: "1.5px solid #eab308" },
-  { label: "Printed", swatchBg: "#1e3a5f", swatchBorder: "1.5px solid #3b82f6" },
-  { label: "Paid",  swatchBg: "#14532d", swatchBorder: "1.5px solid #22c55e" },
-  { label: "Running KOT", swatchBg: "#ea580c", swatchBorder: "1.5px solid #c2410c" },
+  { label: "Occupied", swatchBg: "#3a3520", swatchBorder: "1.5px solid #fde047" },
+  { label: "Billed", swatchBg: "#1a3a2a", swatchBorder: "1.5px solid #22c55e" },
 ];
 
 const LegendBar = React.memo(function LegendBar({ isDarkMode = false }) {

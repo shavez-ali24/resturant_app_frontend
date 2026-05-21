@@ -129,6 +129,7 @@ export const adminApi = createApi({
     "Profile",
     "TopSelling",
     "Staff",
+    "Units",
   ],
 
   endpoints: (builder) => ({
@@ -456,6 +457,80 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
+
+    // ============================================================
+    // TABLE / ROOM MANAGEMENT
+    // ============================================================
+    addUnits: builder.mutation({
+      query: (body) => ({
+        url: "/restaurant/units",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Restaurant", "Units"],
+    }),
+
+    getLiveUnitStatus: builder.query({
+      query: () => "/restaurant/units/live-status",
+      providesTags: ["Units"],
+    }),
+
+    // ============================================================
+    // ROOM / TABLE BOOKING (Live Orders UI)
+    // ============================================================
+    createRoomBooking: builder.mutation({
+      query: (bookingData) => ({
+        url: "/order",
+        method: "POST",
+        body: bookingData,
+      }),
+      invalidatesTags: ["Order", "Restaurant", "Units"],
+    }),
+
+    updateUnitStatus: builder.mutation({
+      query: ({ unitId, status }) => ({
+        url: `/units/${unitId}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["Restaurant", "Units"],
+    }),
+
+    // ============================================================
+    // NEW EXACT APIs AS PER PROMPT (with automatic Bearer token)
+    // ============================================================
+    // Aligned with actual backend routes (restaurantRoutes.js)
+    getLiveUnits: builder.query({
+      query: () => "/restaurant/units/live-status",
+      providesTags: ["Units", "Restaurant"],
+    }),
+
+    bookRoom: builder.mutation({
+      query: (payload) => ({
+        url: "/restaurant/book",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["Units", "Restaurant", "Order"],
+    }),
+
+    // Unified checkout for both tables and rooms (uses /api/order/checkout/:orderId)
+    checkoutOrder: builder.mutation({
+      query: (orderId) => ({
+        url: `/order/checkout/${orderId}`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Order", "Units", "Restaurant"],
+    }),
+
+    addUnits: builder.mutation({
+      query: (payload) => ({
+        url: "/restaurant/units",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["Units", "Restaurant"],
+    }),
   }),
 });
 
@@ -482,4 +557,12 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useAddUnitsMutation,
+  useGetLiveUnitStatusQuery,
+  useCreateRoomBookingMutation,
+  useUpdateUnitStatusMutation,
+  useGetLiveUnitsQuery,
+  useBookRoomMutation,
+  useCheckoutOrderMutation,
+  useAddUnitsNewMutation,
 } = adminApi;

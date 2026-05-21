@@ -17,6 +17,8 @@ import {
 import {
   useCreateOrderByAdminMutation
 } from "../../../redux/adminRedux/adminAPI";
+import { showBill } from "../../../redux/adminRedux/billSlice";
+import { printKot } from "../../../services/tableService";
 import { useAdminTour } from "../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
 
@@ -341,28 +343,6 @@ function OrderSummaryPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
-      {/* Order Type Tabs */}
-      <div className={`p-3 border-b shrink-0 ${border}`}>
-        <div className={`flex rounded-xl overflow-hidden border ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
-          {["Dine In", "Delivery", "Take Away"].map((type) => (
-            <button
-              key={type}
-              onClick={() => { setOrderType(type); setTableId(""); setAddress(""); }}
-              style={orderType === type ? { backgroundColor: "#f97316", color: "#ffffff" } : {}}
-              className={`flex-1 py-3 text-sm font-bold transition-all duration-200 ${
-                orderType === type
-                  ? ""
-                  : isDarkMode
-                  ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                  : "bg-white text-[#78716c] hover:bg-[#f7f3ef]"
-              }`}
-            >
-              {type === "Dine In" ? "Eat Here" : type}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Cart Items */}
       <div className="overflow-y-auto p-3 space-y-2 flex-1">
         {cartCount === 0 ? (
@@ -456,102 +436,6 @@ function OrderSummaryPanel({
         </div>
       </div>
 
-      {/* Customer Form */}
-      <div className="p-3 space-y-2 shrink-0">
-        <div>
-          <input
-            type="text"
-            placeholder="Customer Name *"
-            value={customerName}
-            onChange={handleNameChange}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="words"
-            spellCheck={false}
-            maxLength={15}
-            className={inputStyle}
-          />
-          <p className={`mt-1 text-[11px] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-            Letters only · {15 - customerName.length} chars left
-          </p>
-        </div>
-        <div>
-          <input
-            type="tel"
-            placeholder="Phone Number * (10 digits)"
-            value={customerPhone}
-            onChange={handlePhoneChange}
-            autoComplete="off"
-            inputMode="numeric"
-            maxLength={10}
-            className={inputStyle}
-          />
-          <p className={`mt-1 text-[11px] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-            {10 - customerPhone.length} digits remaining
-          </p>
-        </div>
-
-        {orderType === "Dine In" && (() => {
-          const sec = tableOptions.reduce((acc, opt) => {
-            const [section] = opt.value.split(":");
-            if (!acc[section]) acc[section] = [];
-            acc[section].push(opt);
-            return acc;
-          }, {});
-          const sectionKeys = Object.keys(sec);
-          const sectionLabels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Rooms" };
-          const [selSection, selNum] = tableId ? tableId.split(":") : ["", ""];
-          const onlyOne = sectionKeys.length === 1;
-
-          return (
-            <div className="space-y-2">
-              {onlyOne ? (
-                // Single section — show only number dropdown directly
-                <StyledSelect
-                  value={tableId}
-                  onChange={setTableId}
-                  options={sec[sectionKeys[0]]}
-                  placeholder={`Select ${sectionKeys[0] === "rooms" ? "Room" : "Table"} *`}
-                  isDarkMode={isDarkMode}
-                />
-              ) : (
-                <>
-                  {/* Section select */}
-                  <StyledSelect
-                    value={selSection || ""}
-                    onChange={(v) => setTableId(v ? `${v}:` : "")}
-                    options={sectionKeys.map((k) => ({ value: k, label: sectionLabels[k] || k }))}
-                    placeholder="Select Section *"
-                    isDarkMode={isDarkMode}
-                  />
-                  {/* Number select — only when section chosen */}
-                  {selSection && sec[selSection] && (
-                    <StyledSelect
-                      value={selNum ? tableId : ""}
-                      onChange={setTableId}
-                      options={sec[selSection]}
-                      placeholder={`Select ${selSection === "rooms" ? "Room" : "Table"} *`}
-                      isDarkMode={isDarkMode}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          );
-        })()}
-
-        {orderType === "Delivery" && (
-          <textarea
-            rows={2}
-            placeholder="Delivery Address *"
-            value={address}
-            onChange={(e) => setAddress(e.target.value.slice(0, 200))}
-            autoComplete="off"
-            className={`${inputStyle} resize-none`}
-          />
-        )}
-      </div>
-
       {/* Banners */}
       <div className="px-3 space-y-2 shrink-0">
         {!isRestaurantOpen && (
@@ -597,34 +481,45 @@ function OrderSummaryPanel({
         isDarkMode ? `${summaryBg} border-slate-700/60` : `${summaryBg} border-[#ede8e3]`
       }`}>
         <button
-          onClick={handleClear}
-          className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-all duration-200 ${
-            isDarkMode
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700/60"
-              : "border-[#ede8e3] text-[#78716c] hover:bg-[#f7f3ef]"
-          }`}
-        >
-          Clear
-        </button>
-        <button
-          onClick={handleSubmit}
+          onClick={() => handleSubmit("kot")}
           disabled={
             cartCount === 0 ||
             isSubmitting ||
             !isRestaurantOpen ||
-            !customerName.trim() ||
-            !PHONE_VALID_PATTERN.test(customerPhone) ||
-            (orderType === "Dine In" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
           }
           className="flex-1 py-2 rounded-lg bg-orange-500 text-sm font-semibold text-white transition-all duration-200 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
               <span className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              Placing...
+              Processing...
             </span>
           ) : (
-            "Place Order →"
+            "KOT"
+          )}
+        </button>
+        <button
+          onClick={() => handleSubmit("print_bill")}
+          disabled={
+            cartCount === 0 ||
+            isSubmitting ||
+            !isRestaurantOpen ||
+            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+          }
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+            isDarkMode
+              ? "bg-slate-700 text-white border border-slate-600 hover:bg-slate-600"
+              : "bg-white text-[#1c1917] border border-[#ede8e3] hover:bg-[#f7f3ef]"
+          }`}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 border-t-transparent animate-spin" />
+              Processing...
+            </span>
+          ) : (
+            "Print BILL"
           )}
         </button>
       </div>
@@ -650,7 +545,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedVariants, setSelectedVariants] = useState({});
   const [variantPickerItem, setVariantPickerItem] = useState(null);
-  const [orderType, setOrderType] = useState("Dine In");
+  const [orderType, setOrderType] = useState("Take Away");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [tableId, setTableId] = useState("");
@@ -665,7 +560,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       if (stored) {
         const tableInfo = JSON.parse(stored);
         if (tableInfo.sectionName && tableInfo.tableNumber) {
-          setTableId(`${tableInfo.sectionName.toLowerCase()}:${tableInfo.tableNumber}`);
+          // tableNumber from layout is now either index (number) or unit name (string)
+          // Convert unit names to index numbers for the source format
+          const num = typeof tableInfo.tableNumber === 'string' && isNaN(Number(tableInfo.tableNumber))
+            ? tableInfo.tableNumber  // Keep as-is if it's a real unit name
+            : tableInfo.tableNumber; // Use number directly
+          setTableId(`${tableInfo.sectionName.toLowerCase().replace(/\s+/g, "_")}:${num}`);
+          setOrderType("Eat Here");
         }
         if (tableInfo.customerName) setCustomerName(tableInfo.customerName);
         if (tableInfo.customerPhone) setCustomerPhone(tableInfo.customerPhone);
@@ -768,20 +669,14 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   }, []);
 
   // ── Submit ───────────────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    const trimmedName = customerName.trim();
-    const trimmedAddress = address.trim();
-    const normalizedOrderType = orderType === "Dine In" ? "Eat Here" : orderType;
+  const handleSubmit = async (mode = "kot") => {
+    const normalizedOrderType = orderType;
     let errorMessage = "";
-    if (!trimmedName) errorMessage = "Please enter your name.";
-    else if (!NAME_VALID_PATTERN.test(trimmedName)) errorMessage = "Name can only have letters and spaces.";
-    else if (!PHONE_VALID_PATTERN.test(customerPhone)) errorMessage = "Please enter a valid 10-digit phone number.";
-    else if (normalizedOrderType === "Eat Here" && !tableId) errorMessage = "Please select a table.";
+    if (normalizedOrderType === "Eat Here" && !tableId) errorMessage = "Please select a table.";
     else if (normalizedOrderType === "Eat Here" && tableId) {
       const [sec, num] = tableId.split(":");
       if (!sec || !num) errorMessage = "Please select a table/room number.";
     }
-    else if (normalizedOrderType === "Delivery" && !trimmedAddress) errorMessage = "Please enter delivery address.";
     if (errorMessage) { showError(errorMessage); return; }
 
     try {
@@ -805,22 +700,32 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         if (cartItem.isCombo && cartItem.comboItems) orderItem.comboItems = cartItem.comboItems;
         return orderItem;
       });
-      // Admin/Staff order — uses protected endpoint, no fingerprint needed
-      const formattedName = capitalizeFirst(trimmedName.replace(/\s+/g, " "));
       const orderData = {
-        customerName: formattedName,
-        customerPhone,
         items: orderItems,
         orderType: normalizedOrderType,
       };
       if (normalizedOrderType === "Eat Here" && tableId) {
         const [section, numStr] = tableId.split(":");
         const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
+        const selectedOption = tableOptions.find(o => o.value === tableId);
+        const type = selectedOption?.unitName?.startsWith?.("ROOM") || section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
         orderData.source = { section, number, type };
       }
-      if (normalizedOrderType === "Delivery" && trimmedAddress) orderData.address = trimmedAddress;
-      await createOrder(orderData).unwrap();
+      const response = await createOrder(orderData).unwrap();
+      const createdOrder = response?.order;
+
+      if (mode === "kot" && createdOrder?._id) {
+        try {
+          await printKot(createdOrder._id);
+        } catch (printError) {
+          showError(printError?.message || "Order created, but KOT failed.");
+        }
+      }
+
+      if (mode === "print_bill" && createdOrder) {
+        dispatch(showBill(createdOrder));
+      }
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       dispatch(clearCart());
@@ -828,12 +733,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       setCustomerPhone("");
       setTableId("");
       setAddress("");
-      setOrderType("Dine In");
+      setOrderType("Take Away");
       if (onOrderSuccess) {
         onOrderSuccess();
       }
     } catch (err) {
-      showError(err?.data?.message || "Failed to place order");
+      showError(err?.data?.message || err?.message || "Failed to place order");
     }
   };
 
@@ -843,7 +748,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setCustomerPhone("");
     setTableId("");
     setAddress("");
-    setOrderType("Dine In");
+    setOrderType("Take Away");
     setError("");
   };
 
@@ -863,16 +768,20 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]";
 
   const tableOptions = (() => {
-    const sec = restaurant.sections || {};
+    const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
     const opts = [];
-    const indoorCount  = sec.indoor?.tables  || restaurant.tableNumbers || 0;
-    const outdoorCount = sec.outdoor?.tables || 0;
-    const rooftopCount = sec.rooftop?.tables || 0;
-    const roomsCount   = sec.rooms?.rooms    || 0;
-    for (let i = 1; i <= indoorCount;  i++) opts.push({ value: `indoor:${i}`,  label: `Indoor Table ${i}` });
-    for (let i = 1; i <= outdoorCount; i++) opts.push({ value: `outdoor:${i}`, label: `Outdoor Table ${i}` });
-    for (let i = 1; i <= rooftopCount; i++) opts.push({ value: `rooftop:${i}`, label: `Rooftop Table ${i}` });
-    for (let i = 1; i <= roomsCount;   i++) opts.push({ value: `rooms:${i}`,   label: `Room ${i}` });
+    sections.forEach((section) => {
+      const units = Array.isArray(section.units) ? section.units : [];
+      units.forEach((unit, index) => {
+        const tableNum = index + 1;
+        const sectionKey = section.name.toLowerCase().replace(/\s+/g, "_");
+        opts.push({
+          value: `${sectionKey}:${tableNum}`,
+          label: `${section.name} ${unit.name}`,
+          unitName: unit.name,
+        });
+      });
+    });
     return opts;
   })();
 

@@ -256,12 +256,15 @@ const KitchenDisplaySystem = () => {
     };
   }, []);
 
+  // Rely purely on backend SSE event data for live updates (no refetch when connected)
   useEffect(() => {
-    if (!["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type)) return;
-    refetchPending();
-    refetchPreparing();
-    refetchReady();
-  }, [sseEvent, refetchPending, refetchPreparing, refetchReady]);
+    if (!sseConnected) {
+      if (!["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type)) return;
+      refetchPending();
+      refetchPreparing();
+      refetchReady();
+    }
+  }, [sseEvent, refetchPending, refetchPreparing, refetchReady, sseConnected]);
 
   useEffect(() => {
     if (

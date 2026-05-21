@@ -3,35 +3,43 @@ import React from "react";
 import { SquarePen, Printer } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 
-const getStatusBg = (status, isDark) => {
+// Prompt-specified colors + existing extended statuses
+const getStatusBg = (status, rawStatus, isDark) => {
+  // Priority: raw backend status for rooms
+  if (rawStatus === "AVAILABLE") {
+    return { bg: isDark ? "#1e293b" : "#ffffff", border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` };
+  }
+  if (rawStatus === "OCCUPIED") {
+    return { bg: isDark ? "#3a3520" : "#fefce8", border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` };
+  }
+  if (rawStatus === "BILLED") {
+    return { bg: isDark ? "#1a3a2a" : "#dcfce7", border: `1.5px solid ${isDark ? "#22c55e" : "#4ade80"}` };
+  }
+
+  // Fallback to derived status for food tables
   const map = {
     blank:       { bg: isDark ? "#1e293b" : "#ffffff",       border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` },
     running:     { bg: isDark ? "#3a3520" : "#FFFDE7",       border: `1.5px solid ${isDark ? "#eab308" : "#FDE047"}` },
+    running_kot: { bg: isDark ? "#1e3a5f" : "#EBF5FF",       border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
     printed:     { bg: isDark ? "#1e3a5f" : "#EBF5FF",       border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
     paid:        { bg: isDark ? "#1a3a2a" : "#EFFFEF",       border: `1.5px solid ${isDark ? "#22c55e" : "#86EFAC"}` },
-    running_kot: { bg: "#f97316",                            border: "1.5px solid #ea580c" },
+    booked:      { bg: isDark ? "#3a3520" : "#fefce8",       border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` },
   };
   return map[status] || map.blank;
 };
 
-const getStatusText = (status, isDark) => {
+const getStatusText = (status, rawStatus, isDark) => {
+  if (rawStatus === "AVAILABLE") return isDark ? "#64748b" : "#78716c";
+  if (rawStatus === "OCCUPIED") return isDark ? "#fde047" : "#854d0e";
+  if (rawStatus === "BILLED")  return isDark ? "#86efac" : "#166534";
+
   const map = {
     blank:       isDark ? "#64748b" : "#a8a29e",
     running:     isDark ? "#fde047" : "#854d0e",
+    running_kot: isDark ? "#93c5fd" : "#1e40af",
     printed:     isDark ? "#93c5fd" : "#1e40af",
     paid:        isDark ? "#86efac" : "#166534",
-    running_kot: "#ffffff",
-  };
-  return map[status] || map.blank;
-};
-
-const getStatusAmount = (status, isDark) => {
-  const map = {
-    blank:       isDark ? "#64748b" : "#a8a29e",
-    running:     isDark ? "#fde047" : "#a16207",
-    printed:     isDark ? "#93c5fd" : "#2563eb",
-    paid:        isDark ? "#86efac" : "#16a34a",
-    running_kot: "#fff7ed",
+    booked:      isDark ? "#fde047" : "#854d0e",
   };
   return map[status] || map.blank;
 };
@@ -55,168 +63,106 @@ const TableCard = React.memo(function TableCard({
   table,
   onTableClick,
   onPrint,
-  onView,
   onEdit,
+  onRoomClick,
+  isLoading = false,
   isDarkMode = false,
 }) {
-  const { tableNumber, status, runningMinutes, currentAmount, orderId } = table;
-  const isBlank = status === "blank";
-  const bgInfo = getStatusBg(status, isDarkMode);
-  const textColor = getStatusText(status, isDarkMode);
-  const amountColor = getStatusAmount(status, isDarkMode);
-  const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
+  const {
+    tableNumber,
+    status,
+    unitType,
+    rawStatus,
+    roomCategory,
+    occupiedSince,
+  } = table;
 
-  const handleClick = () => onTableClick(table);
+  const isRoom = unitType === "ROOM";
+  const isAvailable = rawStatus === "AVAILABLE" || status === "blank";
+  const isOccupied = rawStatus === "OCCUPIED";
+  const isBilled = rawStatus === "BILLED";
 
-  const handleEdit = (e) => {
-    e.stopPropagation();
-    if (onEdit && orderId) onEdit(table);
+  const bgInfo = getStatusBg(status, rawStatus, isDarkMode);
+  const textColor = getStatusText(status, rawStatus, isDarkMode);
+
+  const handleClick = () => {
+    if (isRoom) onRoomClick?.(table);
+    else onTableClick?.(table);
   };
 
-  const handlePrint = (e) => {
-    e.stopPropagation();
-    if (onPrint && orderId) onPrint(orderId);
-  };
+  const handleEdit = (e) => { e.stopPropagation(); onEdit?.(table); };
+  const handlePrint = (e) => { e.stopPropagation(); onPrint?.(table); };
+
+  // Calculate elapsed time from occupiedSince (prompt priority)
+  const elapsed = occupiedSince
+    ? Math.floor((Date.now() - new Date(occupiedSince).getTime()) / 60000)
+    : null;
+
+  const showBottomIcons = (isOccupied || isBilled) && table.orderId; // show edit + print icons for any occupied/billed unit (table or room) that has an order
 
   return (
     <div
       onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleClick();
-        }
-      }}
       style={{
-        width: 110,
+        width: 120,
         height: 130,
-        flexShrink: 0,
         borderRadius: 8,
-        cursor: "pointer",
+        cursor: isLoading ? "wait" : "pointer",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        userSelect: "none",
-        transition: "transform 0.15s ease, box-shadow 0.15s ease",
         background: bgInfo.bg,
         border: bgInfo.border,
         boxSizing: "border-box",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "scale(1.04)";
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
-        e.currentTarget.style.boxShadow = "none";
-      }}
-      aria-label={
-        isBlank
-          ? `Table ${tableNumber} — Available`
-          : `Table ${tableNumber} — ${status.replace("_", " ")} — \u20B9${currentAmount}`
-      }
-    >
-      {isBlank ? (
-    <span
-      style={{
-        fontSize: 22,
-        fontWeight: 700,
-        fontFamily: "'Outfit', sans-serif",
-        color: isDarkMode ? "#64748b" : "#a8a29e",
-        lineHeight: 1,
+        opacity: isLoading ? 0.55 : 1,
       }}
     >
-      {tableNumber}
-    </span>
-      ) : (
-        <>
-          {/* Time — top */}
-          <span
-            style={{
-              position: "absolute",
-              top: 6,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontSize: 13,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              color: textColor,
-              lineHeight: 1,
-            }}
-          >
-            {runningMinutes != null ? `${runningMinutes}m` : ""}
-          </span>
+      {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}
 
-          {/* Table number — center */}
-          <span
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              fontFamily: "'Outfit', sans-serif",
-              color: textColor,
-              lineHeight: 1.2,
-              marginBottom: 4,
-              marginTop: 6,
-            }}
-          >
-            {tableNumber}
-          </span>
+      {/* Top status / time */}
+      <div style={{ position: "absolute", top: 6, fontSize: 10, fontWeight: 600, color: textColor, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed}m` : ""}
+      </div>
 
-          {/* Amount */}
-          <span
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: amountColor,
-              lineHeight: 1,
-              marginBottom: 6,
-            }}
-          >
-            {currentAmount != null ? `\u20B9${currentAmount}` : ""}
-          </span>
+      {/* Main number - 22px as per prompt */}
+      <div style={{ fontSize: 22, fontWeight: 700, color: textColor, marginTop: 18 }}>
+        {tableNumber}
+      </div>
 
-          {/* Icons row — straddling card's bottom border */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: -18,
-              left: 0,
-              right: 0,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-            }}
+      {/* Room category + price or table amount */}
+      {!isAvailable && (
+        <div style={{ fontSize: 12, color: textColor, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+          {table.currentAmount != null ? (
+            `₹${table.currentAmount}`
+          ) : isRoom && roomCategory ? (
+            <>
+              {roomCategory.name}
+              {roomCategory.pricePerNight ? ` • ₹${roomCategory.pricePerNight}` : ''}
+            </>
+          ) : ''}
+        </div>
+      )}
+
+      {/* Bottom icons - 22px, only for occupied TABLES (as per prompt) */}
+      {showBottomIcons && (
+        <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10 }}>
+          <button 
+            onClick={handleEdit} 
+            style={ICON_BTN(isDarkMode)}
+            title="Edit Order"
           >
-            <button
-              style={ICON_BTN(isDarkMode)}
-              onClick={handleEdit}
-              title="Edit Order"
-              aria-label="Edit Order"
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.12)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
-            >
-              <SquarePen size={20} />
-            </button>
-            <button
-              style={ICON_BTN(isDarkMode)}
-              onClick={handlePrint}
-              title="Print KOT"
-              aria-label="Print KOT"
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.12)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
-            >
-              <Printer size={20} />
-            </button>
-          </div>
-        </>
+            <SquarePen size={22} />
+          </button>
+          <button 
+            onClick={handlePrint} 
+            style={ICON_BTN(isDarkMode)}
+            title="Print"
+          >
+            <Printer size={22} />
+          </button>
+        </div>
       )}
     </div>
   );

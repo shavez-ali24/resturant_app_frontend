@@ -1,6 +1,6 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
@@ -17,8 +17,9 @@ import {
   getOrderTypeKey,
   getOrderTypeLabel,
   recalcTotal,
+  formatOrderTableId,
+  isEatHereOrder,
 } from "../commonOrderFile/utils";
-import OrderDetailView from "./OrderDetailView";
 
 const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
 const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
@@ -64,14 +65,14 @@ const BillPage = ({
   menuItems = [],
   tables = [],
   updateOrder,
-  sseEvent
+  sseEvent,
+  autoPrint = false
 }) => {
   const billRef = useRef();
   const user = useSelector((state) => state.admin.user);
   const isStaff = user?.role === "staff";
 
   const [isEditMode, setIsEditMode] = useState(false);
-  const [showDetailView, setShowDetailView] = useState(false);
   const [localOrderData, setLocalOrderData] = useState(null);
   const [initialOrderSnapshot, setInitialOrderSnapshot] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState("");
@@ -889,6 +890,18 @@ const BillPage = ({
     };
   };
 
+  // Auto-print support for the layout card printer icon (one-click bill print)
+  useEffect(() => {
+    if (!autoPrint) return;
+    const t = setTimeout(() => {
+      if (billRef.current) {
+        handlePrint();
+        onClose?.();
+      }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [autoPrint, onClose]);
+
   const handleKOTPrint = () => {
     const kotRestName =
       restaurantDetails?.restaurantName ||
@@ -1147,7 +1160,27 @@ const BillPage = ({
                 )}
               </div>
             </div>
-
+ 
+            {/* Order Creator (screen only, hidden on print) */}
+            {(() => {
+              const role = (activeOrder?.createdByRole || "user").toLowerCase();
+              const label = role === "admin" ? "Admin" : role === "staff" ? "Staff" : "User";
+              const badgeClass =
+                role === "admin"
+                  ? "border-orange-200 bg-orange-100 text-orange-700"
+                  : role === "staff"
+                  ? "border-blue-200 bg-blue-100 text-blue-700"
+                  : "border-green-200 bg-green-100 text-green-700";
+              return (
+                <div className="no-print mb-3 flex items-center gap-2 text-sm">
+                  <span className={`${billTextClass} font-medium`}>Order Created By:</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${badgeClass}`}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })()}
+ 
             {/* Customer & Order Info */}
             <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
               <p>
@@ -1156,17 +1189,15 @@ const BillPage = ({
               <p>
                 <strong>Phone:</strong> {activeOrder?.customerPhone || "N/A"}
               </p>
-              {(activeOrder?.source?.section || activeOrder?.tableId) && (
+              {(activeOrder?.source?.section || activeOrder?.source?.sectionName || activeOrder?.tableId) && (
                 <p>
                   <strong>
                     {activeOrder?.source?.type === "ROOM" ? "Room:" : "Table:"}
                   </strong>{" "}
-                  {activeOrder?.source?.section
+                  {(activeOrder?.source?.section || activeOrder?.source?.sectionName)
                     ? (() => {
-                        const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-                        const sec = labels[activeOrder.source.section] || (activeOrder.source.section.charAt(0).toUpperCase() + activeOrder.source.section.slice(1));
-                        const unit = activeOrder.source.type === "ROOM" ? "" : "Table";
-                        return unit ? `${sec} ${unit} ${activeOrder.source.number}` : `${sec} ${activeOrder.source.number}`;
+                        const label = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
+                        return label || "—";
                       })()
                     : activeOrder.tableId
                   }
@@ -1179,7 +1210,13 @@ const BillPage = ({
                   : "N/A"}
               </p>
               <p>
-                <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
+                <strong>Type:</strong>{" "}
+                {(() => {
+                  if (!isEatHereOrder(activeOrder?.orderType)) return activeOrder?.orderType || "N/A";
+                  const tableLabel = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
+                  return tableLabel ? `${tableLabel} : ` : "";
+                })()}
+                {activeOrder?.orderType || "N/A"}
               </p>
             </div>
 
@@ -1550,26 +1587,19 @@ const BillPage = ({
             </button>
           )}
 
-          <button
-            onClick={handleKOTPrint}
-            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            KOT
-          </button>
-
-          <button
-            onClick={() => setShowDetailView(true)}
-            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            Detail
-          </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            Print
-          </button>
+           <button
+             onClick={handleKOTPrint}
+             className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+           >
+             KOT
+           </button>
+ 
+           <button
+             onClick={handlePrint}
+             className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+           >
+             Print
+           </button>
 
           <button
             onClick={onClose}
@@ -1581,17 +1611,8 @@ const BillPage = ({
           >
             Close
           </button>
-        </div>
-
-        {/* Order Detail View overlay */}
-        {showDetailView && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={() => setShowDetailView(false)}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <OrderDetailView order={activeOrder} restaurantDetails={restaurantDetails} onClose={() => setShowDetailView(false)} />
-            </div>
-          </div>
-        )}
-      </MotionDiv>
+         </div>
+       </MotionDiv>
     </MotionDiv>
   );
 };

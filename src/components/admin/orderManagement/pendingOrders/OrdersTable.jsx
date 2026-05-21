@@ -262,11 +262,10 @@ const OrdersTable = ({
                   </div>
 
                   {/* Row 3: Type badge */}
-                  <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
-                    {getOrderTypeIcon(order.orderType)}
-                    <span>{orderTypeLabel}</span>
-                    {isEatHereOrder(order.orderType) && tableLabel && <span>: {tableLabel}</span>}
-                  </div>
+                   <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
+                     {getOrderTypeIcon(order.orderType)}
+                     <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
+                   </div>
 
                   {/* Row 4: Note + View Bill */}
                   <div className="grid grid-cols-2 gap-2">

@@ -1,10 +1,11 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/LayoutView.jsx
 import React, { useState, useCallback, useMemo } from "react";
 import { useNotification } from "../../../Bell/NotificationContext";
-import { printKot } from "../../../../../services/tableService";
+
 import SectionBlock from "./SectionBlock";
 import LegendBar from "./LegendBar";
 import CreateOrderModal from "./CreateOrderModal";
+import RoomActionModal from "./RoomActionModal";
 
 /**
  * Main Layout View — renders restaurant sections with table cards in a flex-wrap row.
@@ -14,6 +15,10 @@ export default function LayoutView({
   onViewOrder,
   onCreateOrder,
   onEditOrder,
+  onPrintBill,
+  onBookRoom,
+  onCheckoutRoom,
+  roomActionLoadingId = null,
   isDarkMode = false,
   isLoading = false,
   error = null,
@@ -22,28 +27,39 @@ export default function LayoutView({
   const { notify } = useNotification();
 
   const [selectedBlankTable, setSelectedBlankTable] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState(null);
 
   const handleTableClick = useCallback(
     (table) => {
       if (table.status === "blank") {
         setSelectedBlankTable(table);
       } else {
-        onViewOrder?.(table);
+        // Occupied / Billed → open "create order" panel (AdminOrderPanel) prefilled with this table
+        try {
+          sessionStorage.setItem("selectedTable", JSON.stringify(table));
+        } catch (_) {}
+        onCreateOrder?.(table);
       }
     },
-    [onViewOrder]
+    [onCreateOrder]
   );
 
-  const handlePrintKot = useCallback(
-    async (orderId) => {
-      try {
-        await printKot(orderId);
-        notify("KOT Sent to Printer", "success");
-      } catch (err) {
-        notify(err.message || "Failed to print KOT", "error");
+  const handleRoomClick = useCallback((room) => {
+    setSelectedRoom(room);
+  }, []);
+
+  const handlePrintBill = useCallback(
+    (tableInfo) => {
+      // If parent provides direct print handler (auto-print + close), use it.
+      // Otherwise fall back to opening the bill view.
+      if (onPrintBill) {
+        onPrintBill(tableInfo);
+      } else {
+        const info = tableInfo && typeof tableInfo === "object" ? tableInfo : { orderId: tableInfo };
+        onViewOrder?.(info);
       }
     },
-    [notify]
+    [onPrintBill, onViewOrder]
   );
 
   const handleViewOrder = useCallback((table) => onViewOrder?.(table), [onViewOrder]);
@@ -58,6 +74,16 @@ export default function LayoutView({
   );
 
   const handleCloseModal = useCallback(() => setSelectedBlankTable(null), []);
+
+  const handleCloseRoomModal = useCallback(() => setSelectedRoom(null), []);
+
+  const handleBookRoom = useCallback(async (payload, room) => {
+    await onBookRoom?.(payload, room);
+  }, [onBookRoom]);
+
+  const handleCheckoutRoom = useCallback(async (room) => {
+    await onCheckoutRoom?.(room);
+  }, [onCheckoutRoom]);
 
   const sectionsList = useMemo(() => {
     if (!Array.isArray(sections)) return [];
@@ -132,7 +158,7 @@ export default function LayoutView({
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>Failed to load table layout</p>
+          <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>Could not load units. Please refresh the page</p>
           <p style={{ fontSize: 12, opacity: 0.7, margin: 0 }}>{error}</p>
           <button
             onClick={onRetry}
@@ -164,8 +190,8 @@ export default function LayoutView({
             <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
             <path d="m12 4 4 5H8l4-5Z" />
           </svg>
-          <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>No sections configured</p>
-          <p style={{ fontSize: 12, opacity: 0.7, margin: 0 }}>Add table sections in restaurant settings</p>
+          <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>No units found. Add tables or rooms to get started</p>
+          <p style={{ fontSize: 12, opacity: 0.7, margin: 0 }}>Add units in Table Management</p>
         </div>
       </div>
     );
@@ -182,9 +208,11 @@ export default function LayoutView({
           sectionName={section.sectionName}
           tables={section.tables}
           onTableClick={handleTableClick}
-          onPrint={handlePrintKot}
+          onPrint={handlePrintBill}
           onView={handleViewOrder}
           onEdit={handleEditOrder}
+          onRoomClick={handleRoomClick}
+          roomActionLoadingId={roomActionLoadingId}
           isDarkMode={isDarkMode}
         />
       ))}
@@ -195,6 +223,17 @@ export default function LayoutView({
           isDarkMode={isDarkMode}
           onClose={handleCloseModal}
           onProceed={handleProceedCreate}
+        />
+      )}
+
+      {selectedRoom && (
+        <RoomActionModal
+          room={selectedRoom}
+          isDarkMode={isDarkMode}
+          onClose={handleCloseRoomModal}
+          onBook={handleBookRoom}
+          onCheckout={handleCheckoutRoom}
+          isLoading={roomActionLoadingId === selectedRoom.unitId}
         />
       )}
     </div>

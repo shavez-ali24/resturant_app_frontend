@@ -21,9 +21,25 @@ export default function CreateOrderModal({
 }) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [formErrors, setFormErrors] = useState({});
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const errors = {};
+    if (!customerName.trim()) {
+      errors.customerName = "Customer name is required";
+    }
+    if (!customerPhone || customerPhone.length !== 10) {
+      errors.customerPhone = "Valid 10-digit phone number is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors({});
     onProceed({
       tableId: table.tableId,
       tableNumber: table.tableNumber,
@@ -56,7 +72,7 @@ export default function CreateOrderModal({
               isDarkMode ? "text-slate-100" : "text-[#1c1917]"
             }`}
           >
-            New Order — Table {table.tableNumber}
+            New Order — {table.unitType === "ROOM" ? "Room" : "Table"} {table.tableNumber}
           </h3>
           <button
             onClick={onClose}
@@ -72,22 +88,7 @@ export default function CreateOrderModal({
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Table Info */}
-          <div
-            className={`rounded-lg px-3.5 py-2.5 text-sm ${
-              isDarkMode
-                ? "bg-slate-800 text-slate-300"
-                : "bg-[#f7f3ef] text-[#78716c]"
-            }`}
-          >
-            <span className="font-medium">
-              Section: {table.sectionName}
-            </span>
-            <span className="mx-2">•</span>
-            <span className="font-medium">
-              Table #{table.tableNumber}
-            </span>
-          </div>
+
 
           {/* Customer Name (optional) */}
           <div>
@@ -96,49 +97,48 @@ export default function CreateOrderModal({
                 isDarkMode ? "text-slate-300" : "text-[#1c1917]"
               }`}
             >
-              Customer Name{" "}
-              <span
-                className={
-                  isDarkMode ? "text-slate-500" : "text-[#a8a29e]"
-                }
-              >
-                (optional)
-              </span>
+              Customer Name *
             </label>
             <input
               type="text"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. John Doe"
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                if (formErrors.customerName) {
+                  setFormErrors((prev) => ({ ...prev, customerName: undefined }));
+                }
+              }}
+              placeholder="Customer name"
               className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${
                 isDarkMode
                   ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                   : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               }`}
             />
+            {formErrors.customerName && (
+              <p className="mt-1 text-xs text-red-500">{formErrors.customerName}</p>
+            )}
           </div>
 
-          {/* Customer Phone (optional) */}
+          {/* Customer Phone */}
           <div>
             <label
               className={`block text-sm font-medium mb-1 ${
                 isDarkMode ? "text-slate-300" : "text-[#1c1917]"
               }`}
             >
-              Phone Number{" "}
-              <span
-                className={
-                  isDarkMode ? "text-slate-500" : "text-[#a8a29e]"
-                }
-              >
-                (optional)
-              </span>
+              Phone Number *
             </label>
             <input
               type="tel"
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              placeholder="e.g. 9876543210"
+              onChange={(e) => {
+                setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                if (formErrors.customerPhone) {
+                  setFormErrors((prev) => ({ ...prev, customerPhone: undefined }));
+                }
+              }}
+              placeholder="Phone number"
               maxLength={10}
               className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${
                 isDarkMode
@@ -146,6 +146,9 @@ export default function CreateOrderModal({
                   : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               }`}
             />
+            {formErrors.customerPhone && (
+              <p className="mt-1 text-xs text-red-500">{formErrors.customerPhone}</p>
+            )}
           </div>
 
           {/* Order Type (read-only) */}
@@ -178,7 +181,7 @@ export default function CreateOrderModal({
                 <path d="m12 4 4 5H8l4-5Z" />
                 <path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
               </svg>
-              Dine-in
+              Eat Here
             </div>
           </div>
 

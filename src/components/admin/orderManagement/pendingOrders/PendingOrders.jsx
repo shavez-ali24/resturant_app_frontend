@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
 import { useNotification } from "../../Bell/NotificationContext";
-import { Plus, ArrowLeft, LayoutGrid } from "lucide-react";
+import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTour } from "../../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
@@ -39,7 +39,12 @@ import {
   useGetRestaurantProfileQuery,
   useUpdateOrderMutation,
   useDeleteOrderMutation,
-  useToggleItemReadyMutation
+  useToggleItemReadyMutation,
+  useCreateRoomBookingMutation,
+  useUpdateUnitStatusMutation,
+  useGetLiveUnitsQuery,
+  useBookRoomMutation,
+  useCheckoutOrderMutation,
 } from "../../../../redux/adminRedux/adminAPI";
 
 const Orders = () => {
@@ -62,7 +67,6 @@ const Orders = () => {
   }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const showCreateOrder = searchParams.get("view") === "create";
-  const openCreateOrder = () => setSearchParams({ view: "create" });
   const closeCreateOrder = () => setSearchParams({});
 
   // Auto onboarding tour — first visit only
@@ -97,8 +101,10 @@ const Orders = () => {
   const [editingOrder, setEditingOrder] = useState(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
+  const [billModalAutoPrint, setBillModalAutoPrint] = useState(false);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
   const [sseOrders, setSseOrders] = useState([]);
+  const [roomActionLoadingId, setRoomActionLoadingId] = useState(null);
   const [autoRefresh] = useState(() => {
     const saved = localStorage.getItem("autoRefresh");
     return ["1", "2", "5"].includes(saved) ? saved : "1";
@@ -192,6 +198,20 @@ const Orders = () => {
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
   const [toggleItemReadyApi] = useToggleItemReadyMutation();
+  const [createRoomBookingApi] = useCreateRoomBookingMutation();
+  const [updateUnitStatusApi] = useUpdateUnitStatusMutation();
+  const [bookRoomApi] = useBookRoomMutation();
+  const [checkoutOrderApi] = useCheckoutOrderMutation();
+
+  const {
+    data: liveUnitsData,
+    isLoading: liveUnitsLoading,
+    refetch: refetchLiveUnits,
+  } = useGetLiveUnitsQuery(undefined, {
+    pollingInterval: 30000,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   useEffect(() => {
     if (
@@ -243,11 +263,15 @@ const Orders = () => {
     });
 
     setCurrentPage(1);
-    refetchPendingOrders();
-    refetchPreparingOrders();
-    refetchReadyOrders();
-    refetchRestaurant();
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchRestaurant]);
+
+    // Use backend SSE event for live updates (no extra refetch when connected)
+    if (!sseConnected) {
+      refetchPendingOrders();
+      refetchPreparingOrders();
+      refetchReadyOrders();
+      refetchRestaurant();
+    }
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchRestaurant, sseConnected]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -266,10 +290,10 @@ const Orders = () => {
     const rawMessage = getRawErrorText(errorObj).toLowerCase();
 
     if (status === 401) {
-      return "Session expired. Please login again.";
+      return "Your session has expired. Please log in again";
     }
     if (status === 403) {
-      return "You do not have permission for this action.";
+      return "You don't have permission to perform this action";
     }
     if (status === 404) {
       return context === "update" || context === "delete"
@@ -402,89 +426,102 @@ const Orders = () => {
     );
   }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
 
-  // ── Derive layout sections from restaurant profile + active orders ─────
-  const SECTION_LABELS = {
-    indoor:  "Indoor",
-    outdoor: "Outdoor",
-    rooftop: "Rooftop",
-    hall:    "Hall",
-    rooms:   "Rooms",
-    deluxe:  "Deluxe Room",
-  };
-
-  const getTableStatusFromOrder = (orderStatus) => {
-    const map = {
-      pending:   "running",
-      preparing: "running_kot",
-      ready:     "printed",
-      completed: "paid",
-    };
-    return map[orderStatus] || "blank";
-  };
-
+  // ── Primary source: GET /api/restaurant/live-units (as per latest prompt) ─────
   const layoutSections = useMemo(() => {
-    if (!restaurantData) return [];
+    const sourceSections = liveUnitsData?.sections || [];
 
-    const restaurant = restaurantData.restaurant || restaurantData;
-    const sec = restaurant.sections || {};
+    // Build quick lookup for order totals using currentOrderId
+    const orderTotalMap = new Map();
+    combinedOrders.forEach((o) => {
+      const oid = getOrderIdValue(o) || o?._id || o?.id || o?.orderId;
+      if (oid != null && o?.totalAmount != null) {
+        orderTotalMap.set(String(oid), Number(o.totalAmount) || 0);
+      }
+    });
 
-    // Section configs from restaurant profile
-    const sectionConfigs = [
-      { key: "indoor",  count: sec.indoor?.tables  || restaurant.tableNumbers || 0 },
-      { key: "outdoor", count: sec.outdoor?.tables || 0 },
-      { key: "rooftop", count: sec.rooftop?.tables || 0 },
-      { key: "hall",    count: sec.hall?.tables    || 0 },
-      { key: "rooms",   count: sec.rooms?.rooms    || 0 },
-    ];
+    const attachAmount = (unit) => {
+      const oid = unit.currentOrderId || unit.orderId;
+      return oid != null ? (orderTotalMap.get(String(oid)) ?? null) : null;
+    };
 
-    return sectionConfigs
-      .filter((cfg) => cfg.count > 0)
-      .map((cfg) => {
-        const sectionName = SECTION_LABELS[cfg.key] || cfg.key;
-        const tables = [];
-        for (let i = 1; i <= cfg.count; i++) {
-          // Find active order for this table+section
-          const order = combinedOrders.find((o) => {
-            const src = o.source || {};
-            return (
-              String(src.section || "").toLowerCase() === cfg.key &&
-              Number(src.number) === i
-            );
-          });
+    if (sourceSections.length === 0) {
+      // Fallback to old derivation if live-units not available yet
+      if (!restaurantData) return [];
+      const restaurant = restaurantData.restaurant || restaurantData;
+      const oldSections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+      return oldSections.map((section) => ({
+        sectionId: section.name,
+        sectionName: section.name,
+        tables: (section.units || []).map((u) => ({
+          tableId: `${section.name}:${u.name}`,
+          tableNumber: u.name,
+          sectionName: section.name,
+          status: u.status === "OCCUPIED" ? "booked" : "blank",
+          unitId: u._id || u.unitId,
+          unitType: u.type || "TABLE",
+          rawStatus: u.status || "AVAILABLE",
+          roomCategory: u.roomCategory || null,
+          occupiedSince: u.occupiedSince || null,
+          currentOrderId: u.currentOrderId || null,
+          orderId: u.currentOrderId || null,
+          currentAmount: attachAmount(u),
+        })),
+      })).filter(s => s.tables.length > 0);
+    }
 
-          if (order) {
-            const createdAt = new Date(order.createdAt).getTime();
-            const runningMinutes = Math.floor((Date.now() - createdAt) / 60000);
-            const orderItems = Array.isArray(order.items) ? order.items : [];
-            const total = orderItems.reduce((sum, item) => {
-              const price = Number(item.discountedPrice || item.price || 0);
-              return sum + price * (item.quantity || 1);
-            }, 0);
+    return sourceSections.map((section) => ({
+      sectionId: section.name,
+      sectionName: section.name,
+      tables: (section.units || []).map((unit) => {
+        const isOccupied = unit.status === "OCCUPIED";
+        const isBilled = unit.status === "BILLED";
 
-            tables.push({
-              tableId: `${cfg.key}:${i}`,
-              tableNumber: i,
-              sectionName: cfg.key,
-              status: getTableStatusFromOrder(String(order.status || "").toLowerCase()),
-              runningMinutes,
-              currentAmount: total,
-              orderId: order._id || order.id || order.orderId,
-            });
-          } else {
-            tables.push({
-              tableId: `${cfg.key}:${i}`,
-              tableNumber: i,
-              sectionName: cfg.key,
-              status: "blank",
-              runningMinutes: null,
-              currentAmount: null,
-              orderId: null,
-            });
+        let displayStatus = "blank";
+        if (isBilled) displayStatus = "billed";
+        else if (isOccupied) displayStatus = "booked";
+
+        return {
+          tableId: `${section.name}:${unit.name}`,
+          tableNumber: unit.name,
+          sectionName: section.name,
+          status: displayStatus,
+          unitId: unit.unitId,
+          unitType: unit.type,
+          rawStatus: unit.status,
+          roomCategory: unit.roomCategory || null,
+          occupiedSince: unit.occupiedSince || null,
+          currentOrderId: unit.currentOrderId || null,
+          orderId: unit.currentOrderId || null,
+          currentAmount: attachAmount(unit),
+        };
+      }),
+    })).filter((sec) => sec.tables.length > 0);
+  }, [liveUnitsData, restaurantData, combinedOrders]);
+  
+  // ── Pre-fill sessionStorage for AdminOrderPanel ──
+  useEffect(() => {
+    if (!restaurantData) return;
+    try {
+      const stored = sessionStorage.getItem("selectedTable");
+      if (stored) {
+        const tableInfo = JSON.parse(stored);
+        if (tableInfo.sectionName && tableInfo.tableNumber) {
+          const restaurant = restaurantData.restaurant || restaurantData;
+          const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+          const section = sections.find(s => s.name.toLowerCase() === tableInfo.sectionName.toLowerCase());
+          if (section) {
+            const unit = Array.isArray(section.units) ? section.units.find(u => u.name === tableInfo.tableNumber) : null;
+            if (unit) {
+              tableInfo.tableId = `${section.name}:${unit.name}`;
+              tableInfo.sectionName = section.name;
+              tableInfo.tableNumber = unit.name;
+              sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
+            }
           }
         }
-        return { sectionId: cfg.key, sectionName, tables };
-      });
-  }, [restaurantData, combinedOrders]);
+      }
+    } catch (_) {}
+  }, [restaurantData]);
 
   const totalPages = Math.max(
     1,
@@ -676,9 +713,30 @@ const Orders = () => {
       });
       if (order) {
         setOrderForBillModal(order);
+        setBillModalAutoPrint(false); // normal view, no auto print
       } else {
         notify("Order details not found. Try refreshing.", "error");
       }
+    }
+  }, [combinedOrders, notify]);
+
+  // Direct bill print from layout card printer icon (auto prints + closes)
+  const handlePrintBillFromLayout = useCallback((tableInfo) => {
+    if (!tableInfo?.orderId) return;
+    const section = tableInfo.sectionName || "";
+    const number = Number(tableInfo.tableNumber);
+    const order = combinedOrders.find((o) => {
+      const src = o.source || {};
+      return (
+        String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
+        Number(src.number) === number
+      );
+    });
+    if (order) {
+      setOrderForBillModal(order);
+      setBillModalAutoPrint(true);
+    } else {
+      notify("Bill not found for this unit. Try refreshing.", "error");
     }
   }, [combinedOrders, notify]);
 
@@ -710,6 +768,102 @@ const Orders = () => {
       }
     }
   }, [combinedOrders, notify]);
+
+  // === ROOM BOOKING HANDLERS (Live Orders UI) ===
+  const handleBookRoom = useCallback(async (payload, roomInfo) => {
+    if (!roomInfo?.unitId) {
+      notify("Room information missing. Cannot book.", "error");
+      return;
+    }
+    setRoomActionLoadingId(roomInfo.unitId);
+    try {
+      await createRoomBookingApi(payload).unwrap();
+      notify(`Room ${roomInfo.tableNumber} booked successfully`, "success");
+      // Backend should update unit status → live data will refresh via tags
+    } catch (err) {
+      const msg = err?.data?.message || err?.message || "Failed to book room";
+      notify(msg, "error");
+      throw err;
+    } finally {
+      setRoomActionLoadingId(null);
+    }
+  }, [createRoomBookingApi, notify]);
+
+  const handleCheckoutRoom = useCallback(async (roomInfo) => {
+    if (!roomInfo) {
+      return notify("Room information missing", "error");
+    }
+
+    // Find the original room booking order that has stay.enabled === true
+    // (some food orders on rooms may not have the stay object)
+    const bookingOrder = combinedOrders.find((o) => {
+      const src = o.source || {};
+      const matchesThisRoom =
+        String(src.unitId || "") === String(roomInfo.unitId || "") ||
+        (String(src.section || "").toLowerCase() === String(roomInfo.sectionName || "").toLowerCase() &&
+         String(src.number) === String(roomInfo.tableNumber));
+
+      return matchesThisRoom && o.stay?.enabled === true;
+    });
+
+    const orderId =
+      bookingOrder?._id ||
+      bookingOrder?.id ||
+      roomInfo?.orderId ||
+      roomInfo?.currentOrderId;
+
+    if (!orderId) {
+      return notify("No valid room booking order found for checkout.", "error");
+    }
+
+    setRoomActionLoadingId(roomInfo.unitId);
+    try {
+      // Correct backend endpoint — it will calculate room charges + free the unit
+      await checkoutOrderApi(orderId).unwrap();
+      notify(`Room ${roomInfo.tableNumber} checked out successfully`, "success");
+
+      refetchLiveUnits?.();
+      refetchPendingOrders?.();
+      refetchPreparingOrders?.();
+      refetchReadyOrders?.();
+    } catch (err) {
+      const msg = err?.data?.message || err?.message || "Failed to checkout room";
+      notify(msg, "error");
+    } finally {
+      setRoomActionLoadingId(null);
+    }
+  }, [combinedOrders, checkoutOrderApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders]);
+
+  // Exact prompt: POST /api/restaurant/book-room
+  const handleBookRoomPrompt = useCallback(async (payload, roomInfo) => {
+    if (!roomInfo?.unitId) {
+      console.error("Missing unitId in roomInfo", roomInfo);
+      throw new Error("Missing unitId");
+    }
+    setRoomActionLoadingId(roomInfo.unitId);
+    try {
+      const requestBody = {
+        unitId: roomInfo.unitId,
+        customerName: payload.guest?.name,
+        customerPhone: payload.guest?.phone,
+      };
+      console.log("Calling book-room with:", requestBody);
+      await bookRoomApi(requestBody).unwrap();
+      notify(`Room ${roomInfo.tableNumber} booked`, "success");
+
+      // Explicitly refetch so the room card immediately gets currentOrderId + shows ₹ total + edit/print icons
+      refetchLiveUnits?.();
+      refetchPendingOrders?.();
+      refetchPreparingOrders?.();
+    } catch (err) {
+      console.error("Book room API error:", err);
+      const message = err?.data?.message || err?.data?.error || err?.message || "Booking failed";
+      notify(message, "error");
+      throw err;
+    } finally {
+      setRoomActionLoadingId(null);
+    }
+  }, [bookRoomApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
 
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
@@ -804,16 +958,6 @@ const Orders = () => {
               <span>Layout</span>
             </button>
           </div>
-
-          <button
-            data-tour="orders-create-btn"
-            onClick={() => openCreateOrder()}
-            className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-orange-600 active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Create Order</span>
-            <span className="sm:hidden">New</span>
-          </button>
         </div>
       </div>
 
@@ -839,9 +983,13 @@ const Orders = () => {
               }
               onRetry={refetchRestaurant}
               isDarkMode={isDarkMode}
-              onViewOrder={handleViewOrder}
-              onCreateOrder={handleCreateOrderFromLayout}
-              onEditOrder={handleEditOrderFromLayout}
+               onViewOrder={handleViewOrder}
+               onCreateOrder={handleCreateOrderFromLayout}
+               onEditOrder={handleEditOrderFromLayout}
+               onPrintBill={handlePrintBillFromLayout}
+               onBookRoom={handleBookRoomPrompt}
+               onCheckoutRoom={handleCheckoutRoom}
+               roomActionLoadingId={roomActionLoadingId}
             />
           </Suspense>
         </div>
@@ -957,7 +1105,11 @@ const Orders = () => {
           <ItemsModal
             order={orderForBillModal}
             restaurantDetails={restaurantData}
-            onClose={() => setOrderForBillModal(null)}
+            autoPrint={billModalAutoPrint}
+            onClose={() => {
+              setOrderForBillModal(null);
+              setBillModalAutoPrint(false);
+            }}
           />
         )}
         {editingOrder && (

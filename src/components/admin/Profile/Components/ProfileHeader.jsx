@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from "../../../ui/button"
 import { useNavigate } from 'react-router-dom'
-import { Users, Settings, Store } from 'lucide-react'
+import { Users, Settings, Store, Table2 } from 'lucide-react'
 
 export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdateClick, showStaffButton, showUpdateButton, isEditing }) {
     const navigate = useNavigate()
@@ -43,23 +43,32 @@ export default function ProfileHeader({ restaurantName, restaurantLogo, onUpdate
                         {displayName || "My Restaurant"}
                     </h1>
                 </div>
-                <div className="flex gap-2 flex-wrap justify-center sm:justify-end">
+                <div className="flex gap-1.5 flex-wrap justify-center sm:justify-end">
                     {showStaffButton && isAdmin && (
                         <Button
                           variant="outline"
                           onClick={() => navigate('/admin/staff')}
-                          className="border-white/50 bg-transparent text-sm text-white hover:bg-white/20"
+                          className="h-8 border-white/50 bg-transparent text-xs text-white hover:bg-white/20 px-3"
                         >
-                            <Users className="w-4 h-4 mr-1" /> Staff
+                            <Users className="w-3.5 h-3.5 mr-1" /> Staff
+                        </Button>
+                    )}
+                    {isAdmin && (
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/admin/tables')}
+                          className="h-8 border-white/50 bg-transparent text-xs text-white hover:bg-white/20 px-3"
+                        >
+                            <Table2 className="w-3.5 h-3.5 mr-1" /> Table Management
                         </Button>
                     )}
                     {showUpdateButton && (
                         <Button
                           data-tour="profile-edit-btn"
                           onClick={onUpdateClick}
-                          className={`text-sm ${isEditing ? "bg-white text-red-500 hover:bg-red-50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-slate-700" : "bg-white text-orange-600 hover:bg-[#f7f3ef] dark:bg-slate-800 dark:text-orange-300 dark:hover:bg-slate-700"}`}
+                          className={`h-8 text-xs px-3 ${isEditing ? "bg-white text-red-500 hover:bg-red-50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-slate-700" : "bg-white text-orange-600 hover:bg-[#f7f3ef] dark:bg-slate-800 dark:text-orange-300 dark:hover:bg-slate-700"}`}
                         >
-                            <Settings className="w-4 h-4 mr-1" />
+                            <Settings className="w-3.5 h-3.5 mr-1" />
                             {isEditing ? "Cancel" : "Edit"}
                         </Button>
                     )}
