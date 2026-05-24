@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
+import { useDispatch } from "react-redux";
 import { useNotification } from "../../Bell/NotificationContext";
-import { ArrowLeft, LayoutGrid } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTour } from "../../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
@@ -26,7 +27,6 @@ import {
 } from "../commonOrderFile/utils";
 
 const OrdersTable = lazy(() => import("./OrdersTable"));
-const EditOrderModal = lazy(() => import("./EditOrderModal"));
 const DeleteModal = lazy(() => import("./DeleteModal"));
 const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
 const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
@@ -40,12 +40,11 @@ import {
   useUpdateOrderMutation,
   useDeleteOrderMutation,
   useToggleItemReadyMutation,
-  useCreateRoomBookingMutation,
-  useUpdateUnitStatusMutation,
   useGetLiveUnitsQuery,
   useBookRoomMutation,
   useCheckoutOrderMutation,
 } from "../../../../redux/adminRedux/adminAPI";
+import { clearCart } from "../../../../redux/clientRedux/clientSlice";
 
 const Orders = () => {
   const { notify, sseEvent, sseConnected } = useNotification();
@@ -103,6 +102,7 @@ const Orders = () => {
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [billModalAutoPrint, setBillModalAutoPrint] = useState(false);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
+  const dispatch = useDispatch();
   const [sseOrders, setSseOrders] = useState([]);
   const [roomActionLoadingId, setRoomActionLoadingId] = useState(null);
   const [autoRefresh] = useState(() => {
@@ -198,8 +198,6 @@ const Orders = () => {
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
   const [toggleItemReadyApi] = useToggleItemReadyMutation();
-  const [createRoomBookingApi] = useCreateRoomBookingMutation();
-  const [updateUnitStatusApi] = useUpdateUnitStatusMutation();
   const [bookRoomApi] = useBookRoomMutation();
   const [checkoutOrderApi] = useCheckoutOrderMutation();
 
@@ -208,9 +206,9 @@ const Orders = () => {
     isLoading: liveUnitsLoading,
     refetch: refetchLiveUnits,
   } = useGetLiveUnitsQuery(undefined, {
-    pollingInterval: 30000,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
+    pollingInterval,
+    refetchOnFocus: refetchOnAction,
+    refetchOnReconnect: refetchOnAction,
   });
 
   useEffect(() => {
@@ -343,7 +341,6 @@ const Orders = () => {
   };
 
   // ✅ FIXED: Extract tables from restaurant profile
-  // Aapke API response ke format ke hisab se adjust karna
   const extractTablesFromRestaurant = () => {
     if (!restaurantData) return [];
     
@@ -367,15 +364,10 @@ const Orders = () => {
           _id: `T${i}`,
           tableNumber: i,
           name: `T${i}`,
-          // capacity: 4
         });
       }
       return tables;
     }
-    
-    // Format 4: Agar koi aur field mein hai
-    // Aapke API response ko check karke add karein
-    // console.log("Restaurant Object for debugging:", restaurant);
     
     return [];
   };
@@ -426,9 +418,9 @@ const Orders = () => {
     );
   }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
 
-  // ── Primary source: GET /api/restaurant/live-units (as per latest prompt) ─────
+  // ── Primary source: GET /api/restaurant/live-units ─────
   const layoutSections = useMemo(() => {
-    const sourceSections = liveUnitsData?.sections || [];
+    const sourceSections = Array.isArray(liveUnitsData?.sections) ? liveUnitsData.sections : [];
 
     // Build quick lookup for order totals using currentOrderId
     const orderTotalMap = new Map();
@@ -445,34 +437,13 @@ const Orders = () => {
     };
 
     if (sourceSections.length === 0) {
-      // Fallback to old derivation if live-units not available yet
-      if (!restaurantData) return [];
-      const restaurant = restaurantData.restaurant || restaurantData;
-      const oldSections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
-      return oldSections.map((section) => ({
-        sectionId: section.name,
-        sectionName: section.name,
-        tables: (section.units || []).map((u) => ({
-          tableId: `${section.name}:${u.name}`,
-          tableNumber: u.name,
-          sectionName: section.name,
-          status: u.status === "OCCUPIED" ? "booked" : "blank",
-          unitId: u._id || u.unitId,
-          unitType: u.type || "TABLE",
-          rawStatus: u.status || "AVAILABLE",
-          roomCategory: u.roomCategory || null,
-          occupiedSince: u.occupiedSince || null,
-          currentOrderId: u.currentOrderId || null,
-          orderId: u.currentOrderId || null,
-          currentAmount: attachAmount(u),
-        })),
-      })).filter(s => s.tables.length > 0);
+      return [];
     }
 
     return sourceSections.map((section) => ({
       sectionId: section.name,
       sectionName: section.name,
-      tables: (section.units || []).map((unit) => {
+      units: (section.units || []).map((unit) => {
         const isOccupied = unit.status === "OCCUPIED";
         const isBilled = unit.status === "BILLED";
 
@@ -495,8 +466,8 @@ const Orders = () => {
           currentAmount: attachAmount(unit),
         };
       }),
-    })).filter((sec) => sec.tables.length > 0);
-  }, [liveUnitsData, restaurantData, combinedOrders]);
+    })).filter((sec) => sec.units.length > 0);
+  }, [liveUnitsData, combinedOrders]);
   
   // ── Pre-fill sessionStorage for AdminOrderPanel ──
   useEffect(() => {
@@ -698,10 +669,8 @@ const Orders = () => {
 
   // ---
   // --- Layout View callbacks ---
-  // When user clicks an active table in LayoutView → open ItemsModal for that order
   const handleViewOrder = useCallback((tableInfo) => {
     if (tableInfo?.orderId) {
-      // Find the order from combinedOrders by source.section + source.number
       const section = tableInfo.sectionName || "";
       const number = Number(tableInfo.tableNumber);
       const order = combinedOrders.find((o) => {
@@ -713,14 +682,13 @@ const Orders = () => {
       });
       if (order) {
         setOrderForBillModal(order);
-        setBillModalAutoPrint(false); // normal view, no auto print
+        setBillModalAutoPrint(false);
       } else {
         notify("Order details not found. Try refreshing.", "error");
       }
     }
   }, [combinedOrders, notify]);
 
-  // Direct bill print from layout card printer icon (auto prints + closes)
   const handlePrintBillFromLayout = useCallback((tableInfo) => {
     if (!tableInfo?.orderId) return;
     const section = tableInfo.sectionName || "";
@@ -740,16 +708,18 @@ const Orders = () => {
     }
   }, [combinedOrders, notify]);
 
-  // When user selects a blank table → navigate to Create Order with pre-filled table
   const handleCreateOrderFromLayout = useCallback((tableInfo) => {
-    // Store table selection in sessionStorage so AdminOrderPanel can pick it up
     try {
       sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
     } catch (_) { /* ignore */ }
     setSearchParams({ view: "create", tableId: tableInfo.tableId || tableInfo.tableNumber });
   }, [setSearchParams]);
 
-  // When user clicks edit pencil in LayoutView → open EditOrderModal for that order
+  const closeEditOrder = useCallback(() => {
+    setEditingOrder(null);
+    dispatch(clearCart());
+  }, [dispatch]);
+
   const handleEditOrderFromLayout = useCallback((tableInfo) => {
     if (tableInfo?.orderId) {
       const section = tableInfo.sectionName || "";
@@ -769,7 +739,6 @@ const Orders = () => {
     }
   }, [combinedOrders, notify]);
 
-  // === ROOM BOOKING HANDLERS (Live Orders UI) ===
   const handleBookRoom = useCallback(async (payload, roomInfo) => {
     if (!roomInfo?.unitId) {
       notify("Room information missing. Cannot book.", "error");
@@ -777,9 +746,16 @@ const Orders = () => {
     }
     setRoomActionLoadingId(roomInfo.unitId);
     try {
-      await createRoomBookingApi(payload).unwrap();
+      const requestBody = {
+        unitId: roomInfo.unitId,
+        customerName: payload.customerName || payload.guest?.name,
+        customerPhone: payload.customerPhone || payload.guest?.phone,
+      };
+      await bookRoomApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked successfully`, "success");
-      // Backend should update unit status → live data will refresh via tags
+      refetchLiveUnits?.();
+      refetchPendingOrders?.();
+      refetchPreparingOrders?.();
     } catch (err) {
       const msg = err?.data?.message || err?.message || "Failed to book room";
       notify(msg, "error");
@@ -787,15 +763,13 @@ const Orders = () => {
     } finally {
       setRoomActionLoadingId(null);
     }
-  }, [createRoomBookingApi, notify]);
+  }, [bookRoomApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
 
   const handleCheckoutRoom = useCallback(async (roomInfo) => {
     if (!roomInfo) {
       return notify("Room information missing", "error");
     }
 
-    // Find the original room booking order that has stay.enabled === true
-    // (some food orders on rooms may not have the stay object)
     const bookingOrder = combinedOrders.find((o) => {
       const src = o.source || {};
       const matchesThisRoom =
@@ -818,7 +792,6 @@ const Orders = () => {
 
     setRoomActionLoadingId(roomInfo.unitId);
     try {
-      // Correct backend endpoint — it will calculate room charges + free the unit
       await checkoutOrderApi(orderId).unwrap();
       notify(`Room ${roomInfo.tableNumber} checked out successfully`, "success");
 
@@ -834,7 +807,6 @@ const Orders = () => {
     }
   }, [combinedOrders, checkoutOrderApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders]);
 
-  // Exact prompt: POST /api/restaurant/book-room
   const handleBookRoomPrompt = useCallback(async (payload, roomInfo) => {
     if (!roomInfo?.unitId) {
       console.error("Missing unitId in roomInfo", roomInfo);
@@ -844,14 +816,13 @@ const Orders = () => {
     try {
       const requestBody = {
         unitId: roomInfo.unitId,
-        customerName: payload.guest?.name,
-        customerPhone: payload.guest?.phone,
+        customerName: payload.customerName || payload.guest?.name,
+        customerPhone: payload.customerPhone || payload.guest?.phone,
       };
       console.log("Calling book-room with:", requestBody);
       await bookRoomApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked`, "success");
 
-      // Explicitly refetch so the room card immediately gets currentOrderId + shows ₹ total + edit/print icons
       refetchLiveUnits?.();
       refetchPendingOrders?.();
       refetchPreparingOrders?.();
@@ -875,6 +846,46 @@ const Orders = () => {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  if (editingOrder) {
+    return (
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+        <div className={`flex items-center gap-3 px-4 py-3 border-b shrink-0 ${isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]"}`}>
+          <button
+            onClick={() => {
+              closeEditOrder();
+              refetchPendingOrders();
+              refetchPreparingOrders();
+              refetchReadyOrders();
+            }}
+            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Live Orders
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={
+            <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+              <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+            </div>
+          }>
+            <AdminOrderPanel
+              asModal={true}
+              isDarkMode={isDarkMode}
+              editingOrder={editingOrder}
+              onOrderSuccess={() => {
+                closeEditOrder();
+                refetchPendingOrders();
+                refetchPreparingOrders();
+                refetchReadyOrders();
+              }}
+            />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
 
   if (showCreateOrder) {
     return (
@@ -958,6 +969,15 @@ const Orders = () => {
               <span>Layout</span>
             </button>
           </div>
+          {/* ── Create Order Button (right side) ── */}
+          <button
+            onClick={() => setSearchParams({ view: "create" })}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm shadow-sm active:scale-[0.97] bg-orange-500 text-white hover:bg-orange-600`}
+            title="Create New Order"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Create Order</span>
+          </button>
         </div>
       </div>
 
@@ -1113,14 +1133,16 @@ const Orders = () => {
           />
         )}
         {editingOrder && (
-          <EditOrderModal
+          <AdminOrderPanel
+            asModal={true}
+            isDarkMode={isDarkMode}
             editingOrder={editingOrder}
-            setEditingOrder={setEditingOrder}
-            updateOrder={updateOrder}
-            getFriendlyErrorMessage={getFriendlyOrderError}
-            menuItems={menuItems}
-            tables={tables}
-            restaurantData={restaurantData}
+            onOrderSuccess={() => {
+              closeEditOrder();
+              refetchPendingOrders();
+              refetchPreparingOrders();
+              refetchReadyOrders();
+            }}
           />
         )}
         {showConfirmDelete && (

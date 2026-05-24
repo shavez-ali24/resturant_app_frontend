@@ -470,31 +470,7 @@ export const adminApi = createApi({
       invalidatesTags: ["Restaurant", "Units"],
     }),
 
-    getLiveUnitStatus: builder.query({
-      query: () => "/restaurant/units/live-status",
-      providesTags: ["Units"],
-    }),
-
-    // ============================================================
-    // ROOM / TABLE BOOKING (Live Orders UI)
-    // ============================================================
-    createRoomBooking: builder.mutation({
-      query: (bookingData) => ({
-        url: "/order",
-        method: "POST",
-        body: bookingData,
-      }),
-      invalidatesTags: ["Order", "Restaurant", "Units"],
-    }),
-
-    updateUnitStatus: builder.mutation({
-      query: ({ unitId, status }) => ({
-        url: `/units/${unitId}/status`,
-        method: "PATCH",
-        body: { status },
-      }),
-      invalidatesTags: ["Restaurant", "Units"],
-    }),
+    // NOTE: Removed duplicate/unused queries and mutations per prompt.
 
     // ============================================================
     // NEW EXACT APIs AS PER PROMPT (with automatic Bearer token)
@@ -558,9 +534,6 @@ export const {
   useUpdateStaffMutation,
   useDeleteStaffMutation,
   useAddUnitsMutation,
-  useGetLiveUnitStatusQuery,
-  useCreateRoomBookingMutation,
-  useUpdateUnitStatusMutation,
   useGetLiveUnitsQuery,
   useBookRoomMutation,
   useCheckoutOrderMutation,

@@ -15,7 +15,8 @@ import {
   useGetMenuQuery,
 } from "../../../redux/clientRedux/clientAPI";
 import {
-  useCreateOrderByAdminMutation
+  useCreateOrderByAdminMutation,
+  useUpdateOrderMutation,
 } from "../../../redux/adminRedux/adminAPI";
 import { showBill } from "../../../redux/adminRedux/billSlice";
 import { printKot } from "../../../services/tableService";
@@ -72,6 +73,35 @@ const hasActiveDiscount = (item, variantKey = null) => {
     discount?.value !== null &&
     Number(discount.value) > 0
   );
+};
+
+const getOrderItemKey = (item) => {
+  if (!item) return "";
+  const variant = item.variant ? String(item.variant) : "default";
+  const customizations = item.customizations ? String(item.customizations).trim() : "";
+  return `${item.menuItemId}_${variant}_${customizations}`;
+};
+
+const getCartItemKey = (item) => {
+  if (!item) return "";
+  const variantPart = item.variantKey ? `${item._id}-${item.variantKey}` : `${item._id}`;
+  const customizations = item.customizations ? `:${String(item.customizations).trim()}` : "";
+  return `${variantPart}${customizations}`;
+};
+
+const makeCartItemFromOrderItem = (orderItem) => {
+  return {
+    _id: orderItem.menuItemId,
+    name: orderItem.name,
+    price: Number(orderItem.discountedPrice ?? orderItem.price ?? 0),
+    originalPrice: Number(orderItem.price ?? orderItem.discountedPrice ?? 0),
+    customizations: orderItem.customizations || "",
+    quantity: Number(orderItem.quantity || 1),
+    variantKey: orderItem.variant || undefined,
+    variantLabel: orderItem.variant ? formatVariantLabel(orderItem.variant) : undefined,
+    isCombo: Boolean(orderItem.comboItems),
+    comboItems: orderItem.comboItems,
+  };
 };
 
 // ─── VegDot ───────────────────────────────────────────────────────────────────
@@ -339,7 +369,9 @@ function OrderSummaryPanel({
   dispatch, handleRemoveAll, handleSubmit, handleClear,
   handleNameChange, handlePhoneChange,
   inputStyle, border, textPrimary, textSecondary, summaryBg,
+  isMobile = false, // stickies buttons on mobile only
 }) {
+  const [isFormCollapsed, setIsFormCollapsed] = useState(true);
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
@@ -410,6 +442,117 @@ function OrderSummaryPanel({
         )}
       </div>
 
+      {/* ── Order Form (collapsible on mobile) ── */}
+      <div className={`border-t shrink-0 ${
+        isDarkMode ? "border-slate-700/60 bg-slate-800/30" : "border-[#ede8e3] bg-[#f7f3ef]"
+      }`}>
+        {/* Toggle Header */}
+        <button
+          type="button"
+          onClick={() => setIsFormCollapsed(!isFormCollapsed)}
+          className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold transition-colors ${
+            isDarkMode ? "text-slate-300 hover:bg-slate-700/40" : "text-[#1c1917] hover:bg-[#ede8e3]/60"
+          }`}
+        >
+          <span>Order Details</span>
+          <ChevronDown
+            size={16}
+            className={`transition-transform duration-200 ${isFormCollapsed ? "" : "rotate-180"} ${
+              isDarkMode ? "text-slate-400" : "text-slate-500"
+            }`}
+          />
+        </button>
+
+        {/* Collapsible Content — hidden when collapsed */}
+        {!isFormCollapsed && (
+          <div className="px-4 pb-3 space-y-3">
+            {/* Order Type */}
+            <div>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                Order Type
+              </label>
+              <div className="flex gap-2">
+                {["Eat Here", "Take Away", "Delivery"].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => { setOrderType(type); if (type !== "Eat Here") setTableId(""); }}
+                    className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${
+                      orderType === type
+                        ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                        : isDarkMode
+                          ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
+                          : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table / Room selector — only when Eat Here */}
+            {orderType === "Eat Here" && (
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Table / Room
+                </label>
+                <StyledSelect
+                  value={tableId}
+                  onChange={setTableId}
+                  options={tableOptions}
+                  placeholder="Select table / room"
+                  isDarkMode={isDarkMode}
+                />
+              </div>
+            )}
+
+            {/* Customer Name */}
+            <div>
+              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                Customer name
+              </label>
+              <input
+                value={customerName}
+                onChange={handleNameChange}
+                placeholder="Customer name"
+                className={inputStyle}
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                Phone number
+              </label>
+              <input
+                value={customerPhone}
+                onChange={handlePhoneChange}
+                placeholder="10-digit phone"
+                maxLength={10}
+                className={inputStyle}
+              />
+            </div>
+
+            {/* Delivery Address */}
+            {orderType === "Delivery" && (
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Delivery address
+                </label>
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Delivery address"
+                  rows={3}
+                  className={`${inputStyle} resize-none`}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Price Breakdown */}
       <div className={`px-4 py-3 space-y-2 border-t border-b shrink-0 ${
         isDarkMode ? "border-slate-700/60 bg-slate-800/30" : "border-[#ede8e3] bg-[#f7f3ef]"
@@ -476,10 +619,31 @@ function OrderSummaryPanel({
         </AnimatePresence>
       </div>
 
-      {/* Action Buttons */}
-      <div className={`flex gap-2 p-3 mt-auto border-t shrink-0 ${
+      {/* Action Buttons — sticky bottom on mobile only (isMobile prop), mt-auto on desktop */}
+      <div className={`flex gap-2 p-3 border-t shrink-0 ${
+        isMobile ? "sticky bottom-0" : "mt-auto"
+      } ${
         isDarkMode ? `${summaryBg} border-slate-700/60` : `${summaryBg} border-[#ede8e3]`
       }`}>
+        <button
+          onClick={() => handleSubmit("save")}
+          disabled={
+            cartCount === 0 ||
+            isSubmitting ||
+            !isRestaurantOpen ||
+            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+          }
+          className="flex-1 py-2 rounded-lg bg-green-600 text-sm font-semibold text-white transition-all duration-200 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              Processing...
+            </span>
+          ) : (
+            "Save"
+          )}
+        </button>
         <button
           onClick={() => handleSubmit("kot")}
           disabled={
@@ -528,7 +692,7 @@ function OrderSummaryPanel({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false }) {
+export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false, editingOrder = null }) {
   const dispatch = useDispatch();
   useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
 
@@ -540,7 +704,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
   const { data: restaurantData } = useGetRestaurantQuery();
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
-  const [createOrder, { isLoading: isSubmitting }] = useCreateOrderByAdminMutation();
+  const [createOrder, { isLoading: isCreating }] = useCreateOrderByAdminMutation();
+  const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedVariants, setSelectedVariants] = useState({});
@@ -552,6 +717,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [originalOrderItems, setOriginalOrderItems] = useState([]);
+
+  const isEditing = Boolean(editingOrder?._id);
+  const isSubmitting = isCreating || isUpdating;
 
   // ── Pre-fill from CreateOrderModal (Layout View) ──────────────────────────
   useEffect(() => {
@@ -574,6 +743,31 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       }
     } catch (_) { /* ignore parse errors */ }
   }, []);
+
+  useEffect(() => {
+    if (!editingOrder) return;
+
+    dispatch(clearCart());
+    setOrderType(editingOrder.orderType || "Take Away");
+    setCustomerName(editingOrder.customerName || "");
+    setCustomerPhone(editingOrder.customerPhone || "");
+    setAddress(editingOrder.address || "");
+    setOriginalOrderItems(editingOrder.items || []);
+
+    if (editingOrder.orderType === "Eat Here" && editingOrder.source) {
+      const section = editingOrder.source.section || editingOrder.source.sectionName || "";
+      const number = editingOrder.source.number || editingOrder.source.unitName || "";
+      if (section && number) {
+        setTableId(`${section}:${number}`);
+      }
+    }
+
+    (editingOrder.items || []).forEach((orderItem) => {
+      const cartItem = makeCartItemFromOrderItem(orderItem);
+      const cartKey = getCartItemKey(cartItem);
+      dispatch(addToCart({ id: cartKey, item: cartItem, quantity: Number(orderItem.quantity || 1) }));
+    });
+  }, [dispatch, editingOrder]);
 
   // ── Menu Data ────────────────────────────────────────────────────────────────
   const menuItems = menuData?.menu || [];
@@ -668,14 +862,88 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
   }, []);
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
+  const buildOrderUpdatePayload = () => {
+    const normalizedOrderType = orderType;
+    const currentCartItems = Object.values(cartItems);
+    const originalItems = originalOrderItems || [];
+
+    const existingByKey = new Map(
+      originalItems.map((item) => [getOrderItemKey(item), item])
+    );
+    const currentByKey = new Map(
+      currentCartItems.map((item) => [getCartItemKey(item), item])
+    );
+
+    const removeItemIds = [];
+    const updateQuantities = [];
+    const newItems = [];
+
+    for (const [key, existingItem] of existingByKey.entries()) {
+      const currentItem = currentByKey.get(key);
+      if (!currentItem) {
+        removeItemIds.push(existingItem._id?.toString?.() || existingItem._id);
+        continue;
+      }
+      if ((currentItem.quantity || 0) !== (existingItem.quantity || 0)) {
+        updateQuantities.push({ itemId: existingItem._id?.toString?.() || existingItem._id, quantity: currentItem.quantity || 0 });
+      }
+    }
+
+    for (const [key, currentItem] of currentByKey.entries()) {
+      if (!existingByKey.has(key)) {
+        newItems.push({
+          menuItemId: currentItem._id,
+          quantity: currentItem.quantity || 1,
+          customizations: currentItem.customizations || "",
+          variant: currentItem.variantKey,
+        });
+      }
+    }
+
+    const payload = {
+      orderType: normalizedOrderType,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+    };
+
+    if (normalizedOrderType === "Eat Here" && tableId) {
+      const [section, numStr] = tableId.split(":");
+      const number = parseInt(numStr, 10) || 1;
+      const selectedOption = tableOptions.find((o) => o.value === tableId);
+      const type = selectedOption?.unitName?.startsWith?.("ROOM") || section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
+      payload.source = { section, number, type };
+    }
+
+    if (normalizedOrderType === "Delivery") {
+      payload.address = address;
+    }
+
+    if (removeItemIds.length) payload.removeItemIds = removeItemIds;
+    if (updateQuantities.length) payload.updateQuantities = updateQuantities;
+    if (newItems.length) payload.items = newItems;
+
+    return payload;
+  };
+
   const handleSubmit = async (mode = "kot") => {
     const normalizedOrderType = orderType;
+    if (!customerName.trim()) {
+      showError("Customer name is required.");
+      return;
+    }
+    if (!PHONE_VALID_PATTERN.test(customerPhone)) {
+      showError("Valid 10-digit phone is required.");
+      return;
+    }
+
     let errorMessage = "";
     if (normalizedOrderType === "Eat Here" && !tableId) errorMessage = "Please select a table.";
     else if (normalizedOrderType === "Eat Here" && tableId) {
       const [sec, num] = tableId.split(":");
       if (!sec || !num) errorMessage = "Please select a table/room number.";
+    }
+    if (normalizedOrderType === "Delivery" && !address.trim()) {
+      errorMessage = "Please provide a delivery address.";
     }
     if (errorMessage) { showError(errorMessage); return; }
 
@@ -700,30 +968,46 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         if (cartItem.isCombo && cartItem.comboItems) orderItem.comboItems = cartItem.comboItems;
         return orderItem;
       });
+
       const orderData = {
         items: orderItems,
         orderType: normalizedOrderType,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
       };
+
       if (normalizedOrderType === "Eat Here" && tableId) {
         const [section, numStr] = tableId.split(":");
         const number = parseInt(numStr, 10) || 1;
-        const selectedOption = tableOptions.find(o => o.value === tableId);
+        const selectedOption = tableOptions.find((o) => o.value === tableId);
         const type = selectedOption?.unitName?.startsWith?.("ROOM") || section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
         orderData.source = { section, number, type };
       }
-      const response = await createOrder(orderData).unwrap();
-      const createdOrder = response?.order;
 
-      if (mode === "kot" && createdOrder?._id) {
+      if (normalizedOrderType === "Delivery") {
+        orderData.address = address;
+      }
+
+      let response;
+      if (isEditing && editingOrder?._id) {
+        const updatePayload = buildOrderUpdatePayload();
+        response = await updateOrder({ orderId: editingOrder._id, updatedData: updatePayload }).unwrap();
+      } else {
+        response = await createOrder(orderData).unwrap();
+      }
+
+      const finalOrder = response?.order || response;
+
+      if (mode === "kot" && finalOrder?._id) {
         try {
-          await printKot(createdOrder._id);
+          await printKot(finalOrder._id);
         } catch (printError) {
-          showError(printError?.message || "Order created, but KOT failed.");
+          showError(printError?.message || "Order processed, but KOT failed.");
         }
       }
 
-      if (mode === "print_bill" && createdOrder) {
-        dispatch(showBill(createdOrder));
+      if (mode === "print_bill" && finalOrder) {
+        dispatch(showBill(finalOrder));
       }
 
       setSuccess(true);
@@ -734,11 +1018,18 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       setTableId("");
       setAddress("");
       setOrderType("Take Away");
+      setOriginalOrderItems([]);
+
       if (onOrderSuccess) {
         onOrderSuccess();
       }
     } catch (err) {
-      showError(err?.data?.message || err?.message || "Failed to place order");
+      const backendMsg = err?.data?.message || err?.message || "";
+      if (backendMsg.includes("Order validation failed") && backendMsg.includes("source.")) {
+        showError("Unable to save this order due to a system configuration issue. Please contact the admin to verify the restaurant setup.");
+      } else {
+        showError(backendMsg || "Failed to place order");
+      }
     }
   };
 
@@ -772,13 +1063,14 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     const opts = [];
     sections.forEach((section) => {
       const units = Array.isArray(section.units) ? section.units : [];
-      units.forEach((unit, index) => {
-        const tableNum = index + 1;
+      units.forEach((unit) => {
         const sectionKey = section.name.toLowerCase().replace(/\s+/g, "_");
+        const unitKey = String(unit.name || unit.unitId || "").toLowerCase().replace(/\s+/g, "_");
         opts.push({
-          value: `${sectionKey}:${tableNum}`,
-          label: `${section.name} ${unit.name}`,
+          value: `${sectionKey}:${unitKey}`,
+          label: `${section.name} - ${unit.name}`,
           unitName: unit.name,
+          unitType: unit.type,
         });
       });
     });
@@ -1033,12 +1325,16 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       </div>
 
       {/* MOBILE: Order Summary */}
+      {/* Fixed h-[50vh] + overflow-y-auto + sticky bottom-0 on action buttons ensures
+          Save / KOT / Print BILL always stay pinned at the bottom of the panel even
+          when Order Details form is expanded (Eat Here / Delivery).
+          isMobile={true} enables conditional sticky bottom on buttons (shared component). */}
       <div
-        className={`md:hidden border-t shrink-0 max-h-[45vh] overflow-hidden flex flex-col ${
+        className={`md:hidden border-t shrink-0 h-[50vh] overflow-y-auto flex flex-col ${
           isDarkMode ? `border-slate-700/60 ${summaryBg}` : `border-[#ede8e3] ${summaryBg}`
         }`}
       >
-        <OrderSummaryPanel {...summaryProps} />
+        <OrderSummaryPanel {...summaryProps} isMobile={true} />
       </div>
 
       {/* ── Variant Picker Modal ── */}

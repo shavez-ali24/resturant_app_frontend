@@ -69,7 +69,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
   const [type, setType] = useState("TABLE");
   const [mode, setMode] = useState("count"); // "count" | "custom"
   const [count, setCount] = useState("");
-  const [customUnits, setCustomUnits] = useState([{ name: "", pricePerNight: "" }]);
+  const [customUnits, setCustomUnits] = useState([{ name: "", categoryName: "", pricePerNight: "" }]);
   const [formError, setFormError] = useState("");
 
   // Auto-select first existing section on load (if any)
@@ -90,7 +90,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
   };
 
   const handleAddCustomRow = () => {
-    setCustomUnits((prev) => [...prev, { name: "", pricePerNight: "" }]);
+    setCustomUnits((prev) => [...prev, { name: "", categoryName: "", pricePerNight: "" }]);
   };
 
   const handleRemoveCustomRow = (idx) => {
@@ -142,6 +142,13 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
         setFormError("Please enter a name for each unit");
         return;
       }
+      if (type === "ROOM") {
+        const missingCategory = validUnits.some((u) => !u.categoryName || !u.categoryName.trim());
+        if (missingCategory) {
+          setFormError("Please enter category name for each room");
+          return;
+        }
+      }
       // Client-side duplicate check
       const names = validUnits.map(u => u.name.trim().toLowerCase());
       if (new Set(names).size !== names.length) {
@@ -153,7 +160,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
         ...(type === "ROOM"
           ? {
               roomCategory: {
-                name: u.name.trim(),
+                name: (u.categoryName || u.name).trim(),
                 pricingModel: "PER_NIGHT",
                 priceConfig: {
                   pricePerNight: Number(u.pricePerNight) || 0,
@@ -189,7 +196,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* SECTION / CATEGORY - Themed dropdown using project Select component */}
       <div className="space-y-1.5">
-        <label className={labelCls}>Section / Category</label>
+        <label className={labelCls}>Section</label>
 
         <Select
           value={isCreatingNewSection ? "__new__" : sectionName}
@@ -328,15 +335,24 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
                   className={inputBase}
                 />
                 {type === "ROOM" && (
-                  <input
-                    type="number"
-                    placeholder="Price per night (₹)"
-                    value={u.pricePerNight}
-                    onChange={(e) => handleCustomChange(idx, "pricePerNight", e.target.value)}
-                    className={inputBase}
-                    min="0"
-                    step="1"
-                  />
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Category name (e.g. Deluxe)"
+                      value={u.categoryName}
+                      onChange={(e) => handleCustomChange(idx, "categoryName", e.target.value)}
+                      className={inputBase}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Price per night (₹)"
+                      value={u.pricePerNight}
+                      onChange={(e) => handleCustomChange(idx, "pricePerNight", e.target.value)}
+                      className={inputBase}
+                      min="0"
+                      step="1"
+                    />
+                  </>
                 )}
               </div>
               {customUnits.length > 1 && (

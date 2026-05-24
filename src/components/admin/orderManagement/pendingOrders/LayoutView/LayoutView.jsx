@@ -87,7 +87,7 @@ export default function LayoutView({
 
   const sectionsList = useMemo(() => {
     if (!Array.isArray(sections)) return [];
-    return sections.filter((sec) => Array.isArray(sec.tables) && sec.tables.length > 0);
+    return sections.filter((sec) => Array.isArray(sec.units) && sec.units.length > 0);
   }, [sections]);
 
   // ── Loading State ──
@@ -206,7 +206,7 @@ export default function LayoutView({
         <SectionBlock
           key={section.sectionId || section.sectionName}
           sectionName={section.sectionName}
-          tables={section.tables}
+          units={section.units}
           onTableClick={handleTableClick}
           onPrint={handlePrintBill}
           onView={handleViewOrder}

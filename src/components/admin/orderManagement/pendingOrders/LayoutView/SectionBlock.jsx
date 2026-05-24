@@ -8,7 +8,7 @@ import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
  */
 const SectionBlock = React.memo(function SectionBlock({
   sectionName,
-  tables,
+  units,
   onTableClick,
   onPrint,
   onView,
@@ -17,7 +17,7 @@ const SectionBlock = React.memo(function SectionBlock({
   roomActionLoadingId,
   isDarkMode = false,
 }) {
-  if (!tables || tables.length === 0) return null;
+  if (!units || units.length === 0) return null;
 
   const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
 
@@ -61,7 +61,7 @@ const SectionBlock = React.memo(function SectionBlock({
             borderRadius: 999,
           }}
         >
-          {tables.length} {tables.length === 1 ? "Table" : "Tables"}
+          {units.length} {units.length === 1 ? "Unit" : "Units"}
         </span>
       </div>
 
@@ -74,9 +74,9 @@ const SectionBlock = React.memo(function SectionBlock({
           padding: "16px 16px 34px",
         }}
       >
-        {tables.map((table) => (
+        {units.map((table) => (
           <TableCard
-            key={table.tableId || table.tableNumber}
+            key={table.unitId || table.tableNumber}
             table={table}
             onTableClick={onTableClick}
             onPrint={onPrint}

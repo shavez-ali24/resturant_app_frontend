@@ -37,10 +37,9 @@ export default function RoomActionModal({
     }
 
     const payload = {
-      guest: {
-        name: guestName.trim(),
-        phone: phone.trim(),
-      },
+      unitId: room?.unitId || room?.unitId,
+      customerName: guestName.trim(),
+      customerPhone: phone.trim(),
     };
 
     try {

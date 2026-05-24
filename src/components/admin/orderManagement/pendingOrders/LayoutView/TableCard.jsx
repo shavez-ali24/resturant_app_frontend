@@ -98,7 +98,7 @@ const TableCard = React.memo(function TableCard({
     ? Math.floor((Date.now() - new Date(occupiedSince).getTime()) / 60000)
     : null;
 
-  const showBottomIcons = (isOccupied || isBilled) && table.orderId; // show edit + print icons for any occupied/billed unit (table or room) that has an order
+  const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId); // prefer backend `currentOrderId`
 
   return (
     <div
