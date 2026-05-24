@@ -49,7 +49,7 @@ const initialState = {
   adminInfo: localStorage.getItem('adminInfo')
     ? JSON.parse(localStorage.getItem('adminInfo'))
     : null,
-  token: localStorage.getItem('token') || null,
+  token: localStorage.getItem('admin_token') || null,
   loading: false,
   error: null,
 };
@@ -63,7 +63,7 @@ const adminSlice = createSlice({
       state.adminInfo = adminInfo;
       state.token = token;
       localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
-      localStorage.setItem('token', token);
+      localStorage.setItem('admin_token', token);
     },
     logout: (state) => {
       state.adminInfo = null;
@@ -71,7 +71,7 @@ const adminSlice = createSlice({
       state.loading = false;
       state.error = null;
       localStorage.removeItem('adminInfo');
-      localStorage.removeItem('token');
+      localStorage.removeItem('admin_token');
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('restaurantName');

@@ -51,7 +51,7 @@ const formatValue = (value) => {
   return String(value);
 };
 
-export const ProfileField = ({ label, value, icon }) => (
+export const ProfileField = React.memo(({ label, value, icon }) => (
   <div className="rounded-xl border border-[#ede8e3] bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-[#1e293b]">
     <div className="mb-1 flex items-center gap-2">
       {icon && <span className="text-orange-500">{icon}</span>}
@@ -59,4 +59,4 @@ export const ProfileField = ({ label, value, icon }) => (
     </div>
     <p className="text-sm font-semibold text-[#1c1917] dark:text-slate-100">{formatValue(value)}</p>
   </div>
-);
+));

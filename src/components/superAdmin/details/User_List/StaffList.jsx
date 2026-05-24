@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, User, Mail, Calendar, Building, Clock, Trash2 } from "lucide-react"
+import { Loader2, User, Mail, Calendar, Building, Trash2 } from "lucide-react"
 import { DeleteConfirmModal } from "@/components/superAdmin/common/deleteConfirmModal"
-import { useGetStaffQuery, useDeleteUserMutation, useUpdateUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
+import { useGetStaffQuery, useDeleteUserMutation } from "@/redux/superAdminRedux/superAdminAPI"
 
 export default function StaffList() {
   const { data: staffData, isLoading, error } = useGetStaffQuery();
   const [deleteUser] = useDeleteUserMutation();
-  const [updateUser] = useUpdateUserMutation();
   const [deleteModal, setDeleteModal] = useState({ open: false, staff: null })
   const [message, setMessage] = useState({ type: '', text: '' })
 
@@ -34,16 +33,8 @@ export default function StaffList() {
     }
   }
 
-  const handleStatusToggle = async (staffMember) => {
-    try {
-      const newStatus = staffMember.isActive === false ? true : false;
-      await updateUser({ userId: staffMember._id, isActive: newStatus }).unwrap();
-      showMessage(`Staff ${newStatus ? 'activated' : 'deactivated'} successfully!`, 'success')
-    } catch (error) {
-      const errMsg = error?.data?.message || error?.message || 'Failed to update status'
-      showMessage(errMsg, 'error')
-    }
-  }
+  // NOTE: isActive toggle removed because User model doesn't have an isActive field.
+  // To restore this feature, add isActive: Boolean to the User model (backend).
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
@@ -96,7 +87,6 @@ export default function StaffList() {
                   <TableHead className="text-orange-700">Role</TableHead>
                   <TableHead className="text-orange-700">Contact</TableHead>
                   <TableHead className="text-orange-700">Restaurant</TableHead>
-                  <TableHead className="text-orange-700">Status</TableHead>
                   <TableHead className="text-orange-700">Created</TableHead>
                   <TableHead className="text-right text-orange-700">Actions</TableHead>
                 </TableRow>
@@ -122,16 +112,6 @@ export default function StaffList() {
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-orange-900/90">
                       {staffMember.restaurantId?.restaurantName || staffMember.restaurantName || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleStatusToggle(staffMember)}
-                        className={staffMember.isActive === false ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}
-                      >
-                        {staffMember.isActive === false ? "Inactive" : "Active"}
-                      </Button>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-orange-700/80">
@@ -188,17 +168,6 @@ export default function StaffList() {
                   <div className="flex items-center gap-2 text-orange-900/80">
                     <Building className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{staffMember.restaurantId?.restaurantName || staffMember.restaurantName || "N/A"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-orange-900/80">
-                    <Clock className="h-4 w-4 flex-shrink-0" />
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleStatusToggle(staffMember)}
-                      className={staffMember.isActive === false ? "text-red-600 p-0 h-auto" : "text-green-600 p-0 h-auto"}
-                    >
-                      {staffMember.isActive === false ? "Inactive" : "Active"}
-                    </Button>
                   </div>
                   <div className="flex items-center gap-2 text-orange-700/80">
                     <Calendar className="h-4 w-4 flex-shrink-0" />

@@ -11,7 +11,7 @@ const BASE_URL = `${config.BASE_URL}/api`;
  * @returns {Promise<{ success: boolean }>}
  */
 export async function printKot(orderId) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("admin_token");
 
   const response = await fetch(`${BASE_URL}/admin/orders/${orderId}/print-kot`, {
     method: "POST",

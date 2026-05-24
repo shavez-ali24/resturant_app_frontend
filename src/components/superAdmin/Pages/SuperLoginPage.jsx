@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useNavigate } from 'react-router-dom'
 import { NotificationModal } from '../common/notificationModal'
-import { useRegisterMutation } from '@/redux/superAdminRedux/superAdminAPI' // ✅ Fixed import
+import { useLoginMutation } from '@/redux/superAdminRedux/superAdminAPI'
 import loginImage from "@/assets/loginImg.png"
 
 const SuperLoginPage = () => {
-  const [login, { isLoading }] = useRegisterMutation(); // ✅ Fixed hook name
+  const [login, { isLoading }] = useLoginMutation();
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")

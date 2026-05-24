@@ -1,6 +1,6 @@
 import React from "react";
 
-export const OrderModeStatus = ({ label, isEnabled }) => (
+export const OrderModeStatus = React.memo(({ label, isEnabled }) => (
   <div
     className={`flex items-center justify-between rounded-xl border p-3 ${
       isEnabled
@@ -23,4 +23,4 @@ export const OrderModeStatus = ({ label, isEnabled }) => (
       {isEnabled ? "Active" : "Inactive"}
     </span>
   </div>
-);
+));

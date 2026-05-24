@@ -1,3 +1,5 @@
+// ─── IMPORTS ───────────────────────────────────────────
+// MainLayout — Client app shell (mobile-first, 520px max-width, dark mode support)
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 
@@ -21,8 +23,8 @@ export default function MainLayout() {
     <div
       className={`client-app-shell relative mx-auto min-h-screen max-w-[520px] overflow-hidden font-mostrate font-semibold ${
         isDarkMode
-          ? "client-dark dark bg-[linear-gradient(180deg,#0f172a_0%,#111827_48%,#020617_100%)] text-slate-100"
-          : "bg-[linear-gradient(180deg,#fffaf5_0%,#fffdfb_48%,#ffffff_100%)] text-slate-900"
+          ? "client-dark dark bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 text-slate-100"
+          : "bg-gradient-to-b from-orange-50/80 via-white to-white text-slate-900"
       }`}
     >
       <div
@@ -33,7 +35,7 @@ export default function MainLayout() {
         }`}
       />
       <main className={`relative min-h-screen ${isDarkMode ? "bg-slate-950/70" : "bg-white"}`}>
-        <Outlet context={{ isDarkMode, toggleDarkMode }} /> {/* <-- Renders child route here */}
+        <Outlet context={{ isDarkMode, toggleDarkMode }} />
       </main>
     </div>
   );

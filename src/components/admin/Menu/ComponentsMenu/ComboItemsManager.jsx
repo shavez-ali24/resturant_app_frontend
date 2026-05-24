@@ -160,7 +160,7 @@ const ComboItemsManager = ({
 
             return (
               <MotionDiv
-                key={index}
+                key={`combo-${item.menuItemId || index}-${index}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-lg border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800"

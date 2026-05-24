@@ -92,7 +92,7 @@ const normalizeMenuItem = (it) => {
 const baseQuery = fetchBaseQuery({
   baseUrl: `${config.BASE_URL}/api`,
   prepareHeaders: (headers) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (token) headers.set("Authorization", `Bearer ${token}`);
     headers.set("Accept", "application/json");
     return headers;
@@ -104,7 +104,7 @@ const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
   const status = result.error?.status || result.error?.originalStatus;
 
   if (typeof window !== "undefined" && (status === 401 || status === 403)) {
-    localStorage.removeItem("token");
+    localStorage.removeItem("admin_token");
     localStorage.removeItem("adminInfo");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
@@ -499,14 +499,6 @@ export const adminApi = createApi({
       invalidatesTags: ["Order", "Units", "Restaurant"],
     }),
 
-    addUnits: builder.mutation({
-      query: (payload) => ({
-        url: "/restaurant/units",
-        method: "POST",
-        body: payload,
-      }),
-      invalidatesTags: ["Units", "Restaurant"],
-    }),
   }),
 });
 
@@ -537,5 +529,4 @@ export const {
   useGetLiveUnitsQuery,
   useBookRoomMutation,
   useCheckoutOrderMutation,
-  useAddUnitsNewMutation,
 } = adminApi;

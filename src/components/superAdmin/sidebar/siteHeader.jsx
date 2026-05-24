@@ -18,7 +18,7 @@ export function SiteHeader() {
   useEffect(() => {
     const validateUserSession = () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('sa_token');
         const user = localStorage.getItem('user');
         
         if (!token || !user) {
@@ -28,7 +28,7 @@ export function SiteHeader() {
 
         const parsedUser = JSON.parse(user);
         if (parsedUser.role !== 'superadmin') {
-          localStorage.removeItem('token');
+          localStorage.removeItem('sa_token');
           localStorage.removeItem('user');
           navigate('/super-login');
           return;
@@ -37,7 +37,7 @@ export function SiteHeader() {
         setUserData(parsedUser);
       } catch (error) {
         console.error('User validation error:', error);
-        localStorage.removeItem('token');
+        localStorage.removeItem('sa_token');
         localStorage.removeItem('user');
         navigate('/super-login');
       }

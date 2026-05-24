@@ -9,7 +9,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token) {
       navigate("/login", { replace: true });
     }

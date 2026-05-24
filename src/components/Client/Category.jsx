@@ -98,7 +98,7 @@ export default function Category({
                 fallbackImage;
               return (
                 <button
-                  key={index}
+                  key={`cat-${item.category || index}`}
                   type="button"
                   onClick={() => onCategoryClick?.(item.category)}
                   className={`client-category-chip relative h-[54px] w-[116px] min-w-[116px] flex-shrink-0 overflow-hidden rounded-2xl border border-orange-200/80 transition-all duration-200 shadow-sm hover:shadow-md ${

@@ -27,7 +27,7 @@ const getCategoryLabel = (category) => {
   return "";
 };
 
-export const CategoryChips = ({ categories }) => {
+export const CategoryChips = React.memo(({ categories }) => {
   const list = Array.isArray(categories) ? categories : [];
   const chips = list
     .map((category, index) => {
@@ -61,4 +61,4 @@ export const CategoryChips = ({ categories }) => {
       )}
     </div>
   );
-};
+});

@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 
-export default function Filter({
+const Filter = memo(function Filter({
   filters = { veg: false, nonVeg: false, mixed: false, combo: false },
   onChange = () => {},
   isDarkMode = false,
@@ -111,4 +112,6 @@ export default function Filter({
       </button>
     </motion.div>
   );
-}
+});
+
+export default Filter;

@@ -13,6 +13,17 @@ import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
 
+// ── Utility: normalize category string (moved outside component to avoid recreation) ──
+const normalizeCategoryValue = (value) =>
+  String(value || "")
+    .replace(/-+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+// ── Static config ──
+const LOADER_MIN_DURATION = 2000;
+
 export default function Home() {
   const outletContext = useOutletContext() || {};
   const isDarkMode = Boolean(outletContext?.isDarkMode);
@@ -36,13 +47,6 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
-  const normalizeCategoryValue = (value) =>
-    String(value || "")
-      .replace(/-+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
   const error = menuError || restaurantError;
@@ -54,7 +58,7 @@ export default function Home() {
     } else {
       timer = setTimeout(() => {
         setShowLoader(false);
-      }, 2000);
+      }, LOADER_MIN_DURATION);
     }
     return () => clearTimeout(timer);
   }, [loading]);

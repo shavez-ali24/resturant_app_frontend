@@ -628,7 +628,7 @@ export default function RevenueAnalytics() {
                         </TableRow>
                       ) : tableData.length > 0 ? (
                         tableData.map((row, index) => (
-                          <TableRow key={index} className={`border-b transition-colors ${isDarkMode ? "border-slate-700 hover:bg-slate-800/60" : "border-[#f0ebe5] hover:bg-[#faf7f4]"}`}>
+                          <TableRow key={row.displayDate || row._id || index} className={`border-b transition-colors ${isDarkMode ? "border-slate-700 hover:bg-slate-800/60" : "border-[#f0ebe5] hover:bg-[#faf7f4]"}`}>
                             <TableCell className="py-3">
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>

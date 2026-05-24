@@ -45,7 +45,7 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token || !config?.BASE_URL) return undefined;
 
     const baseUrl = String(config.BASE_URL).replace(/\/$/, "");

@@ -25,7 +25,7 @@ export function NavUser({ user, isDarkMode = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [restaurantImage, setRestaurantImage] = useState("");
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("admin_token");
 
   const {
     data: restaurantData,
@@ -59,7 +59,7 @@ export function NavUser({ user, isDarkMode = false }) {
   }, [restaurantData]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("admin_token");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userAvatar");

@@ -79,7 +79,7 @@ function ProfileEditForm({ resData, token, isDarkMode, onSuccess, onClose }) {
 
 // ── Main Profile component ────────────────────────────────────────────────────
 const Profile = () => {
-  const [token] = useState(() => localStorage.getItem("token") || "");
+  const [token] = useState(() => localStorage.getItem("admin_token") || "");
   const [isEditing, setIsEditing] = useState(false);
   const notify = useNotify();
   const userRole = localStorage.getItem("userRole") || "";

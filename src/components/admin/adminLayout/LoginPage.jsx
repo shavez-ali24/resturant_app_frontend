@@ -31,7 +31,7 @@ const LoginPage = () => {
       const userRole = resolvedRole === "staff" ? "staff" : "admin";
 
       // Store in localStorage
-      localStorage.setItem("token", res.token);
+      localStorage.setItem("admin_token", res.token);
       localStorage.setItem("userName", res.user?.name || res.name || "Admin");
       localStorage.setItem("userEmail", res.user?.email || res.email || email);
       localStorage.setItem("userRole", userRole);

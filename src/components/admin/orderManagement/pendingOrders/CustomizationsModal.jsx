@@ -69,7 +69,7 @@ const CustomizationsModal = ({ order, onClose }) => {
 
               {/* Items */}
               {customizations.map((item, index) => (
-                <div key={index} className={`rounded-xl border overflow-hidden ${cardBg}`}>
+                <div key={`${item.itemName}-${item.variant || ''}-${index}`} className={`rounded-xl border overflow-hidden ${cardBg}`}>
                   {/* Item header */}
                   <div className={`flex items-center justify-between border-b px-4 py-3 ${cardHeader}`}>
                     <h4 className={`text-sm font-bold ${textPri}`}>{item.itemName}</h4>

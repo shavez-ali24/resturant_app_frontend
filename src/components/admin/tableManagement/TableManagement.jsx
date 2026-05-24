@@ -426,6 +426,7 @@ function UnitCard({ unit }) {
           <img
             src={unit.qrCode.url}
             alt={`QR for ${unit.name}`}
+            loading="lazy"
             className="h-20 w-20 rounded-md border border-[#ede8e3] object-contain"
             onError={() => setImgError(true)}
           />
