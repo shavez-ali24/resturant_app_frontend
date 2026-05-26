@@ -115,6 +115,11 @@ const TableCard = React.memo(function TableCard({
     ? Math.floor((Date.now() - new Date(occupiedSince).getTime()) / 60000)
     : null;
 
+  const formatAmount = (val) => {
+    const n = Number(val);
+    return Number.isFinite(n) ? `₹${n.toFixed(2)}` : "";
+  };
+
   // 🔧 FIX: Show bottom icons (Edit/Print/Move) for both rooms AND tables
   const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
 
@@ -140,25 +145,25 @@ const TableCard = React.memo(function TableCard({
       {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}
 
       {/* Top status / time */}
-      <div style={{ position: "absolute", top: 6, fontSize: 10, fontWeight: 600, color: textColor, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-        {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed}m` : ""}
+      <div style={{ position: "absolute", top: 8, fontSize: 11, fontWeight: 800, color: textColor, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+        {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed} MINS` : ""}
       </div>
 
-      {/* Main number - 22px as per prompt */}
-      <div style={{ fontSize: 22, fontWeight: 700, color: textColor, marginTop: 18 }}>
+      {/* Main number - styled duller and slightly larger */}
+      <div style={{ fontSize: 19, fontWeight: 700, color: isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.3)", marginTop: 12 }}>
         {tableNumber}
       </div>
 
       {/* Room category + price or table amount */}
       {!isAvailable && (
-        <div style={{ fontSize: 12, color: textColor, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+        <div style={{ fontSize: 15, color: textColor, marginTop: 4, fontWeight: 800, textAlign: 'center' }}>
           {table.currentAmount != null ? (
-            `₹${table.currentAmount}`
+            formatAmount(table.currentAmount)
           ) : isRoom && roomCategory ? (
-            <>
-              {roomCategory.name}
-              {roomCategory.pricePerNight ? ` • ₹${roomCategory.pricePerNight}` : ''}
-            </>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 10 }}>
+              <span style={{ opacity: 0.8, fontWeight: 500 }}>{roomCategory.name}</span>
+              {roomCategory.pricePerNight ? <span style={{ fontSize: 14, fontWeight: 800 }}>{formatAmount(roomCategory.pricePerNight)}</span> : ''}
+            </div>
           ) : ''}
         </div>
       )}

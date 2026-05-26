@@ -125,11 +125,6 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
   const [newSectionInput, setNewSectionInput] = useState("");
 
   const [type, setType] = useState("TABLE");
-  const [mode, setMode] = useState("count"); // "count" | "custom"
-  const [count, setCount] = useState("");
-  const [bulkRoomCategorySelection, setBulkRoomCategorySelection] = useState("");
-  const [bulkRoomCategoryName, setBulkRoomCategoryName] = useState("");
-  const [bulkRoomPricePerNight, setBulkRoomPricePerNight] = useState("");
   const [customUnits, setCustomUnits] = useState([createCustomUnitDraft()]);
   const [formError, setFormError] = useState("");
 
@@ -145,11 +140,6 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
     setIsCreatingNewSection(false);
     setNewSectionInput("");
     setType("TABLE");
-    setMode("count");
-    setCount("");
-    setBulkRoomCategorySelection("");
-    setBulkRoomCategoryName("");
-    setBulkRoomPricePerNight("");
     setCustomUnits([createCustomUnitDraft()]);
   };
 
@@ -164,24 +154,6 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
   const handleCustomChange = (idx, field, value) => {
     setCustomUnits((prev) =>
       prev.map((u, i) => (i === idx ? { ...u, [field]: value } : u))
-    );
-  };
-
-  const handleBulkRoomCategoryChange = (value) => {
-    if (value === "__new__") {
-      setBulkRoomCategorySelection("__new__");
-      setBulkRoomCategoryName("");
-      setBulkRoomPricePerNight("");
-      return;
-    }
-
-    const selectedCategory = existingRoomCategories.find((category) => category.name === value);
-    setBulkRoomCategorySelection(value);
-    setBulkRoomCategoryName(selectedCategory?.name || value);
-    setBulkRoomPricePerNight(
-      selectedCategory?.pricePerNight != null
-        ? String(selectedCategory.pricePerNight)
-        : ""
     );
   };
 
@@ -234,60 +206,38 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
       return;
     }
 
+    const validUnits = customUnits.filter((u) => u.name.trim());
+    if (validUnits.length === 0) {
+      setFormError("Please enter a name for each unit");
+      return;
+    }
+
+    if (type === "ROOM") {
+      const missingCategory = validUnits.some(
+        (u) =>
+          !buildRoomCategoryPayload({
+            categorySelection: u.categorySelection,
+            categoryName: u.categoryName,
+            pricePerNight: u.pricePerNight,
+          })
+      );
+      if (missingCategory) {
+        setFormError("Please select or create a category for each room");
+        return;
+      }
+    }
+
+    // Client-side duplicate check
+    const names = validUnits.map(u => u.name.trim().toLowerCase());
+    if (new Set(names).size !== names.length) {
+      setFormError("Unit name already exists, please use a different name");
+      return;
+    }
+
     const body = {
       sectionName: finalSectionName,
       type,
-    };
-
-    if (mode === "count") {
-      const num = Number(count);
-      if (!num || num < 1) {
-        setFormError(num < 1 && count !== "" ? "Number of tables cannot be less than 1" : "Please enter how many tables you want to add");
-        return;
-      }
-      body.count = num;
-
-      if (type === "ROOM") {
-        const roomCategory = buildRoomCategoryPayload({
-          categorySelection: bulkRoomCategorySelection,
-          categoryName: bulkRoomCategoryName,
-          pricePerNight: bulkRoomPricePerNight,
-        });
-
-        if (!roomCategory) {
-          setFormError("Please select an existing room category or create a new one");
-          return;
-        }
-
-        body.roomCategory = roomCategory;
-      }
-    } else {
-      const validUnits = customUnits.filter((u) => u.name.trim());
-      if (validUnits.length === 0) {
-        setFormError("Please enter a name for each unit");
-        return;
-      }
-      if (type === "ROOM") {
-        const missingCategory = validUnits.some(
-          (u) =>
-            !buildRoomCategoryPayload({
-              categorySelection: u.categorySelection,
-              categoryName: u.categoryName,
-              pricePerNight: u.pricePerNight,
-            })
-        );
-        if (missingCategory) {
-          setFormError("Please select or create a category for each room");
-          return;
-        }
-      }
-      // Client-side duplicate check
-      const names = validUnits.map(u => u.name.trim().toLowerCase());
-      if (new Set(names).size !== names.length) {
-        setFormError("Unit name already exists, please use a different name");
-        return;
-      }
-      body.units = validUnits.map((u) => ({
+      units: validUnits.map((u) => ({
         name: u.name.trim(),
         ...(type === "ROOM"
           ? {
@@ -301,8 +251,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
               },
             }
           : {}),
-      }));
-    }
+      })),
+    };
 
     try {
       await addUnits(body).unwrap();
@@ -404,108 +354,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
         </div>
       </div>
 
-      {/* MODE SELECTOR */}
-      <div className="space-y-1.5">
-        <label className={labelCls}>Add Method</label>
-        <div className="flex gap-2">
-          {[
-            { value: "count", label: "Bulk Count" },
-            { value: "custom", label: "Custom Names" },
-          ].map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setMode(m.value)}
-              className={`${btnBase} ${
-                mode === m.value
-                  ? "bg-orange-500 text-white shadow-sm"
-                  : "bg-white text-[#78716c] border border-[#ede8e3] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* BULK COUNT */}
-      {mode === "count" && (
-        <div className="space-y-1.5">
-          <label className={labelCls}>Count</label>
-           <input
-             type="number"
-             value={count}
-             onChange={(e) => {
-               const val = e.target.value;
-               if (val === "" || /^\d+$/.test(val)) {
-                 setCount(val);
-               }
-             }}
-             onWheel={(e) => e.currentTarget.blur()}
-             className={inputBase}
-             placeholder="e.g. 10"
-           />
-          <p className="text-[11px] text-[#a8a29e] dark:text-slate-500">
-            {type === "TABLE"
-              ? `Tables will be named T1, T2, ...`
-              : `Rooms will be named 101, 102, ... and the selected category will apply to all new rooms.`}
-          </p>
-
-          {type === "ROOM" && (
-            <div className="space-y-2 pt-2">
-              <Select
-                value={bulkRoomCategorySelection || undefined}
-                onValueChange={handleBulkRoomCategoryChange}
-              >
-                <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-500/30 focus:border-orange-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
-                  <SelectValue placeholder="Select existing category or create new" />
-                </SelectTrigger>
-                <SelectContent className="border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800">
-                  {existingRoomCategories.map((category) => (
-                    <SelectItem
-                      key={category.name}
-                      value={category.name}
-                      className="cursor-pointer focus:bg-[#f7f3ef] dark:focus:bg-slate-700"
-                    >
-                      {category.name}
-                      {category.pricePerNight > 0 ? ` • ₹${category.pricePerNight}/night` : ""}
-                    </SelectItem>
-                  ))}
-                  <SelectItem
-                    value="__new__"
-                    className="cursor-pointer text-orange-600 focus:bg-[#f7f3ef] dark:focus:bg-slate-700 dark:text-orange-400"
-                  >
-                    + Create New Category
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              {(!bulkRoomCategorySelection || bulkRoomCategorySelection === "__new__") && (
-                <input
-                  type="text"
-                  placeholder="Category name (e.g. Deluxe)"
-                  value={bulkRoomCategoryName}
-                  onChange={(e) => setBulkRoomCategoryName(e.target.value)}
-                  className={inputBase}
-                />
-              )}
-
-              <input
-                type="number"
-                placeholder="Price per night (₹)"
-                value={bulkRoomPricePerNight}
-                onChange={(e) => setBulkRoomPricePerNight(e.target.value)}
-                className={inputBase}
-                min="0"
-                step="1"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* CUSTOM UNITS */}
-      {mode === "custom" && (
+      {/* UNITS (Custom Names) */}
+      <div>
         <div className="space-y-3">
           <label className={labelCls}>Units</label>
           {customUnits.map((u, idx) => (
@@ -586,7 +436,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
             <Plus size={14} /> Add another
           </button>
         </div>
-      )}
+      </div>
 
       {/* SUBMIT */}
       {formError && (

@@ -421,18 +421,34 @@ export const getOrderTypeItemClass = (value) => {
 };
 
 export const formatOrderTableId = (tableId, source) => {
+  const getShortSection = (sec) => {
+    if (!sec) return "";
+    const s = String(sec).trim().toLowerCase();
+    if (s === "indoor") return "IND";
+    if (s === "outdoor") return "OUT";
+    if (s === "rooftop") return "ROOF";
+    if (s === "rooms" || s === "room") return "RM";
+    return sec;
+  };
+
   // ✅ New source object: { section: "indoor", number: 3, type: "TABLE" }
   if (source && source.section && source.number != null) {
-    const FULL = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-    const full = FULL[String(source.section).toLowerCase()] || (String(source.section).charAt(0).toUpperCase() + String(source.section).slice(1));
-    const unit = source.type === "ROOM" ? "" : "Table";
-    return unit ? `${full} ${unit} ${source.number}` : `${full} ${source.number}`;
+    const shortSec = getShortSection(source.section);
+    if (String(source.type).toUpperCase() === "ROOM") {
+      return `RM ${source.number}`;
+    } else {
+      return `${shortSec} TBL ${source.number}`;
+    }
   }
 
   // ✅ QR / client order source: { sectionName, unitName, type }
   if (source && source.sectionName && source.unitName) {
-    const unit = source.type === "ROOM" ? "" : "Table";
-    return unit ? `${source.sectionName} ${unit} ${source.unitName}` : `${source.sectionName} ${source.unitName}`;
+    const shortSec = getShortSection(source.sectionName);
+    if (String(source.type).toUpperCase() === "ROOM") {
+      return `RM ${source.unitName}`;
+    } else {
+      return `${shortSec} TBL ${source.unitName}`;
+    }
   }
 
   if (!tableId) return "";
@@ -440,7 +456,7 @@ export const formatOrderTableId = (tableId, source) => {
   if (typeof tableId === "object") {
     if (tableId.name) return String(tableId.name).trim();
     if (tableId.tableNumber !== undefined && tableId.tableNumber !== null) {
-      return `T${tableId.tableNumber}`;
+      return `TBL ${tableId.tableNumber}`;
     }
     if (tableId._id) return String(tableId._id).trim();
     return "";
@@ -450,9 +466,16 @@ export const formatOrderTableId = (tableId, source) => {
   if (!raw) return "";
 
   const tableMatch = raw.match(/^table[-_\s]?(\d+)$/i);
-  if (tableMatch?.[1]) return `T${tableMatch[1]}`;
+  if (tableMatch?.[1]) return `TBL ${tableMatch[1]}`;
 
-  if (/^t\d+$/i.test(raw)) return raw.toUpperCase();
+  if (/^t\d+$/i.test(raw)) return `TBL ${raw.slice(1)}`;
 
-  return raw;
+  let replaced = raw
+    .replace(/\bindoor\b/i, "IND")
+    .replace(/\boutdoor\b/i, "OUT")
+    .replace(/\brooftop\b/i, "ROOF")
+    .replace(/\brooms?\b/i, "RM")
+    .replace(/\btables?\b/i, "TBL");
+
+  return replaced;
 };

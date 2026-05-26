@@ -50,7 +50,7 @@ const StatusDropdown = ({ order, updateOrder }) => {
         )}`}
       >
         <ClipboardCheck size={16} />
-        <span>Completed</span>
+        <span>Billed</span>
       </div>
     );
   }

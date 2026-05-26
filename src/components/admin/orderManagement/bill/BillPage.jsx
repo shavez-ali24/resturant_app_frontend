@@ -986,12 +986,18 @@ const BillPage = ({
             </tr>
           </thead>
           <tbody>
-            ${kotItems.map(item => `
-              <tr style="border-bottom:1px dotted #000">
-                <td style="padding:4px 0;color:#000">${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}</td>
-                <td style="padding:4px 0;text-align:right;font-weight:500;color:#000">${item.quantity || 1}</td>
-              </tr>
-            `).join("")}
+            ${kotItems.map(item => {
+              const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+              return `
+                <tr style="border-bottom:1px dotted #000">
+                  <td style="padding:4px 0;color:#000">
+                    ${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}
+                    ${cust}
+                  </td>
+                  <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
+                </tr>
+              `;
+            }).join("")}
           </tbody>
         </table>
 
@@ -1615,6 +1621,20 @@ const BillPage = ({
                 <span>Grand Total</span>
                 <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
+
+              {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
+                <div className={`flex justify-between font-bold border-t pt-2 mt-2 text-emerald-600 dark:text-emerald-400 ${billBorderClass}`}>
+                  <span>Settled Amount</span>
+                  <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
+                </div>
+              )}
+
+              {!isEditMode && activeOrder?.paymentMethod && (
+                <div className={`flex justify-between text-xs font-semibold mt-1 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                  <span>Payment Method</span>
+                  <span className="uppercase">{activeOrder.paymentMethod}</span>
+                </div>
+              )}
             </div>
 
             <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>

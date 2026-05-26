@@ -94,33 +94,33 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
-    ...(isAdmin
-      ? [
-          {
-            title: "Analytics",
-            url: "#",
-            icon: TrendingUp,
-            isActive: true,
-            roles: ["admin"],
-            items: [
-              { title: "Revenue", url: "/admin/revenue" },
-              { title: "Sales", url: "/admin/sales" },
-            ],
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? [
-          {
-            title: "Inventory",
-            url: "#",
-            icon: Boxes,
-            isActive: true,
-            roles: ["admin"],
-            items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
-          },
-        ]
-      : []),
+    // ...(isAdmin
+    //   ? [
+    //       {
+    //         title: "Analytics",
+    //         url: "#",
+    //         icon: TrendingUp,
+    //         isActive: true,
+    //         roles: ["admin"],
+    //         items: [
+    //           { title: "Revenue", url: "/admin/revenue" },
+    //           { title: "Sales", url: "/admin/sales" },
+    //         ],
+    //       },
+    //     ]
+    //   : []),
+    // ...(isAdmin
+    //   ? [
+    //       {
+    //         title: "Inventory",
+    //         url: "#",
+    //         icon: Boxes,
+    //         isActive: true,
+    //         roles: ["admin"],
+    //         items: [{ title: "Stock Control", url: "/admin/comingsoon" }],
+    //       },
+    //     ]
+    //   : []),
     {
       title: "Profile",
       url: "/admin/profile",
