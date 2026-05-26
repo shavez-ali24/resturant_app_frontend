@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
 import { Truck, Utensils, House } from "lucide-react";
@@ -28,6 +28,8 @@ const OrderRow = ({
   order,
   setEditingOrder,
   setShowConfirmDelete,
+  setPayModalOrder,
+  setMoveModalOrder,
   updateOrder,
   tableType,
   onCustomizationsClick,
@@ -36,6 +38,11 @@ const OrderRow = ({
   isDarkMode = false,
 }) => {
   const dispatch = useDispatch();
+
+  const handleBillClick = useCallback(() => {
+    if (onBillOpen) onBillOpen();
+    dispatch(showBill(order));
+  }, [order, dispatch, onBillOpen]);
 
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
@@ -101,7 +108,7 @@ const OrderRow = ({
       {/* View Items & Bill */}
       <td className="px-4 py-3 align-middle text-center">
         <button
-          onClick={() => { if (onBillOpen) onBillOpen(); dispatch(showBill(order)); }}
+          onClick={handleBillClick}
           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
             showBillAttention ? "bill-border-animate" : ""
           } ${isDarkMode
@@ -120,6 +127,8 @@ const OrderRow = ({
             order={order}
             setEditingOrder={setEditingOrder}
             setShowConfirmDelete={setShowConfirmDelete}
+            setPayModalOrder={setPayModalOrder}
+            setMoveModalOrder={setMoveModalOrder}
             updateOrder={updateOrder}
             onCustomizationsClick={onCustomizationsClick}
             isDarkMode={isDarkMode}

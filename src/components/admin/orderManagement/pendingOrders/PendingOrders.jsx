@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
 import { useNotification } from "../../Bell/NotificationContext";
-import { ArrowLeft, LayoutGrid, Plus } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTour } from "../../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
@@ -32,6 +32,11 @@ const ItemsModal = lazy(() => import("../commonOrderFile/ItemsModal"));
 const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
 const AdminOrderPanel = lazy(() => import("../../OrderPanel/AdminOrderPanel"));
 const LayoutView = lazy(() => import("./LayoutView/LayoutView"));
+const PayModal = lazy(() => import("./PayModal"));
+const MoveTableModal = lazy(() => import("./MoveTableModal"));
+
+const ORDER_PANEL_DRAFT_KEY = "adminOrderPanelDraft";
+const ORDER_PANEL_FRESH_CREATE_KEY = "adminOrderPanelFreshCreate";
 
 import {
   useGetOrdersQuery,
@@ -43,6 +48,7 @@ import {
   useGetLiveUnitsQuery,
   useBookRoomMutation,
   useCheckoutOrderMutation,
+  useLazyGetOrderByIdQuery,
 } from "../../../../redux/adminRedux/adminAPI";
 import { clearCart } from "../../../../redux/clientRedux/clientSlice";
 
@@ -66,7 +72,16 @@ const Orders = () => {
   }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const showCreateOrder = searchParams.get("view") === "create";
-  const closeCreateOrder = () => setSearchParams({});
+  const urlOrderId = searchParams.get("orderId");
+  const closeCreateOrder = () => {
+    sessionStorage.removeItem("editingOrder");
+    sessionStorage.removeItem("selectedTable");
+    sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
+    sessionStorage.removeItem(ORDER_PANEL_FRESH_CREATE_KEY);
+    setSearchParams({});
+  };
+  const [urlFetchedOrder, setUrlFetchedOrder] = useState(null);
+  const [isUrlFetching, setIsUrlFetching] = useState(false);
 
   // Auto onboarding tour — first visit only
   useAdminTour(TOUR_KEYS.orders, getOrdersSteps, isDarkMode, 800);
@@ -100,6 +115,8 @@ const Orders = () => {
   const [editingOrder, setEditingOrder] = useState(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
+  const [payModalOrder, setPayModalOrder] = useState(null);
+  const [moveModalOrder, setMoveModalOrder] = useState(null);
   const [billModalAutoPrint, setBillModalAutoPrint] = useState(false);
   const [selectedOrderForCustomizations, setSelectedOrderForCustomizations] = useState(null);
   const dispatch = useDispatch();
@@ -179,6 +196,26 @@ const Orders = () => {
      }
    );
 
+   const {
+     data: completedOrdersResponse = {},
+     isLoading: completedLoading,
+     isError: completedError,
+     error: completedErrorObj,
+     refetch: refetchCompletedOrders,
+   } = useGetOrdersQuery(
+     {
+       status: "completed",
+       page: 1,
+       limit: combinedFetchLimit,
+       range: "all",
+     },
+     {
+       pollingInterval,
+       refetchOnFocus: refetchOnAction,
+       refetchOnReconnect: refetchOnAction,
+     }
+   );
+
 
 
   const { data: menuItems = [] } = useGetMenuQuery();
@@ -200,6 +237,7 @@ const Orders = () => {
   const [toggleItemReadyApi] = useToggleItemReadyMutation();
   const [bookRoomApi] = useBookRoomMutation();
   const [checkoutOrderApi] = useCheckoutOrderMutation();
+  const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
   const {
     data: liveUnitsData,
@@ -213,7 +251,9 @@ const Orders = () => {
 
   useEffect(() => {
     if (
-      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type) ||
+      // 🔧 FIX: Backend only emits "NEW_ORDER" and "ORDER_UPDATED" (see orderListener.js)
+      // "ORDER_STATUS_CHANGED" does not exist — status changes come via ORDER_UPDATED
+      !["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent?.type) ||
       !sseEvent?.data
     ) {
       return;
@@ -247,7 +287,7 @@ const Orders = () => {
         (order) => getOrderIdValue(order) !== incomingId
       );
 
-      if (!["pending", "preparing"].includes(normalizedStatus)) {
+      if (!["pending", "preparing", "ready", "completed"].includes(normalizedStatus)) {
         return remainingOrders;
       }
 
@@ -267,9 +307,10 @@ const Orders = () => {
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
+      refetchCompletedOrders();
       refetchRestaurant();
     }
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchRestaurant, sseConnected]);
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -396,10 +437,17 @@ const Orders = () => {
         : [],
     [readyOrdersResponse?.orders]
   );
+  const completedOrders = useMemo(
+    () =>
+      Array.isArray(completedOrdersResponse?.orders)
+        ? completedOrdersResponse.orders
+        : [],
+    [completedOrdersResponse?.orders]
+  );
 
   const combinedOrders = useMemo(() => {
     const orderMap = new Map();
-    [...pendingOrders, ...preparingOrders, ...readyOrders].forEach((order) => {
+    [...pendingOrders, ...preparingOrders, ...readyOrders, ...completedOrders].forEach((order) => {
       const key = getOrderIdValue(order) || order?.createdAt;
       if (!key) return;
       orderMap.set(key, order);
@@ -412,11 +460,14 @@ const Orders = () => {
       orderMap.set(key, existingOrder ? mergeOrderData(existingOrder, order) : order);
     });
 
-    // Show all orders (pending, preparing, ready) in live view
-    return Array.from(orderMap.values()).sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
-  }, [pendingOrders, preparingOrders, readyOrders, sseOrders]);
+    // Show live kitchen orders plus billed-but-unpaid orders so Pay remains reachable.
+    return Array.from(orderMap.values())
+      .filter((order) => {
+        const status = String(order?.status || "").toLowerCase();
+        return status !== "completed" || !order?.paymentMethod;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [pendingOrders, preparingOrders, readyOrders, completedOrders, sseOrders]);
 
   // ── Primary source: GET /api/restaurant/live-units ─────
   const layoutSections = useMemo(() => {
@@ -443,29 +494,32 @@ const Orders = () => {
     return sourceSections.map((section) => ({
       sectionId: section.name,
       sectionName: section.name,
-      units: (section.units || []).map((unit) => {
-        const isOccupied = unit.status === "OCCUPIED";
-        const isBilled = unit.status === "BILLED";
+      units: (section.units || [])
+        .filter((unit) => unit?.isActive !== false)
+        .map((unit) => {
+          const isOccupied = unit.status === "OCCUPIED";
+          const isBilled = unit.status === "BILLED";
 
-        let displayStatus = "blank";
-        if (isBilled) displayStatus = "billed";
-        else if (isOccupied) displayStatus = "booked";
+          let displayStatus = "blank";
+          if (isBilled) displayStatus = "billed";
+          else if (isOccupied) displayStatus = "booked";
 
-        return {
-          tableId: `${section.name}:${unit.name}`,
-          tableNumber: unit.name,
-          sectionName: section.name,
-          status: displayStatus,
-          unitId: unit.unitId,
-          unitType: unit.type,
-          rawStatus: unit.status,
-          roomCategory: unit.roomCategory || null,
-          occupiedSince: unit.occupiedSince || null,
-          currentOrderId: unit.currentOrderId || null,
-          orderId: unit.currentOrderId || null,
-          currentAmount: attachAmount(unit),
-        };
-      }),
+          return {
+            tableId: `${section.name}:${unit.name}`,
+            tableNumber: unit.name,
+            sectionName: section.name,
+            status: displayStatus,
+            unitId: unit.unitId,
+            unitType: unit.type,
+            isActive: unit.isActive !== false,
+            rawStatus: unit.status,
+            roomCategory: unit.roomCategory || null,
+            occupiedSince: unit.occupiedSince || null,
+            currentOrderId: unit.currentOrderId || null,
+            orderId: unit.currentOrderId || null,
+            currentAmount: attachAmount(unit),
+          };
+        }),
     })).filter((sec) => sec.units.length > 0);
   }, [liveUnitsData, combinedOrders]);
   
@@ -502,11 +556,11 @@ const Orders = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return combinedOrders.slice(start, start + itemsPerPage);
   }, [combinedOrders, currentPage, itemsPerPage]);
-   const loading = pendingLoading || preparingLoading || restaurantLoading;
+   const loading = pendingLoading || preparingLoading || completedLoading || restaurantLoading;
    const error =
-     pendingError || preparingError || restaurantError
+     pendingError || preparingError || completedError || restaurantError
        ? getFriendlyOrderError(
-           pendingErrorObj || preparingErrorObj || restaurantError,
+           pendingErrorObj || preparingErrorObj || completedErrorObj || restaurantError,
            "fetch"
          )
        : null;
@@ -525,7 +579,7 @@ const Orders = () => {
     if (!sseOrders.length) return;
 
     const fetchedOrderMap = new Map(
-      [...pendingOrders, ...preparingOrders]
+      [...pendingOrders, ...preparingOrders, ...readyOrders, ...completedOrders]
         .map((order) => [getOrderIdValue(order), order])
         .filter(([id]) => Boolean(id))
     );
@@ -542,7 +596,67 @@ const Orders = () => {
         );
       })
     );
-  }, [pendingOrders, preparingOrders, sseOrders.length]);
+  }, [pendingOrders, preparingOrders, readyOrders, completedOrders, sseOrders.length]);
+
+  useEffect(() => {
+    if (!showCreateOrder || urlOrderId) return;
+    const tableId = searchParams.get("tableId");
+    if (!tableId) return;
+
+    try {
+      if (sessionStorage.getItem("selectedTable") || sessionStorage.getItem(ORDER_PANEL_DRAFT_KEY)) {
+        return;
+      }
+
+      const [sectionName = "", tableNumber = ""] = tableId.split(":");
+      sessionStorage.setItem(
+        "selectedTable",
+        JSON.stringify({
+          tableId,
+          sectionName,
+          tableNumber,
+        })
+      );
+    } catch (_) { /* ignore storage errors */ }
+  }, [searchParams, showCreateOrder, urlOrderId]);
+
+  // ── Re-fetch order from API when URL has orderId but no local data ──
+  useEffect(() => {
+    if (!showCreateOrder || !urlOrderId) return;
+    // Only try to fetch if sessionStorage doesn't have editingOrder data
+    try {
+      const stored = sessionStorage.getItem("editingOrder");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?._id) {
+          setUrlFetchedOrder(parsed);
+          return;
+        }
+      }
+    } catch (_) {}
+    // No sessionStorage data — fetch from API using URL orderId
+    setIsUrlFetching(true);
+    fetchOrderById(urlOrderId).then(({ data }) => {
+      if (data?._id) {
+        setUrlFetchedOrder(data);
+        // Also restore selectedTable from URL if available
+        const tableId = searchParams.get("tableId");
+        if (tableId) {
+          try {
+            sessionStorage.setItem("selectedTable", JSON.stringify({
+              tableId,
+              tableNumber: tableId.split(":")[1] || "",
+              sectionName: tableId.split(":")[0] || "",
+            }));
+          } catch (_) {}
+        }
+      }
+    }).catch(() => {
+      // Silent fail — will show empty panel if API fails
+    }).finally(() => {
+      setIsUrlFetching(false);
+    });
+  }, [showCreateOrder, urlOrderId, fetchOrderById, searchParams]);
 
   // Update Order
   const updateOrder = async (orderId, updatedData) => {
@@ -625,6 +739,7 @@ const Orders = () => {
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
+      refetchCompletedOrders();
       setEditingOrder(null);
     } catch (err) {
       if (previousPreparingStartedAt) {
@@ -636,6 +751,7 @@ const Orders = () => {
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
+      refetchCompletedOrders();
       console.error("Update order error:", err);
       notify(getFriendlyOrderError(err, "update"), "error");
     }
@@ -649,6 +765,7 @@ const Orders = () => {
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
+      refetchCompletedOrders();
       setShowConfirmDelete(null);
     } catch (err) {
       notify(getFriendlyOrderError(err, "delete"), "error");
@@ -669,75 +786,192 @@ const Orders = () => {
 
   // ---
   // --- Layout View callbacks ---
-  const handleViewOrder = useCallback((tableInfo) => {
-    if (tableInfo?.orderId) {
-      const section = tableInfo.sectionName || "";
-      const number = Number(tableInfo.tableNumber);
-      const order = combinedOrders.find((o) => {
-        const src = o.source || {};
-        return (
-          String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
-          Number(src.number) === number
-        );
-      });
+  // 🔧 FIX: Backend Order.source uses sectionName & unitName (not section/number)
+  const resolveOrderByTableInfo = useCallback((tableInfo) => {
+    if (!tableInfo) return null;
+    const currentOrderId = tableInfo.currentOrderId || tableInfo.orderId;
+    const unitId = tableInfo.unitId;
+    const unitName = tableInfo.tableNumber;
+    const sectionName = tableInfo.sectionName;
+    return combinedOrders.find((o) => {
+      // Priority 1: Match by currentOrderId (MongoDB _id) — most reliable
+      if (currentOrderId && String(o._id || o.id || o.orderId) === String(currentOrderId)) return true;
+      // Priority 2: Match by unitId
+      if (unitId && o.source?.unitId && String(o.source.unitId) === String(unitId)) return true;
+      // Priority 3: Match by sectionName + unitName
+      if (sectionName && unitName &&
+          String(o.source?.sectionName || "").toLowerCase() === String(sectionName).toLowerCase() &&
+          String(o.source?.unitName || "").toLowerCase() === String(unitName).toLowerCase()) return true;
+      return false;
+    });
+  }, [combinedOrders]);
+
+  const handleViewOrder = useCallback(async (tableInfo) => {
+    const orderId = tableInfo?.currentOrderId || tableInfo?.orderId;
+    if (!orderId) return;
+    try {
+      const orderToBill = await fetchOrderById(orderId).unwrap();
+      if (orderToBill?._id) {
+        setOrderForBillModal(orderToBill);
+        setBillModalAutoPrint(false);
+        return;
+      }
+    } catch (_) {
+      const order = resolveOrderByTableInfo(tableInfo);
       if (order) {
         setOrderForBillModal(order);
         setBillModalAutoPrint(false);
-      } else {
-        notify("Order details not found. Try refreshing.", "error");
+        return;
       }
     }
-  }, [combinedOrders, notify]);
+    notify("Order details not found. Try refreshing.", "error");
+  }, [resolveOrderByTableInfo, notify, fetchOrderById]);
 
-  const handlePrintBillFromLayout = useCallback((tableInfo) => {
-    if (!tableInfo?.orderId) return;
-    const section = tableInfo.sectionName || "";
-    const number = Number(tableInfo.tableNumber);
-    const order = combinedOrders.find((o) => {
-      const src = o.source || {};
-      return (
-        String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
-        Number(src.number) === number
-      );
-    });
-    if (order) {
-      setOrderForBillModal(order);
-      setBillModalAutoPrint(true);
-    } else {
-      notify("Bill not found for this unit. Try refreshing.", "error");
+  const handlePrintBillFromLayout = useCallback(async (tableInfo) => {
+    const orderId = tableInfo?.currentOrderId || tableInfo?.orderId;
+    if (!orderId) return;
+    try {
+      const orderToBill = await fetchOrderById(orderId).unwrap();
+      if (orderToBill?._id) {
+        setOrderForBillModal(orderToBill);
+        setBillModalAutoPrint(false);
+        return;
+      }
+    } catch (_) {
+      const order = resolveOrderByTableInfo(tableInfo);
+      if (order) {
+        setOrderForBillModal(order);
+        setBillModalAutoPrint(false);
+        return;
+      }
     }
-  }, [combinedOrders, notify]);
+    notify("Bill not found for this unit. Try refreshing.", "error");
+  }, [resolveOrderByTableInfo, notify, fetchOrderById]);
+
+  const handlePayOrderFromLayout = useCallback(async (tableInfo) => {
+    const orderId = tableInfo?.currentOrderId || tableInfo?.orderId;
+    if (!orderId) {
+      notify("Billed order not found for this unit. Try refreshing.", "error");
+      return;
+    }
+
+    try {
+      const freshOrder = await fetchOrderById(orderId).unwrap();
+      const orderToPay = freshOrder?._id ? freshOrder : resolveOrderByTableInfo(tableInfo);
+      if (orderToPay?._id) {
+        setPayModalOrder(orderToPay);
+        return;
+      }
+    } catch (_) {
+      const order = resolveOrderByTableInfo(tableInfo);
+      if (order?._id) {
+        setPayModalOrder(order);
+        return;
+      }
+    }
+
+    notify("Billed order not found for this unit. Try refreshing.", "error");
+  }, [fetchOrderById, notify, resolveOrderByTableInfo]);
 
   const handleCreateOrderFromLayout = useCallback((tableInfo) => {
+    if (tableInfo?.unitType === "ROOM") {
+      notify("Room must be booked first before creating a room order.", "error");
+      return;
+    }
     try {
+      sessionStorage.removeItem("editingOrder");
+      sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
+      sessionStorage.setItem(ORDER_PANEL_FRESH_CREATE_KEY, "1");
       sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
     } catch (_) { /* ignore */ }
+    setUrlFetchedOrder(null);
+    setEditingOrder(null);
+    dispatch(clearCart());
     setSearchParams({ view: "create", tableId: tableInfo.tableId || tableInfo.tableNumber });
-  }, [setSearchParams]);
+  }, [dispatch, notify, setSearchParams]);
+
+  // Pending row edit must use fresh GET /order/:orderId data, not cached table data.
+  const handleEditTableRow = useCallback(async (order) => {
+    const orderId = order?._id || order?.id || order?.orderId;
+    if (!orderId) {
+      notify("Order id missing. Try refreshing.", "error");
+      return;
+    }
+    try {
+      const freshOrder = await fetchOrderById(orderId).unwrap();
+      if (freshOrder?._id) {
+        sessionStorage.removeItem("editingOrder");
+        sessionStorage.removeItem("selectedTable");
+        sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
+        setUrlFetchedOrder(null);
+        setSearchParams({});
+        setEditingOrder(freshOrder);
+        return;
+      }
+      notify("Fresh order data not found. Try refreshing.", "error");
+    } catch (err) {
+      notify(getFriendlyOrderError(err, "fetch"), "error");
+    }
+  }, [fetchOrderById, notify, setSearchParams]);
 
   const closeEditOrder = useCallback(() => {
     setEditingOrder(null);
     dispatch(clearCart());
   }, [dispatch]);
 
-  const handleEditOrderFromLayout = useCallback((tableInfo) => {
-    if (tableInfo?.orderId) {
-      const section = tableInfo.sectionName || "";
-      const number = Number(tableInfo.tableNumber);
-      const order = combinedOrders.find((o) => {
-        const src = o.source || {};
-        return (
-          String(src.section || "").toLowerCase() === String(section).toLowerCase() &&
-          Number(src.number) === Number(tableInfo.tableNumber)
-        );
-      });
-      if (order) {
-        setEditingOrder(order);
-      } else {
-        notify("Order not found for editing. Try refreshing.", "error");
+  // 🔧 FIX: Store orderId in URL so data survives page refresh
+  const handleEditOrderFromLayout = useCallback(async (tableInfo) => {
+    const orderId = tableInfo?.currentOrderId || tableInfo?.orderId;
+    if (!orderId) {
+      if (tableInfo?.unitType === "ROOM") {
+        notify("Book the room first, then edit the room order from layout.", "error");
       }
+      return;
     }
-  }, [combinedOrders, notify]);
+    try {
+      const { data: freshOrder } = await fetchOrderById(orderId);
+      if (freshOrder?._id) {
+        try {
+          sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
+          // Keep editingOrder in sessionStorage as fast cache for first visit
+          sessionStorage.setItem("editingOrder", JSON.stringify(freshOrder));
+        } catch (_) {}
+        // ✅ Include orderId in URL params — survives page refresh
+        setSearchParams({
+          view: "create",
+          tableId: tableInfo.tableId || tableInfo.tableNumber,
+          orderId: orderId,
+        });
+        return;
+      }
+    } catch (_) {
+      // fallback: don't navigate if API fails
+    }
+    const order = resolveOrderByTableInfo(tableInfo);
+    if (order) {
+      try {
+        sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
+        sessionStorage.setItem("editingOrder", JSON.stringify(order));
+      } catch (_) {}
+      setSearchParams({
+        view: "create",
+        tableId: tableInfo.tableId || tableInfo.tableNumber,
+        orderId: orderId,
+      });
+    } else {
+      notify("Order not found for editing. Try refreshing.", "error");
+    }
+  }, [resolveOrderByTableInfo, notify, setSearchParams, fetchOrderById]);
+
+  const handleMoveOrderFromLayout = useCallback((tableInfo) => {
+    if (!tableInfo?.currentOrderId && !tableInfo?.orderId) return;
+    const order = resolveOrderByTableInfo(tableInfo);
+    if (order) {
+      setMoveModalOrder(order);
+    } else {
+      notify("Order not found for moving. Try refreshing.", "error");
+    }
+  }, [resolveOrderByTableInfo, notify]);
 
   const handleBookRoom = useCallback(async (payload, roomInfo) => {
     if (!roomInfo?.unitId) {
@@ -770,14 +1004,17 @@ const Orders = () => {
       return notify("Room information missing", "error");
     }
 
+    // 🔧 FIX: Order.source uses sectionName & unitName (not section/number)
     const bookingOrder = combinedOrders.find((o) => {
       const src = o.source || {};
-      const matchesThisRoom =
-        String(src.unitId || "") === String(roomInfo.unitId || "") ||
-        (String(src.section || "").toLowerCase() === String(roomInfo.sectionName || "").toLowerCase() &&
-         String(src.number) === String(roomInfo.tableNumber));
+      const matchesByUnitId =
+        roomInfo.unitId && src.unitId && String(src.unitId) === String(roomInfo.unitId);
+      const matchesByName =
+        roomInfo.sectionName && roomInfo.tableNumber &&
+        String(src.sectionName || "").toLowerCase() === String(roomInfo.sectionName || "").toLowerCase() &&
+        String(src.unitName || "").toLowerCase() === String(roomInfo.tableNumber || "").toLowerCase();
 
-      return matchesThisRoom && o.stay?.enabled === true;
+      return (matchesByUnitId || matchesByName) && o.stay?.enabled === true;
     });
 
     const orderId =
@@ -799,13 +1036,14 @@ const Orders = () => {
       refetchPendingOrders?.();
       refetchPreparingOrders?.();
       refetchReadyOrders?.();
+      refetchCompletedOrders?.();
     } catch (err) {
       const msg = err?.data?.message || err?.message || "Failed to checkout room";
       notify(msg, "error");
     } finally {
       setRoomActionLoadingId(null);
     }
-  }, [combinedOrders, checkoutOrderApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders]);
+  }, [combinedOrders, checkoutOrderApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders]);
 
   const handleBookRoomPrompt = useCallback(async (payload, roomInfo) => {
     if (!roomInfo?.unitId) {
@@ -857,6 +1095,7 @@ const Orders = () => {
               refetchPendingOrders();
               refetchPreparingOrders();
               refetchReadyOrders();
+              refetchCompletedOrders();
             }}
             className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
           >
@@ -879,6 +1118,7 @@ const Orders = () => {
                 refetchPendingOrders();
                 refetchPreparingOrders();
                 refetchReadyOrders();
+                refetchCompletedOrders();
               }}
             />
           </Suspense>
@@ -886,6 +1126,7 @@ const Orders = () => {
       </div>
     );
   }
+
 
   if (showCreateOrder) {
     return (
@@ -897,6 +1138,7 @@ const Orders = () => {
               refetchPendingOrders();
               refetchPreparingOrders();
               refetchReadyOrders();
+              refetchCompletedOrders();
             }}
             className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
           >
@@ -910,16 +1152,39 @@ const Orders = () => {
               <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
             </div>
           }>
-            <AdminOrderPanel
-              asModal={true}
-              isDarkMode={isDarkMode}
-              onOrderSuccess={() => {
-                closeCreateOrder();
-                refetchPendingOrders();
-                refetchPreparingOrders();
-                refetchReadyOrders();
-              }}
-            />
+            {isUrlFetching ? (
+              <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+                <div className="text-center">
+                  <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin mx-auto mb-3" />
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>
+                    Loading order details...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <AdminOrderPanel
+                asModal={true}
+                isDarkMode={isDarkMode}
+                editingOrder={editingOrder || urlFetchedOrder || (urlOrderId ? (() => {
+                  try {
+                    const s = sessionStorage.getItem("editingOrder");
+                    if (s) {
+                      const p = JSON.parse(s);
+                      // Keep in sessionStorage as cache for this session
+                      return p;
+                    }
+                  } catch(_) {}
+                  return null;
+                })() : null)}
+                onOrderSuccess={() => {
+                  closeCreateOrder();
+                  refetchPendingOrders();
+                  refetchPreparingOrders();
+                  refetchReadyOrders();
+                  refetchCompletedOrders();
+                }}
+              />
+            )}
           </Suspense>
         </div>
       </div>
@@ -1006,6 +1271,8 @@ const Orders = () => {
                onViewOrder={handleViewOrder}
                onCreateOrder={handleCreateOrderFromLayout}
                onEditOrder={handleEditOrderFromLayout}
+               onMoveOrder={handleMoveOrderFromLayout}
+               onPayOrder={handlePayOrderFromLayout}
                onPrintBill={handlePrintBillFromLayout}
                onBookRoom={handleBookRoomPrompt}
                onCheckoutRoom={handleCheckoutRoom}
@@ -1035,9 +1302,11 @@ const Orders = () => {
               orders={orders}
               loading={loading}
               error={error}
-              setEditingOrder={setEditingOrder}
+              setEditingOrder={handleEditTableRow}
               setShowConfirmDelete={setShowConfirmDelete}
               setOrderForBillModal={setOrderForBillModal}
+              setPayModalOrder={setPayModalOrder}
+              setMoveModalOrder={setMoveModalOrder}
               updateOrder={updateOrder}
               tableType="pending"
               onCustomizationsClick={handleCustomizationsClick}
@@ -1150,6 +1419,32 @@ const Orders = () => {
             order={showConfirmDelete}
             onCancel={() => setShowConfirmDelete(null)}
             onDelete={() => deleteOrder(showConfirmDelete._id)}
+          />
+        )}
+        {payModalOrder && (
+          <PayModal
+            order={payModalOrder}
+            onClose={() => {
+              setPayModalOrder(null);
+              refetchPendingOrders();
+              refetchPreparingOrders();
+              refetchReadyOrders();
+              refetchCompletedOrders();
+              refetchLiveUnits?.();
+            }}
+          />
+        )}
+        {moveModalOrder && (
+          <MoveTableModal
+            order={moveModalOrder}
+            onClose={() => {
+              setMoveModalOrder(null);
+              refetchPendingOrders();
+              refetchPreparingOrders();
+              refetchReadyOrders();
+              refetchCompletedOrders();
+              refetchLiveUnits?.();
+            }}
           />
         )}
       </Suspense>

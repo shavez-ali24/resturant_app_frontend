@@ -1,6 +1,6 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/TableCard.jsx
 import React from "react";
-import { SquarePen, Printer } from "lucide-react";
+import { IndianRupee, SquarePen, Printer, Move } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 
 // Prompt-specified colors + existing extended statuses
@@ -64,6 +64,8 @@ const TableCard = React.memo(function TableCard({
   onTableClick,
   onPrint,
   onEdit,
+  onMove,
+  onPay,
   onRoomClick,
   isLoading = false,
   isDarkMode = false,
@@ -86,19 +88,35 @@ const TableCard = React.memo(function TableCard({
   const textColor = getStatusText(status, rawStatus, isDarkMode);
 
   const handleClick = () => {
-    if (isRoom) onRoomClick?.(table);
-    else onTableClick?.(table);
+    if (isRoom) {
+      onRoomClick?.(table);
+      return;
+    }
+    if (isBilled) {
+      onPay?.(table);
+      return;
+    }
+    onTableClick?.(table);
   };
 
-  const handleEdit = (e) => { e.stopPropagation(); onEdit?.(table); };
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    if (isBilled) {
+      onPay?.(table);
+      return;
+    }
+    onEdit?.(table);
+  };
   const handlePrint = (e) => { e.stopPropagation(); onPrint?.(table); };
+  const handleMove = (e) => { e.stopPropagation(); onMove?.(table); };
 
   // Calculate elapsed time from occupiedSince (prompt priority)
   const elapsed = occupiedSince
     ? Math.floor((Date.now() - new Date(occupiedSince).getTime()) / 60000)
     : null;
 
-  const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId); // prefer backend `currentOrderId`
+  // 🔧 FIX: Show bottom icons (Edit/Print/Move) for both rooms AND tables
+  const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
 
   return (
     <div
@@ -145,23 +163,32 @@ const TableCard = React.memo(function TableCard({
         </div>
       )}
 
-      {/* Bottom icons - 22px, only for occupied TABLES (as per prompt) */}
+      {/* Bottom icons - only for occupied TABLES */}
       {showBottomIcons && (
         <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10 }}>
-          <button 
-            onClick={handleEdit} 
+          <button
+            onClick={isBilled ? (e) => { e.stopPropagation(); onPay?.(table); } : handleEdit}
             style={ICON_BTN(isDarkMode)}
-            title="Edit Order"
+            title={isBilled ? "Pay Order" : "Edit Order"}
           >
-            <SquarePen size={22} />
+            {isBilled ? <IndianRupee size={22} /> : <SquarePen size={22} />}
           </button>
-          <button 
-            onClick={handlePrint} 
+          <button
+            onClick={handlePrint}
             style={ICON_BTN(isDarkMode)}
             title="Print"
           >
             <Printer size={22} />
           </button>
+          {!isBilled && (
+            <button
+              onClick={handleMove}
+              style={ICON_BTN(isDarkMode)}
+              title="Move Table/Room"
+            >
+              <Move size={22} />
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -21,17 +21,27 @@ export const clientApi = createApi({
       providesTags: ['Menu'],
     }),
     createOrder: builder.mutation({
-      query: (orderData) => ({
-        url: '/api/order',
-        method: 'POST',
-        body: orderData,
-      }),
+      query: (orderData) => {
+        // 🔧 FIX: Backend reads unitId from query param (req.query.unitId), not from body
+        // Extract source.unitId → query param, don't send source in body
+        const { source, ...cleanBody } = orderData;
+        const params = {};
+        if (source?.unitId) {
+          params.unitId = source.unitId;
+        }
+        return {
+          url: '/api/order',
+          method: 'POST',
+          params,
+          body: cleanBody,
+        };
+      },
       invalidatesTags: ['Order'],
     }),
     getOrdersByFingerprint: builder.query({
-      query: ({ fingerPrint, page = 1 }) => ({
+      query: ({ fingerPrint }) => ({
         url: '/api/order/fingerprint',
-        params: { fingerPrint, page },
+        params: { fingerPrint },
       }),
       providesTags: ['Order'],
     }),

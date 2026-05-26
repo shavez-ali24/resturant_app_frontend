@@ -50,6 +50,8 @@ const OrdersTable = ({
   setEditingOrder,
   setShowConfirmDelete,
   setOrderForBillModal,
+  setPayModalOrder,
+  setMoveModalOrder,
   updateOrder,
   tableType,
   onCustomizationsClick,
@@ -94,6 +96,11 @@ const OrdersTable = ({
     if (!id || id !== latestId) return;
     localStorage.setItem("billViewedOrderId", id);
     setSeenBillOrderId(id);
+  };
+
+  const handleBillClick = async (order) => {
+    markLatestSeen(order);
+    dispatch(showBill(order));
   };
 
   const containerClassName =
@@ -182,6 +189,8 @@ const OrdersTable = ({
                   setEditingOrder={setEditingOrder}
                   setShowConfirmDelete={setShowConfirmDelete}
                   setOrderForBillModal={setOrderForBillModal}
+                  setPayModalOrder={setPayModalOrder}
+                  setMoveModalOrder={setMoveModalOrder}
                   updateOrder={updateOrder}
                   tableType={tableType}
                   isDarkMode={isDarkMode}
@@ -275,7 +284,7 @@ const OrdersTable = ({
                       </Suspense>
                     )}
                     <button
-                      onClick={() => { markLatestSeen(order); dispatch(showBill(order)); }}
+                      onClick={() => handleBillClick(order)}
                       className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
                         isLatestUnseen(order) ? "bill-border-animate" : ""
                       } ${isDarkMode
@@ -287,7 +296,7 @@ const OrdersTable = ({
                     </button>
                   </div>
 
-                  {/* Row 5: Status + Edit/Delete */}
+                  {/* Row 5: Status + Pay/Move/Edit/Delete */}
                   {tableType === "pending" && (
                     <Suspense fallback={null}>
                       <PendingOrderMobileControls
@@ -295,6 +304,8 @@ const OrdersTable = ({
                         updateOrder={updateOrder}
                         setEditingOrder={setEditingOrder}
                         setShowConfirmDelete={setShowConfirmDelete}
+                        setPayModalOrder={setPayModalOrder}
+                        setMoveModalOrder={setMoveModalOrder}
                         isDarkMode={isDarkMode}
                       />
                     </Suspense>

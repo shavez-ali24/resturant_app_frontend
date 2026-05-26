@@ -17,15 +17,17 @@ import {
 import {
   useCreateOrderByAdminMutation,
   useUpdateOrderMutation,
+  useBillOrderMutation,
 } from "../../../redux/adminRedux/adminAPI";
 import { showBill } from "../../../redux/adminRedux/billSlice";
-import { printKot } from "../../../services/tableService";
 import { useAdminTour } from "../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
+const ORDER_PANEL_DRAFT_KEY = "adminOrderPanelDraft";
+const ORDER_PANEL_FRESH_CREATE_KEY = "adminOrderPanelFreshCreate";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const capitalizeFirst = (val) =>
@@ -75,18 +77,122 @@ const hasActiveDiscount = (item, variantKey = null) => {
   );
 };
 
-const getOrderItemKey = (item) => {
-  if (!item) return "";
-  const variant = item.variant ? String(item.variant) : "default";
-  const customizations = item.customizations ? String(item.customizations).trim() : "";
-  return `${item.menuItemId}_${variant}_${customizations}`;
-};
-
 const getCartItemKey = (item) => {
   if (!item) return "";
   const variantPart = item.variantKey ? `${item._id}-${item.variantKey}` : `${item._id}`;
   const customizations = item.customizations ? `:${String(item.customizations).trim()}` : "";
   return `${variantPart}${customizations}`;
+};
+
+const buildComparableItemKey = (menuItemId, variant = null, customizations = "") => {
+  const normalizedId = String(menuItemId || "").trim();
+  const normalizedVariant = variant ? String(variant).trim() : "default";
+  const normalizedCustomizations = String(customizations || "").trim();
+  return `${normalizedId}::${normalizedVariant}::${normalizedCustomizations}`;
+};
+
+const getComparableOrderItemKey = (item) =>
+  buildComparableItemKey(
+    item?.menuItemId || item?._id,
+    item?.variant || item?.variantName,
+    item?.customizations
+  );
+
+const getComparableCartItemKey = (item) =>
+  buildComparableItemKey(item?._id, item?.variantKey || item?.variant, item?.customizations);
+
+const buildOrderItemFromCartItem = (cartItem, quantityOverride = null) => {
+  const variantData =
+    cartItem?.variantKey && cartItem?.variantRates?.[cartItem.variantKey]
+      ? cartItem.variantRates[cartItem.variantKey]
+      : null;
+  const isCombo = cartItem?.isCombo || cartItem?.pricingType === "combo";
+  const variantBasePrice = Number(variantData?.price) || 0;
+  const price =
+    Number(
+      cartItem?.originalPrice ??
+      (isCombo ? cartItem?.comboPrice : variantBasePrice || cartItem?.price) ??
+      0
+    ) || 0;
+  const discountedPrice =
+    Number(
+      cartItem?.price ??
+      (isCombo ? cartItem?.comboPrice : variantBasePrice || price) ??
+      0
+    ) || 0;
+
+  const orderItem = {
+    menuItemId: cartItem?._id,
+    name: cartItem?.name,
+    quantity: Number(quantityOverride ?? cartItem?.quantity ?? 1) || 1,
+    customizations: cartItem?.customizations || "",
+    price,
+    discountedPrice,
+    discountApplied: variantData?.discount || cartItem?.discount || null,
+  };
+
+  if (cartItem?.variantKey) orderItem.variant = cartItem.variantKey;
+  if (cartItem?.isCombo && cartItem?.comboItems) orderItem.comboItems = cartItem.comboItems;
+
+  return orderItem;
+};
+
+const buildAddedItemsPreview = (currentCartItems = [], originalItems = []) => {
+  const originalByKey = new Map(
+    (originalItems || []).map((item) => [getComparableOrderItemKey(item), item])
+  );
+
+  return currentCartItems.reduce((acc, cartItem) => {
+    const existingItem = originalByKey.get(getComparableCartItemKey(cartItem));
+    const currentQty = Number(cartItem?.quantity || 0);
+    const existingQty = Number(existingItem?.quantity || 0);
+    const addedQty = existingItem ? currentQty - existingQty : currentQty;
+
+    if (addedQty > 0) {
+      acc.push(buildOrderItemFromCartItem(cartItem, addedQty));
+    }
+
+    return acc;
+  }, []);
+};
+
+const createKotPreviewOrder = ({ finalOrder, previewItems, restaurantDetails }) => {
+  const items = Array.isArray(previewItems) ? previewItems : [];
+  const subtotal = items.reduce(
+    (sum, item) =>
+      sum + (Number(item?.discountedPrice ?? item?.price ?? 0) || 0) * (Number(item?.quantity || 1) || 1),
+    0
+  );
+  const gstRate = Number(finalOrder?.gstRate ?? restaurantDetails?.gstRate ?? 0) || 0;
+  const gstAmount = gstRate > 0 ? (subtotal * gstRate) / 100 : 0;
+
+  return {
+    ...finalOrder,
+    source: {
+      ...finalOrder?.source,
+      section: finalOrder?.source?.section || finalOrder?.source?.sectionName || null,
+      number: finalOrder?.source?.number || finalOrder?.source?.unitName || null,
+    },
+    stay: {
+      ...finalOrder?.stay,
+      roomCharge: 0,
+    },
+    items,
+    subtotal,
+    gstRate,
+    gstAmount,
+    deliveryCharges: 0,
+    totalAmount: subtotal + gstAmount,
+    createdAt: new Date().toISOString(),
+    previewMode: "new-items-only",
+    previewLabel: "New Items Only",
+  };
+};
+
+const makeUnitSelectValue = (sectionName, unitName) => {
+  const sectionKey = String(sectionName || "").toLowerCase().replace(/\s+/g, "_");
+  const unitKey = String(unitName || "").toLowerCase().replace(/\s+/g, "_");
+  return sectionKey && unitKey ? `${sectionKey}:${unitKey}` : "";
 };
 
 const makeCartItemFromOrderItem = (orderItem) => {
@@ -660,7 +766,7 @@ function OrderSummaryPanel({
               Processing...
             </span>
           ) : (
-            "KOT"
+            "KOT & Add"
           )}
         </button>
         <button
@@ -683,7 +789,7 @@ function OrderSummaryPanel({
               Processing...
             </span>
           ) : (
-            "Print BILL"
+            "Bill Order"
           )}
         </button>
       </div>
@@ -706,6 +812,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
   const [createOrder, { isLoading: isCreating }] = useCreateOrderByAdminMutation();
   const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
+  const [billOrder] = useBillOrderMutation();
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedVariants, setSelectedVariants] = useState({});
@@ -718,31 +825,80 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [originalOrderItems, setOriginalOrderItems] = useState([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   const isEditing = Boolean(editingOrder?._id);
   const isSubmitting = isCreating || isUpdating;
+  const restaurant = restaurantData?.restaurant || {};
+
+  const tableOptions = (() => {
+    const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+    const opts = [];
+    sections.forEach((section) => {
+      const units = Array.isArray(section.units) ? section.units : [];
+      units.forEach((unit) => {
+        if (unit?.isActive === false) return;
+        opts.push({
+          value: makeUnitSelectValue(section.name, unit.name || unit.unitId),
+          label: `${section.name} - ${unit.name}`,
+          sectionName: section.name,
+          unitName: unit.name,
+          unitType: unit.type,
+          unitId: unit._id,
+        });
+      });
+    });
+    return opts;
+  })();
 
   // ── Pre-fill from CreateOrderModal (Layout View) ──────────────────────────
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem("selectedTable");
-      if (stored) {
-        const tableInfo = JSON.parse(stored);
+      const draft = !stored ? sessionStorage.getItem(ORDER_PANEL_DRAFT_KEY) : null;
+      if (stored || draft) {
+        if (stored && sessionStorage.getItem(ORDER_PANEL_FRESH_CREATE_KEY) === "1") {
+          dispatch(clearCart());
+          setOriginalOrderItems([]);
+          sessionStorage.removeItem(ORDER_PANEL_FRESH_CREATE_KEY);
+        }
+        const tableInfo = JSON.parse(stored || draft);
         if (tableInfo.sectionName && tableInfo.tableNumber) {
-          // tableNumber from layout is now either index (number) or unit name (string)
-          // Convert unit names to index numbers for the source format
-          const num = typeof tableInfo.tableNumber === 'string' && isNaN(Number(tableInfo.tableNumber))
-            ? tableInfo.tableNumber  // Keep as-is if it's a real unit name
-            : tableInfo.tableNumber; // Use number directly
-          setTableId(`${tableInfo.sectionName.toLowerCase().replace(/\s+/g, "_")}:${num}`);
+          setTableId(makeUnitSelectValue(tableInfo.sectionName, tableInfo.tableNumber));
           setOrderType("Eat Here");
+        } else if (tableInfo.tableId) {
+          setTableId(tableInfo.tableId);
+          setOrderType(tableInfo.orderType || "Eat Here");
+        } else if (tableInfo.orderType) {
+          setOrderType(tableInfo.orderType);
         }
         if (tableInfo.customerName) setCustomerName(tableInfo.customerName);
         if (tableInfo.customerPhone) setCustomerPhone(tableInfo.customerPhone);
+        if (tableInfo.address) setAddress(tableInfo.address);
         sessionStorage.removeItem("selectedTable");
       }
     } catch (_) { /* ignore parse errors */ }
+    setDraftHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!draftHydrated || isEditing) return;
+    try {
+      const selectedOption = tableOptions.find((o) => o.value === tableId);
+      sessionStorage.setItem(
+        ORDER_PANEL_DRAFT_KEY,
+        JSON.stringify({
+          orderType,
+          tableId,
+          sectionName: selectedOption?.sectionName || "",
+          tableNumber: selectedOption?.unitName || "",
+          customerName,
+          customerPhone,
+          address,
+        })
+      );
+    } catch (_) { /* ignore storage errors */ }
+  }, [address, customerName, customerPhone, draftHydrated, isEditing, orderType, tableId, tableOptions]);
 
   useEffect(() => {
     if (!editingOrder) return;
@@ -754,11 +910,21 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setAddress(editingOrder.address || "");
     setOriginalOrderItems(editingOrder.items || []);
 
+    // 🔧 FIX: tableOptions use sectionKey:unitKey format, match by unitId if available
     if (editingOrder.orderType === "Eat Here" && editingOrder.source) {
-      const section = editingOrder.source.section || editingOrder.source.sectionName || "";
-      const number = editingOrder.source.number || editingOrder.source.unitName || "";
-      if (section && number) {
-        setTableId(`${section}:${number}`);
+      const unitId = editingOrder.source.unitId;
+      if (unitId) {
+        const match = tableOptions.find((o) => String(o.unitId) === String(unitId));
+        if (match) {
+          setTableId(match.value);
+        }
+      } else {
+        // Fallback: match by sectionName + unitName
+          const section = editingOrder.source.sectionName || editingOrder.source.section || "";
+          const number = editingOrder.source.unitName || editingOrder.source.number || "";
+          if (section && number) {
+          setTableId(makeUnitSelectValue(section, number));
+        }
       }
     }
 
@@ -798,7 +964,6 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     (acc, item) => acc + (item?.price || 0) * (item?.quantity || 1),
     0
   );
-  const restaurant = restaurantData?.restaurant || {};
   const gstRate = Number(restaurant.gstRate) || 0;
   const gstEnabled = restaurant.gstEnabled || false;
   const gstAmount = gstEnabled ? (subtotal * gstRate) / 100 : 0;
@@ -868,10 +1033,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     const originalItems = originalOrderItems || [];
 
     const existingByKey = new Map(
-      originalItems.map((item) => [getOrderItemKey(item), item])
+      originalItems.map((item) => [getComparableOrderItemKey(item), item])
     );
     const currentByKey = new Map(
-      currentCartItems.map((item) => [getCartItemKey(item), item])
+      currentCartItems.map((item) => [getComparableCartItemKey(item), item])
     );
 
     const removeItemIds = [];
@@ -891,12 +1056,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
     for (const [key, currentItem] of currentByKey.entries()) {
       if (!existingByKey.has(key)) {
-        newItems.push({
-          menuItemId: currentItem._id,
-          quantity: currentItem.quantity || 1,
-          customizations: currentItem.customizations || "",
-          variant: currentItem.variantKey,
-        });
+        newItems.push(buildOrderItemFromCartItem(currentItem));
       }
     }
 
@@ -906,12 +1066,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       customerPhone: customerPhone.trim(),
     };
 
+    // 🔧 FIX: Backend createOrderByAdminOrStaff expects source.unitId (MongoDB _id), not {section, number, type}
     if (normalizedOrderType === "Eat Here" && tableId) {
-      const [section, numStr] = tableId.split(":");
-      const number = parseInt(numStr, 10) || 1;
       const selectedOption = tableOptions.find((o) => o.value === tableId);
-      const type = selectedOption?.unitName?.startsWith?.("ROOM") || section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
-      payload.source = { section, number, type };
+      payload.source = { unitId: selectedOption?.unitId || null };
     }
 
     if (normalizedOrderType === "Delivery") {
@@ -948,26 +1106,9 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     if (errorMessage) { showError(errorMessage); return; }
 
     try {
-      const orderItems = Object.values(cartItems).map((cartItem) => {
-        const variantData = cartItem.variantKey && cartItem.variantRates?.[cartItem.variantKey]
-          ? cartItem.variantRates[cartItem.variantKey] : null;
-        const isCombo = cartItem.isCombo || cartItem.pricingType === "combo";
-        const variantBasePrice = Number(variantData?.price) || 0;
-        const price = Number(cartItem.originalPrice ?? (isCombo ? cartItem.comboPrice : variantBasePrice || cartItem.price) ?? 0) || 0;
-        const discountedPrice = Number(cartItem.price ?? (isCombo ? cartItem.comboPrice : variantBasePrice) ?? 0) || 0;
-        const orderItem = {
-          menuItemId: cartItem._id,
-          name: cartItem.name,
-          quantity: cartItem.quantity || 1,
-          customizations: cartItem.customizations || "",
-          price,
-          discountedPrice,
-          discountApplied: variantData?.discount || cartItem.discount || null,
-        };
-        if (cartItem.variantKey) orderItem.variant = cartItem.variantKey;
-        if (cartItem.isCombo && cartItem.comboItems) orderItem.comboItems = cartItem.comboItems;
-        return orderItem;
-      });
+      const currentCartItems = Object.values(cartItems);
+      const orderItems = currentCartItems.map((cartItem) => buildOrderItemFromCartItem(cartItem));
+      const addedItemsPreview = buildAddedItemsPreview(currentCartItems, originalOrderItems);
 
       const orderData = {
         items: orderItems,
@@ -976,12 +1117,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         customerPhone: customerPhone.trim(),
       };
 
+      // 🔧 FIX: Backend createOrderByAdminOrStaff expects source.unitId (MongoDB _id), not {section, number, type}
       if (normalizedOrderType === "Eat Here" && tableId) {
-        const [section, numStr] = tableId.split(":");
-        const number = parseInt(numStr, 10) || 1;
         const selectedOption = tableOptions.find((o) => o.value === tableId);
-        const type = selectedOption?.unitName?.startsWith?.("ROOM") || section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
-        orderData.source = { section, number, type };
+        orderData.source = { unitId: selectedOption?.unitId || null };
       }
 
       if (normalizedOrderType === "Delivery") {
@@ -998,16 +1137,30 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       const finalOrder = response?.order || response;
 
-      if (mode === "kot" && finalOrder?._id) {
-        try {
-          await printKot(finalOrder._id);
-        } catch (printError) {
-          showError(printError?.message || "Order processed, but KOT failed.");
+      if (mode === "kot" && finalOrder) {
+        if (isEditing && addedItemsPreview.length > 0) {
+          dispatch(
+            showBill(
+              createKotPreviewOrder({
+                finalOrder,
+                previewItems: addedItemsPreview,
+                restaurantDetails: restaurant,
+              })
+            )
+          );
+        } else if (!isEditing) {
+          dispatch(showBill(finalOrder));
         }
       }
 
       if (mode === "print_bill" && finalOrder) {
-        dispatch(showBill(finalOrder));
+        try {
+          const response = await billOrder(finalOrder._id).unwrap();
+          const billedData = response?.order || response;
+          dispatch(showBill(billedData));
+        } catch {
+          dispatch(showBill(finalOrder));
+        }
       }
 
       setSuccess(true);
@@ -1019,6 +1172,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       setAddress("");
       setOrderType("Take Away");
       setOriginalOrderItems([]);
+      sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
 
       if (onOrderSuccess) {
         onOrderSuccess();
@@ -1041,6 +1195,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setAddress("");
     setOrderType("Take Away");
     setError("");
+    sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
   };
 
   // ── Styles ───────────────────────────────────────────────────────────────────
@@ -1057,25 +1212,6 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     : "bg-white border-[#ede8e3] hover:border-orange-300 hover:shadow-sm shadow-none";
   const summaryBg = isDarkMode ? "bg-[#1e293b]" : "bg-white";
   const headerBg  = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]";
-
-  const tableOptions = (() => {
-    const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
-    const opts = [];
-    sections.forEach((section) => {
-      const units = Array.isArray(section.units) ? section.units : [];
-      units.forEach((unit) => {
-        const sectionKey = section.name.toLowerCase().replace(/\s+/g, "_");
-        const unitKey = String(unit.name || unit.unitId || "").toLowerCase().replace(/\s+/g, "_");
-        opts.push({
-          value: `${sectionKey}:${unitKey}`,
-          label: `${section.name} - ${unit.name}`,
-          unitName: unit.name,
-          unitType: unit.type,
-        });
-      });
-    });
-    return opts;
-  })();
 
   // All props for OrderSummaryPanel (module-level component)
   const summaryProps = {

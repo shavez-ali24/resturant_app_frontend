@@ -1,6 +1,5 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/LayoutView.jsx
 import React, { useState, useCallback, useMemo } from "react";
-import { useNotification } from "../../../Bell/NotificationContext";
 
 import SectionBlock from "./SectionBlock";
 import LegendBar from "./LegendBar";
@@ -15,6 +14,8 @@ export default function LayoutView({
   onViewOrder,
   onCreateOrder,
   onEditOrder,
+  onMoveOrder,
+  onPayOrder,
   onPrintBill,
   onBookRoom,
   onCheckoutRoom,
@@ -24,24 +25,27 @@ export default function LayoutView({
   error = null,
   onRetry,
 }) {
-  const { notify } = useNotification();
-
   const [selectedBlankTable, setSelectedBlankTable] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
   const handleTableClick = useCallback(
     (table) => {
+      if (table?.unitType === "ROOM") {
+        setSelectedRoom(table);
+        return;
+      }
       if (table.status === "blank") {
         setSelectedBlankTable(table);
+      } else if (table.rawStatus === "BILLED" || table.status === "billed") {
+        onPayOrder?.(table);
       } else {
-        // Occupied / Billed → open "create order" panel (AdminOrderPanel) prefilled with this table
         try {
           sessionStorage.setItem("selectedTable", JSON.stringify(table));
         } catch (_) {}
-        onCreateOrder?.(table);
+        onEditOrder?.(table);
       }
     },
-    [onCreateOrder]
+    [onEditOrder, onPayOrder]
   );
 
   const handleRoomClick = useCallback((room) => {
@@ -63,7 +67,15 @@ export default function LayoutView({
   );
 
   const handleViewOrder = useCallback((table) => onViewOrder?.(table), [onViewOrder]);
-  const handleEditOrder = useCallback((table) => onEditOrder?.(table), [onEditOrder]);
+  const handleEditOrder = useCallback((table) => {
+    if (table?.rawStatus === "BILLED" || table?.status === "billed") {
+      onPayOrder?.(table);
+      return;
+    }
+    onEditOrder?.(table);
+  }, [onEditOrder, onPayOrder]);
+  const handleMoveOrder = useCallback((table) => onMoveOrder?.(table), [onMoveOrder]);
+  const handlePayOrder = useCallback((table) => onPayOrder?.(table), [onPayOrder]);
 
   const handleProceedCreate = useCallback(
     (tableInfo) => {
@@ -211,6 +223,8 @@ export default function LayoutView({
           onPrint={handlePrintBill}
           onView={handleViewOrder}
           onEdit={handleEditOrder}
+          onMove={handleMoveOrder}
+          onPay={handlePayOrder}
           onRoomClick={handleRoomClick}
           roomActionLoadingId={roomActionLoadingId}
           isDarkMode={isDarkMode}
@@ -233,6 +247,10 @@ export default function LayoutView({
           onClose={handleCloseRoomModal}
           onBook={handleBookRoom}
           onCheckout={handleCheckoutRoom}
+          onEdit={onEditOrder}
+          onView={onViewOrder}
+          onMove={handleMoveOrder}
+          onPay={handlePayOrder}
           isLoading={roomActionLoadingId === selectedRoom.unitId}
         />
       )}

@@ -13,13 +13,46 @@ const SectionBlock = React.memo(function SectionBlock({
   onPrint,
   onView,
   onEdit,
+  onMove,
+  onPay,
   onRoomClick,
   roomActionLoadingId,
   isDarkMode = false,
 }) {
-  if (!units || units.length === 0) return null;
-
   const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
+  const tables = React.useMemo(
+    () => (units || []).filter((unit) => unit?.unitType !== "ROOM"),
+    [units]
+  );
+  const roomGroups = React.useMemo(() => {
+    const groups = new Map();
+
+    (units || [])
+      .filter((unit) => unit?.unitType === "ROOM")
+      .forEach((unit) => {
+        const categoryName = String(unit?.roomCategory?.name || "Uncategorized").trim() || "Uncategorized";
+        if (!groups.has(categoryName)) groups.set(categoryName, []);
+        groups.get(categoryName).push(unit);
+      });
+
+    return Array.from(groups.entries())
+      .map(([categoryName, groupUnits]) => ({ categoryName, units: groupUnits }))
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
+  }, [units]);
+
+  const rowTitleStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+    fontSize: 12,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: C.textSecondary,
+  };
+
+  if (!units || units.length === 0) return null;
 
   return (
     <div
@@ -65,27 +98,104 @@ const SectionBlock = React.memo(function SectionBlock({
         </span>
       </div>
 
-      {/* Tables — flex-wrap row */}
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
-          gap: 24,
+          flexDirection: "column",
+          gap: 20,
           padding: "16px 16px 34px",
         }}
       >
-        {units.map((table) => (
-          <TableCard
-            key={table.unitId || table.tableNumber}
-            table={table}
-            onTableClick={onTableClick}
-            onPrint={onPrint}
-            onView={onView}
-            onEdit={onEdit}
-            onRoomClick={onRoomClick}
-            isLoading={roomActionLoadingId === table.unitId}
-            isDarkMode={isDarkMode}
-          />
+        {tables.length > 0 && (
+          <div>
+            {roomGroups.length > 0 && (
+              <div style={rowTitleStyle}>
+                <span>Tables</span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: C.textSecondary,
+                    background: isDarkMode ? "#334155" : "#f3efea",
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    letterSpacing: "normal",
+                    textTransform: "none",
+                  }}
+                >
+                  {tables.length}
+                </span>
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 24,
+              }}
+            >
+              {tables.map((table) => (
+                <TableCard
+                  key={table.unitId || table.tableNumber}
+                  table={table}
+                  onTableClick={onTableClick}
+                  onPrint={onPrint}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onMove={onMove}
+                  onPay={onPay}
+                  onRoomClick={onRoomClick}
+                  isLoading={roomActionLoadingId === table.unitId}
+                  isDarkMode={isDarkMode}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {roomGroups.map((group) => (
+          <div key={`${sectionName}-${group.categoryName}`}>
+            <div style={rowTitleStyle}>
+              <span>{group.categoryName}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: C.textSecondary,
+                  background: isDarkMode ? "#334155" : "#f3efea",
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  letterSpacing: "normal",
+                  textTransform: "none",
+                }}
+              >
+                {group.units.length} {group.units.length === 1 ? "room" : "rooms"}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 24,
+              }}
+            >
+              {group.units.map((table) => (
+                <TableCard
+                  key={table.unitId || table.tableNumber}
+                  table={table}
+                  onTableClick={onTableClick}
+                  onPrint={onPrint}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onMove={onMove}
+                  onPay={onPay}
+                  onRoomClick={onRoomClick}
+                  isLoading={roomActionLoadingId === table.unitId}
+                  isDarkMode={isDarkMode}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

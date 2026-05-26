@@ -13,6 +13,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 
 const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const Home = lazy(() => import("./pages/Home"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const Menu = lazy(() => import("./components/admin/Menu/Menu.jsx"));
@@ -128,11 +129,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
             <Suspense fallback={<RouteFallback />}>
               <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<Home />} />
-              <Route path="filter" element={<Filter />} />
-            </Route>
+              {/* Public Routes */}
+              <Route path="/" element={<MainLayout />}>
+                <Route index element={<Home />} />
+                <Route path="filter" element={<Filter />} />
+                <Route path="track" element={<TrackOrder />} />
+              </Route>
 
             {/* Admin Login (Public) */}
             <Route path="login" element={<LoginPage />} />

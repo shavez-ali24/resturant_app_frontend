@@ -271,8 +271,9 @@ const EditOrderModal = ({
         setInitialAddress(editingOrder.address);
       }
 
-      if (editingOrder.source?.section && editingOrder.source?.number) {
-        const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
+      // 🔧 FIX: Backend Order model uses source.sectionName & source.unitName, not section/number
+      if (editingOrder.source?.sectionName && editingOrder.source?.unitName) {
+        const val = `${editingOrder.source.sectionName}:${editingOrder.source.unitName}`;
         setSelectedTableId(val);
         setInitialTableId(val);
       } else if (editingOrder.tableId) {
@@ -637,11 +638,24 @@ const EditOrderModal = ({
       }
 
       // ─── SOURCE (TABLE) ───────────────────────────────
+      // 🔧 FIX: Backend updateOrder expects source.unitId (MongoDB _id), not {section, number, type}
+      // Resolve unitId from restaurantData using sectionName:unitName
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        const [section, numStr] = selectedTableId.split(":");
-        const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
-        payload.source = { section, number, type };
+        const [sectionName, unitName] = selectedTableId.split(":");
+        let resolvedUnitId = null;
+        const restaurant = restaurantData?.restaurant || restaurantData;
+        if (restaurant?.sections) {
+          for (const section of restaurant.sections) {
+            if (section.name === sectionName) {
+              const unit = section.units?.find(u => u.name === unitName);
+              if (unit) {
+                resolvedUnitId = unit._id;
+                break;
+              }
+            }
+          }
+        }
+        payload.source = { unitId: resolvedUnitId };
       }
 
       // ─── ADDRESS ──────────────────────────────────────

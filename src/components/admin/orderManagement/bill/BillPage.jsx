@@ -1,7 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
-import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
+import {
+  useBillOrderMutation,
+  useToggleItemReadyMutation,
+} from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
   SelectContent,
@@ -10,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, ClipboardList, ListChecks } from "lucide-react";
+import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, ClipboardList, ListChecks, Printer } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass,
@@ -63,7 +66,6 @@ const BillPage = ({
   restaurantDetails,
   onClose,
   menuItems = [],
-  tables = [],
   updateOrder,
   sseEvent,
   autoPrint = false
@@ -86,14 +88,17 @@ const BillPage = ({
   });
   const [itemChecks, setItemChecks] = useState({});
   const [toggleItemReady] = useToggleItemReadyMutation();
+  const [billOrder, { isLoading: isBilling }] = useBillOrderMutation();
 
   // ✅ FIX: Ref to block SSE overwrite during post-save restore window
   const restoringRef = useRef(false);
 
-  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+  const activeOrder = localOrderData || order;
+  const isPreviewOnly = Boolean(order?.previewMode === "new-items-only");
+  const isAlreadyBilled = String(activeOrder?.status || "").toLowerCase() === "completed";
 
   // ✅ FIX: Use activeOrder.status so checkboxes don't disappear after edit
-  const showItemChecks = ["pending", "preparing", "ready"].includes(
+  const showItemChecks = !isPreviewOnly && ["pending", "preparing", "ready"].includes(
     String(activeOrder?.status || "").toLowerCase()
   );
 
@@ -389,6 +394,12 @@ const BillPage = ({
       ? resolvedDeliveryCharge
       : 0;
 
+  // 🔧 FIX: Room charge from order document (source of truth)
+  // Backend billOrder saves roomCharge to order.stay.roomCharge
+  // Only show when stay.enabled === true (room order)
+  const isStayEnabled = activeOrder?.stay?.enabled === true;
+  const roomCharge = isStayEnabled ? parseAmount(activeOrder?.stay?.roomCharge || 0) : 0;
+
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
   const backendSubtotal = parseAmount(activeOrder?.subtotal);
   const hasBackendSubtotal =
@@ -412,7 +423,8 @@ const BillPage = ({
     ? computedGstAmount
     : (backendGstAmount || computedGstAmount);
 
-  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges;
+  // 🔧 FIX: Include roomCharge in grand total
+  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges + roomCharge;
   const backendGrandTotal = parseAmount(activeOrder?.totalAmount || 0);
   let displayGrandTotal = computedGrandTotal;
 
@@ -890,6 +902,33 @@ const BillPage = ({
     };
   };
 
+  const handleBillOrder = async () => {
+    const orderId = activeOrder?._id || activeOrder?.id || activeOrder?.orderId;
+    if (!orderId || isBilling || isAlreadyBilled || isPreviewOnly) return;
+
+    setError("");
+    try {
+      const response = await billOrder(orderId).unwrap();
+      const billedData = response?.order || response;
+      setLocalOrderData((prev) => ({
+        ...(prev || activeOrder),
+        ...billedData,
+        _id: activeOrder?._id || billedData?._id || billedData?.orderId,
+        items: activeOrder?.items || prev?.items || [],
+        customerName: activeOrder?.customerName || prev?.customerName,
+        customerPhone: activeOrder?.customerPhone || prev?.customerPhone,
+        orderType: activeOrder?.orderType || prev?.orderType,
+        source: billedData?.source || activeOrder?.source || prev?.source,
+        status: billedData?.status || "completed",
+        totalAmount: billedData?.totalAmount ?? activeOrder?.totalAmount ?? prev?.totalAmount,
+        completedAt: billedData?.completedAt || new Date().toISOString(),
+      }));
+      broadcastOrderStatus(orderId, "completed");
+    } catch (err) {
+      setError(err?.data?.message || err?.message || "Failed to bill order");
+    }
+  };
+
   // Auto-print support for the layout card printer icon (one-click bill print)
   useEffect(() => {
     if (!autoPrint) return;
@@ -1016,7 +1055,6 @@ const BillPage = ({
   };
   const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
 
-  const availableTables = Array.isArray(tables) ? tables : [];
   const MotionDiv = motion.div;
 
   return (
@@ -1049,8 +1087,17 @@ const BillPage = ({
         >
           <div className="flex items-center gap-2">
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-              Order Details & Bill
+              {isPreviewOnly ? "New Items Bill Preview" : "Order Details & Bill"}
             </h3>
+            {isPreviewOnly && (
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                isDarkMode
+                  ? "border-sky-500/40 bg-sky-500/20 text-sky-200"
+                  : "border-sky-200 bg-sky-100 text-sky-700"
+              }`}>
+                {order?.previewLabel || "New Items Only"}
+              </span>
+            )}
             {isStaff && !isEditMode && (
               <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
                 isDarkMode
@@ -1062,7 +1109,7 @@ const BillPage = ({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {isStaff && !isEditMode && (
+            {isStaff && !isEditMode && !isPreviewOnly && (
               <button
                 onClick={() => setIsEditMode(true)}
                 className={`relative rounded-lg p-2 transition-colors ${
@@ -1549,6 +1596,14 @@ const BillPage = ({
                 </div>
               )}
 
+              {/* 🔧 FIX: Show room charge only when stay.enabled === true (room order) */}
+              {isStayEnabled && roomCharge > 0 && (
+                <div className="flex justify-between">
+                  <span>Room Charges</span>
+                  <span>₹{roomCharge.toFixed(2)}</span>
+                </div>
+              )}
+
               {activeOrderTypeKey === "delivery" && (
                 <div className="flex justify-between">
                   <span>Delivery Charges</span>
@@ -1594,12 +1649,33 @@ const BillPage = ({
              KOT
            </button>
  
-           <button
-             onClick={handlePrint}
-             className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-           >
-             Print
-           </button>
+          {!isPreviewOnly && (
+            <button
+              onClick={handleBillOrder}
+              disabled={isBilling || isAlreadyBilled}
+              className={`flex h-8 sm:h-9 items-center rounded-lg px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors ${
+                isBilling || isAlreadyBilled
+                  ? "cursor-not-allowed bg-slate-400"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
+            >
+              {isBilling ? "Billing..." : isAlreadyBilled ? "Billed" : "Bill Order"}
+            </button>
+          )}
+
+          {!isPreviewOnly && (
+            <button
+              onClick={handlePrint}
+              className={`flex h-8 sm:h-9 items-center gap-1.5 rounded-lg px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors ${
+                isDarkMode
+                  ? "bg-sky-600 hover:bg-sky-500"
+                  : "bg-sky-600 hover:bg-sky-700"
+              }`}
+            >
+              <Printer size={14} />
+              Print Bill
+            </button>
+          )}
 
           <button
             onClick={onClose}

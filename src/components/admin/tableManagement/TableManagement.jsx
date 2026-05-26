@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import {
   useGetRestaurantProfileQuery,
   useAddUnitsMutation,
+  useToggleUnitActiveMutation,
 } from "@/redux/adminRedux/adminAPI";
-import { Download, QrCode, Table2, BedDouble, Plus, Minus, Trash2, ArrowLeft } from "lucide-react";
-import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
+import { Download, Loader2, Power, PowerOff, QrCode, Table2, BedDouble, Plus, Minus, Trash2, ArrowLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
 /* ───────────────────────────────────────────
    HELPERS
@@ -45,6 +46,63 @@ const extractSections = (restaurant) => {
   return Array.isArray(data.sections) ? data.sections : [];
 };
 
+const extractRoomCategories = (sections = []) => {
+  const categories = new Map();
+
+  sections.forEach((section) => {
+    (section?.units || []).forEach((unit) => {
+      if (unit?.type !== "ROOM") return;
+      const name = String(unit?.roomCategory?.name || "").trim();
+      if (!name) return;
+
+      const key = name.toLowerCase();
+      const pricePerNight =
+        Number(
+          unit?.roomCategory?.priceConfig?.pricePerNight ??
+          unit?.roomCategory?.pricePerNight ??
+          0
+        ) || 0;
+
+      const existing = categories.get(key);
+      if (!existing || (!existing.pricePerNight && pricePerNight > 0)) {
+        categories.set(key, { name, pricePerNight });
+      }
+    });
+  });
+
+  return Array.from(categories.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const createCustomUnitDraft = () => ({
+  name: "",
+  categorySelection: "",
+  categoryName: "",
+  pricePerNight: "",
+});
+
+const buildRoomCategoryPayload = ({
+  categorySelection = "",
+  categoryName = "",
+  pricePerNight = "",
+  fallbackName = "",
+}) => {
+  const finalName = String(
+    categorySelection && categorySelection !== "__new__"
+      ? categorySelection
+      : categoryName || fallbackName
+  ).trim();
+
+  if (!finalName) return null;
+
+  return {
+    name: finalName,
+    pricingModel: "PER_NIGHT",
+    priceConfig: {
+      pricePerNight: Number(pricePerNight) || 0,
+    },
+  };
+};
+
 /* ───────────────────────────────────────────
    CATEGORY ICON
    ─────────────────────────────────────────── */
@@ -59,7 +117,7 @@ const typeIcon = (type) => {
    ADD SECTION / UNITS FORM
    ─────────────────────────────────────────── */
 
-function AddUnitsForm({ onSuccess, existingSectionNames }) {
+function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories = [] }) {
   const [addUnits, { isLoading }] = useAddUnitsMutation();
 
   const [sectionName, setSectionName] = useState("");
@@ -69,7 +127,10 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
   const [type, setType] = useState("TABLE");
   const [mode, setMode] = useState("count"); // "count" | "custom"
   const [count, setCount] = useState("");
-  const [customUnits, setCustomUnits] = useState([{ name: "", categoryName: "", pricePerNight: "" }]);
+  const [bulkRoomCategorySelection, setBulkRoomCategorySelection] = useState("");
+  const [bulkRoomCategoryName, setBulkRoomCategoryName] = useState("");
+  const [bulkRoomPricePerNight, setBulkRoomPricePerNight] = useState("");
+  const [customUnits, setCustomUnits] = useState([createCustomUnitDraft()]);
   const [formError, setFormError] = useState("");
 
   // Auto-select first existing section on load (if any)
@@ -86,11 +147,14 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
     setType("TABLE");
     setMode("count");
     setCount("");
-    setCustomUnits([{ name: "", pricePerNight: "" }]);
+    setBulkRoomCategorySelection("");
+    setBulkRoomCategoryName("");
+    setBulkRoomPricePerNight("");
+    setCustomUnits([createCustomUnitDraft()]);
   };
 
   const handleAddCustomRow = () => {
-    setCustomUnits((prev) => [...prev, { name: "", categoryName: "", pricePerNight: "" }]);
+    setCustomUnits((prev) => [...prev, createCustomUnitDraft()]);
   };
 
   const handleRemoveCustomRow = (idx) => {
@@ -100,6 +164,52 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
   const handleCustomChange = (idx, field, value) => {
     setCustomUnits((prev) =>
       prev.map((u, i) => (i === idx ? { ...u, [field]: value } : u))
+    );
+  };
+
+  const handleBulkRoomCategoryChange = (value) => {
+    if (value === "__new__") {
+      setBulkRoomCategorySelection("__new__");
+      setBulkRoomCategoryName("");
+      setBulkRoomPricePerNight("");
+      return;
+    }
+
+    const selectedCategory = existingRoomCategories.find((category) => category.name === value);
+    setBulkRoomCategorySelection(value);
+    setBulkRoomCategoryName(selectedCategory?.name || value);
+    setBulkRoomPricePerNight(
+      selectedCategory?.pricePerNight != null
+        ? String(selectedCategory.pricePerNight)
+        : ""
+    );
+  };
+
+  const handleCustomCategorySelect = (idx, value) => {
+    setCustomUnits((prev) =>
+      prev.map((unit, unitIdx) => {
+        if (unitIdx !== idx) return unit;
+
+        if (value === "__new__") {
+          return {
+            ...unit,
+            categorySelection: "__new__",
+            categoryName: "",
+            pricePerNight: "",
+          };
+        }
+
+        const selectedCategory = existingRoomCategories.find((category) => category.name === value);
+        return {
+          ...unit,
+          categorySelection: value,
+          categoryName: selectedCategory?.name || value,
+          pricePerNight:
+            selectedCategory?.pricePerNight != null
+              ? String(selectedCategory.pricePerNight)
+              : unit.pricePerNight,
+        };
+      })
     );
   };
 
@@ -136,6 +246,21 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
         return;
       }
       body.count = num;
+
+      if (type === "ROOM") {
+        const roomCategory = buildRoomCategoryPayload({
+          categorySelection: bulkRoomCategorySelection,
+          categoryName: bulkRoomCategoryName,
+          pricePerNight: bulkRoomPricePerNight,
+        });
+
+        if (!roomCategory) {
+          setFormError("Please select an existing room category or create a new one");
+          return;
+        }
+
+        body.roomCategory = roomCategory;
+      }
     } else {
       const validUnits = customUnits.filter((u) => u.name.trim());
       if (validUnits.length === 0) {
@@ -143,9 +268,16 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
         return;
       }
       if (type === "ROOM") {
-        const missingCategory = validUnits.some((u) => !u.categoryName || !u.categoryName.trim());
+        const missingCategory = validUnits.some(
+          (u) =>
+            !buildRoomCategoryPayload({
+              categorySelection: u.categorySelection,
+              categoryName: u.categoryName,
+              pricePerNight: u.pricePerNight,
+            })
+        );
         if (missingCategory) {
-          setFormError("Please enter category name for each room");
+          setFormError("Please select or create a category for each room");
           return;
         }
       }
@@ -160,11 +292,12 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
         ...(type === "ROOM"
           ? {
               roomCategory: {
-                name: (u.categoryName || u.name).trim(),
-                pricingModel: "PER_NIGHT",
-                priceConfig: {
-                  pricePerNight: Number(u.pricePerNight) || 0,
-                },
+                ...buildRoomCategoryPayload({
+                  categorySelection: u.categorySelection,
+                  categoryName: u.categoryName,
+                  pricePerNight: u.pricePerNight,
+                  fallbackName: u.name,
+                }),
               },
             }
           : {}),
@@ -315,8 +448,59 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
           <p className="text-[11px] text-[#a8a29e] dark:text-slate-500">
             {type === "TABLE"
               ? `Tables will be named T1, T2, ...`
-              : `Rooms will be named 101, 102, ...`}
+              : `Rooms will be named 101, 102, ... and the selected category will apply to all new rooms.`}
           </p>
+
+          {type === "ROOM" && (
+            <div className="space-y-2 pt-2">
+              <Select
+                value={bulkRoomCategorySelection || undefined}
+                onValueChange={handleBulkRoomCategoryChange}
+              >
+                <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-500/30 focus:border-orange-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  <SelectValue placeholder="Select existing category or create new" />
+                </SelectTrigger>
+                <SelectContent className="border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800">
+                  {existingRoomCategories.map((category) => (
+                    <SelectItem
+                      key={category.name}
+                      value={category.name}
+                      className="cursor-pointer focus:bg-[#f7f3ef] dark:focus:bg-slate-700"
+                    >
+                      {category.name}
+                      {category.pricePerNight > 0 ? ` • ₹${category.pricePerNight}/night` : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem
+                    value="__new__"
+                    className="cursor-pointer text-orange-600 focus:bg-[#f7f3ef] dark:focus:bg-slate-700 dark:text-orange-400"
+                  >
+                    + Create New Category
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(!bulkRoomCategorySelection || bulkRoomCategorySelection === "__new__") && (
+                <input
+                  type="text"
+                  placeholder="Category name (e.g. Deluxe)"
+                  value={bulkRoomCategoryName}
+                  onChange={(e) => setBulkRoomCategoryName(e.target.value)}
+                  className={inputBase}
+                />
+              )}
+
+              <input
+                type="number"
+                placeholder="Price per night (₹)"
+                value={bulkRoomPricePerNight}
+                onChange={(e) => setBulkRoomPricePerNight(e.target.value)}
+                className={inputBase}
+                min="0"
+                step="1"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -336,13 +520,41 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
                 />
                 {type === "ROOM" && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="Category name (e.g. Deluxe)"
-                      value={u.categoryName}
-                      onChange={(e) => handleCustomChange(idx, "categoryName", e.target.value)}
-                      className={inputBase}
-                    />
+                    <Select
+                      value={u.categorySelection || undefined}
+                      onValueChange={(value) => handleCustomCategorySelect(idx, value)}
+                    >
+                      <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-500/30 focus:border-orange-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                        <SelectValue placeholder="Select existing category or create new" />
+                      </SelectTrigger>
+                      <SelectContent className="border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800">
+                        {existingRoomCategories.map((category) => (
+                          <SelectItem
+                            key={category.name}
+                            value={category.name}
+                            className="cursor-pointer focus:bg-[#f7f3ef] dark:focus:bg-slate-700"
+                          >
+                            {category.name}
+                            {category.pricePerNight > 0 ? ` • ₹${category.pricePerNight}/night` : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem
+                          value="__new__"
+                          className="cursor-pointer text-orange-600 focus:bg-[#f7f3ef] dark:focus:bg-slate-700 dark:text-orange-400"
+                        >
+                          + Create New Category
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(!u.categorySelection || u.categorySelection === "__new__") && (
+                      <input
+                        type="text"
+                        placeholder="Category name (e.g. Deluxe)"
+                        value={u.categoryName}
+                        onChange={(e) => handleCustomChange(idx, "categoryName", e.target.value)}
+                        className={inputBase}
+                      />
+                    )}
                     <input
                       type="number"
                       placeholder="Price per night (₹)"
@@ -399,14 +611,64 @@ function AddUnitsForm({ onSuccess, existingSectionNames }) {
 
 function UnitCard({ unit }) {
   const [imgError, setImgError] = useState(false);
+  const { notify } = useNotification();
+  const [toggleUnitActive, { isLoading: isToggleLoading }] = useToggleUnitActiveMutation();
+
+  const unitId = unit?._id || unit?.unitId;
+  const isRoom = unit?.type === "ROOM";
+  const isActive = unit?.isActive !== false;
+  const canToggleRoom = isRoom && unit?.status === "AVAILABLE" && Boolean(unitId);
 
   const handleDownload = () => {
     const filename = `${unit.type}_${unit.name}_qr.png`;
     downloadQR(unit.qrCode?.url, filename);
   };
 
+  const handleToggleRoomActive = async (e) => {
+    e.stopPropagation();
+
+    if (!canToggleRoom || isToggleLoading) return;
+
+    const nextIsActive = !isActive;
+
+    try {
+      const response = await toggleUnitActive({
+        unitId,
+        isActive: nextIsActive,
+      }).unwrap();
+
+      notify(
+        response?.message || `Room ${nextIsActive ? "activated" : "deactivated"} successfully`,
+        "success"
+      );
+    } catch (err) {
+      notify(
+        err?.data?.message || `Failed to ${nextIsActive ? "activate" : "deactivate"} room`,
+        "error"
+      );
+    }
+  };
+
   return (
-    <div className="group relative rounded-lg border border-[#ede8e3] bg-white p-3 transition-all duration-150 hover:shadow-md dark:border-slate-700 dark:bg-[#1e293b]">
+    <div
+      className={`relative rounded-lg border bg-white p-3 transition-all duration-150 hover:shadow-md dark:bg-[#1e293b] ${
+        isRoom && !isActive
+          ? "border-[#d6cfc8] bg-[#faf7f4] opacity-80 dark:border-slate-600 dark:bg-slate-900/70"
+          : "border-[#ede8e3] dark:border-slate-700"
+      }`}
+    >
+      {isRoom && (
+        <span
+          className={`absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            isActive
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : "bg-[#ede8e3] text-[#78716c] dark:bg-slate-700 dark:text-slate-300"
+          }`}
+        >
+          {isActive ? "Active" : "Inactive"}
+        </span>
+      )}
+
       {/* STATUS BADGE */}
       <span
         className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
@@ -427,7 +689,9 @@ function UnitCard({ unit }) {
             src={unit.qrCode.url}
             alt={`QR for ${unit.name}`}
             loading="lazy"
-            className="h-20 w-20 rounded-md border border-[#ede8e3] object-contain"
+            className={`h-20 w-20 rounded-md border border-[#ede8e3] object-contain ${
+              isRoom && !isActive ? "grayscale" : ""
+            }`}
             onError={() => setImgError(true)}
           />
         ) : (
@@ -449,17 +713,54 @@ function UnitCard({ unit }) {
         </p>
       </div>
 
-      {/* DOWNLOAD BUTTON (on hover) */}
-      {unit.qrCode?.url && (
-        <button
-          onClick={handleDownload}
-          className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
-        >
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-[#1c1917] shadow-sm dark:bg-slate-800 dark:text-slate-100">
+      <div className="mt-3 space-y-2">
+        {unit.qrCode?.url && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] px-3 py-2 text-xs font-semibold text-[#1c1917] transition-colors hover:bg-[#ede8e3] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-700"
+          >
             <Download size={14} /> Download QR
-          </span>
-        </button>
-      )}
+          </button>
+        )}
+
+        {isRoom && (
+          <>
+            <button
+              type="button"
+              onClick={handleToggleRoomActive}
+              disabled={!canToggleRoom || isToggleLoading}
+              className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                canToggleRoom && !isToggleLoading
+                  ? isActive
+                    ? "bg-[#1c1917] text-white hover:bg-[#292524] dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                    : "bg-orange-500 text-white hover:bg-orange-600"
+                  : "cursor-not-allowed bg-[#ede8e3] text-[#a8a29e] dark:bg-slate-700 dark:text-slate-500"
+              }`}
+            >
+              {isToggleLoading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Saving...
+                </>
+              ) : isActive ? (
+                <>
+                  <PowerOff size={14} /> Mark Inactive
+                </>
+              ) : (
+                <>
+                  <Power size={14} /> Mark Active
+                </>
+              )}
+            </button>
+
+            {!canToggleRoom && (
+              <p className="text-center text-[10px] font-medium text-[#a8a29e] dark:text-slate-500">
+                Room can be toggled only when status is available.
+              </p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -528,7 +829,7 @@ function SectionBlock({ section }) {
    MAIN COMPONENT
    ─────────────────────────────────────────── */
 
-export default function TableManagement({ isDarkMode = false }) {
+export default function TableManagement() {
   const navigate = useNavigate();
   const {
     data: restaurantData,
@@ -541,6 +842,10 @@ export default function TableManagement({ isDarkMode = false }) {
   const sections = useMemo(() => extractSections(restaurantData), [restaurantData]);
   const existingSectionNames = useMemo(
     () => sections.map((s) => s.name),
+    [sections]
+  );
+  const existingRoomCategories = useMemo(
+    () => extractRoomCategories(sections),
     [sections]
   );
 
@@ -597,6 +902,7 @@ export default function TableManagement({ isDarkMode = false }) {
           <AddUnitsForm
             onSuccess={handleSuccess}
             existingSectionNames={existingSectionNames}
+            existingRoomCategories={existingRoomCategories}
           />
         </div>
       )}

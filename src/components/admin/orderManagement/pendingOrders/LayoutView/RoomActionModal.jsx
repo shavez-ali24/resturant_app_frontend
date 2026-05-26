@@ -1,6 +1,6 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/RoomActionModal.jsx
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, IndianRupee, SquarePen, Printer, Move } from "lucide-react";
 
 export default function RoomActionModal({
   room,
@@ -8,9 +8,14 @@ export default function RoomActionModal({
   onClose,
   onBook,
   onCheckout,
+  onEdit,
+  onView,
+  onMove,
+  onPay,
   isLoading = false,
 }) {
   const isOccupied = room?.rawStatus === "OCCUPIED";
+  const isBilled = room?.rawStatus === "BILLED";
   const price = room?.roomCategory?.pricePerNight || room?.roomCategory?.priceConfig?.pricePerNight || 0;
 
   const [guestName, setGuestName] = useState("");
@@ -70,11 +75,44 @@ export default function RoomActionModal({
     }
   };
 
-  const bg = isDarkMode ? "#0f172a" : "#ffffff";
-  const text = isDarkMode ? "#e2e8f0" : "#1f2937";
-  const border = isDarkMode ? "#334155" : "#e5e5e5";
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    if (isBilled) {
+      onPay?.(room);
+      onClose?.();
+      return;
+    }
+    onEdit?.(room);
+    onClose?.();
+  };
+
+  const handleViewClick = (e) => {
+    e.stopPropagation();
+    onView?.(room);
+    onClose?.();
+  };
+  const handleMoveClick = (e) => {
+    e.stopPropagation();
+    onMove?.(room);
+    onClose?.();
+  };
 
   if (!room) return null;
+
+  const ICON_BTN = (isDark) => ({
+    width: 36,
+    height: 36,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: `1px solid ${isDark ? "#475569" : "#e5e5e5"}`,
+    background: isDark ? "#334155" : "#ffffff",
+    cursor: "pointer",
+    borderRadius: 8,
+    color: isDark ? "#f1f5f9" : "#1c1917",
+    padding: 0,
+    outline: "none",
+  });
 
   return (
     <div
@@ -99,7 +137,8 @@ export default function RoomActionModal({
               isDarkMode ? "text-slate-100" : "text-[#1c1917]"
             }`}
           >
-            {isOccupied ? "Room Booking" : "Book Room"} — {room.tableNumber}
+            {/* 🔧 FIX: Show "Manage Room" for occupied/billed rooms */}
+            {isOccupied || isBilled ? "Manage Room" : "Book Room"} — {room.tableNumber}
           </h3>
           <button
             onClick={onClose}
@@ -115,7 +154,7 @@ export default function RoomActionModal({
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          {isOccupied ? (
+          {isOccupied || isBilled ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -124,32 +163,55 @@ export default function RoomActionModal({
                   <path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
                 </svg>
                 <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                  Current Booking
+                  {isBilled ? "Room Billed" : "Current Booking"}
                 </span>
               </div>
-              <div>
-                <p className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-                  {room?.occupancy?.guestName || "Guest"}
-                </p>
-                <p className={`text-sm mt-0.5 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
-                  {room?.occupancy?.phone}
-                </p>
-              </div>
+
+              {/* 🔧 FIX: Backend doesn't store guestName/phone in unit.occupancy — it's created on Order */}
               <div className={`text-sm px-3 py-2 rounded-lg border ${
                 isDarkMode ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-[#f7f3ef] border-[#ede8e3] text-[#78716c]"
               }`}>
-                {room?.roomCategory?.name} • ₹{price}/night
+                {room?.roomCategory?.name || "Room"} • ₹{price}/night
               </div>
+
+              {/* 🔧 FIX: Add Edit + View Bill buttons (like TableCard bottom icons) */}
+              {(room?.currentOrderId || room?.orderId) && (
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={handleEditClick}
+                    style={ICON_BTN(isDarkMode)}
+                    className="flex-1 flex items-center justify-center gap-1.5"
+                    title={isBilled ? "Pay Order" : "Edit Order"}
+                  >
+                    {isBilled ? <IndianRupee size={18} /> : <SquarePen size={18} />}
+                    <span className="text-xs font-semibold">{isBilled ? "Pay" : "Edit"}</span>
+                  </button>
+                  <button
+                    onClick={handleViewClick}
+                    style={ICON_BTN(isDarkMode)}
+                    className="flex-1 flex items-center justify-center gap-1.5"
+                    title="View Bill"
+                  >
+                    <Printer size={18} />
+                    <span className="text-xs font-semibold">Bill</span>
+                  </button>
+                </div>
+              )}
+
               {formErrors.submit && (
                 <p className="text-xs text-red-500">{formErrors.submit}</p>
               )}
-              <button
-                onClick={handleCheckout}
-                disabled={isLoading}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isLoading ? "..." : "Check Out"}
-              </button>
+
+              {/* 🔧 FIX: Only show Check Out for OCCUPIED (not BILLED) */}
+              {isOccupied && (
+                <button
+                  onClick={handleCheckout}
+                  disabled={isLoading}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading ? "..." : "Check Out"}
+                </button>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmitBooking} className="space-y-4">

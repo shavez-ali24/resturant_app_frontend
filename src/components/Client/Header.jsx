@@ -132,9 +132,9 @@ export default function Header({
   const visibleCartItems = cartEntries.slice(0, MAX_CART_PREVIEW_IMAGES);
 
   const [fingerPrint, setFingerPrint] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  // 🔧 FIX: Backend only returns 2 orders via .limit(2), no pagination support
+  // removed currentPage/hasMore pagination state
   const [allOrders, setAllOrders] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
 
   const isPreparingBanner = orderStatusBanner?.status === "preparing";
 
@@ -437,7 +437,7 @@ export default function Header({
     isLoading: ordersLoading,
     refetch,
   } = useGetOrdersByFingerprintQuery(
-    { fingerPrint, page: currentPage },
+    { fingerPrint }, // 🔧 FIX: removed page param — backend doesn't support pagination
     {
       skip: !fingerPrint,
       refetchOnMountOrArgChange: false,
@@ -446,7 +446,7 @@ export default function Header({
     }
   );
 
-  // Merge fetched orders into local state
+  // 🔧 FIX: Simplified — backend returns all orders directly, no pagination needed
   useEffect(() => {
     if (!ordersData) return;
 
@@ -472,20 +472,8 @@ export default function Header({
           )
       );
 
-    if (currentPage === 1) {
-      setAllOrders(dedup(orders));
-    } else {
-      setAllOrders((prev) => {
-        const existingIds = new Set(prev.map((o) => o._id || o.id || o.orderId));
-        const newOrders = orders.filter(
-          (order) => !existingIds.has(order._id || order.id || order.orderId)
-        );
-        return [...prev, ...newOrders];
-      });
-    }
-
-    setHasMore(orders.length > 0 && ordersData?.hasMore !== false);
-  }, [ordersData, currentPage]);
+    setAllOrders(dedup(orders));
+  }, [ordersData]);
 
   // SSE — real-time order status updates
   useEffect(() => {
@@ -580,12 +568,10 @@ export default function Header({
     }
   }, [showModal, allOrders]);
 
-  // Reset pagination when fingerprint changes
+  // 🔧 FIX: Removed setCurrentPage/setHasMore (pagination removed — backend .limit(2) only)
   useEffect(() => {
     if (fingerPrint) {
-      setCurrentPage(1);
       setAllOrders([]);
-      setHasMore(true);
     }
   }, [fingerPrint]);
 
@@ -1577,7 +1563,7 @@ export default function Header({
 
               <div className="flex-1 overflow-y-auto">
                 <div className="space-y-4 p-4">
-                  {ordersLoading && currentPage === 1 ? null : allOrders.length ===
+                  {ordersLoading ? null : allOrders.length ===
                     0 ? (
                     <div className="text-center py-8">
                       <FiShoppingCart
@@ -1747,20 +1733,7 @@ export default function Header({
                         );
                       })}
 
-                      {/* Load More */}
-                      {hasMore && allOrders.length >= 3 && (
-                        <button
-                          onClick={() => setCurrentPage((p) => p + 1)}
-                          disabled={ordersLoading}
-                          className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                            isDarkMode
-                              ? "bg-slate-800 text-orange-400 hover:bg-slate-700 disabled:opacity-50"
-                              : "bg-orange-50 text-orange-600 hover:bg-orange-100 disabled:opacity-50"
-                          }`}
-                        >
-                          {ordersLoading ? "Loading..." : "Load More"}
-                        </button>
-                      )}
+                      {/* 🔧 FIX: Removed "Load More" pagination — backend .limit(2) only */}
                     </>
                   )}
                 </div>

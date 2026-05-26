@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
+import { useBillOrderMutation } from "@/redux/adminRedux/adminAPI";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell } from "lucide-react";
 import audio from "@/assets/orderRing.mp3";
@@ -21,6 +22,7 @@ export default function NotificationBell() {
   const MotionDiv = motion.div;
   const MotionSpan = motion.span;
   const dispatch = useDispatch();
+  const [billOrder] = useBillOrderMutation();
   const bellRef = useRef(null);
   const [latestOrders, setLatestOrders] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -146,7 +148,16 @@ export default function NotificationBell() {
     return () => obs.disconnect();
   }, []);
 
-  const handleViewBill = (order) => { dispatch(showBill(order)); setIsDropdownOpen(false); };
+  const handleViewBill = async (order) => {
+    setIsDropdownOpen(false);
+    try {
+      const response = await billOrder(order._id).unwrap();
+      const billedData = response?.order || response;
+      dispatch(showBill(billedData));
+    } catch {
+      dispatch(showBill(order));
+    }
+  };
   const handleClearAll = () => { setLatestOrders([]); knownOrderIds.current.clear(); setIsDropdownOpen(false); };
   const handleManualRefresh = () => { refetchPending(); refetchPreparing(); };
 

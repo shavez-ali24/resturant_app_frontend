@@ -11,6 +11,9 @@ import { getStatusBadge } from "../commonOrderFile/utils";
 import { ClipboardCheck, Hourglass, Timer, X, CheckCircle } from "lucide-react";
 
 const StatusDropdown = ({ order, updateOrder }) => {
+  const normalizedStatus = String(order?.status || "").toLowerCase();
+  const isCompleted = normalizedStatus === "completed";
+
   const getStatusItemClass = (status) => {
     switch (status) {
       case "pending":
@@ -29,11 +32,28 @@ const StatusDropdown = ({ order, updateOrder }) => {
   };
 
   const handleStatusChange = (value) => {
+    if (value === "completed") return;
+
     // Only send status change, don't send items (items validation fails for existing orders)
     updateOrder(order._id, {
       status: value,
     });
   };
+
+  if (isCompleted) {
+    return (
+      <div
+        data-tour="orders-status-dropdown"
+        aria-label="Order status completed"
+        className={`inline-flex h-9 w-full min-w-[130px] items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold uppercase tracking-wide ring-1 ring-inset md:h-8 md:w-[140px] ${getStatusBadge(
+          order.status
+        )}`}
+      >
+        <ClipboardCheck size={16} />
+        <span>Completed</span>
+      </div>
+    );
+  }
 
   return (
     <Select value={order.status} onValueChange={handleStatusChange}>
@@ -78,16 +98,6 @@ const StatusDropdown = ({ order, updateOrder }) => {
           >
             <div className="flex items-center gap-2">
               <span><CheckCircle size={16} /></span> Ready
-            </div>
-          </SelectItem>
-
-          {/* Item: Completed */}
-          <SelectItem
-            value="completed"
-            className={`cursor-pointer rounded-lg py-2 text-xs font-medium transition-colors ${getStatusItemClass("completed")}`}
-          >
-            <div className="flex items-center gap-2">
-              <span><ClipboardCheck size={16} /></span> Completed
             </div>
           </SelectItem>
 

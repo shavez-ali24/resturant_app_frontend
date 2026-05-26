@@ -755,8 +755,19 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: 
   font-family: inherit !important;
   border: 1px solid rgba(249,115,22,0.2) !important;
   animation: tour-pop-in 0.22s cubic-bezier(0.34,1.56,0.64,1) both !important;
-  z-index: var(--z-tooltip) !important;
   margin: 0 !important;
+}
+
+/* ── Fix: driver.js overlay was blocking all pointer events on the page ── */
+/* Allow clicks to pass through the overlay to elements beneath it */
+.driver-overlay {
+  pointer-events: none !important;
+}
+/* But keep the highlighted element and popover fully interactive */
+.driver-active-element,
+.driver-popover,
+.driver-popover * {
+  pointer-events: auto !important;
 }
 
 @keyframes tour-pop-in {
