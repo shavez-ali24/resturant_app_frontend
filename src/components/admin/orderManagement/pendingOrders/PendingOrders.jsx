@@ -50,10 +50,17 @@ import {
   useCheckoutOrderMutation,
   useLazyGetOrderByIdQuery,
 } from "../../../../redux/adminRedux/adminAPI";
-import { clearCart } from "../../../../redux/clientRedux/clientSlice";
+const getOrderItemCartKey = (orderItem) => {
+  if (!orderItem) return "";
+  const itemId = orderItem.menuItemId || orderItem._id || orderItem.id;
+  const variant = orderItem.variant || orderItem.variantKey || orderItem.variantName;
+  const variantPart = variant ? `${itemId}-${variant}` : `${itemId}`;
+  const customizations = orderItem.customizations ? `:${String(orderItem.customizations).trim()}` : "";
+  return `${variantPart}${customizations}`;
+};
 
 const Orders = () => {
-  const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds } = useNotification();
+  const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds, newItemsByOrderId, setNewItemsByOrderId } = useNotification();
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -78,10 +85,17 @@ const Orders = () => {
     sessionStorage.removeItem("selectedTable");
     sessionStorage.removeItem(ORDER_PANEL_DRAFT_KEY);
     sessionStorage.removeItem(ORDER_PANEL_FRESH_CREATE_KEY);
+    setUrlFetchedOrder(null);
     setSearchParams({});
   };
   const [urlFetchedOrder, setUrlFetchedOrder] = useState(null);
   const [isUrlFetching, setIsUrlFetching] = useState(false);
+
+  useEffect(() => {
+    if (!showCreateOrder || !urlOrderId) {
+      setUrlFetchedOrder(null);
+    }
+  }, [showCreateOrder, urlOrderId]);
 
   // Auto onboarding tour — first visit only
   useAdminTour(TOUR_KEYS.orders, getOrdersSteps, isDarkMode, 800);
@@ -281,6 +295,15 @@ const Orders = () => {
         next.add(String(incomingId));
         return next;
       });
+      // Store all item keys in this new order as new
+      if (Array.isArray(normalizedOrder.items)) {
+        const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
+        setNewItemsByOrderId((prevMap) => {
+          const next = new Map(prevMap);
+          next.set(String(incomingId), itemKeys);
+          return next;
+        });
+      }
     } else {
       // ORDER_UPDATED — show badge if total quantity increased (admin or client added items)
       const previousVersion = sseOrders.find(
@@ -296,6 +319,47 @@ const Orders = () => {
           setNewlyAddedItemsOrderIds((prevSet) => {
             const next = new Set(prevSet);
             next.add(String(incomingId));
+            return next;
+          });
+
+          // Determine which items are new/increased
+          const prevItemsMap = new Map();
+          if (Array.isArray(previousVersion.items)) {
+            previousVersion.items.forEach((item) => {
+              const key = getOrderItemCartKey(item);
+              prevItemsMap.set(key, (prevItemsMap.get(key) || 0) + (Number(item.quantity) || 0));
+            });
+          }
+
+          const newKeys = new Set();
+          if (Array.isArray(normalizedOrder.items)) {
+            normalizedOrder.items.forEach((item) => {
+              const key = getOrderItemCartKey(item);
+              const prevQtyForItem = prevItemsMap.get(key) || 0;
+              const newQtyForItem = Number(item.quantity) || 0;
+              if (newQtyForItem > prevQtyForItem) {
+                newKeys.add(key);
+              }
+            });
+          }
+
+          if (newKeys.size > 0) {
+            setNewItemsByOrderId((prevMap) => {
+              const next = new Map(prevMap);
+              const existingKeys = next.get(String(incomingId)) || new Set();
+              const updatedKeys = new Set([...existingKeys, ...newKeys]);
+              next.set(String(incomingId), updatedKeys);
+              return next;
+            });
+          }
+        }
+      } else {
+        // Fallback: if previous version is not found, treat all items in incoming as new
+        if (Array.isArray(normalizedOrder.items)) {
+          const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
+          setNewItemsByOrderId((prevMap) => {
+            const next = new Map(prevMap);
+            next.set(String(incomingId), itemKeys);
             return next;
           });
         }
@@ -964,6 +1028,15 @@ const Orders = () => {
     });
   }, []);
 
+  const clearNewItemsForOrder = useCallback((orderId) => {
+    if (!orderId) return;
+    setNewItemsByOrderId((prev) => {
+      const next = new Map(prev);
+      next.delete(String(orderId));
+      return next;
+    });
+  }, [setNewItemsByOrderId]);
+
   useEffect(() => {
     const activeId = getOrderIdValue(editingOrder) || 
                      getOrderIdValue(selectedOrderForCustomizations) || 
@@ -973,6 +1046,16 @@ const Orders = () => {
       clearNewItemsFlag(activeId);
     }
   }, [editingOrder, selectedOrderForCustomizations, orderForBillModal, payModalOrder, clearNewItemsFlag]);
+
+  // Track previous active order being viewed/edited to clear its new items on close/exit
+  const prevActiveOrderIdRef = React.useRef(null);
+  useEffect(() => {
+    const activeId = getOrderIdValue(editingOrder) || getOrderIdValue(urlFetchedOrder);
+    if (!activeId && prevActiveOrderIdRef.current) {
+      clearNewItemsForOrder(prevActiveOrderIdRef.current);
+    }
+    prevActiveOrderIdRef.current = activeId;
+  }, [editingOrder, urlFetchedOrder, clearNewItemsForOrder]);
 
   // 🔧 FIX: Store orderId in URL so data survives page refresh
   const handleEditOrderFromLayout = useCallback(async (tableInfo) => {

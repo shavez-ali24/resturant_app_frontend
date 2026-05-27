@@ -486,8 +486,9 @@ function OrderSummaryPanel({
   handleNameChange, handlePhoneChange,
   inputStyle, border, textPrimary, textSecondary, summaryBg,
   isMobile = false, // stickies buttons on mobile only
+  editingOrder,
 }) {
-  const { notify } = useNotification();
+  const { notify, newItemsByOrderId } = useNotification() || {};
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -503,14 +504,31 @@ function OrderSummaryPanel({
           Object.entries(cartItems).map(([id, item]) => {
             if (!item) return null;
             const itemTotal = (item.price || 0) * (item.quantity || 1);
+            const orderId = editingOrder?._id;
+            const newItemsSet = orderId && newItemsByOrderId?.get(String(orderId));
+            const isNewItem = newItemsSet && newItemsSet.has(id);
             return (
               <div
                 key={id}
-                className={`flex items-center gap-3 rounded-xl p-3 border ${isDarkMode ? "border-slate-700/60 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
-                  }`}
+                className={`flex items-center gap-3 rounded-xl p-3 border transition-all duration-350 ${
+                  isNewItem
+                    ? isDarkMode
+                      ? "border-rose-500/50 bg-rose-950/20 shadow-[0_0_12px_rgba(244,63,94,0.15)] animate-pulse"
+                      : "border-rose-300 bg-rose-50/45 shadow-[0_0_12px_rgba(244,63,94,0.06)]"
+                    : isDarkMode
+                      ? "border-slate-700/60 bg-slate-800/60"
+                      : "border-[#ede8e3] bg-[#f7f3ef]"
+                }`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold line-clamp-1 ${textPrimary}`}>{item.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`text-sm font-bold line-clamp-1 ${textPrimary}`}>{item.name}</p>
+                    {isNewItem && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-rose-500 text-white animate-bounce shadow-sm">
+                        New
+                      </span>
+                    )}
+                  </div>
                   {item.variantLabel && (
                     <span className={`text-xs px-2 py-0.5 rounded-md mt-1 inline-block font-semibold ${isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
                       }`}>
@@ -818,7 +836,7 @@ function OrderSummaryPanel({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false, editingOrder = null }) {
   const dispatch = useDispatch();
-  const { notify } = useNotification();
+  const { notify, newItemsByOrderId } = useNotification() || {};
   useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
@@ -1269,6 +1287,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     dispatch, handleRemoveAll, handleSubmit, handleClear,
     handleNameChange, handlePhoneChange,
     inputStyle, border, textPrimary, textSecondary, summaryBg,
+    editingOrder,
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
