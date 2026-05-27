@@ -11,6 +11,7 @@ const PAYMENT_METHODS = [
 
 export default function PayModal({ order, onClose }) {
   const { notify } = useNotification();
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const [payOrder, { isLoading }] = usePayOrderMutation();
 
@@ -84,8 +85,14 @@ export default function PayModal({ order, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800 cursor-default"
+      >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-extrabold text-gray-800 dark:text-slate-100">
@@ -166,10 +173,12 @@ export default function PayModal({ order, onClose }) {
                   <button
                     type="button"
                     onClick={() => setSettlementMode("percent")}
-                    className={`rounded-md px-2 py-1 text-xs font-bold ${
+                    className={`rounded-md px-2 py-1 text-xs font-extrabold transition-all ${
                       settlementMode === "percent"
-                        ? "bg-orange-500 text-white"
-                        : "text-gray-500 dark:text-slate-300"
+                        ? isDarkMode
+                          ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
+                          : "border border-orange-200 bg-orange-50 text-orange-700 shadow-sm"
+                        : "text-gray-500 dark:text-slate-300 border border-transparent"
                     }`}
                   >
                     %
@@ -177,10 +186,12 @@ export default function PayModal({ order, onClose }) {
                   <button
                     type="button"
                     onClick={() => setSettlementMode("amount")}
-                    className={`rounded-md px-2 py-1 text-xs font-bold ${
+                    className={`rounded-md px-2 py-1 text-xs font-extrabold transition-all ${
                       settlementMode === "amount"
-                        ? "bg-orange-500 text-white"
-                        : "text-gray-500 dark:text-slate-300"
+                        ? isDarkMode
+                          ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
+                          : "border border-orange-200 bg-orange-50 text-orange-700 shadow-sm"
+                        : "text-gray-500 dark:text-slate-300 border border-transparent"
                     }`}
                   >
                     ₹
@@ -241,10 +252,12 @@ export default function PayModal({ order, onClose }) {
             <button
               type="submit"
               disabled={!isValid || isLoading}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold text-white transition-all ${
+              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold transition-all active:scale-[0.97] ${
                 isValid && !isLoading
-                  ? "bg-orange-500 shadow-[0_8px_18px_rgba(249,115,22,0.3)] hover:bg-orange-600"
-                  : "cursor-not-allowed bg-gray-300 dark:bg-slate-600"
+                  ? isDarkMode
+                    ? "border border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                    : "border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm"
+                  : "cursor-not-allowed bg-gray-200 text-gray-400 border border-transparent dark:bg-slate-700 dark:text-slate-500"
               }`}
             >
               {isLoading && <Loader2 size={18} className="animate-spin" />}

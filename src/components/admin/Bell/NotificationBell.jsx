@@ -229,7 +229,11 @@ export default function NotificationBell() {
                 <p className={`text-xs ${textMut}`}>Real-time notifications</p>
               </div>
               {pendingOrdersCount > 0 && (
-                <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-extrabold ${
+                  isDarkMode
+                    ? "bg-orange-950/20 border-orange-500/35 text-orange-400"
+                    : "bg-orange-50 border-orange-200 text-orange-700"
+                }`}>
                   {displayCount} pending
                 </span>
               )}

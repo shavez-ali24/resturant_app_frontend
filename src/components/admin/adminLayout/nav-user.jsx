@@ -83,32 +83,28 @@ export function NavUser({ user, isDarkMode = false }) {
   };
 
   return (
-    <SidebarMenu className={`rounded-xl border transition-shadow duration-200 hover:shadow-sm ${
-      isDarkMode
+    <SidebarMenu className={`rounded-xl border transition-shadow duration-200 hover:shadow-sm ${isDarkMode
         ? "border-slate-700/60 bg-slate-800/60"
         : "border-[#ede8e3] bg-[#f7f3ef]"
-    }`}>
+      }`}>
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className={`h-14 rounded-xl bg-transparent px-2.5 transition-colors duration-200 ${
-                isDarkMode
+              className={`h-14 rounded-xl bg-transparent px-2.5 transition-colors duration-200 ${isDarkMode
                   ? "text-slate-100 hover:bg-slate-800 data-[state=open]:bg-slate-800"
                   : "text-gray-800 hover:bg-gradient-to-r hover:from-orange-100 hover:to-orange-200 data-[state=open]:bg-orange-100/60"
-              }`}
+                }`}
             >
               {isLoading ? (
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border animate-pulse ${
-                  isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
-                }`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border animate-pulse ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
+                  }`}>
                   <div className={`h-6 w-6 rounded ${isDarkMode ? "bg-slate-600" : "bg-orange-200"}`}></div>
                 </div>
               ) : (
-                <Avatar className={`h-10 w-10 rounded-xl border ${
-                  isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
-                }`}>
+                <Avatar className={`h-10 w-10 rounded-xl border ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
+                  }`}>
                   {restaurantImage && (
                     <AvatarImage
                       src={restaurantImage}
@@ -136,29 +132,25 @@ export function NavUser({ user, isDarkMode = false }) {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className={`w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-2xl border p-1 shadow-xl ${
-              isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200 bg-white"
-            }`}
+            className={`w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-2xl border p-1 shadow-xl ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-200 bg-white"
+              }`}
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={8}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div
-                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 ${
-                  isDarkMode ? "hover:bg-slate-800" : "hover:bg-orange-50"
-                }`}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 ${isDarkMode ? "hover:bg-slate-800" : "hover:bg-orange-50"
+                  }`}
                 onClick={handleProfileClick}
               >
                 <div className="relative">
                   {isLoading ? (
-                    <div className={`h-10 w-10 rounded-xl border animate-pulse ${
-                      isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
-                    }`}></div>
+                    <div className={`h-10 w-10 rounded-xl border animate-pulse ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200 bg-white"
+                      }`}></div>
                   ) : (
-                    <Avatar className={`h-10 w-10 rounded-xl border ${
-                      isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200"
-                    }`}>
+                    <Avatar className={`h-10 w-10 rounded-xl border ${isDarkMode ? "border-slate-600 bg-slate-800" : "border-orange-200"
+                      }`}>
                       {restaurantImage ? (
                         <AvatarImage
                           src={restaurantImage}
@@ -174,9 +166,8 @@ export function NavUser({ user, isDarkMode = false }) {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 border ${
-                    isDarkMode ? "border-slate-600 bg-slate-900" : "border-orange-200 bg-white"
-                  }`}>
+                  <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 border ${isDarkMode ? "border-slate-600 bg-slate-900" : "border-orange-200 bg-white"
+                    }`}>
                     <User className={`h-3 w-3 ${isDarkMode ? "text-orange-300" : "text-orange-600"}`} />
                   </div>
                 </div>
@@ -199,9 +190,8 @@ export function NavUser({ user, isDarkMode = false }) {
 
             <DropdownMenuItem
               onClick={handleLogout}
-              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${
-                isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
-              }`}
+              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
+                }`}
             >
               <div className={`rounded-lg p-1.5 ${isDarkMode ? "bg-red-500/20" : "bg-red-100"}`}>
                 <LogOut className="h-4 w-4" />

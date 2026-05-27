@@ -1,7 +1,8 @@
 import React, { Suspense, lazy, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { Truck, Utensils, House } from "lucide-react";
+import { Truck, Utensils, House, Bell } from "lucide-react";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
@@ -39,10 +40,23 @@ const OrderRow = ({
 }) => {
   const dispatch = useDispatch();
 
+  const { setNewlyAddedItemsOrderIds } = useNotification() || {};
+
   const handleBillClick = useCallback(() => {
+    // Clear NEW ORDER badge when bill is viewed
+    const oid = order?._id || order?.id || order?.orderId;
+    if (oid && setNewlyAddedItemsOrderIds) {
+      setNewlyAddedItemsOrderIds((prev) => {
+        const key = String(oid);
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
     if (onBillOpen) onBillOpen();
     dispatch(showBill(order));
-  }, [order, dispatch, onBillOpen]);
+  }, [order, dispatch, onBillOpen, setNewlyAddedItemsOrderIds]);
 
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
@@ -77,29 +91,35 @@ const OrderRow = ({
       {tableType === "pending" ? (
         <>
           {/* ID */}
-          <td className="px-4 py-3 align-middle text-center">
-            <span className={`font-mono text-xs font-bold px-2 py-1 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
+          <td className="px-4 py-3 align-middle text-center flex items-center justify-center gap-1.5">
+            <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#fbfaf8] border border-[#ede8e3] text-orange-600"}`}>
               {orderIdDisplay || "—"}
             </span>
+            {order.hasNewClientItems && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500 text-white animate-pulse shadow-sm border border-white">
+                <Bell size={10} className="animate-bounce" />
+                <span>NEW ORDER</span>
+              </span>
+            )}
           </td>
           {/* Time */}
           <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
           {/* Customer */}
-          <td className={`${tdBase} font-medium text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
+          <td className={`${tdBase} font-bold text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
           {/* Phone */}
-          <td className={`text-center ${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
+          <td className={`text-center ${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#87807b]"}`}>{customerPhone || "—"}</td>
         </>
       ) : (
         <>
           <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
-          <td className={`${tdBase} font-medium text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
-          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{customerPhone || "—"}</td>
+          <td className={`${tdBase} font-bold text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
+          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-[#87807b]"}`}>{customerPhone || "—"}</td>
         </>
       )}
 
       {/* Order Type */}
       <td className="px-4 py-3 align-middle text-center">
-        <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
+        <span className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-extrabold min-w-[130px] ${orderTypeClass}`}>
           {getOrderTypeIcon(order.orderType)}
           {isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}
         </span>
@@ -109,11 +129,11 @@ const OrderRow = ({
       <td className="px-4 py-3 align-middle text-center">
         <button
           onClick={handleBillClick}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+          className={`rounded-xl border px-4 py-2 text-xs font-extrabold transition-all duration-200 ${
             showBillAttention ? "bill-border-animate" : ""
           } ${isDarkMode
-            ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-            : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
+            ? "border-slate-600 bg-slate-800 text-orange-300 hover:bg-slate-700"
+            : "border-[#ede8e3] bg-[#fbfaf8] text-[#57524e] hover:bg-orange-50/50 hover:text-orange-700 hover:border-orange-200 shadow-sm"
           }`}
         >
           View Items & Bill

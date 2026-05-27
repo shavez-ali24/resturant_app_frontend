@@ -1,6 +1,7 @@
 "use client";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
 import {
   Collapsible,
@@ -20,12 +21,13 @@ import {
 
 export function NavMain({ items, isDarkMode = false }) {
   const location = useLocation();
+  const { newlyAddedItemsOrderIds } = useNotification() || {};
+  const hasNewItems = newlyAddedItemsOrderIds && newlyAddedItemsOrderIds.size > 0;
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className={`text-[10px] font-semibold uppercase tracking-widest ${
-        isDarkMode ? "text-slate-500" : "text-[#a8a29e]"
-      }`}>
+      <SidebarGroupLabel className={`text-[10px] font-semibold uppercase tracking-widest ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"
+        }`}>
         ADMIN
       </SidebarGroupLabel>
       <SidebarMenu className="mt-2">
@@ -36,84 +38,97 @@ export function NavMain({ items, isDarkMode = false }) {
 
           return (
             <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
-  <SidebarMenuItem className="rounded-md">
+              <SidebarMenuItem className="rounded-md">
 
-    {/* Trigger Button */}
-    <CollapsibleTrigger asChild>
-      <button
-        type="button"
-        className={`
-          flex items-center w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150 group
+                {/* Trigger Button */}
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className={`
+          flex items-center w-full text-left px-3.5 py-2 text-[13px] rounded-xl transition-all duration-150 group
           group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
           ${isActive
             ? isDarkMode
-              ? "!bg-orange-500/15 !text-orange-300 hover:!bg-orange-500/20 hover:!text-orange-300"
-              : "!bg-orange-500 !text-white shadow-sm hover:!bg-orange-500 hover:!text-white"
+              ? "!bg-orange-500/10 !text-orange-400 font-bold"
+              : "!bg-orange-50/60 !text-orange-700 font-bold border-l-4 border-l-orange-500 pl-2.5 rounded-r-xl rounded-l-none shadow-none"
             : isDarkMode
-              ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
-              : "text-[#78716c] hover:!bg-[#f7f3ef] hover:!text-[#1c1917]"
+              ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100 border-l-4 border-l-transparent"
+              : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917] border-l-4 border-l-transparent pl-3.5"
           }
         `}
-      >
-        <item.icon
-          className={`
-            mr-3 w-4 h-4 transition-colors duration-150 group-data-[collapsible=icon]:mr-0
-            ${isActive
-              ? isDarkMode ? "!text-orange-300" : "!text-white"
-              : isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#a8a29e] group-hover:text-[#1c1917]"}
-          `}
-        />
-
-        <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">{item.title}</span>
-
-        {item.items?.length && (
-          <ChevronRight
-            className={`
-              w-4 h-4 transition-transform duration-150 group-data-[collapsible=icon]:hidden
-              ${isActive
-                ? isDarkMode ? "rotate-90 !text-orange-300" : "rotate-90 !text-white"
-                : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#a8a29e] group-data-[state=open]:rotate-90"}
-            `}
-          />
-        )}
-      </button>
-    </CollapsibleTrigger>
-
-    {/* Submenu */}
-    {item.items?.length && (
-      <CollapsibleContent className="group-data-[collapsible=icon]:hidden">
-        <SidebarMenuSub className="pl-6 mt-1 space-y-1">
-          {item.items.map((subItem) => {
-            const isSubActive = subItem.url === location.pathname;
-            return (
-              <SidebarMenuSubItem key={subItem.title}>
-                  <Link
-                    to={subItem.url}
-                    target={subItem.target || undefined}
-                    rel={subItem.target === "_blank" ? "noreferrer" : undefined}
-                    className={`
-                      block px-3 py-1.5 text-sm rounded-lg transition-colors duration-150
-                      ${isSubActive
-                        ? isDarkMode
-                          ? "!bg-orange-500/15 !text-orange-300 font-semibold hover:!bg-orange-500/20 hover:!text-orange-300"
-                          : "!bg-orange-500 !text-white font-semibold hover:!bg-orange-500 hover:!text-white"
-                        : isDarkMode
-                          ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
-                          : "text-[#78716c] hover:!bg-[#f7f3ef] hover:!text-[#1c1917]"
-                      }
-                    `}
                   >
-                    {subItem.title}
-                  </Link>
-              </SidebarMenuSubItem>
-            );
-          })}
-        </SidebarMenuSub>
-      </CollapsibleContent>
-    )}
+                    <div className="relative mr-2.5 flex shrink-0 group-data-[collapsible=icon]:mr-0">
+                      <item.icon
+                        className={`
+              w-4 h-4 transition-colors duration-150
+              ${isActive
+                            ? isDarkMode ? "!text-orange-400" : "!text-orange-600"
+                            : isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#87807b] group-hover:text-[#1c1917]"}
+            `}
+                      />
+                      {item.title === "Orders" && hasNewItems && (
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                      )}
+                    </div>
 
-  </SidebarMenuItem>
-</Collapsible>
+                    <span className="flex-1 truncate font-semibold group-data-[collapsible=icon]:hidden">{item.title}</span>
+
+                    {item.items?.length && (
+                      <ChevronRight
+                        className={`
+              w-3.5 h-3.5 transition-transform duration-150 group-data-[collapsible=icon]:hidden
+              ${isActive
+                            ? isDarkMode ? "rotate-90 !text-orange-400" : "rotate-90 !text-orange-600"
+                            : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#87807b] group-data-[state=open]:rotate-90"}
+            `}
+                      />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+
+                {/* Submenu */}
+                {item.items?.length && (
+                  <CollapsibleContent className="group-data-[collapsible=icon]:hidden">
+                    <SidebarMenuSub className="pl-6 mt-1 space-y-1">
+                      {item.items.map((subItem) => {
+                        const isSubActive = subItem.url === location.pathname;
+                        return (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <Link
+                              to={subItem.url}
+                              target={subItem.target || undefined}
+                              rel={subItem.target === "_blank" ? "noreferrer" : undefined}
+                              className={`
+                       flex items-center justify-between px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-150
+                       ${isSubActive
+                                   ? isDarkMode
+                                     ? "!bg-orange-500/10 !text-orange-400 font-bold"
+                                     : "!bg-orange-50/50 !text-orange-700 font-bold border-l-2 border-l-orange-500 pl-2 rounded-r-lg rounded-l-none"
+                                   : isDarkMode
+                                     ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
+                                     : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917] pl-3"
+                                 }
+                     `}
+                            >
+                              <span>{subItem.title}</span>
+                              {subItem.title === "Live Orders" && hasNewItems && (
+                                <span className="inline-flex items-center rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-black text-white uppercase tracking-wider animate-pulse">
+                                  NEW
+                                </span>
+                              )}
+                            </Link>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                )}
+
+              </SidebarMenuItem>
+            </Collapsible>
 
           );
         })}

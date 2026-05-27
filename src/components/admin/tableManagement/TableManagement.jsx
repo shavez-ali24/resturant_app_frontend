@@ -119,6 +119,7 @@ const typeIcon = (type) => {
 
 function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories = [] }) {
   const [addUnits, { isLoading }] = useAddUnitsMutation();
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const [sectionName, setSectionName] = useState("");
   const [isCreatingNewSection, setIsCreatingNewSection] = useState(false);
@@ -270,7 +271,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
 
   /* ── STYLES ── */
   const inputBase =
-    "w-full rounded-lg border border-[#ede8e3] bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-orange-500/20";
+    "w-full rounded-lg border border-[#ede8e3] bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-orange-950 dark:focus:border-orange-500";
   const labelCls = "text-xs font-semibold uppercase tracking-wider text-[#78716c] dark:text-slate-400";
   const btnBase =
     "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-150";
@@ -285,7 +286,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
           value={isCreatingNewSection ? "__new__" : sectionName}
           onValueChange={handleSectionChange}
         >
-          <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-500/30 focus:border-orange-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+          <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-200 focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
             <SelectValue 
               placeholder={
                 existingSectionNames?.length 
@@ -343,7 +344,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
               onClick={() => setType(t)}
               className={`${btnBase} ${
                 type === t
-                  ? "bg-orange-500 text-white shadow-sm"
+                  ? isDarkMode
+                    ? "border border-orange-500/35 bg-orange-950/20 text-orange-400 font-extrabold shadow-sm"
+                    : "border border-orange-200 bg-orange-50 text-orange-700 font-extrabold shadow-sm"
                   : "bg-white text-[#78716c] border border-[#ede8e3] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               }`}
             >
@@ -374,7 +377,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                       value={u.categorySelection || undefined}
                       onValueChange={(value) => handleCustomCategorySelect(idx, value)}
                     >
-                      <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-500/30 focus:border-orange-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-200 focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                         <SelectValue placeholder="Select existing category or create new" />
                       </SelectTrigger>
                       <SelectContent className="border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800">
@@ -447,7 +450,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
       <button
         type="submit"
         disabled={isLoading}
-        className={`${btnBase} bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`${btnBase} w-full flex items-center justify-center gap-2 border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400`}
       >
         {isLoading ? "Adding..." : `Add ${type === "TABLE" ? "Tables" : "Rooms"}`}
       </button>
@@ -501,52 +504,58 @@ function UnitCard({ unit }) {
 
   return (
     <div
-      className={`relative rounded-lg border bg-white p-3 transition-all duration-150 hover:shadow-md dark:bg-[#1e293b] ${
+      className={`relative rounded-xl border bg-white p-2 transition-all duration-150 hover:shadow-sm dark:bg-[#1e293b] ${
         isRoom && !isActive
           ? "border-[#d6cfc8] bg-[#faf7f4] opacity-80 dark:border-slate-600 dark:bg-slate-900/70"
           : "border-[#ede8e3] dark:border-slate-700"
       }`}
     >
-      {isRoom && (
+      {/* TOP BADGES ROW */}
+      <div className="flex items-center justify-between gap-1 mb-2">
+        {isRoom ? (
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider whitespace-nowrap ${
+              isActive
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                : "bg-[#ede8e3] text-[#78716c] dark:bg-slate-700 dark:text-slate-300"
+            }`}
+          >
+            {isActive ? "Active" : "Inactive"}
+          </span>
+        ) : (
+          <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider whitespace-nowrap bg-orange-100 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400">
+            Table
+          </span>
+        )}
+
         <span
-          className={`absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-            isActive
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              : "bg-[#ede8e3] text-[#78716c] dark:bg-slate-700 dark:text-slate-300"
+          className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider whitespace-nowrap ${
+            unit.status === "AVAILABLE"
+              ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
+              : unit.status === "OCCUPIED"
+              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300"
+              : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
           }`}
         >
-          {isActive ? "Active" : "Inactive"}
+          {unit.status}
         </span>
-      )}
-
-      {/* STATUS BADGE */}
-      <span
-        className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-          unit.status === "AVAILABLE"
-            ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
-            : unit.status === "OCCUPIED"
-            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300"
-            : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
-        }`}
-      >
-        {unit.status}
-      </span>
+      </div>
 
       {/* QR CODE */}
-      <div className="flex justify-center mb-2">
+      <div className="flex justify-center mb-2 mt-1">
         {unit.qrCode?.url && !imgError ? (
           <img
             src={unit.qrCode.url}
             alt={`QR for ${unit.name}`}
             loading="lazy"
-            className={`h-20 w-20 rounded-md border border-[#ede8e3] object-contain ${
+            className={`h-16 w-16 rounded-md border border-[#ede8e3] object-contain ${
               isRoom && !isActive ? "grayscale" : ""
             }`}
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed border-[#ede8e3] bg-[#f7f3ef] dark:border-slate-600 dark:bg-slate-800/60">
-            <QrCode size={28} className="text-[#a8a29e] dark:text-slate-500" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-[#ede8e3] bg-[#f7f3ef] dark:border-slate-600 dark:bg-slate-800/60">
+            <QrCode size={24} className="text-[#a8a29e] dark:text-slate-500" />
           </div>
         )}
       </div>
@@ -563,52 +572,53 @@ function UnitCard({ unit }) {
         </p>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {unit.qrCode?.url && (
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] px-3 py-2 text-xs font-semibold text-[#1c1917] transition-colors hover:bg-[#ede8e3] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-700"
-          >
-            <Download size={14} /> Download QR
-          </button>
-        )}
+      {/* ACTIONS */}
+      <div className="mt-2 flex flex-col gap-1">
+        <div className="flex gap-1 w-full">
+          {unit.qrCode?.url && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="inline-flex flex-1 items-center justify-center gap-0.5 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] px-1 py-1 text-[9px] font-extrabold text-[#1c1917] transition-colors hover:bg-[#ede8e3] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"
+            >
+              <Download size={10} /> QR
+            </button>
+          )}
 
-        {isRoom && (
-          <>
+          {isRoom && (
             <button
               type="button"
               onClick={handleToggleRoomActive}
               disabled={!canToggleRoom || isToggleLoading}
-              className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+              className={`inline-flex flex-1 items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[9px] font-extrabold transition-all active:scale-[0.97] whitespace-nowrap ${
                 canToggleRoom && !isToggleLoading
                   ? isActive
-                    ? "bg-[#1c1917] text-white hover:bg-[#292524] dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                    : "bg-orange-500 text-white hover:bg-orange-600"
+                    ? "border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5]"
+                    : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                   : "cursor-not-allowed bg-[#ede8e3] text-[#a8a29e] dark:bg-slate-700 dark:text-slate-500"
               }`}
             >
               {isToggleLoading ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" /> Saving...
+                  <Loader2 size={10} className="animate-spin" /> Saving
                 </>
               ) : isActive ? (
                 <>
-                  <PowerOff size={14} /> Mark Inactive
+                  <PowerOff size={10} /> Inactive
                 </>
               ) : (
                 <>
-                  <Power size={14} /> Mark Active
+                  <Power size={10} /> Active
                 </>
               )}
             </button>
+          )}
+        </div>
 
-            {!canToggleRoom && (
-              <p className="text-center text-[10px] font-medium text-[#a8a29e] dark:text-slate-500">
-                Room can be toggled only when status is available.
-              </p>
-            )}
-          </>
+        {isRoom && !canToggleRoom && (
+          <p className="text-center text-[8px] font-bold text-[#a8a29e] dark:text-slate-500 leading-tight">
+            Can toggle room only when Available
+          </p>
         )}
       </div>
     </div>
@@ -650,7 +660,7 @@ function SectionBlock({ section }) {
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <Table2 size={14} /> Tables ({tables.length})
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
               {tables.map((unit) => (
                 <UnitCard key={unit._id || unit.name} unit={unit} />
               ))}
@@ -663,7 +673,7 @@ function SectionBlock({ section }) {
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <BedDouble size={14} /> Rooms ({rooms.length})
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
               {rooms.map((unit) => (
                 <UnitCard key={unit._id || unit.name} unit={unit} />
               ))}
@@ -700,6 +710,7 @@ export default function TableManagement() {
   );
 
   const handleSuccess = () => setShowForm(false);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
@@ -708,7 +719,7 @@ export default function TableManagement() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/admin/profile")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-orange-600"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-[#fff8f5] px-3 py-1.5 text-xs font-extrabold text-orange-700 shadow-sm transition-all hover:bg-[#ffedd5] active:scale-[0.97] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
           >
             <ArrowLeft size={14} />
           </button>
@@ -728,7 +739,11 @@ export default function TableManagement() {
           </div>
           <button
             onClick={() => setShowForm((p) => !p)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-orange-600"
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-extrabold shadow-sm transition-all active:scale-[0.97] ${
+              showForm
+                ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
+            }`}
           >
             {showForm ? <Minus size={14} /> : <Plus size={14} />}
             {showForm ? "Close" : "Add Section"}
@@ -737,7 +752,11 @@ export default function TableManagement() {
         <div className="sm:hidden flex justify-end">
           <button
             onClick={() => setShowForm((p) => !p)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-orange-600"
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-extrabold shadow-sm transition-all active:scale-[0.97] ${
+              showForm
+                ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
+            }`}
           >
             {showForm ? <Minus size={14} /> : <Plus size={14} />}
             {showForm ? "Close" : "Add Section"}
@@ -745,56 +764,64 @@ export default function TableManagement() {
         </div>
       </div>
 
-      {/* ADD FORM (collapsible) */}
-      {showForm && (
-        <div className="rounded-xl border border-[#ede8e3] bg-white p-5 max-w-md mx-auto dark:border-slate-700 dark:bg-[#1e293b]">
-          <h2 className="mb-4 text-sm font-bold text-[#1c1917] dark:text-slate-100">Add New Section / Units</h2>
-          <AddUnitsForm
-            onSuccess={handleSuccess}
-            existingSectionNames={existingSectionNames}
-            existingRoomCategories={existingRoomCategories}
-          />
-        </div>
-      )}
+      {/* MAIN CONTENT SPLIT GRID */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+        {/* ADD FORM (collapsible - 1 column) */}
+        {showForm && (
+          <div className="lg:col-span-1">
+            <div className="sticky top-4 rounded-2xl border border-[#ede8e3] bg-white p-5 dark:border-slate-700 dark:bg-[#1e293b] shadow-sm">
+              <h2 className="mb-4 text-sm font-bold text-[#1c1917] dark:text-slate-100">Add New Section / Units</h2>
+              <AddUnitsForm
+                onSuccess={handleSuccess}
+                existingSectionNames={existingSectionNames}
+                existingRoomCategories={existingRoomCategories}
+              />
+            </div>
+          </div>
+        )}
 
-      {/* LOADING */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ede8e3] border-t-orange-500 dark:border-slate-600" />
-        </div>
-      )}
+        {/* SECTIONS LIST (2 columns if form open, else full 3 columns) */}
+        <div className={`space-y-4 ${showForm ? "lg:col-span-2" : "lg:col-span-3"}`}>
+          {/* LOADING */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ede8e3] border-t-orange-500 dark:border-slate-600" />
+            </div>
+          )}
 
-      {/* ERROR */}
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm font-semibold text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-          Failed to load sections. Please try again.
-        </div>
-      )}
+          {/* ERROR */}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm font-semibold text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+              Failed to load sections. Please try again.
+            </div>
+          )}
 
-      {/* EMPTY */}
-      {!isLoading && !error && sections.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#ede8e3] bg-white py-20 text-center dark:border-slate-700 dark:bg-[#1e293b]">
-          <Table2 size={40} className="text-[#a8a29e] dark:text-slate-500" />
-          <p className="text-sm font-semibold text-[#78716c] dark:text-slate-400">
-            No sections or units configured yet
-          </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-orange-600"
-            >
-              <Plus size={14} /> Add Your First Section
-            </button>
-        </div>
-      )}
+          {/* EMPTY */}
+          {!isLoading && !error && sections.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#ede8e3] bg-white py-20 text-center dark:border-slate-700 dark:bg-[#1e293b]">
+              <Table2 size={40} className="text-[#a8a29e] dark:text-slate-500" />
+              <p className="text-sm font-semibold text-[#78716c] dark:text-slate-400">
+                No sections or units configured yet
+              </p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
+              >
+                <Plus size={14} /> Add Your First Section
+              </button>
+            </div>
+          )}
 
-      {/* SECTIONS LIST */}
-      {!isLoading && !error && sections.length > 0 && (
-        <div className="space-y-4">
-          {sections.map((section) => (
-            <SectionBlock key={section._id || section.name} section={section} />
-          ))}
+          {/* SECTIONS LIST */}
+          {!isLoading && !error && sections.length > 0 && (
+            <div className="space-y-4">
+              {sections.map((section) => (
+                <SectionBlock key={section._id || section.name} section={section} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

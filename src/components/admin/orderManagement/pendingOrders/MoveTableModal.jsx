@@ -85,8 +85,14 @@ export default function MoveTableModal({ order, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800 cursor-default"
+      >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-extrabold text-gray-800 dark:text-slate-100">

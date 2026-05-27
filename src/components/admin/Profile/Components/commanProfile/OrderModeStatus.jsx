@@ -1,23 +1,17 @@
 import React from "react";
 
 export const OrderModeStatus = React.memo(({ label, isEnabled }) => (
-  <div
-    className={`flex items-center justify-between rounded-xl border p-3 ${
-      isEnabled
-        ? "border-orange-200 bg-orange-50/70 dark:border-slate-600 dark:bg-slate-800/80"
-        : "border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-900/90"
-    }`}
-  >
-    <span className={`text-sm font-medium ${
-      isEnabled ? "text-orange-700 dark:text-orange-300" : "text-gray-600 dark:text-slate-300"
+  <div className="flex items-center justify-between py-2 px-1 border-b border-[#ede8e3]/50 last:border-b-0 dark:border-slate-700/50">
+    <span className={`text-sm font-extrabold ${
+      isEnabled ? "text-[#1c1917] dark:text-slate-100" : "text-gray-400 dark:text-slate-500"
     }`}>
       {label}
     </span>
     <span
-      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+      className={`rounded-lg px-2.5 py-0.5 text-xs font-bold transition-all ${
         isEnabled
-          ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
-          : "bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-200"
+          ? "border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-950/40 dark:text-orange-350 shadow-sm"
+          : "border border-gray-200 bg-gray-100 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
       }`}
     >
       {isEnabled ? "Active" : "Inactive"}

@@ -11,6 +11,7 @@ const ComboItemsManager = ({
   errors = {}, foodType = "mixed", isLoadingMenu = false,
   discount = null, comboPrice = null,
 }) => {
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
   const [availableMenuItems, setAvailableMenuItems] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const MotionDiv = motion.div;
@@ -111,7 +112,11 @@ const ComboItemsManager = ({
             type="button"
             onClick={addComboItem}
             disabled={isLoadingMenu || getAvailableCount() === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-orange-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-extrabold transition-all shadow-sm ${
+              isDarkMode
+                ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            } disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <Plus size={14} />
             {isLoadingMenu ? "Loading..." : "Add Item"}
@@ -171,7 +176,11 @@ const ComboItemsManager = ({
                   onClick={() => setExpandedIndex(isExpanded ? null : index)}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-extrabold ${
+                      isDarkMode
+                        ? "bg-orange-950/20 border-orange-500/35 text-orange-400"
+                        : "bg-orange-50 border-orange-200 text-orange-700"
+                    }`}>
                       {index + 1}
                     </span>
                     <div>

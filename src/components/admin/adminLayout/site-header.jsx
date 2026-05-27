@@ -123,10 +123,10 @@ export function SiteHeader({
               onClick={toggleSidebar}
               variant="outline"
               size="icon"
-              className={`h-9 w-9 rounded-xl transition-colors ${
+              className={`h-9 w-9 rounded-xl transition-all duration-200 border ${
                 isDarkMode
-                  ? "border-slate-700/50 bg-slate-900/50 text-slate-200 hover:bg-slate-800 hover:text-orange-300"
-                  : "border-orange-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                  ? "border-slate-700 bg-slate-900/50 text-slate-200 hover:bg-slate-800 hover:text-orange-400"
+                  : "border-[#ede8e3] bg-white text-[#57524e] hover:border-orange-200 hover:bg-orange-50/40 hover:text-orange-600 shadow-sm"
               }`}
               aria-label="Toggle sidebar"
             >
@@ -135,30 +135,29 @@ export function SiteHeader({
 
             <Separator
               orientation="vertical"
-              className={`h-7 ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
+              className={`h-7 ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}
             />
 
             {/* Restaurant Info - only show on md+ */}
             <div className="hidden items-center gap-3 md:flex">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${
+              <div className={`flex h-8 w-8 items-center justify-center rounded-xl border shadow-sm ${
                 isDarkMode
-                  ? "bg-gradient-to-br from-orange-400 to-orange-500"
-                  : "bg-gradient-to-br from-orange-500 to-orange-600"
+                  ? "border-orange-500/30 bg-orange-950/20 text-orange-400"
+                  : "border-orange-200 bg-[#fff8f5] text-orange-600"
               }`}>
-                <Store size={20} className="text-white" />
+                <Store size={20} />
               </div>
               <div>
                 <p
-                  className={`text-[9px] font-medium uppercase tracking-[0.16em] ${
-                    isDarkMode ? "text-slate-400" : "text-gray-500"
+                  className={`text-[9px] font-bold uppercase tracking-[0.16em] ${
+                    isDarkMode ? "text-slate-400" : "text-[#87807b]"
                   }`}
                 >
                   TapNbite
                 </p>
-                <h1 className={`text-lg font-bold leading-tight ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
+                <h1 className={`text-sm font-extrabold leading-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                   {restaurantName}
                 </h1>
-                {/* <p className={`text-xs ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>Dashboard Panel</p> */}
               </div>
             </div>
           </div>
@@ -170,21 +169,20 @@ export function SiteHeader({
               <>
                 <div 
                   data-tour="header-restaurant-toggle"
-                  className={`flex items-center gap-2 rounded-xl border px-2 py-1 shadow-sm md:gap-3 md:px-3 md:py-1 restaurant-toggle-card  ${
+                  className={`flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-sm md:gap-3 md:px-3.5 md:py-1 restaurant-toggle-card transition-all duration-200 ${
                     isDarkMode
-                      ? "border-slate-700 bg-gradient-to-r from-slate-950/95 via-slate-900/95 to-slate-900/95"
-                      : "border-orange-200 bg-white"
+                      ? "border-slate-700 bg-slate-900/90"
+                      : "border-[#ede8e3] bg-white hover:border-orange-200"
                   }`}
-                  style={isDarkMode ? { backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(100, 116, 139, 0.35)' } : {}}
                 >
                   <div className="flex flex-col">
-                    <span className={`text-xs font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>Restaurant</span>
-                    <span className={`text-xs font-semibold ${isOpen ? (isDarkMode ? 'text-emerald-300' : 'text-emerald-800') : (isDarkMode ? 'text-rose-300' : 'text-rose-700')}`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#87807b]"}`}>Restaurant</span>
+                    <span className={`text-xs font-black ${isOpen ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-600') : (isDarkMode ? 'text-rose-400' : 'text-rose-600')}`}>
                       {isOpen === true ? 'OPEN' : isOpen === false ? 'CLOSED' : '...'}
                     </span>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative flex items-center">
                     <input
                       type="checkbox"
                       id="status-toggle"
@@ -195,13 +193,13 @@ export function SiteHeader({
                     />
                     <label
                       htmlFor="status-toggle"
-                      className={`relative inline-flex items-center h-5 w-10 cursor-pointer rounded-full transition-all duration-300 ${
+                      className={`relative inline-flex items-center h-6 w-11 cursor-pointer rounded-full transition-all duration-300 ${
                         loading || toggleLoading ? 'opacity-50 cursor-not-allowed' : ''
-                      } ${isOpen ? (isDarkMode ? 'bg-emerald-400' : 'bg-green-600') : (isDarkMode ? 'bg-rose-500' : 'bg-red-600')}`}
+                      } ${isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}
                     >
                       <span
-                        className={`inline-block w-3 h-3 transform bg-white rounded-full transition-all duration-300 shadow-md ${
-                          isOpen ? 'translate-x-6' : 'translate-x-0.5'
+                        className={`absolute left-0.5 inline-block w-5 h-5 transform bg-white rounded-full transition-all duration-300 shadow-md ${
+                          isOpen ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
                     </label>
@@ -212,7 +210,7 @@ export function SiteHeader({
                 </div>
                 <Separator
                   orientation="vertical"
-                  className={`hidden h-7 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-orange-200/50"}`}
+                  className={`hidden h-7 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}
                 />
               </>
             )}
@@ -222,10 +220,10 @@ export function SiteHeader({
               onClick={onToggleDarkMode}
               variant="outline"
               size="icon"
-              className={`h-9 w-9 rounded-xl transition-colors ${
+              className={`h-9 w-9 rounded-xl transition-all duration-200 border ${
                 isDarkMode
-                  ? "border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800"
-                  : "border-orange-200 bg-white text-orange-600 hover:bg-orange-50"
+                  ? "border-slate-700 bg-slate-900/50 text-orange-400 hover:bg-slate-800"
+                  : "border-[#ede8e3] bg-white text-[#57524e] hover:border-orange-200 hover:bg-orange-50/40 hover:text-orange-600 shadow-sm"
               }`}
               aria-label="Toggle admin dark mode"
               title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}

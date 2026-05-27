@@ -1,7 +1,8 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/TableCard.jsx
 import React from "react";
-import { IndianRupee, SquarePen, Printer, Move } from "lucide-react";
+import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
 // Prompt-specified colors + existing extended statuses
 const getStatusBg = (status, rawStatus, isDark) => {
@@ -69,6 +70,7 @@ const TableCard = React.memo(function TableCard({
   onRoomClick,
   isLoading = false,
   isDarkMode = false,
+  newlyAddedItemsOrderIds,
 }) {
   const {
     tableNumber,
@@ -87,7 +89,19 @@ const TableCard = React.memo(function TableCard({
   const bgInfo = getStatusBg(status, rawStatus, isDarkMode);
   const textColor = getStatusText(status, rawStatus, isDarkMode);
 
+  const { newlyAddedItemsOrderIds: ctxOrderIds, setNewlyAddedItemsOrderIds } = useNotification() || {};
+
   const handleClick = () => {
+    // Clear NEW ORDER badge when card is clicked
+    if (orderId && setNewlyAddedItemsOrderIds) {
+      setNewlyAddedItemsOrderIds((prev) => {
+        const oid = String(orderId);
+        if (!prev.has(oid)) return prev;
+        const next = new Set(prev);
+        next.delete(oid);
+        return next;
+      });
+    }
     if (isRoom) {
       onRoomClick?.(table);
       return;
@@ -123,6 +137,11 @@ const TableCard = React.memo(function TableCard({
   // 🔧 FIX: Show bottom icons (Edit/Print/Move) for both rooms AND tables
   const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
 
+  const orderId = table.currentOrderId || table.orderId;
+  // Use context directly so it works even if prop chain is broken (LayoutView doesn't forward the prop)
+  const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
+  const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
+
   return (
     <div
       onClick={handleClick}
@@ -142,12 +161,43 @@ const TableCard = React.memo(function TableCard({
         opacity: isLoading ? 0.55 : 1,
       }}
     >
+      {hasNewClientItems && (
+        <div 
+          className="animate-pulse"
+          style={{
+            position: "absolute",
+            top: 2,
+            left: 2,
+            right: 2,
+            background: "#ef4444",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 3,
+            fontSize: "8px",
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.2px",
+            padding: "3px 0",
+            borderRadius: "4px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            zIndex: 10,
+            whiteSpace: "nowrap"
+          }}
+        >
+          <Bell size={8} className="animate-bounce" />
+          <span>NEW ORDER</span>
+        </div>
+      )}
       {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}
 
       {/* Top status / time */}
-      <div style={{ position: "absolute", top: 8, fontSize: 11, fontWeight: 800, color: textColor, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-        {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed} MINS` : ""}
-      </div>
+      {!hasNewClientItems && (
+        <div style={{ position: "absolute", top: 8, fontSize: 11, fontWeight: 800, color: textColor, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+          {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed} MINS` : ""}
+        </div>
+      )}
 
       {/* Main number - styled duller and slightly larger */}
       <div style={{ fontSize: 19, fontWeight: 700, color: isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.3)", marginTop: 12 }}>

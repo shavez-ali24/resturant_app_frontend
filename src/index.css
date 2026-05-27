@@ -371,10 +371,10 @@
 .admin-dark [class*="bg-amber-100"]                    { background-color: rgba(30, 41, 59, 0.9) !important; }
 
 /* ✅ PROTECT orange-500/600 — placed after bg-orange-50 rule so last !important wins */
-.admin-dark [class*="bg-orange-500"] { background-color: #f97316 !important; color: #ffffff !important; }
-.admin-dark [class*="bg-orange-600"] { background-color: #ea580c !important; color: #ffffff !important; }
-.admin-dark [class*="hover:bg-orange-500"]:hover { background-color: #ea580c !important; }
-.admin-dark [class*="hover:bg-orange-600"]:hover { background-color: #c2410c !important; }
+.admin-dark [class*="bg-orange-500"]:not([class*="bg-orange-500/"]) { background-color: #f97316 !important; color: #ffffff !important; }
+.admin-dark [class*="bg-orange-600"]:not([class*="bg-orange-600/"]) { background-color: #ea580c !important; color: #ffffff !important; }
+.admin-dark [class*="hover:bg-orange-500"]:not([class*="hover:bg-orange-500/"]):hover { background-color: #ea580c !important; }
+.admin-dark [class*="hover:bg-orange-600"]:not([class*="hover:bg-orange-600/"]):hover { background-color: #c2410c !important; }
 
 /* ✅ Sidebar active nav items — keep orange on hover in dark mode */
 .admin-dark [data-sidebar="menu-button"]:hover,
@@ -382,8 +382,8 @@
   background-color: hsl(215 28% 17%) !important;
   color: hsl(213 31% 91%) !important;
 }
-.admin-dark button[class*="bg-orange-500"]:hover,
-.admin-dark a[class*="bg-orange-500"]:hover {
+.admin-dark button[class*="bg-orange-500"]:not([class*="bg-orange-500/"]):hover,
+.admin-dark a[class*="bg-orange-500"]:not([class*="bg-orange-500/"]):hover {
   background-color: #f97316 !important;
   color: #ffffff !important;
 }

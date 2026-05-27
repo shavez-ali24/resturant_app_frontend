@@ -24,6 +24,9 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
+  const [newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds] = useState(() => new Set());
+  // Map<orderId, Set<itemKey>> — tracks which specific items are new per order
+  const [newItemsByOrderId, setNewItemsByOrderId] = useState(() => new Map());
   const sseManagerRef = useRef(null);
   const lastEventSignatureRef = useRef(null);
 
@@ -98,7 +101,15 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ notify, sseEvent, sseConnected }}>
+    <NotificationContext.Provider value={{
+      notify,
+      sseEvent,
+      sseConnected,
+      newlyAddedItemsOrderIds,
+      setNewlyAddedItemsOrderIds,
+      newItemsByOrderId,
+      setNewItemsByOrderId,
+    }}>
       {children}
 
       {notifications.length > 0 && (

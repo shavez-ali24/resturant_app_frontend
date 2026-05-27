@@ -1263,13 +1263,7 @@ const BillPage = ({
                   : "N/A"}
               </p>
               <p>
-                <strong>Type:</strong>{" "}
-                {(() => {
-                  if (!isEatHereOrder(activeOrder?.orderType)) return activeOrder?.orderType || "N/A";
-                  const tableLabel = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
-                  return tableLabel ? `${tableLabel} : ` : "";
-                })()}
-                {activeOrder?.orderType || "N/A"}
+                <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
               </p>
             </div>
 
@@ -1623,14 +1617,14 @@ const BillPage = ({
               </div>
 
               {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
-                <div className={`flex justify-between font-bold border-t pt-2 mt-2 text-emerald-600 dark:text-emerald-400 ${billBorderClass}`}>
+                <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass} ${billTextClass}`}>
                   <span>Settled Amount</span>
                   <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
                 </div>
               )}
 
               {!isEditMode && activeOrder?.paymentMethod && (
-                <div className={`flex justify-between text-xs font-semibold mt-1 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
                   <span>Payment Method</span>
                   <span className="uppercase">{activeOrder.paymentMethod}</span>
                 </div>
@@ -1644,39 +1638,45 @@ const BillPage = ({
         </div>
 
         {/* Footer - Responsive buttons */}
-        <div className={`flex flex-wrap items-center justify-end gap-2 border-t p-3 sm:p-4 ${
+        <div className={`flex flex-wrap items-center justify-end gap-2.5 border-t p-4 sm:p-5 ${
           isDarkMode
             ? "border-slate-700 bg-slate-800/40"
-            : "border-[#ede8e3] bg-[#f7f3ef]"
+            : "border-[#ede8e3] bg-[#fbfaf8]"
         }`}>
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className={`flex h-8 sm:h-9 items-center rounded-lg border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold transition-colors ${
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 ${
                 isDarkMode
                   ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                  : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                  : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
               }`}
             >
               Cancel
             </button>
           )}
 
-           <button
-             onClick={handleKOTPrint}
-             className="flex h-8 sm:h-9 items-center rounded-lg bg-orange-500 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-           >
-             KOT
-           </button>
+            <button
+              onClick={handleKOTPrint}
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
+                isDarkMode
+                  ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                  : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-350"
+              }`}
+            >
+              KOT
+            </button>
  
           {!isPreviewOnly && (
             <button
               onClick={handleBillOrder}
               disabled={isBilling || isAlreadyBilled}
-              className={`flex h-8 sm:h-9 items-center rounded-lg px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors ${
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 shadow-sm ${
                 isBilling || isAlreadyBilled
-                  ? "cursor-not-allowed bg-slate-400"
-                  : "bg-green-600 hover:bg-green-700"
+                  ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-60"
+                  : isDarkMode
+                    ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-950/40 active:scale-[0.97]"
+                    : "border-emerald-200 bg-[#f0fdf4] text-emerald-700 hover:bg-[#dcfce7] hover:border-emerald-300 active:scale-[0.97]"
               }`}
             >
               {isBilling ? "Billing..." : isAlreadyBilled ? "Billed" : "Bill Order"}
@@ -1686,23 +1686,23 @@ const BillPage = ({
           {!isPreviewOnly && (
             <button
               onClick={handlePrint}
-              className={`flex h-8 sm:h-9 items-center gap-1.5 rounded-lg px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-white transition-colors ${
+              className={`flex h-11 items-center gap-1.5 rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
                 isDarkMode
-                  ? "bg-sky-600 hover:bg-sky-500"
-                  : "bg-sky-600 hover:bg-sky-700"
+                  ? "border-sky-500/30 bg-sky-950/20 text-sky-400 hover:bg-sky-950/40"
+                  : "border-sky-200 bg-[#f0f9ff] text-sky-700 hover:bg-[#e0f2fe] hover:border-sky-300"
               }`}
             >
-              <Printer size={14} />
+              <Printer size={15} strokeWidth={2.5} />
               Print Bill
             </button>
           )}
 
           <button
             onClick={onClose}
-            className={`flex h-8 sm:h-9 items-center rounded-lg border px-2.5 sm:px-4 text-xs sm:text-sm font-semibold transition-colors sm:ml-auto ${
+            className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 sm:ml-auto ${
               isDarkMode
                 ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
             }`}
           >
             Close

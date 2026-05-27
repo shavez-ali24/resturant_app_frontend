@@ -337,9 +337,9 @@ export default function TopSellingAnalytics() {
   };
 
   const secondaryButtonClass =
-    "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60";
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 px-4 text-sm font-bold ${isDarkMode ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40" : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"}`;
   const primaryButtonClass =
-    "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 px-4 text-sm font-semibold ${isDarkMode ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40" : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"}`;
   const selectTriggerClass =
     `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 focus:ring-orange-100 sm:w-[190px] ${
       isDarkMode
@@ -566,7 +566,9 @@ export default function TopSellingAnalytics() {
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all sm:w-auto ${
                     showDatePicker || isCustomRange
-                      ? "border-orange-400 bg-orange-500 text-white"
+                      ? isDarkMode
+                        ? "border-orange-500/50 bg-orange-950/30 text-orange-400"
+                        : "border-orange-300 bg-orange-50 text-orange-700 font-bold"
                       : isDarkMode
                         ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
                         : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] hover:border-[#d6cfc8]"
@@ -647,8 +649,8 @@ export default function TopSellingAnalytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className={`rounded-2xl border p-4 ${card}`}>
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-orange-100">
-              <CalendarDays className="w-5 h-5 text-orange-600" />
+            <div className={`p-3 rounded-xl border ${isDarkMode ? "bg-orange-950/20 border-orange-500/30 text-orange-400" : "bg-[#fff8f5] border border-orange-200 text-orange-600"}`}>
+              <CalendarDays className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium mb-1 ${textSecondary}`}>
@@ -671,8 +673,8 @@ export default function TopSellingAnalytics() {
 
         <div className={`rounded-2xl border p-4 ${card}`}>
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-orange-100">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
+            <div className={`p-3 rounded-xl border ${isDarkMode ? "bg-orange-950/20 border-orange-500/30 text-orange-400" : "bg-[#fff8f5] border border-orange-200 text-orange-600"}`}>
+              <TrendingUp className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium mb-1 ${textSecondary}`}>Selected Time Range</p>
@@ -709,10 +711,12 @@ export default function TopSellingAnalytics() {
                   onClick={() => setActiveTab(tab)}
                   className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                     activeTab === tab
-                      ? "bg-orange-500 text-white shadow-sm"
+                      ? isDarkMode
+                        ? "bg-orange-950/30 border border-orange-500/40 text-orange-400 shadow-sm"
+                        : "bg-orange-50 border border-orange-200 text-orange-700 font-bold shadow-sm"
                       : isDarkMode
-                        ? "bg-transparent text-slate-400 hover:text-slate-100"
-                        : "bg-transparent text-[#78716c] hover:text-[#1c1917]"
+                        ? "border border-transparent text-slate-400 hover:text-slate-100"
+                        : "border border-transparent text-[#78716c] hover:text-[#1c1917]"
                   }`}
                 >
                   {tab === "products"

@@ -710,7 +710,7 @@ const EditOrderModal = ({
   const modalBg          = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
   const headerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
   const textPri          = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
-  const textMut          = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
+  const textMut          = isDarkMode ? "text-slate-400/80"  : "text-[#a8a29e]";
   const labelCls         = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
   const inputCls         = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
     isDarkMode
@@ -784,12 +784,21 @@ const EditOrderModal = ({
             const rooftopCount = sec.rooftop?.tables || 0;
             const roomsCount   = sec.rooms?.rooms    || 0;
 
+            const isRoomOrder = editingOrder?.source?.type === "ROOM";
+
             const sectionDefs = [
               { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
               { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
               { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
               { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
-            ].filter(s => s.count > 0);
+            ].filter(s => {
+              if (s.count <= 0) return false;
+              if (isRoomOrder) {
+                return s.key === "rooms";
+              } else {
+                return s.key !== "rooms";
+              }
+            });
 
             const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
             const onlyOne = sectionDefs.length === 1;

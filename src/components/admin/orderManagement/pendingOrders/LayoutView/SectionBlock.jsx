@@ -18,6 +18,7 @@ const SectionBlock = React.memo(function SectionBlock({
   onRoomClick,
   roomActionLoadingId,
   isDarkMode = false,
+  newlyAddedItemsOrderIds,
 }) {
   const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
   const tables = React.useMemo(
@@ -147,6 +148,7 @@ const SectionBlock = React.memo(function SectionBlock({
                   onRoomClick={onRoomClick}
                   isLoading={roomActionLoadingId === table.unitId}
                   isDarkMode={isDarkMode}
+                  newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
                 />
               ))}
             </div>
@@ -192,6 +194,7 @@ const SectionBlock = React.memo(function SectionBlock({
                   onRoomClick={onRoomClick}
                   isLoading={roomActionLoadingId === table.unitId}
                   isDarkMode={isDarkMode}
+                  newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
                 />
               ))}
             </div>

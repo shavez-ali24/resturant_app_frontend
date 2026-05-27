@@ -179,21 +179,19 @@ export default function RoomActionModal({
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={handleEditClick}
-                    style={ICON_BTN(isDarkMode)}
-                    className="flex-1 flex items-center justify-center gap-1.5"
+                    className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-orange-200 bg-white text-xs font-extrabold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
                     title={isBilled ? "Pay Order" : "Edit Order"}
                   >
-                    {isBilled ? <IndianRupee size={18} /> : <SquarePen size={18} />}
-                    <span className="text-xs font-semibold">{isBilled ? "Pay" : "Edit"}</span>
+                    {isBilled ? <IndianRupee size={16} /> : <SquarePen size={16} />}
+                    <span className="text-xs font-bold">{isBilled ? "Pay" : "Edit"}</span>
                   </button>
                   <button
                     onClick={handleViewClick}
-                    style={ICON_BTN(isDarkMode)}
-                    className="flex-1 flex items-center justify-center gap-1.5"
+                    className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-orange-200 bg-white text-xs font-extrabold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
                     title="View Bill"
                   >
-                    <Printer size={18} />
-                    <span className="text-xs font-semibold">Bill</span>
+                    <Printer size={16} />
+                    <span className="text-xs font-bold">Bill</span>
                   </button>
                 </div>
               )}
@@ -207,7 +205,7 @@ export default function RoomActionModal({
                 <button
                   onClick={handleCheckout}
                   disabled={isLoading}
-                  className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 transition-all duration-150 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                 >
                   {isLoading ? "..." : "Check Out"}
                 </button>
@@ -306,10 +304,10 @@ export default function RoomActionModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-all duration-150 ${
                     isDarkMode
-                      ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      : "bg-[#f7f3ef] text-[#78716c] hover:bg-[#ede8e3]"
+                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+                      : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
                   }`}
                 >
                   Cancel
@@ -317,7 +315,7 @@ export default function RoomActionModal({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 rounded-lg py-2.5 text-sm font-extrabold border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm"
                 >
                   {isLoading ? "Booking..." : "Book Room"}
                 </button>

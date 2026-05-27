@@ -431,14 +431,14 @@ const TabButton = ({ active, onClick, children }) => (
     onClick={onClick}
     className={`relative px-3 pb-2 text-sm font-semibold transition ${
       active
-        ? "text-orange-600"
+        ? "text-orange-700 dark:text-orange-400"
         : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
     }`}
   >
     {children}
     <span
       className={`absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition ${
-        active ? "bg-orange-500" : "bg-transparent"
+        active ? "bg-orange-600 dark:bg-orange-500" : "bg-transparent"
       }`}
     />
   </button>
@@ -1581,10 +1581,14 @@ const prepareFormData = (formData, file) => {
                 data-tour="menu-filters-btn"
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-none sm:px-4 ${
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-bold transition-all sm:px-4 ${
                   isFilterOpen
-                    ? "border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
-                    : "border-orange-500 bg-orange-500 text-white hover:bg-orange-600"
+                    ? isDarkMode
+                      ? "border-orange-500/50 bg-orange-950/40 text-orange-300 hover:bg-orange-950/60"
+                      : "border-orange-300 bg-orange-100/90 text-orange-850 hover:bg-orange-200/90 shadow-sm"
+                    : isDarkMode
+                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+                      : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm"
                 }`}
               >
                 <SlidersHorizontal size={14} />
@@ -1683,7 +1687,11 @@ const prepareFormData = (formData, file) => {
                           type="button"
                           data-tour="menu-drag-category"
                           onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-1.5 py-1 text-[#78716c] transition hover:bg-[#ede8e3] active:cursor-grabbing dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 sm:order-2 sm:ml-auto"
+                          className={`order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border px-1.5 py-1 transition active:cursor-grabbing sm:order-2 sm:ml-auto ${
+                             isDarkMode
+                               ? "border-slate-600 bg-slate-700 text-orange-400 hover:bg-slate-600"
+                               : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+                           }`}
                           aria-label={`Drag ${category} to reorder`}
                           title="Hold and drag to reorder"
                         >
@@ -1741,14 +1749,18 @@ const prepareFormData = (formData, file) => {
                           key={categoryKey}
                           type="button"
                           onClick={() => setSelectedCategory(category.label)}
-                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 px-4 py-2.5 text-left text-sm font-semibold transition ${
+                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 py-2.5 text-left text-sm font-semibold transition ${
                             isActive
-                              ? "border-orange-500 bg-[#fff7ed] text-orange-600"
-                              : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800/60"
+                              ? "border-l-orange-500 bg-orange-50 text-orange-700 rounded-r-xl rounded-l-none pl-3 pr-4 shadow-none dark:border-l-orange-500 dark:bg-orange-950/20 dark:text-orange-400"
+                              : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] pl-4 pr-4 dark:text-slate-200 dark:hover:bg-slate-800/60"
                           }`}
                         >
                           <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">{category.label}</span>
-                          <span className="shrink-0 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <span className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-semibold transition ${
+                            isActive
+                              ? "border-orange-200 bg-orange-100 text-orange-850 dark:border-orange-500/30 dark:bg-orange-950/40 dark:text-orange-350"
+                              : "border-[#ede8e3] bg-[#f7f3ef] text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          }`}>
                             {category.items.length}
                           </span>
                         </button>
@@ -1779,7 +1791,11 @@ const prepareFormData = (formData, file) => {
                       <button
                         type="button"
                         onClick={() => navigate("/admin/menu/add")}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500 bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 hover:border-orange-600"
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-extrabold transition-all shadow-sm active:scale-[0.97] ${
+                          isDarkMode
+                            ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                            : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+                        }`}
                         data-tour="menu-add-item-btn"
                       >
                         <CirclePlus size={14} />

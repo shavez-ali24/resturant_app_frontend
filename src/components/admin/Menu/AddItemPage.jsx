@@ -310,8 +310,8 @@ export default function AddItemPage() {
         <button
           type="button"
           onClick={() => navigate("/admin/menu")}
-          className={`flex items-center gap-1 text-xs font-semibold transition-colors sm:gap-1.5 sm:text-sm ${
-            isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"
+          className={`flex items-center gap-1 text-xs font-extrabold transition-all sm:gap-1.5 sm:text-sm ${
+            isDarkMode ? "text-orange-400 hover:text-orange-355" : "text-orange-700 hover:text-orange-850"
           }`}
         >
           <ArrowLeft size={14} className="sm:w-4 sm:h-4" />
@@ -319,7 +319,7 @@ export default function AddItemPage() {
           <span className="sm:hidden">Back</span>
         </button>
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3">
-          <Pizza size={20} className="text-orange-500 shrink-0 sm:w-7 sm:h-7" />
+          <Pizza size={20} className="text-orange-600 dark:text-orange-400 shrink-0 sm:w-7 sm:h-7" />
           <div>
             <p className={`text-sm font-bold leading-tight sm:text-xl ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
               Add New Item

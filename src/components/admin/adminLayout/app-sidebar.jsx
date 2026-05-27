@@ -59,15 +59,15 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
   const navMain = [
     ...(isAdmin || isStaff
       ? [
-          {
-            title: "Kitchen KDS",
-            url: "#",
-            icon: ChefHat,
-            isActive: true,
-            roles: ["admin", "staff"],
-            items: [{ title: "Kitchen View", url: "/kds", target: "_blank" }],
-          },
-        ]
+        {
+          title: "Kitchen KDS",
+          url: "#",
+          icon: ChefHat,
+          isActive: true,
+          roles: ["admin", "staff"],
+          items: [{ title: "Kitchen View", url: "/kds", target: "_blank" }],
+        },
+      ]
       : []),
     {
       title: "Orders",
@@ -84,15 +84,15 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
 
     ...(isAdmin || isStaff
       ? [
-          {
-            title: "Digital Menu",
-            url: "#",
-            icon: Utensils,
-            isActive: true,
-            roles: ["admin", "staff"],
-            items: [{ title: "Edit Menu", url: "/admin/menu" }],
-          },
-        ]
+        {
+          title: "Digital Menu",
+          url: "#",
+          icon: Utensils,
+          isActive: true,
+          roles: ["admin", "staff"],
+          items: [{ title: "Edit Menu", url: "/admin/menu" }],
+        },
+      ]
       : []),
     // ...(isAdmin
     //   ? [

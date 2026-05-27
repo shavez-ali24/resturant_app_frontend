@@ -39,17 +39,19 @@ const PendingOrderRowActions = ({
         {hasCustomizations ? (
           <button
             onClick={() => onCustomizationsClick?.(order)}
-            className="inline-flex items-center gap-1 rounded-lg bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-orange-600 "
+            className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-[#fff8f5] px-3 py-1.5 text-xs font-black text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
             title={`${customizationCount} item(s) have customizations`}
           >
-            <Eye size={12} />
-            Note
-            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
+            <Eye size={13} strokeWidth={2.5} />
+            <span>Note</span>
+            <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-orange-100 text-[10px] font-black text-orange-800 dark:bg-orange-900/60 dark:text-orange-355">
               {customizationCount}
             </span>
           </button>
         ) : (
-          <Ban size={14} className={`mx-auto opacity-30 ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`} />
+          <span className={`text-xs font-bold opacity-30 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
+            —
+          </span>
         )}
       </td>
 

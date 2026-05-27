@@ -125,7 +125,11 @@ const CustomizationsModal = ({ order, onClose }) => {
         <div className={`flex justify-end border-t px-5 py-3 ${divider} ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
           <button
             onClick={onClose}
-            className="rounded-lg bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+            className={`rounded-lg px-5 py-2 text-sm font-bold transition-all active:scale-[0.97] ${
+              isDarkMode
+                ? "border border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                : "border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm"
+            }`}
           >
             Close
           </button>

@@ -52,11 +52,11 @@ const formatValue = (value) => {
 };
 
 export const ProfileField = React.memo(({ label, value, icon }) => (
-  <div className="rounded-xl border border-[#ede8e3] bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-[#1e293b]">
-    <div className="mb-1 flex items-center gap-2">
-      {icon && <span className="text-orange-500">{icon}</span>}
-      <label className="text-xs font-semibold uppercase tracking-wide text-orange-500">{label}</label>
+  <div className="flex flex-col min-w-0 transition-colors py-1">
+    <div className="mb-1 flex items-center gap-1.5">
+      {icon && <span className="text-orange-600 dark:text-orange-400 opacity-80 shrink-0">{icon}</span>}
+      <label className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">{label}</label>
     </div>
-    <p className="text-sm font-semibold text-[#1c1917] dark:text-slate-100">{formatValue(value)}</p>
+    <p className="text-sm font-extrabold text-[#1c1917] dark:text-slate-100 truncate">{formatValue(value)}</p>
   </div>
 ));

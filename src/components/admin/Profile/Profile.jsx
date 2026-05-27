@@ -10,12 +10,10 @@ import { useAdminTour } from "../../../hooks/useAdminTour";
 import { TOUR_KEYS, getProfileSteps } from "../../../utils/adminTour";
 import { useUpdateProfileForm } from "./Hooks/useUpdateProfileForm";
 import UpdateCoreProfileForm from "./Components/UpdateCoreProfileForm";
-import UpdateCategoriesForm from "./Components/UpdateCategoriesForm";
 import UpdateOrderModeForm from "./Components/UpdateOrderModeForm";
 import UpdateFinancialsForm from "./Components/UpdateFinancialsForm";
 import UpdateBrandingForm from "./Components/UpdateBrandingForm";
 import UpdateFormActions from "./Components/UpdateFormActions";
-import { chipVariant } from "./Lib/motionVariants";
 
 // ── Inner edit form — only rendered after resData is loaded ──────────────────
 // Separate component so hooks always run with real data
@@ -25,44 +23,34 @@ function ProfileEditForm({ resData, token, isDarkMode, onSuccess, onClose }) {
   return (
     <form onSubmit={form.handleSubmit} className="flex flex-1 min-h-0 flex-col">
       <div className="flex-1 min-h-0 overflow-y-scroll px-3 pt-4 pb-2 md:px-6">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <UpdateCoreProfileForm formData={form.formData} handleChange={form.handleChange} />
           <UpdateFinancialsForm
             formData={form.formData}
             handleChange={form.handleChange}
             handleGstToggle={form.handleGstToggle}
           />
-          <div className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b] p-3 flex flex-col gap-3">
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Order Modes</h3>
-              <UpdateOrderModeForm
-                formData={form.formData}
-                handleOrderModeToggle={form.handleOrderModeToggle}
-                activeModesCount={form.activeModesCount}
-                atLeastOneModeActive={form.atLeastOneModeActive}
-              />
+          <div className="rounded-xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b] p-4 flex flex-col gap-4 lg:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Order Modes</h3>
+                <UpdateOrderModeForm
+                  formData={form.formData}
+                  handleOrderModeToggle={form.handleOrderModeToggle}
+                  activeModesCount={form.activeModesCount}
+                  atLeastOneModeActive={form.atLeastOneModeActive}
+                />
+              </div>
+              <div className="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-6 border-[#ede8e3] dark:border-slate-700">
+                <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo & Branding</h3>
+                <UpdateBrandingForm
+                  file={form.file}
+                  fileError={form.fileError}
+                  handleFileChange={form.handleFileChange}
+                  currentLogo={resData?.logo?.url || ""}
+                />
+              </div>
             </div>
-            <div className="border-t border-[#ede8e3] dark:border-slate-700 pt-3">
-              <h3 className="mb-2 text-sm font-semibold text-[#1c1917] dark:text-slate-100">Logo & Branding</h3>
-              <UpdateBrandingForm
-                file={form.file}
-                fileError={form.fileError}
-                handleFileChange={form.handleFileChange}
-                currentLogo={resData?.logo?.url || ""}
-              />
-            </div>
-          </div>
-          <div className="lg:col-span-1">
-            <UpdateCategoriesForm
-              categories={form.categories}
-              currentCategoryInput={form.currentCategoryInput}
-              setCurrentCategoryInput={form.setCurrentCategoryInput}
-              handleCategoryKeyDown={form.handleCategoryKeyDown}
-              handleAddCategory={form.handleAddCategory}
-              handleRemoveCategory={form.handleRemoveCategory}
-              categorySuggestions={form.categorySuggestions}
-              chipVariant={chipVariant}
-            />
           </div>
         </div>
       </div>

@@ -53,7 +53,7 @@ import {
 import { clearCart } from "../../../../redux/clientRedux/clientSlice";
 
 const Orders = () => {
-  const { notify, sseEvent, sseConnected } = useNotification();
+  const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds } = useNotification();
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -267,6 +267,40 @@ const Orders = () => {
     if (!normalizedOrder) return;
     const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
     const eventTimestamp = sseEvent?.ts || Date.now();
+
+    // ─── SHOW BADGE FOR NEW ORDER OR ADDED ITEMS (admin or client) ───
+    const getOrderTotalItemsQuantity = (order) => {
+      if (!order || !Array.isArray(order.items)) return 0;
+      return order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+    };
+
+    if (sseEvent.type === "NEW_ORDER") {
+      // Any new order (from client or admin) → show badge
+      setNewlyAddedItemsOrderIds((prevSet) => {
+        const next = new Set(prevSet);
+        next.add(String(incomingId));
+        return next;
+      });
+    } else {
+      // ORDER_UPDATED — show badge if total quantity increased (admin or client added items)
+      const previousVersion = sseOrders.find(
+        (order) => getOrderIdValue(order) === incomingId
+      ) || [...(pendingOrders || []), ...(preparingOrders || []), ...(readyOrders || []), ...(completedOrders || [])].find(
+        (order) => getOrderIdValue(order) === incomingId
+      );
+
+      if (previousVersion) {
+        const prevQty = getOrderTotalItemsQuantity(previousVersion);
+        const newQty = getOrderTotalItemsQuantity(normalizedOrder);
+        if (newQty > prevQty) {
+          setNewlyAddedItemsOrderIds((prevSet) => {
+            const next = new Set(prevSet);
+            next.add(String(incomingId));
+            return next;
+          });
+        }
+      }
+    }
 
     if (normalizedStatus === "preparing") {
       const preparingStartedAtMs =
@@ -919,6 +953,27 @@ const Orders = () => {
     dispatch(clearCart());
   }, [dispatch]);
 
+  const clearNewItemsFlag = useCallback((orderId) => {
+    if (!orderId) return;
+    setNewlyAddedItemsOrderIds((prev) => {
+      const oid = String(orderId);
+      if (!prev.has(oid)) return prev;
+      const next = new Set(prev);
+      next.delete(oid);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const activeId = getOrderIdValue(editingOrder) || 
+                     getOrderIdValue(selectedOrderForCustomizations) || 
+                     getOrderIdValue(orderForBillModal) || 
+                     getOrderIdValue(payModalOrder);
+    if (activeId) {
+      clearNewItemsFlag(activeId);
+    }
+  }, [editingOrder, selectedOrderForCustomizations, orderForBillModal, payModalOrder, clearNewItemsFlag]);
+
   // 🔧 FIX: Store orderId in URL so data survives page refresh
   const handleEditOrderFromLayout = useCallback(async (tableInfo) => {
     const orderId = tableInfo?.currentOrderId || tableInfo?.orderId;
@@ -1097,7 +1152,7 @@ const Orders = () => {
               refetchReadyOrders();
               refetchCompletedOrders();
             }}
-            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
+            className={`flex items-center gap-1.5 text-sm font-extrabold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-350" : "text-orange-700 hover:text-orange-850"}`}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Live Orders
@@ -1113,12 +1168,21 @@ const Orders = () => {
               asModal={true}
               isDarkMode={isDarkMode}
               editingOrder={editingOrder}
-              onOrderSuccess={() => {
+              onOrderSuccess={(mode) => {
                 closeEditOrder();
                 refetchPendingOrders();
                 refetchPreparingOrders();
                 refetchReadyOrders();
                 refetchCompletedOrders();
+                if (mode === "print_bill") {
+                  setViewMode("layout");
+                  localStorage.setItem("orderViewMode", "layout");
+                  notify("Order billed successfully!", "success");
+                } else if (mode === "save") {
+                  notify("Order saved successfully!", "success");
+                } else if (mode === "kot") {
+                  notify("KOT generated and items added successfully!", "success");
+                }
               }}
             />
           </Suspense>
@@ -1140,7 +1204,7 @@ const Orders = () => {
               refetchReadyOrders();
               refetchCompletedOrders();
             }}
-            className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"}`}
+            className={`flex items-center gap-1.5 text-sm font-extrabold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-350" : "text-orange-700 hover:text-orange-850"}`}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Live Orders
@@ -1176,12 +1240,21 @@ const Orders = () => {
                   } catch(_) {}
                   return null;
                 })() : null)}
-                onOrderSuccess={() => {
+                onOrderSuccess={(mode) => {
                   closeCreateOrder();
                   refetchPendingOrders();
                   refetchPreparingOrders();
                   refetchReadyOrders();
                   refetchCompletedOrders();
+                  if (mode === "print_bill") {
+                    setViewMode("layout");
+                    localStorage.setItem("orderViewMode", "layout");
+                    notify("Order billed successfully!", "success");
+                  } else if (mode === "save") {
+                    notify("Order saved successfully!", "success");
+                  } else if (mode === "kot") {
+                    notify("KOT generated and items added successfully!", "success");
+                  }
                 }}
               />
             )}
@@ -1192,56 +1265,60 @@ const Orders = () => {
   }
 
   return (
-    <div className={`flex h-screen flex-col overflow-hidden px-3 py-3 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+    <div className={`flex h-screen flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#fbfaf8]"}`}>
 
       {/* ── Header bar ── */}
       <div
         data-tour="orders-heading"
-        className="mb-2 flex flex-shrink-0 items-center justify-between gap-3 px-1 py-2"
+        className="mb-4 flex flex-shrink-0 flex-col gap-3.5 px-1 py-1 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-center gap-2.5">
           <Heading title="Live Orders" showDot />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2.5 sm:w-auto sm:justify-end sm:gap-3">
           {/* ── View Toggle ── */}
-          <div className={`flex items-center rounded-lg border p-0.5 ${isDarkMode ? "border-slate-700/60 bg-slate-800" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
+          <div className={`flex items-center rounded-2xl border p-1 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-[#ede8e3] bg-white"}`}>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "table"); setViewMode("table"); }}
-              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all sm:px-2.5 sm:text-sm ${
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${
                 viewMode === "table"
-                  ? "bg-orange-500 text-white shadow-sm"
+                  ? isDarkMode ? "bg-orange-950/30 border border-orange-500/50 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
                   : isDarkMode
-                    ? "text-slate-400 hover:text-slate-200"
-                    : "text-[#78716c] hover:text-[#44403c]"
+                    ? "text-slate-400 border border-transparent hover:text-slate-200"
+                    : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
               }`}
               title="Table View"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               <span>Table</span>
             </button>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
-              className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all sm:px-2.5 sm:text-sm ${
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${
                 viewMode === "layout"
-                  ? "bg-orange-500 text-white shadow-sm"
+                  ? isDarkMode ? "bg-orange-950/30 border border-orange-500/40 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
                   : isDarkMode
-                    ? "text-slate-400 hover:text-slate-200"
-                    : "text-[#78716c] hover:text-[#44403c]"
+                    ? "text-slate-400 border border-transparent hover:text-slate-200"
+                    : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
               }`}
               title="Layout View"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-3.5 w-3.5" strokeWidth={2.5} />
               <span>Layout</span>
             </button>
           </div>
           {/* ── Create Order Button (right side) ── */}
           <button
             onClick={() => setSearchParams({ view: "create" })}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm shadow-sm active:scale-[0.97] bg-orange-500 text-white hover:bg-orange-600`}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all sm:text-sm shadow-sm active:scale-[0.97] whitespace-nowrap shrink-0 ${
+              isDarkMode
+                ? "bg-orange-950/20 border border-orange-500/35 text-orange-400 hover:bg-orange-950/40"
+                : "bg-[#fff8f5] border border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            }`}
             title="Create New Order"
           >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Create Order</span>
+            <Plus className="h-4 w-4" strokeWidth={3} />
+            <span>Create Order</span>
           </button>
         </div>
       </div>
@@ -1277,6 +1354,7 @@ const Orders = () => {
                onBookRoom={handleBookRoomPrompt}
                onCheckoutRoom={handleCheckoutRoom}
                roomActionLoadingId={roomActionLoadingId}
+               newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
             />
           </Suspense>
         </div>
@@ -1312,6 +1390,7 @@ const Orders = () => {
               onCustomizationsClick={handleCustomizationsClick}
               containerVariant="plain"
               isDarkMode={isDarkMode}
+              newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
               latestOrderId={
                 combinedOrders[0]?._id ||
                 combinedOrders[0]?.id ||
@@ -1352,9 +1431,11 @@ const Orders = () => {
                       <PaginationLink
                         href="#"
                         isActive={currentPage === pageNum}
-                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm ${
+                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm font-extrabold transition-all ${
                           currentPage === pageNum
-                            ? "bg-orange-500 text-white border-orange-500"
+                            ? isDarkMode
+                              ? "bg-orange-950/30 border-orange-500/50 text-orange-400"
+                              : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
                               : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
@@ -1406,11 +1487,20 @@ const Orders = () => {
             asModal={true}
             isDarkMode={isDarkMode}
             editingOrder={editingOrder}
-            onOrderSuccess={() => {
+            onOrderSuccess={(mode) => {
               closeEditOrder();
               refetchPendingOrders();
               refetchPreparingOrders();
               refetchReadyOrders();
+              if (mode === "print_bill") {
+                setViewMode("layout");
+                localStorage.setItem("orderViewMode", "layout");
+                notify("Order billed successfully!", "success");
+              } else if (mode === "save") {
+                notify("Order saved successfully!", "success");
+              } else if (mode === "kot") {
+                notify("KOT generated and items added successfully!", "success");
+              }
             }}
           />
         )}

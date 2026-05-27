@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useGetStaffQuery,
   useCreateStaffMutation,
@@ -15,6 +16,7 @@ import {
   X,
   SquarePen,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import Heading from "../common/Heading";
 import { useNotify } from "../common/NotificationModal";
@@ -41,6 +43,7 @@ const StaffManagement = () => {
 
   useAdminTour(TOUR_KEYS.staff, getStaffSteps, isDarkMode, 700);
 
+  const navigate = useNavigate();
   const { data: staffData, isLoading, refetch } = useGetStaffQuery();
   const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
   const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
@@ -155,8 +158,8 @@ const StaffManagement = () => {
             {/* Header */}
             <div className={`rounded-t-2xl border-b p-5 pb-4 ${divider} ${isDarkMode ? "bg-slate-800/60" : "bg-[#f7f3ef]"}`}>
               <h2 className={`flex items-center gap-2.5 text-lg font-semibold ${tp}`}>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500">
-                  {isEditing ? <SquarePen className="text-white" size={16} /> : <Plus className="text-white" size={16} />}
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200 bg-[#fff8f5] text-orange-600 dark:border-orange-500/30 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm shrink-0">
+                  {isEditing ? <SquarePen size={16} /> : <Plus size={16} />}
                 </div>
                 {isEditing ? "Edit Staff" : "Add New Staff"}
               </h2>
@@ -194,7 +197,11 @@ const StaffManagement = () => {
               <button onClick={handleCloseModal} className={`h-9 flex-1 rounded-lg border text-sm font-semibold transition-colors ${isDarkMode ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} disabled={isCreating || isUpdating} className="h-9 flex-1 rounded-lg bg-orange-500 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">
+              <button
+                onClick={handleSubmit}
+                disabled={isCreating || isUpdating}
+                className="h-9 flex-1 rounded-lg border border-orange-200 bg-[#fff8f5] text-sm font-semibold text-orange-700 transition-colors hover:bg-[#ffedd5] hover:border-orange-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm"
+              >
                 {isCreating || isUpdating ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Staff" : "Create Staff")}
               </button>
             </div>
@@ -233,8 +240,15 @@ const StaffManagement = () => {
       {/* ── Header: Title + Search + Total + Add ── */}
       <div data-tour="staff-heading" className={`mb-4 shrink-0 rounded-2xl border p-3 sm:p-4 ${card}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left: title + total */}
+          {/* Left: back button + title + total */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/admin/profile")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200 bg-white text-orange-600 hover:bg-[#fff8f5] hover:text-orange-700 hover:border-orange-300 dark:border-orange-500/30 dark:bg-orange-950/10 dark:text-orange-400 dark:hover:bg-orange-950/20 dark:hover:text-orange-300 transition-all duration-150 shadow-sm shrink-0"
+              title="Back to Profile"
+            >
+              <ArrowLeft size={16} />
+            </button>
             <Heading title="Staff Management" />
             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-[#ede8e3] bg-[#f7f3ef] text-[#78716c]"}`}>
               {filteredStaff.length}
@@ -255,7 +269,7 @@ const StaffManagement = () => {
             <button
               data-tour="staff-add-btn"
               onClick={handleAddNew}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-orange-500 px-3 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-orange-200 bg-[#fff8f5] px-3 text-sm font-semibold text-orange-700 transition-colors hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm"
             >
               <Plus size={15} />
               <span className="hidden sm:inline">Add Staff</span>

@@ -132,6 +132,7 @@ function FilterControls({
   handleSelectFilter, handleResetFilters, categoryOptions,
   isInModal = false, showSearch = true,
 }) {
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
   return (
     <>
       {showSearch && (
@@ -183,7 +184,11 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className="h-9 w-full flex-shrink-0 rounded-lg bg-orange-500 px-3 text-xs font-semibold text-white transition hover:bg-orange-600 dark:hover:bg-orange-600 md:w-auto"
+        className={`h-9 w-full flex-shrink-0 rounded-lg px-3 text-xs font-extrabold transition-all border md:w-auto ${
+          isDarkMode
+            ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+            : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+        }`}
       >
         Reset
       </button>
@@ -195,6 +200,7 @@ function FilterControls({
 export default function MenuFilter({
   onFilterChange, categories, value, onResetNotify, layout = "auto", showSearch = true,
 }) {
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
   const isControlled = value != null && typeof onFilterChange === "function";
   const isPanelLayout = layout === "panel";
 
@@ -285,7 +291,11 @@ export default function MenuFilter({
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className="mt-1 h-9 w-full rounded-lg bg-orange-500 px-4 text-xs font-semibold text-white hover:bg-orange-600"
+            className={`mt-1 h-9 w-full rounded-lg border text-xs font-extrabold transition-all ${
+              isDarkMode
+                ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            }`}
           >
             Apply Filters
           </button>
