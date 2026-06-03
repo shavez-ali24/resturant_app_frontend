@@ -257,8 +257,8 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
         type="button"
         onClick={() => setIsOpen((p) => !p)}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none ${isDarkMode
-            ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
-            : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
+          ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
+          : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
           }`}
       >
         <span className={selectedOption ? "" : isDarkMode ? "text-slate-500" : "text-slate-400"}>
@@ -277,8 +277,8 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
             transition={{ duration: 0.15 }}
             // UPWARD: bottom: "calc(100% + 6px)" positions the dropdown above the trigger
             className={`absolute z-[200] w-full rounded-lg border shadow-lg overflow-hidden ${isDarkMode
-                ? "bg-[#1e293b] border-slate-600 shadow-black/70"
-                : "bg-white border-[#ede8e3] shadow-md"
+              ? "bg-[#1e293b] border-slate-600 shadow-black/70"
+              : "bg-white border-[#ede8e3] shadow-md"
               }`}
             style={{
               bottom: "calc(100% + 6px)",
@@ -298,10 +298,10 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
                   aria-disabled={isDisabled}
                   style={{ height: ITEM_HEIGHT }}
                   className={`w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2 ${isDisabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : value === opt.value
-                        ? isDarkMode ? "bg-orange-500/25 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                        : isDarkMode ? "text-slate-200 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
+                    ? "opacity-50 cursor-not-allowed"
+                    : value === opt.value
+                      ? isDarkMode ? "bg-orange-500/25 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
+                      : isDarkMode ? "text-slate-200 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -361,8 +361,8 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
         type="button"
         onClick={(e) => { e.stopPropagation(); setIsOpen((p) => !p); }}
         className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium border transition-all duration-200 outline-none ${isDarkMode
-            ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500" : "border-slate-700 hover:border-orange-400"}`
-            : `bg-[#f7f3ef] text-[#1c1917] ${isOpen ? "border-orange-400" : "border-[#ede8e3] hover:border-orange-300"}`
+          ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500" : "border-slate-700 hover:border-orange-400"}`
+          : `bg-[#f7f3ef] text-[#1c1917] ${isOpen ? "border-orange-400" : "border-[#ede8e3] hover:border-orange-300"}`
           }`}
       >
         <span className="truncate">
@@ -392,8 +392,8 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onChange(key); setIsOpen(false); }}
                   className={`w-full text-left px-2.5 py-2 text-[10px] font-medium transition-all duration-150 ${value === key
-                      ? isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                      : isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
+                    ? isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
+                    : isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
                     }`}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -447,12 +447,12 @@ function VariantPills({ item, value, onChange, isDarkMode }) {
             type="button"
             onClick={(e) => { e.stopPropagation(); onChange(key); }}
             className={`flex-1 min-w-[80px] flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 ${isSelected
-                ? isDarkMode
-                  ? "bg-orange-950/40 border-orange-500/60 text-orange-400 font-extrabold"
-                  : "bg-orange-50 border-orange-400 text-orange-700 font-extrabold shadow-none"
-                : isDarkMode
-                  ? "bg-slate-800 border-slate-600 text-slate-200 hover:border-orange-400 hover:bg-slate-700"
-                  : "bg-[#f7f3ef] border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-white"
+              ? isDarkMode
+                ? "bg-orange-950/40 border-orange-500/60 text-orange-400 font-extrabold"
+                : "bg-orange-50 border-orange-400 text-orange-700 font-extrabold shadow-none"
+              : isDarkMode
+                ? "bg-slate-800 border-slate-600 text-slate-200 hover:border-orange-400 hover:bg-slate-700"
+                : "bg-[#f7f3ef] border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-white"
               }`}
           >
             <span className="text-base">{d.label}</span>
@@ -510,15 +510,14 @@ function OrderSummaryPanel({
             return (
               <div
                 key={id}
-                className={`flex items-center gap-3 rounded-xl p-3 border transition-all duration-350 ${
-                  isNewItem
+                className={`flex items-center gap-3 rounded-xl p-3 border transition-all duration-350 ${isNewItem
                     ? isDarkMode
                       ? "border-rose-500/50 bg-rose-950/20 shadow-[0_0_12px_rgba(244,63,94,0.15)] animate-pulse"
                       : "border-rose-300 bg-rose-50/45 shadow-[0_0_12px_rgba(244,63,94,0.06)]"
                     : isDarkMode
                       ? "border-slate-700/60 bg-slate-800/60"
                       : "border-[#ede8e3] bg-[#f7f3ef]"
-                }`}
+                  }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -614,12 +613,12 @@ function OrderSummaryPanel({
                       notify(`Order type changed to ${type}!`, "success");
                     }}
                     className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${orderType === type
-                        ? isDarkMode
-                          ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
-                          : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
-                        : isDarkMode
-                          ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
-                          : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
+                      ? isDarkMode
+                        ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
+                        : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
+                      : isDarkMode
+                        ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
+                        : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
                       }`}
                   >
                     {type}
@@ -771,8 +770,8 @@ function OrderSummaryPanel({
             (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
           }
           className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-              ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-              : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
             }`}
         >
           {isSubmitting ? (
@@ -793,8 +792,8 @@ function OrderSummaryPanel({
             (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
           }
           className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-              ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-              : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
             }`}
         >
           {isSubmitting ? (
@@ -815,8 +814,8 @@ function OrderSummaryPanel({
             (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
           }
           className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-              ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-              : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
             }`}
         >
           {isSubmitting ? (
@@ -1332,10 +1331,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             key={cat}
             onClick={() => setSelectedCategory(cat)}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap shrink-0 transition-all duration-150 border ${selectedCategory === cat
-                ? isDarkMode ? "bg-orange-950/30 border-orange-500/50 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-sm"
-                : isDarkMode
-                  ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-100"
-                  : "bg-white text-[#57524e] border-[#ede8e3] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+              ? isDarkMode ? "bg-orange-950/30 border-orange-500/50 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-sm"
+              : isDarkMode
+                ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-100"
+                : "bg-white text-[#57524e] border-[#ede8e3] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
               }`}
           >
             {cat}
@@ -1358,10 +1357,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border ${selectedCategory === cat
-                  ? isDarkMode ? "bg-orange-950/30 border-orange-500/40 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-bold pl-3 shadow-none border-l-4 border-l-orange-500 rounded-r-xl rounded-l-none"
-                  : isDarkMode
-                    ? "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                    : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
+                ? isDarkMode ? "bg-orange-950/30 border-orange-500/40 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-bold pl-3 shadow-none border-l-4 border-l-orange-500 rounded-r-xl rounded-l-none"
+                : isDarkMode
+                  ? "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                  : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
                 }`}
             >
               {cat}
@@ -1471,8 +1470,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                           onClick={() => setVariantPickerItem(item)}
                           disabled={!isRestaurantOpen}
                           className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
-                              ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-                              : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
+                            ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                            : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
                             }`}
                         >
                           + Add
@@ -1482,8 +1481,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                           onClick={() => handleAddItem(item)}
                           disabled={!isRestaurantOpen}
                           className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
-                              ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-                              : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
+                            ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
+                            : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
                             }`}
                         >
                           + Add
@@ -1493,8 +1492,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                           <button
                             onClick={() => dispatch(removeFromCart(cartKey))}
                             className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode
-                                ? "border-orange-500/30 bg-[#ea580c]/10 text-orange-400 hover:bg-[#ea580c]/20"
-                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                              ? "border-orange-500/30 bg-[#ea580c]/10 text-orange-400 hover:bg-[#ea580c]/20"
+                              : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
                               }`}
                           >
                             <Minus className="h-4 w-4" />
@@ -1504,8 +1503,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                             onClick={() => handleAddItem(item)}
                             disabled={!isRestaurantOpen}
                             className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode
-                                ? "border-orange-500/30 bg-[#ea580c]/15 text-orange-400 hover:bg-[#ea580c]/25"
-                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                              ? "border-orange-500/30 bg-[#ea580c]/15 text-orange-400 hover:bg-[#ea580c]/25"
+                              : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
                               }`}
                           >
                             <Plus className="h-4 w-4" />
@@ -1600,8 +1599,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       }));
                     }}
                     className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl text-base font-bold transition-all active:scale-[0.97] ${isDarkMode
-                        ? "bg-slate-800/80 border border-slate-700 text-slate-100 hover:border-orange-500/50 hover:bg-orange-950/20 hover:text-orange-400"
-                        : "bg-white border border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-[#fff8f5] hover:text-orange-700 shadow-sm"
+                      ? "bg-slate-800/80 border border-slate-700 text-slate-100 hover:border-orange-500/50 hover:bg-orange-950/20 hover:text-orange-400"
+                      : "bg-white border border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-[#fff8f5] hover:text-orange-700 shadow-sm"
                       }`}
                   >
                     <span>{label}</span>
@@ -1621,8 +1620,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
               type="button"
               onClick={() => setVariantPickerItem(null)}
               className={`w-full mt-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isDarkMode
-                  ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  : "bg-[#f7f3ef] text-[#78716c] hover:bg-[#ede8e3]"
+                ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                : "bg-[#f7f3ef] text-[#78716c] hover:bg-[#ede8e3]"
                 }`}
             >
               Cancel

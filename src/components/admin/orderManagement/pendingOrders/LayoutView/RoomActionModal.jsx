@@ -122,31 +122,27 @@ export default function RoomActionModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${
-          isDarkMode ? "bg-[#1e293b]" : "bg-white"
-        }`}
+        className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? "bg-[#1e293b]" : "bg-white"
+          }`}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-3.5 border-b ${
-            isDarkMode ? "border-slate-700" : "border-[#ede8e3]"
-          }`}
+          className={`flex items-center justify-between px-5 py-3.5 border-b ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"
+            }`}
         >
           <h3
-            className={`text-base font-semibold ${
-              isDarkMode ? "text-slate-100" : "text-[#1c1917]"
-            }`}
+            className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"
+              }`}
           >
             {/* 🔧 FIX: Show "Manage Room" for occupied/billed rooms */}
             {isOccupied || isBilled ? "Manage Room" : "Book Room"} — {room.tableNumber}
           </h3>
           <button
             onClick={onClose}
-            className={`rounded-lg p-1.5 transition-colors ${
-              isDarkMode
+            className={`rounded-lg p-1.5 transition-colors ${isDarkMode
                 ? "hover:bg-slate-700 text-slate-400"
                 : "hover:bg-[#f7f3ef] text-[#78716c]"
-            }`}
+              }`}
           >
             <X size={18} />
           </button>
@@ -168,9 +164,8 @@ export default function RoomActionModal({
               </div>
 
               {/* 🔧 FIX: Backend doesn't store guestName/phone in unit.occupancy — it's created on Order */}
-              <div className={`text-sm px-3 py-2 rounded-lg border ${
-                isDarkMode ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-[#f7f3ef] border-[#ede8e3] text-[#78716c]"
-              }`}>
+              <div className={`text-sm px-3 py-2 rounded-lg border ${isDarkMode ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-[#f7f3ef] border-[#ede8e3] text-[#78716c]"
+                }`}>
                 {room?.roomCategory?.name || "Room"} • ₹{price}/night
               </div>
 
@@ -216,9 +211,8 @@ export default function RoomActionModal({
               {/* Customer Name */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1.5 ${
-                    isDarkMode ? "text-slate-300" : "text-[#1c1917]"
-                  }`}
+                  className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
+                    }`}
                 >
                   Customer Name *
                 </label>
@@ -232,11 +226,10 @@ export default function RoomActionModal({
                     }
                   }}
                   placeholder="Customer name"
-                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${
-                    isDarkMode
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
                       ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                       : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  }`}
+                    }`}
                 />
                 {formErrors.guestName && (
                   <p className="mt-1 text-xs text-red-500">{formErrors.guestName}</p>
@@ -246,9 +239,8 @@ export default function RoomActionModal({
               {/* Phone Number */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1.5 ${
-                    isDarkMode ? "text-slate-300" : "text-[#1c1917]"
-                  }`}
+                  className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
+                    }`}
                 >
                   Phone Number *
                 </label>
@@ -264,11 +256,10 @@ export default function RoomActionModal({
                   }}
                   placeholder="Phone number"
                   maxLength={10}
-                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${
-                    isDarkMode
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
                       ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                       : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  }`}
+                    }`}
                 />
                 {formErrors.phone && (
                   <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>
@@ -278,18 +269,16 @@ export default function RoomActionModal({
               {/* Room Info (read-only) */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1.5 ${
-                    isDarkMode ? "text-slate-300" : "text-[#1c1917]"
-                  }`}
+                  className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
+                    }`}
                 >
                   Room Details
                 </label>
                 <div
-                  className={`w-full rounded-lg px-3 py-2.5 text-sm font-medium border ${
-                    isDarkMode
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm font-medium border ${isDarkMode
                       ? "bg-slate-800 text-slate-400 border-slate-600"
                       : "bg-[#f7f3ef] text-[#78716c] border-[#ede8e3]"
-                  }`}
+                    }`}
                 >
                   {room?.tableNumber} • {room?.roomCategory?.name || "-"} • ₹{price}/night
                 </div>
@@ -304,11 +293,10 @@ export default function RoomActionModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-all duration-150 ${
-                    isDarkMode
+                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-all duration-150 ${isDarkMode
                       ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
                       : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
-                  }`}
+                    }`}
                 >
                   Cancel
                 </button>

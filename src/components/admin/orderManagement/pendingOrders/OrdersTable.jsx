@@ -143,86 +143,86 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden md:flex md:h-full md:flex-col">
         <div className="overflow-auto flex-1">
-        <table className="min-w-full">
-          <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800/95" : "bg-[#fff8f5]"}`}>
-            <tr className={`border-b ${isDarkMode ? "border-slate-700/70" : "border-orange-100/80"}`}>
-              {tableType === "pending" ? (
-                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Order ID</th>
-              ) : (
-                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Date</th>
-              )}
-              <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Placed At</th>
-              <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Customer</th>
-              <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Phone</th>
-              <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Type</th>
-              <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Order Details</th>
-              {tableType === "pending" && (
-                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Note</th>
-              )}
-              {tableType === "pending" && (
-                <>
-                  <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Status</th>
-                  <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Manage</th>
-                </>
-              )}
-            </tr>
-          </thead>
+          <table className="min-w-full">
+            <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800/95" : "bg-[#fff8f5]"}`}>
+              <tr className={`border-b ${isDarkMode ? "border-slate-700/70" : "border-orange-100/80"}`}>
+                {tableType === "pending" ? (
+                  <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Order ID</th>
+                ) : (
+                  <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Date</th>
+                )}
+                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Placed At</th>
+                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Customer</th>
+                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Phone</th>
+                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Type</th>
+                <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Order Details</th>
+                {tableType === "pending" && (
+                  <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Note</th>
+                )}
+                {tableType === "pending" && (
+                  <>
+                    <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Status</th>
+                    <th className={`px-4 py-3.5 text-center align-middle text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-slate-300" : "text-orange-900/80"}`}>Manage</th>
+                  </>
+                )}
+              </tr>
+            </thead>
 
-          <tbody className={`divide-y ${isDarkMode ? "divide-slate-700/50" : "divide-[#f0ebe5]"}`}>
-            {loading ? (
-              skeletonRows.map((_, rowIndex) => (
-                <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
-                  {Array.from({ length: columnCount }).map((__, colIndex) => (
-                    <td key={`skeleton-cell-${rowIndex}-${colIndex}`} className="px-4 py-3">
-                      <div className={`h-4 w-full rounded ${isDarkMode ? "bg-slate-700/60" : "bg-[#f0ebe5]"}`} />
-                    </td>
-                  ))}
+            <tbody className={`divide-y ${isDarkMode ? "divide-slate-700/50" : "divide-[#f0ebe5]"}`}>
+              {loading ? (
+                skeletonRows.map((_, rowIndex) => (
+                  <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
+                    {Array.from({ length: columnCount }).map((__, colIndex) => (
+                      <td key={`skeleton-cell-${rowIndex}-${colIndex}`} className="px-4 py-3">
+                        <div className={`h-4 w-full rounded ${isDarkMode ? "bg-slate-700/60" : "bg-[#f0ebe5]"}`} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : error ? (
+                <tr>
+                  <td colSpan={columnCount} className="py-10 text-center text-sm text-red-500">
+                    {error}
+                  </td>
                 </tr>
-              ))
-            ) : error ? (
-              <tr>
-                <td colSpan={columnCount} className="py-10 text-center text-sm text-red-500">
-                  {error}
-                </td>
-              </tr>
-            ) : orders.length === 0 ? (
-              <tr>
-                <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
-                  No orders yet
-                </td>
-              </tr>
-            ) : (
-              orders.map((order, index) => (
-                <OrderRow
-                  key={getOrderId(order) || order?.createdAt || index}
-                  order={{
-                    ...order,
-                    formattedDate: formatDate(order.createdAt),
-                    formattedTime: formatTime(order.createdAt),
-                    hasNewClientItems: newlyAddedItemsOrderIds?.has(String(getOrderId(order))),
-                  }}
-                  index={index}
-                  setEditingOrder={setEditingOrder}
-                  setShowConfirmDelete={setShowConfirmDelete}
-                  setOrderForBillModal={setOrderForBillModal}
-                  setPayModalOrder={setPayModalOrder}
-                  setMoveModalOrder={setMoveModalOrder}
-                  updateOrder={updateOrder}
-                  tableType={tableType}
-                  isDarkMode={isDarkMode}
-                  onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
-                  showBillAttention={isLatestUnseen(order)}
-                  onBillOpen={() => markLatestSeen(order)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+                    No orders yet
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order, index) => (
+                  <OrderRow
+                    key={getOrderId(order) || order?.createdAt || index}
+                    order={{
+                      ...order,
+                      formattedDate: formatDate(order.createdAt),
+                      formattedTime: formatTime(order.createdAt),
+                      hasNewClientItems: newlyAddedItemsOrderIds?.has(String(getOrderId(order))),
+                    }}
+                    index={index}
+                    setEditingOrder={setEditingOrder}
+                    setShowConfirmDelete={setShowConfirmDelete}
+                    setOrderForBillModal={setOrderForBillModal}
+                    setPayModalOrder={setPayModalOrder}
+                    setMoveModalOrder={setMoveModalOrder}
+                    updateOrder={updateOrder}
+                    tableType={tableType}
+                    isDarkMode={isDarkMode}
+                    onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
+                    showBillAttention={isLatestUnseen(order)}
+                    onBillOpen={() => markLatestSeen(order)}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-       {/* Mobile View — scrollable */}
-       <div className="block md:hidden h-full overflow-y-auto p-3">
+      {/* Mobile View — scrollable */}
+      <div className="block md:hidden h-full overflow-y-auto p-3">
         {loading ? (
           <div className="space-y-3">
             {mobileSkeletons.map((_, idx) => (
@@ -258,11 +258,10 @@ const OrdersTable = ({
               return (
                 <div
                   key={getOrderId(order) || order?.createdAt}
-                  className={`w-full rounded-xl border p-3 space-y-2.5 ${
-                    isDarkMode
+                  className={`w-full rounded-xl border p-3 space-y-2.5 ${isDarkMode
                       ? "border-slate-700/60 bg-slate-800/60"
                       : "border-[#ede8e3] bg-white"
-                  }`}
+                    }`}
                 >
                   {/* Row 1: ID + Time */}
                   <div className="flex items-center justify-between">
@@ -297,10 +296,10 @@ const OrdersTable = ({
                   </div>
 
                   {/* Row 3: Type badge */}
-                   <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
-                     {getOrderTypeIcon(order.orderType)}
-                     <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
-                   </div>
+                  <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
+                    {getOrderTypeIcon(order.orderType)}
+                    <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
+                  </div>
 
                   {/* Row 4: Note + View Bill */}
                   <div className="grid grid-cols-2 gap-2">
@@ -311,12 +310,11 @@ const OrdersTable = ({
                     )}
                     <button
                       onClick={() => handleBillClick(order)}
-                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                        isLatestUnseen(order) ? "bill-border-animate" : ""
-                      } ${isDarkMode
-                        ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                        : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
-                      } ${tableType !== "pending" ? "col-span-2" : ""}`}
+                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${isLatestUnseen(order) ? "bill-border-animate" : ""
+                        } ${isDarkMode
+                          ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                          : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
+                        } ${tableType !== "pending" ? "col-span-2" : ""}`}
                     >
                       View Items & Bill
                     </button>

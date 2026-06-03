@@ -19,12 +19,12 @@ const getStatusBg = (status, rawStatus, isDark) => {
 
   // Fallback to derived status for food tables
   const map = {
-    blank:       { bg: isDark ? "#1e293b" : "#ffffff",       border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` },
-    running:     { bg: isDark ? "#3a3520" : "#FFFDE7",       border: `1.5px solid ${isDark ? "#eab308" : "#FDE047"}` },
-    running_kot: { bg: isDark ? "#1e3a5f" : "#EBF5FF",       border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
-    printed:     { bg: isDark ? "#1e3a5f" : "#EBF5FF",       border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
-    paid:        { bg: isDark ? "#1a3a2a" : "#EFFFEF",       border: `1.5px solid ${isDark ? "#22c55e" : "#86EFAC"}` },
-    booked:      { bg: isDark ? "#3a3520" : "#fefce8",       border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` },
+    blank: { bg: isDark ? "#1e293b" : "#ffffff", border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` },
+    running: { bg: isDark ? "#3a3520" : "#FFFDE7", border: `1.5px solid ${isDark ? "#eab308" : "#FDE047"}` },
+    running_kot: { bg: isDark ? "#1e3a5f" : "#EBF5FF", border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
+    printed: { bg: isDark ? "#1e3a5f" : "#EBF5FF", border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
+    paid: { bg: isDark ? "#1a3a2a" : "#EFFFEF", border: `1.5px solid ${isDark ? "#22c55e" : "#86EFAC"}` },
+    booked: { bg: isDark ? "#3a3520" : "#fefce8", border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` },
   };
   return map[status] || map.blank;
 };
@@ -32,15 +32,15 @@ const getStatusBg = (status, rawStatus, isDark) => {
 const getStatusText = (status, rawStatus, isDark) => {
   if (rawStatus === "AVAILABLE") return isDark ? "#64748b" : "#78716c";
   if (rawStatus === "OCCUPIED") return isDark ? "#fde047" : "#854d0e";
-  if (rawStatus === "BILLED")  return isDark ? "#86efac" : "#166534";
+  if (rawStatus === "BILLED") return isDark ? "#86efac" : "#166534";
 
   const map = {
-    blank:       isDark ? "#64748b" : "#a8a29e",
-    running:     isDark ? "#fde047" : "#854d0e",
+    blank: isDark ? "#64748b" : "#a8a29e",
+    running: isDark ? "#fde047" : "#854d0e",
     running_kot: isDark ? "#93c5fd" : "#1e40af",
-    printed:     isDark ? "#93c5fd" : "#1e40af",
-    paid:        isDark ? "#86efac" : "#166534",
-    booked:      isDark ? "#fde047" : "#854d0e",
+    printed: isDark ? "#93c5fd" : "#1e40af",
+    paid: isDark ? "#86efac" : "#166534",
+    booked: isDark ? "#fde047" : "#854d0e",
   };
   return map[status] || map.blank;
 };
@@ -162,7 +162,7 @@ const TableCard = React.memo(function TableCard({
       }}
     >
       {hasNewClientItems && (
-        <div 
+        <div
           className="animate-pulse"
           style={{
             position: "absolute",

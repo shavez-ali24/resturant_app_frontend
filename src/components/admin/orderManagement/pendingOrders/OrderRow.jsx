@@ -129,12 +129,11 @@ const OrderRow = ({
       <td className="px-4 py-3 align-middle text-center">
         <button
           onClick={handleBillClick}
-          className={`rounded-xl border px-4 py-2 text-xs font-extrabold transition-all duration-200 ${
-            showBillAttention ? "bill-border-animate" : ""
-          } ${isDarkMode
-            ? "border-slate-600 bg-slate-800 text-orange-300 hover:bg-slate-700"
-            : "border-[#ede8e3] bg-[#fbfaf8] text-[#57524e] hover:bg-orange-50/50 hover:text-orange-700 hover:border-orange-200 shadow-sm"
-          }`}
+          className={`rounded-xl border px-4 py-2 text-xs font-extrabold transition-all duration-200 ${showBillAttention ? "bill-border-animate" : ""
+            } ${isDarkMode
+              ? "border-slate-600 bg-slate-800 text-orange-300 hover:bg-slate-700"
+              : "border-[#ede8e3] bg-[#fbfaf8] text-[#57524e] hover:bg-orange-50/50 hover:text-orange-700 hover:border-orange-200 shadow-sm"
+            }`}
         >
           View Items & Bill
         </button>

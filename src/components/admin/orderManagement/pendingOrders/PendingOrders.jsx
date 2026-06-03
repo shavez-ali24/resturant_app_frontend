@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
+import { clearCart } from "../../../../features/cartSlice";
 import { useNotification } from "../../Bell/NotificationContext";
 import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -182,60 +183,60 @@ const Orders = () => {
     isError: preparingError,
     error: preparingErrorObj,
     refetch: refetchPreparingOrders,
-   } = useGetOrdersQuery(
-     {
-       status: "preparing",
-       page: 1,
-       limit: combinedFetchLimit,
-       range: "all",
-     },
-     {
-       pollingInterval,
-       refetchOnFocus: refetchOnAction,
-       refetchOnReconnect: refetchOnAction,
-     }
-   );
+  } = useGetOrdersQuery(
+    {
+      status: "preparing",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
+    }
+  );
 
-   const { data: readyOrdersResponse = {}, refetch: refetchReadyOrders } = useGetOrdersQuery(
-     {
-       status: "ready",
-       page: 1,
-       limit: combinedFetchLimit,
-       range: "all",
-     },
-     {
-       pollingInterval,
-       refetchOnFocus: refetchOnAction,
-       refetchOnReconnect: refetchOnAction,
-     }
-   );
+  const { data: readyOrdersResponse = {}, refetch: refetchReadyOrders } = useGetOrdersQuery(
+    {
+      status: "ready",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
+    }
+  );
 
-   const {
-     data: completedOrdersResponse = {},
-     isLoading: completedLoading,
-     isError: completedError,
-     error: completedErrorObj,
-     refetch: refetchCompletedOrders,
-   } = useGetOrdersQuery(
-     {
-       status: "completed",
-       page: 1,
-       limit: combinedFetchLimit,
-       range: "all",
-     },
-     {
-       pollingInterval,
-       refetchOnFocus: refetchOnAction,
-       refetchOnReconnect: refetchOnAction,
-     }
-   );
+  const {
+    data: completedOrdersResponse = {},
+    isLoading: completedLoading,
+    isError: completedError,
+    error: completedErrorObj,
+    refetch: refetchCompletedOrders,
+  } = useGetOrdersQuery(
+    {
+      status: "completed",
+      page: 1,
+      limit: combinedFetchLimit,
+      range: "all",
+    },
+    {
+      pollingInterval,
+      refetchOnFocus: refetchOnAction,
+      refetchOnReconnect: refetchOnAction,
+    }
+  );
 
 
 
   const { data: menuItems = [] } = useGetMenuQuery();
-  
+
   // ✅ Restaurant profile se tables extract karenge
-  const { 
+  const {
     data: restaurantData,
     isLoading: restaurantLoading,
     error: restaurantError,
@@ -245,7 +246,7 @@ const Orders = () => {
     refetchOnFocus: refetchOnAction,
     refetchOnReconnect: refetchOnAction,
   });
-  
+
   const [updateOrderApi] = useUpdateOrderMutation();
   const [deleteOrderApi] = useDeleteOrderMutation();
   const [toggleItemReadyApi] = useToggleItemReadyMutation();
@@ -482,19 +483,19 @@ const Orders = () => {
   // ✅ FIXED: Extract tables from restaurant profile
   const extractTablesFromRestaurant = () => {
     if (!restaurantData) return [];
-    
+
     const restaurant = restaurantData.restaurant || restaurantData;
-    
+
     // Format 1: Direct tables array in restaurant
     if (Array.isArray(restaurant.tables)) {
       return restaurant.tables;
     }
-    
+
     // Format 2: Tables as separate field
     if (restaurant.tables && Array.isArray(restaurant.tables)) {
       return restaurant.tables;
     }
-    
+
     // Format 3: tableNumbers se generate karna
     if (restaurant.tableNumbers && typeof restaurant.tableNumbers === 'number') {
       const tables = [];
@@ -507,7 +508,7 @@ const Orders = () => {
       }
       return tables;
     }
-    
+
     return [];
   };
 
@@ -620,7 +621,7 @@ const Orders = () => {
         }),
     })).filter((sec) => sec.units.length > 0);
   }, [liveUnitsData, combinedOrders]);
-  
+
   // ── Pre-fill sessionStorage for AdminOrderPanel ──
   useEffect(() => {
     if (!restaurantData) return;
@@ -643,7 +644,7 @@ const Orders = () => {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }, [restaurantData]);
 
   const totalPages = Math.max(
@@ -654,14 +655,14 @@ const Orders = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return combinedOrders.slice(start, start + itemsPerPage);
   }, [combinedOrders, currentPage, itemsPerPage]);
-   const loading = pendingLoading || preparingLoading || completedLoading || restaurantLoading;
-   const error =
-     pendingError || preparingError || completedError || restaurantError
-       ? getFriendlyOrderError(
-           pendingErrorObj || preparingErrorObj || completedErrorObj || restaurantError,
-           "fetch"
-         )
-       : null;
+  const loading = pendingLoading || preparingLoading || completedLoading || restaurantLoading;
+  const error =
+    pendingError || preparingError || completedError || restaurantError
+      ? getFriendlyOrderError(
+        pendingErrorObj || preparingErrorObj || completedErrorObj || restaurantError,
+        "fetch"
+      )
+      : null;
 
   // Update bill modal live
   useEffect(() => {
@@ -731,7 +732,7 @@ const Orders = () => {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     // No sessionStorage data — fetch from API using URL orderId
     setIsUrlFetching(true);
     fetchOrderById(urlOrderId).then(({ data }) => {
@@ -746,7 +747,7 @@ const Orders = () => {
               tableNumber: tableId.split(":")[1] || "",
               sectionName: tableId.split(":")[0] || "",
             }));
-          } catch (_) {}
+          } catch (_) { }
         }
       }
     }).catch(() => {
@@ -898,8 +899,8 @@ const Orders = () => {
       if (unitId && o.source?.unitId && String(o.source.unitId) === String(unitId)) return true;
       // Priority 3: Match by sectionName + unitName
       if (sectionName && unitName &&
-          String(o.source?.sectionName || "").toLowerCase() === String(sectionName).toLowerCase() &&
-          String(o.source?.unitName || "").toLowerCase() === String(unitName).toLowerCase()) return true;
+        String(o.source?.sectionName || "").toLowerCase() === String(sectionName).toLowerCase() &&
+        String(o.source?.unitName || "").toLowerCase() === String(unitName).toLowerCase()) return true;
       return false;
     });
   }, [combinedOrders]);
@@ -1038,10 +1039,10 @@ const Orders = () => {
   }, [setNewItemsByOrderId]);
 
   useEffect(() => {
-    const activeId = getOrderIdValue(editingOrder) || 
-                     getOrderIdValue(selectedOrderForCustomizations) || 
-                     getOrderIdValue(orderForBillModal) || 
-                     getOrderIdValue(payModalOrder);
+    const activeId = getOrderIdValue(editingOrder) ||
+      getOrderIdValue(selectedOrderForCustomizations) ||
+      getOrderIdValue(orderForBillModal) ||
+      getOrderIdValue(payModalOrder);
     if (activeId) {
       clearNewItemsFlag(activeId);
     }
@@ -1073,7 +1074,7 @@ const Orders = () => {
           sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
           // Keep editingOrder in sessionStorage as fast cache for first visit
           sessionStorage.setItem("editingOrder", JSON.stringify(freshOrder));
-        } catch (_) {}
+        } catch (_) { }
         // ✅ Include orderId in URL params — survives page refresh
         setSearchParams({
           view: "create",
@@ -1090,7 +1091,7 @@ const Orders = () => {
       try {
         sessionStorage.setItem("selectedTable", JSON.stringify(tableInfo));
         sessionStorage.setItem("editingOrder", JSON.stringify(order));
-      } catch (_) {}
+      } catch (_) { }
       setSearchParams({
         view: "create",
         tableId: tableInfo.tableId || tableInfo.tableNumber,
@@ -1320,7 +1321,7 @@ const Orders = () => {
                       // Keep in sessionStorage as cache for this session
                       return p;
                     }
-                  } catch(_) {}
+                  } catch (_) { }
                   return null;
                 })() : null)}
                 onOrderSuccess={(mode) => {
@@ -1363,27 +1364,25 @@ const Orders = () => {
           <div className={`flex items-center rounded-2xl border p-1 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-[#ede8e3] bg-white"}`}>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "table"); setViewMode("table"); }}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${
-                viewMode === "table"
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "table"
                   ? isDarkMode ? "bg-orange-950/30 border border-orange-500/50 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
                   : isDarkMode
                     ? "text-slate-400 border border-transparent hover:text-slate-200"
                     : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
-              }`}
+                }`}
               title="Table View"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
               <span>Table</span>
             </button>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${
-                viewMode === "layout"
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "layout"
                   ? isDarkMode ? "bg-orange-950/30 border border-orange-500/40 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
                   : isDarkMode
                     ? "text-slate-400 border border-transparent hover:text-slate-200"
                     : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
-              }`}
+                }`}
               title="Layout View"
             >
               <LayoutGrid className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -1393,11 +1392,10 @@ const Orders = () => {
           {/* ── Create Order Button (right side) ── */}
           <button
             onClick={() => setSearchParams({ view: "create" })}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all sm:text-sm shadow-sm active:scale-[0.97] whitespace-nowrap shrink-0 ${
-              isDarkMode
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all sm:text-sm shadow-sm active:scale-[0.97] whitespace-nowrap shrink-0 ${isDarkMode
                 ? "bg-orange-950/20 border border-orange-500/35 text-orange-400 hover:bg-orange-950/40"
                 : "bg-[#fff8f5] border border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-            }`}
+              }`}
             title="Create New Order"
           >
             <Plus className="h-4 w-4" strokeWidth={3} />
@@ -1428,27 +1426,26 @@ const Orders = () => {
               }
               onRetry={refetchRestaurant}
               isDarkMode={isDarkMode}
-               onViewOrder={handleViewOrder}
-               onCreateOrder={handleCreateOrderFromLayout}
-               onEditOrder={handleEditOrderFromLayout}
-               onMoveOrder={handleMoveOrderFromLayout}
-               onPayOrder={handlePayOrderFromLayout}
-               onPrintBill={handlePrintBillFromLayout}
-               onBookRoom={handleBookRoomPrompt}
-               onCheckoutRoom={handleCheckoutRoom}
-               roomActionLoadingId={roomActionLoadingId}
-               newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
+              onViewOrder={handleViewOrder}
+              onCreateOrder={handleCreateOrderFromLayout}
+              onEditOrder={handleEditOrderFromLayout}
+              onMoveOrder={handleMoveOrderFromLayout}
+              onPayOrder={handlePayOrderFromLayout}
+              onPrintBill={handlePrintBillFromLayout}
+              onBookRoom={handleBookRoomPrompt}
+              onCheckoutRoom={handleCheckoutRoom}
+              roomActionLoadingId={roomActionLoadingId}
+              newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
             />
           </Suspense>
         </div>
       ) : (
         <div
           data-tour="orders-table"
-          className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
-            isDarkMode
+          className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${isDarkMode
               ? "border-slate-700/60 bg-[#1e293b]"
               : "border-[#ede8e3] bg-white"
-          }`}
+            }`}
         >
           <Suspense
             fallback={
@@ -1489,61 +1486,58 @@ const Orders = () => {
       {viewMode === "table" && (
         <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
           {totalPages > 1 && (
-          <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Pagination className="min-w-max">
-              <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (currentPage > 1) handlePageChange(currentPage - 1); }}
-                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${
-                      currentPage === 1 ? "pointer-events-none opacity-40" : ""
-                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
-                  />
-                </PaginationItem>
-                {pageNumbers.map((pageNum, index) => {
-                  if (typeof pageNum === "string") {
+            <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <Pagination className="min-w-max">
+                <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"}`}>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); if (currentPage > 1) handlePageChange(currentPage - 1); }}
+                      className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === 1 ? "pointer-events-none opacity-40" : ""
+                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                    />
+                  </PaginationItem>
+                  {pageNumbers.map((pageNum, index) => {
+                    if (typeof pageNum === "string") {
+                      return (
+                        <PaginationItem key={`${pageNum}-${index}`}>
+                          <PaginationEllipsis className="h-8 w-8" />
+                        </PaginationItem>
+                      );
+                    }
                     return (
-                      <PaginationItem key={`${pageNum}-${index}`}>
-                        <PaginationEllipsis className="h-8 w-8" />
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          isActive={currentPage === pageNum}
+                          className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm font-extrabold transition-all ${currentPage === pageNum
+                              ? isDarkMode
+                                ? "bg-orange-950/30 border-orange-500/50 text-orange-400"
+                                : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
+                              : isDarkMode
+                                ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                            }`}
+                          onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}
+                        >
+                          {pageNum}
+                        </PaginationLink>
                       </PaginationItem>
                     );
-                  }
-                  return (
-                    <PaginationItem key={pageNum}>
-                      <PaginationLink
-                        href="#"
-                        isActive={currentPage === pageNum}
-                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm font-extrabold transition-all ${
-                          currentPage === pageNum
-                            ? isDarkMode
-                              ? "bg-orange-950/30 border-orange-500/50 text-orange-400"
-                              : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
-                            : isDarkMode
-                              ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
-                        }`}
-                        onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) handlePageChange(currentPage + 1); }}
-                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${
-                      currentPage === totalPages ? "pointer-events-none opacity-40" : ""
-                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-      </div>
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) handlePageChange(currentPage + 1); }}
+                      className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === totalPages ? "pointer-events-none opacity-40" : ""
+                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Modals ── */}
