@@ -1656,6 +1656,7 @@ const BillPage = ({
             </button>
           )}
 
+          {!isAlreadyBilled && (
             <button
               onClick={handleKOTPrint}
               className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
@@ -1666,20 +1667,21 @@ const BillPage = ({
             >
               KOT
             </button>
+          )}
  
-          {!isPreviewOnly && (
+          {!isPreviewOnly && !isAlreadyBilled && (
             <button
               onClick={handleBillOrder}
-              disabled={isBilling || isAlreadyBilled}
+              disabled={isBilling}
               className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 shadow-sm ${
-                isBilling || isAlreadyBilled
+                isBilling
                   ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-60"
                   : isDarkMode
                     ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-950/40 active:scale-[0.97]"
                     : "border-emerald-200 bg-[#f0fdf4] text-emerald-700 hover:bg-[#dcfce7] hover:border-emerald-300 active:scale-[0.97]"
               }`}
             >
-              {isBilling ? "Billing..." : isAlreadyBilled ? "Billed" : "Bill Order"}
+              {isBilling ? "Billing..." : "Bill Order"}
             </button>
           )}
 
