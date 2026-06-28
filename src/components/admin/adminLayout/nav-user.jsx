@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
-import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
+import { useGetRestaurantQuery } from "@/redux/adminRedux/adminAPI";
 
 export function NavUser({ user, isDarkMode = false }) {
   const { isMobile } = useSidebar();
@@ -31,7 +31,7 @@ export function NavUser({ user, isDarkMode = false }) {
     data: restaurantData,
     isLoading,
     error,
-  } = useGetRestaurantProfileQuery(undefined, {
+  } = useGetRestaurantQuery(undefined, {
     skip: !token,
   });
 

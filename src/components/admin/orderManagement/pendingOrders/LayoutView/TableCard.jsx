@@ -186,8 +186,7 @@ const TableCard = React.memo(function TableCard({
             whiteSpace: "nowrap"
           }}
         >
-          <Bell size={8} className="animate-bounce" />
-          <span>NEW ORDER</span>
+          <Bell size={9} className="animate-bounce" />
         </div>
       )}
       {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}

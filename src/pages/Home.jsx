@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Clock } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import {
-  useGetRestaurantQuery,
+  useGetPublicRestaurantQuery,
   useGetMenuQuery,
 } from "../redux/clientRedux/clientAPI";
 import Header from "@/components/Client/Header";
@@ -12,6 +12,7 @@ import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
+import { getFriendlyErrorMessage } from "@/utils/errorHelpers";
 
 // ── Utility: normalize category string (moved outside component to avoid recreation) ──
 const normalizeCategoryValue = (value) =>
@@ -38,7 +39,7 @@ export default function Home() {
     data: restaurantData,
     isLoading: restaurantLoading,
     error: restaurantError,
-  } = useGetRestaurantQuery();
+  } = useGetPublicRestaurantQuery();
 
   const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
@@ -117,6 +118,17 @@ export default function Home() {
     return imageMap;
   }, [menu, normalizeCategoryValue]);
 
+  const clientVisibleCategories = useMemo(() => {
+    const list = orderedCategories.length ? orderedCategories : menu;
+    const activeMenuCategories = new Set(
+      menu.map((item) => normalizeCategoryValue(item?.category))
+    );
+    return list.filter((cat) => {
+      const label = typeof cat === "object" && cat !== null ? cat.name || cat.category : cat;
+      return activeMenuCategories.has(normalizeCategoryValue(label));
+    });
+  }, [orderedCategories, menu]);
+
   if (showLoader)
     return (
       <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]"}`}>
@@ -130,10 +142,25 @@ export default function Home() {
     );
 
   if (error) {
+    const friendlyMsg = getFriendlyErrorMessage(error, "We couldn't load the menu right now. Please check your internet connection.");
     return (
-      <p>
-        Error: {error?.data?.message || error?.message || "An error occurred"}
-      </p>
+      <div className={`flex min-h-[60vh] flex-col items-center justify-center p-6 text-center ${isDarkMode ? "text-slate-200" : "text-gray-800"}`}>
+        <div className={`max-w-md rounded-2xl border p-8 shadow-lg ${isDarkMode ? "border-slate-800 bg-slate-900/50" : "border-orange-100 bg-white"}`}>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-950/30 text-orange-500">
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-lg font-bold">Unable to Load Menu</h2>
+          <p className={`text-sm mb-6 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{friendlyMsg}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-2.5 text-sm font-semibold text-white transition-all shadow-md"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -221,7 +248,7 @@ export default function Home() {
 
         <Category
           title="Choose Your Favourite Food"
-          categories={orderedCategories.length ? orderedCategories : menu}
+          categories={clientVisibleCategories}
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
           categoryImages={categoryImages}

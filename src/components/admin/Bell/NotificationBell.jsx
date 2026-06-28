@@ -17,6 +17,37 @@ const extractOrders = (response) => {
   return [];
 };
 
+const checkAndClearAdminModifiedOrderId = (id) => {
+  if (!id) return false;
+  try {
+    const data = JSON.parse(sessionStorage.getItem("adminModifiedOrderIds") || "{}");
+    if (Array.isArray(data)) {
+      const index = data.indexOf(String(id));
+      if (index !== -1) {
+        data.splice(index, 1);
+        sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(data));
+        return true;
+      }
+      return false;
+    }
+    const now = Date.now();
+    let isFound = false;
+    const pruned = {};
+    Object.entries(data).forEach(([key, val]) => {
+      if (now - Number(val) < 30000) {
+        pruned[key] = val;
+      }
+    });
+    const timestamp = data[String(id)];
+    if (timestamp && now - Number(timestamp) < 15000) {
+      isFound = true;
+    }
+    sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
+    return isFound;
+  } catch (_) {}
+  return false;
+};
+
 export default function NotificationBell() {
   const MotionDiv = motion.div;
   const MotionSpan = motion.span;
@@ -28,7 +59,7 @@ export default function NotificationBell() {
   const hasInitialized = useRef(false);
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const { sseEvent, sseConnected } = useNotification();
+  const { notify, sseEvent, sseConnected } = useNotification();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -91,18 +122,57 @@ export default function NotificationBell() {
   }, [orders]);
 
   useEffect(() => {
-    if (sseEvent?.type === "NEW_ORDER") {
-      // Bell directly on SSE event — same as KDS
-      try {
-        notificationSound.currentTime = 0;
-        const p = notificationSound.play();
-        if (p?.catch) p.catch(() => {});
-      } catch { /* ignore */ }
+    if (!sseEvent?.type || !sseEvent?.data) return;
+
+    if (sseEvent.type === "OCCUPANCY_CHANGED") {
+      const payload = sseEvent.data;
+      const action = payload?.action;
+      const unitName = payload?.unitName;
+      const sectionName = payload?.sectionName;
+
+      let message = "";
+      if (action === "ROOM_VACATED") {
+        message = `Room ${unitName} (${sectionName}) has been vacated.`;
+      } else if (action === "TABLE_VACATED") {
+        message = `Table ${unitName} (${sectionName}) has been vacated.`;
+      } else if (action === "ROOM_CANCELLED") {
+        message = `Booking for Room ${unitName} (${sectionName}) has been cancelled.`;
+      } else if (action === "ROOM_OCCUPIED") {
+        message = `Room ${unitName} (${sectionName}) is now occupied.`;
+      } else if (action === "TABLE_OCCUPIED") {
+        message = `Table ${unitName} (${sectionName}) is now occupied.`;
+      }
+
+      if (message) {
+        notify(message, "info");
+        try {
+          notificationSound.currentTime = 0;
+          const p = notificationSound.play();
+          if (p?.catch) p.catch(() => {});
+        } catch { /* ignore */ }
+      }
+      return;
     }
-    if (["NEW_ORDER", "ORDER_STATUS_CHANGED"].includes(sseEvent?.type)) {
-      refetchPending(); refetchPreparing();
+
+    const actualOrder = sseEvent.data?.order || sseEvent.data;
+    const orderId = actualOrder?._id || actualOrder?.id || actualOrder?.orderId;
+    const isAdminAction = checkAndClearAdminModifiedOrderId(orderId);
+
+    if (["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type)) {
+      if (!isAdminAction) {
+        try {
+          notificationSound.currentTime = 0;
+          const p = notificationSound.play();
+          if (p?.catch) p.catch(() => {});
+        } catch { /* ignore */ }
+      }
     }
-  }, [sseEvent, refetchPending, refetchPreparing, notificationSound]);
+
+    if (["NEW_ORDER", "ORDER_UPDATED", "ORDER_STATUS_CHANGED"].includes(sseEvent.type)) {
+      refetchPending();
+      refetchPreparing();
+    }
+  }, [sseEvent, refetchPending, refetchPreparing, notificationSound, notify]);
 
   useEffect(() => {
     const handler = (e) => {

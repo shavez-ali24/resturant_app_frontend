@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useNotification } from "../Bell/NotificationContext";
 import {
-  useGetRestaurantProfileQuery,
-  useToggleRestaurantMutation,
+  useGetRestaurantQuery,
+  useUpdateRestaurantStatusMutation,
 } from "@/redux/adminRedux/adminAPI";
 
 const NotificationBell = lazy(() => import("../Bell/NotificationBell"));
@@ -15,11 +15,11 @@ export function SiteHeader({
   isDarkMode = false,
   onToggleDarkMode = () => {},
 }) {
-  const { toggleSidebar } = useSidebar();
+  const toggleSidebar = useSidebar().toggleSidebar;
   const { notify } = useNotification();
 
   const { data: profileData, isLoading: profileLoading } =
-    useGetRestaurantProfileQuery();
+    useGetRestaurantQuery();
 
   // Get current user role from localStorage
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
@@ -28,7 +28,7 @@ export function SiteHeader({
     
 
   const [toggleRestaurant, { isLoading: toggleLoading }] =
-    useToggleRestaurantMutation();
+    useUpdateRestaurantStatusMutation();
 
   const [isOpen, setIsOpen] = useState(null);
   const [restaurantName, setRestaurantName] = useState("Restaurant");

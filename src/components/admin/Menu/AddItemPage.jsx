@@ -17,6 +17,7 @@ import ComboPriceSection   from "./ComponentsMenu/AddItemModal/components/ComboP
 import CategoryTypeSelectors from "./ComponentsMenu/AddItemModal/components/CategoryTypeSelectors";
 import ImageUpload         from "./ComponentsMenu/AddItemModal/components/ImageUpload";
 import AvailabilityToggle  from "./ComponentsMenu/AddItemModal/components/AvailabilityToggle";
+import VisibilityToggle    from "./ComponentsMenu/AddItemModal/components/VisibilityToggle";
 import SubmitButton        from "./ComponentsMenu/AddItemModal/components/SubmitButton";
 import DescriptionField    from "./ComponentsMenu/AddItemModal/components/DescriptionField";
 
@@ -29,9 +30,12 @@ import {
 
 import {
   useGetMenuQuery,
-  useGetRestaurantProfileQuery,
+  useGetRestaurantQuery,
   useCreateMenuItemMutation,
-  useUpdateRestaurantProfileMutation,
+  useUpdateRestaurantMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 import { useNotify } from "../common/NotificationModal";
 
@@ -115,8 +119,11 @@ export default function AddItemPage() {
   }, []);
 
   const [createMenuItem]          = useCreateMenuItemMutation();
-  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
-  const { data: restaurantData }  = useGetRestaurantProfileQuery();
+  const [updateRestaurantProfile] = useUpdateRestaurantMutation();
+  const [createCategory]          = useCreateCategoriesMutation();
+  const [updateCategory]          = useUpdateCategoryMutation();
+  const [deleteCategory]          = useDeleteCategoryMutation();
+  const { data: restaurantData }  = useGetRestaurantQuery();
   const { data: apiResponse = {}, isLoading: isLoadingMenuItems } = useGetMenuQuery();
 
   const [restaurantCategories, setRestaurantCategories] = useState([]);
@@ -200,6 +207,7 @@ export default function AddItemPage() {
       fd.append("type",        addFormData.type        || "veg");
       fd.append("category",    addFormData.category    || "");
       fd.append("available",   addFormData.available ? "true" : "false");
+      fd.append("visibility",  addFormData.visibility  || "PUBLIC");
 
       if (addFormData.pricingType === "single") {
         fd.append("price", (addFormData.price ?? "0").toString());
@@ -247,23 +255,20 @@ export default function AddItemPage() {
       setIsAddingItem(false);
     }
   };
-
   // ── Category handlers ──────────────────────────────────────────────────────
   const handleAddRestaurantCategory = useCallback(async (rawName) => {
     const name = normalizeCategoryLabel(rawName);
     if (!name) return { ok: false, message: "Please enter a valid category name." };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (dup) return { ok: true, category: dup, duplicate: true };
-    const cats = sortUniqueCategories([...restaurantCategories, name]);
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await createCategory({ name }).unwrap();
       notify(`Category "${name}" added.`, "success");
       return { ok: true, category: name };
-    } catch { return { ok: false, message: "Unable to add category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to add category." };
+    }
+  }, [restaurantCategories, createCategory, notify]);
 
   const handleRenameRestaurantCategory = useCallback(async (oldName, rawNew) => {
     const newName = normalizeCategoryLabel(rawNew);
@@ -274,30 +279,38 @@ export default function AddItemPage() {
       return { ok: true, category: current, unchanged: true };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(newName));
     if (dup) return { ok: false, message: `"${newName}" already exists.` };
-    const cats = sortUniqueCategories(restaurantCategories.map(c => c === current ? newName : c));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+    
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(oldName)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await updateCategory({ categoryId: categoryObj._id, newName }).unwrap();
       notify(`Category renamed to "${newName}".`, "success");
       return { ok: true, oldCategory: current, category: newName };
-    } catch { return { ok: false, message: "Unable to rename category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to rename category." };
+    }
+  }, [restaurantCategories, restaurantData, updateCategory, notify]);
 
   const handleDeleteRestaurantCategory = useCallback(async (name) => {
     const target = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (!target) return { ok: false, message: "Category not found." };
-    const cats = sortUniqueCategories(restaurantCategories.filter(c => c !== target));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(name)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await deleteCategory(categoryObj._id).unwrap();
       notify(`Category "${target}" deleted.`, "success");
       return { ok: true, deletedCategory: target };
-    } catch { return { ok: false, message: "Unable to delete category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to delete category." };
+    }
+  }, [restaurantCategories, restaurantData, deleteCategory, notify]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   const bg = isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]";
@@ -354,7 +367,10 @@ export default function AddItemPage() {
                   value={addFormData.description} onChange={handleChange}
                   error={formErrors.description}
                 />
-                <AvailabilityToggle available={addFormData.available} handleChange={handleChange} />
+                 <div className="flex flex-wrap gap-4">
+                  <AvailabilityToggle available={addFormData.available} handleChange={handleChange} />
+                  <VisibilityToggle visibility={addFormData.visibility} handleChange={handleChange} />
+                </div>
               </div>
 
               {/* Col 2 */}

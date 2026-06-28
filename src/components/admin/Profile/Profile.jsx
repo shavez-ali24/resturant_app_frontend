@@ -5,7 +5,7 @@ import ProfileDetails from "./components/ProfileDetails";
 import { LoadingSpinner } from "./Components/commanProfile/LoadingSpinner";
 import { ErrorMessage } from "./Components/commanProfile/ErrorMessage";
 import { useNotify } from "../common/NotificationModal";
-import { useGetRestaurantProfileQuery } from "@/redux/adminRedux/adminAPI";
+import { useGetRestaurantQuery } from "@/redux/adminRedux/adminAPI";
 import { useAdminTour } from "../../../hooks/useAdminTour";
 import { TOUR_KEYS, getProfileSteps } from "../../../utils/adminTour";
 import { useUpdateProfileForm } from "./Hooks/useUpdateProfileForm";
@@ -92,7 +92,7 @@ const Profile = () => {
 
   useAdminTour(TOUR_KEYS.profile, getProfileSteps, isDarkMode, 800);
 
-  const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantProfileQuery();
+  const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantQuery();
   const resData = restaurant?.data || restaurant?.restaurant;
 
   const handleUpdateSuccess = () => {

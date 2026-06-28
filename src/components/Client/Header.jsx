@@ -11,9 +11,10 @@ import {
   clearCart,
 } from "../../redux/clientRedux/clientSlice";
 import {
-  useGetRestaurantQuery,
+  useGetPublicRestaurantQuery,
   useCreateOrderMutation,
   useGetOrdersByFingerprintQuery,
+  useGetQrInfoQuery,
 } from "../../redux/clientRedux/clientAPI";
 import { Toaster } from "@/components/ui/toaster";
 import OrderComplete from "@/components/Client/OrderComplete";
@@ -21,6 +22,7 @@ import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
 import config from "@/config";
 import { useBackButtonClose } from "@/hooks/useBackButtonClose";
+import { getFriendlyErrorMessage } from "@/utils/errorHelpers";
 
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
@@ -51,7 +53,7 @@ export default function Header({
   isRestaurantOpen = true,
   onSidebarToggle,
   isDarkMode = false,
-  onToggleDarkMode = () => {},
+  onToggleDarkMode = () => { },
 }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function Header({
   }, []));
   const [orderStatusBanner, setOrderStatusBanner] = useState(null);
 
-  const { data: restaurantData } = useGetRestaurantQuery();
+  const { data: restaurantData } = useGetPublicRestaurantQuery();
 
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
 
@@ -94,9 +96,14 @@ export default function Header({
   const [address, setAddress] = useState("");
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [sseRetryKey, setSseRetryKey] = useState(0);
-  
+
   // Read unitId from QR scan URL
   const qrUnitId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("unitId") : null;
+
+  // Fetch QR code info if unitId is scanned
+  const { data: qrInfo, isLoading: isQrLoading } = useGetQrInfoQuery(qrUnitId, {
+    skip: !qrUnitId,
+  });
 
   // Auto-select table when only one section exists and Eat Here is chosen
   useEffect(() => {
@@ -153,7 +160,7 @@ export default function Header({
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw-vibration.js", { scope: "/" })
-        .catch(() => {}); // silent fail — not critical
+        .catch(() => { }); // silent fail — not critical
     }
   }, []);
 
@@ -525,12 +532,12 @@ export default function Header({
         // ONLY trigger notification if actual status has changed
         const previousStatus = orderStatusTracker.current.get(orderId);
         const newStatus = String(updatedOrder.status || "").toLowerCase();
-        
+
         if (previousStatus !== newStatus) {
           orderStatusTracker.current.set(orderId, newStatus);
           if (payload.type === "ORDER_UPDATED") showOrderStatusBanner(updatedOrder);
         }
-        
+
         refetch();
       }
     };
@@ -620,7 +627,7 @@ export default function Header({
         }
       } else if ("Notification" in window && Notification.permission === "default") {
         // Request permission silently — will be used next time
-        Notification.requestPermission().catch(() => {});
+        Notification.requestPermission().catch(() => { });
       }
     } catch (e) {
       // Notification not supported
@@ -678,9 +685,8 @@ export default function Header({
           opacity: 0,
         },
         {
-          transform: `translate(-50%, -50%) translate(${dx * 0.28}px, ${
-            dy * 0.34 - 46
-          }px) scale(1.05) rotate(6deg)`,
+          transform: `translate(-50%, -50%) translate(${dx * 0.28}px, ${dy * 0.34 - 46
+            }px) scale(1.05) rotate(6deg)`,
           opacity: 1,
           offset: 0.5,
         },
@@ -772,6 +778,9 @@ export default function Header({
   };
 
   const isFormValid = () => {
+    const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+    if (isRoomQR) return true;
+
     const trimmedName = customerName.trim();
     if (!trimmedName || !NAME_VALID_PATTERN.test(trimmedName)) return false;
     if (!PHONE_VALID_PATTERN.test(customerPhone)) return false;
@@ -789,11 +798,13 @@ export default function Header({
 
   const handleOrderSubmit = async () => {
     try {
-      const finalOrderType = normalizedOrderType;
-      const trimmedName = customerName.trim();
-      const formattedName = capitalizeFirstLetter(
+      const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+      const finalOrderType = isRoomQR ? "Eat Here" : normalizedOrderType;
+      const trimmedName = isRoomQR ? "Room Guest" : customerName.trim();
+      const formattedName = isRoomQR ? "Room Guest" : capitalizeFirstLetter(
         trimmedName.replace(/\s+/g, " ")
       );
+      const customerPhoneVal = isRoomQR ? "0000000000" : customerPhone;
       const trimmedAddress = address.trim();
 
       if (!isRestaurantOpen) {
@@ -808,9 +819,9 @@ export default function Header({
         if (!trimmedName) errorMessage = "Please enter your name.";
         else if (!NAME_VALID_PATTERN.test(trimmedName))
           errorMessage = "Name can contain only letters and spaces.";
-        else if (!PHONE_VALID_PATTERN.test(customerPhone))
+        else if (!PHONE_VALID_PATTERN.test(customerPhoneVal))
           errorMessage = "Please enter a valid 10-digit phone number.";
-        else if (finalOrderType === "Eat Here" && !tableId)
+        else if (finalOrderType === "Eat Here" && !tableId && !qrUnitId)
           errorMessage = "Please select a table.";
         else if (finalOrderType === "Delivery" && !trimmedAddress)
           errorMessage = "Please enter delivery address.";
@@ -821,8 +832,8 @@ export default function Header({
       const orderItems = Object.values(cartItems).map((cartItem) => {
         const variantData =
           cartItem.variantKey &&
-          cartItem.variantRates &&
-          cartItem.variantRates[cartItem.variantKey]
+            cartItem.variantRates &&
+            cartItem.variantRates[cartItem.variantKey]
             ? cartItem.variantRates[cartItem.variantKey]
             : null;
 
@@ -833,17 +844,17 @@ export default function Header({
         const price =
           Number(
             cartItem.originalPrice ??
-              (isComboItem
-                ? cartItem.comboPrice
-                : variantBasePrice || cartItem.price) ??
-              0
+            (isComboItem
+              ? cartItem.comboPrice
+              : variantBasePrice || cartItem.price) ??
+            0
           ) || 0;
 
         const discountedPrice =
           Number(
             cartItem.price ??
-              (isComboItem ? cartItem.comboPrice : variantBasePrice) ??
-              0
+            (isComboItem ? cartItem.comboPrice : variantBasePrice) ??
+            0
           ) || 0;
 
         const orderItem = {
@@ -869,9 +880,9 @@ export default function Header({
       const orderData = {
         fingerPrint: fp,
         customerName: formattedName,
-        customerPhone,
+        customerPhone: customerPhoneVal,
         items: orderItems,
-        orderType: finalOrderType,
+        orderType: isRoomQR ? "Room Stay" : finalOrderType,
       };
 
       if (finalOrderType === "Eat Here" && qrUnitId) {
@@ -894,15 +905,8 @@ export default function Header({
       dispatch(clearCart());
     } catch (error) {
       console.error("Order error:", error);
-      let errorMessage = error.data?.message || "Failed to place order. Please try again.";
-      
-      // Check for table/room already occupied error
-      if (error?.status === 403 || error?.originalStatus === 403) {
-        errorMessage = "This table is already booked. Please place your order from the same phone that was used for the first order.";
-      }
-      
-      if (error.data?.error) errorMessage += ` - ${error.data.error}`;
-      showErrorMessage(errorMessage);
+      const friendlyMessage = getFriendlyErrorMessage(error, "Failed to place your order. Please check your network and try again.");
+      showErrorMessage(friendlyMessage);
     }
   };
 
@@ -917,7 +921,7 @@ export default function Header({
   };
 
   const safeOnSearch =
-    typeof onSearch === "function" ? onSearch : () => {};
+    typeof onSearch === "function" ? onSearch : () => { };
 
   return (
     <>
@@ -946,18 +950,16 @@ export default function Header({
                       isCartBarBump ? { scale: [1, 1.05, 1] } : { scale: 1 }
                     }
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className={`relative overflow-hidden rounded-3xl border ${
-                      isDarkMode
-                        ? "border-orange-300 bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 shadow-[0_-12px_34px_rgba(249,115,22,0.42)]"
-                        : "border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
-                    }`}
+                    className={`relative overflow-hidden rounded-3xl border ${isDarkMode
+                      ? "border-orange-300 bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 shadow-[0_-12px_34px_rgba(249,115,22,0.42)]"
+                      : "border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
+                      }`}
                   >
                     <div
-                      className={`pointer-events-none absolute inset-0 ${
-                        isDarkMode
-                          ? "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.22),transparent_48%)]"
-                          : "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]"
-                      }`}
+                      className={`pointer-events-none absolute inset-0 ${isDarkMode
+                        ? "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.22),transparent_48%)]"
+                        : "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]"
+                        }`}
                     />
                     <div className="relative flex items-center justify-between gap-3 p-2.5">
                       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
@@ -987,11 +989,10 @@ export default function Header({
                               {cartCount}
                             </span>
                             <span
-                              className={`ml-1 hidden text-sm font-semibold min-[360px]:inline ${
-                                isDarkMode
-                                  ? "text-orange-100"
-                                  : "text-slate-200"
-                              }`}
+                              className={`ml-1 hidden text-sm font-semibold min-[360px]:inline ${isDarkMode
+                                ? "text-orange-100"
+                                : "text-slate-200"
+                                }`}
                             >
                               item{cartCount > 1 ? "s" : ""}
                             </span>
@@ -1004,17 +1005,15 @@ export default function Header({
                           setIsAccordionOpen(true);
                           onSidebarToggle?.(true);
                         }}
-                        className={`group inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-white transition-all duration-200 active:scale-95 ${
-                          isDarkMode
-                            ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-[0_8px_18px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700"
-                            : "bg-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.45)] hover:bg-slate-600"
-                        }`}
+                        className={`group inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-white transition-all duration-200 active:scale-95 ${isDarkMode
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-[0_8px_18px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700"
+                          : "bg-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.45)] hover:bg-slate-600"
+                          }`}
                       >
                         <span>View Cart</span>
                         <span
-                          className={`grid h-6 w-6 place-items-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 ${
-                            isDarkMode ? "bg-orange-400" : "bg-slate-500"
-                          }`}
+                          className={`grid h-6 w-6 place-items-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 ${isDarkMode ? "bg-orange-400" : "bg-slate-500"
+                            }`}
                         >
                           <ArrowRight className="h-4 w-4 text-white" />
                         </span>
@@ -1029,11 +1028,10 @@ export default function Header({
             <AnimatePresence>
               {isAccordionOpen && (
                 <motion.div
-                  className={`fixed inset-0 z-[100] flex flex-col ${
-                    isDarkMode
-                      ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
-                      : "bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
-                  }`}
+                  className={`fixed inset-0 z-[100] flex flex-col ${isDarkMode
+                    ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
+                    : "bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
+                    }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }}
@@ -1041,16 +1039,14 @@ export default function Header({
                 >
                   {/* Header */}
                   <div
-                    className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 ${
-                      isDarkMode
-                        ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"
-                        : "border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9]"
-                    }`}
+                    className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 ${isDarkMode
+                      ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"
+                      : "border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9]"
+                      }`}
                   >
                     <h2
-                      className={`text-xl font-semibold sm:text-[1.65rem] ${
-                        isDarkMode ? "text-slate-100" : "text-slate-900"
-                      }`}
+                      className={`text-xl font-semibold sm:text-[1.65rem] ${isDarkMode ? "text-slate-100" : "text-slate-900"
+                        }`}
                     >
                       Your Order ({cartCount})
                     </h2>
@@ -1059,18 +1055,17 @@ export default function Header({
                         setIsAccordionOpen(false);
                         onSidebarToggle?.(false);
                       }}
-                      className={`p-1 transition-colors ${
-                        isDarkMode
-                          ? "text-slate-300 hover:text-slate-100"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
+                      className={`p-1 transition-colors ${isDarkMode
+                        ? "text-slate-300 hover:text-slate-100"
+                        : "text-slate-600 hover:text-slate-900"
+                        }`}
                       aria-label="Close"
                     >
                       <X className="w-6 h-6" />
                     </button>
                   </div>
 
-                 
+
 
                   {/* Items list */}
                   <div className="flex-1 overflow-y-auto px-3 py-3 pb-28">
@@ -1133,11 +1128,11 @@ export default function Header({
                                     {Number.isInteger(item.quantity)
                                       ? item.quantity
                                       : item.quantity
-                                          .toFixed(2)
-                                          .replace(".00", "")
-                                          .replace(".25", "¼")
-                                          .replace(".50", "½")
-                                          .replace(".75", "¾")}
+                                        .toFixed(2)
+                                        .replace(".00", "")
+                                        .replace(".25", "¼")
+                                        .replace(".50", "½")
+                                        .replace(".75", "¾")}
                                   </span>
                                   <button
                                     className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 sm:h-7 sm:w-7"
@@ -1150,7 +1145,7 @@ export default function Header({
                                             item.name,
                                             item.variantLabel,
                                             item.isCombo ||
-                                              item.pricingType === "combo",
+                                            item.pricingType === "combo",
                                             item
                                           ),
                                         })
@@ -1216,48 +1211,47 @@ export default function Header({
                     )}
                   </div>
 
-                   {/* Price Breakdown */}
-                   <div className={`px-4 py-3 border-t ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-orange-100 bg-orange-50/50"}`}>
-                     {/* Subtotal */}
-                     <div className="flex justify-between items-center text-sm">
-                       <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Subtotal</span>
-                       <span className="font-medium">₹{calculatedDetails.subtotal.toFixed(2)}</span>
-                     </div>
-                     
-                     {/* GST */}
-                     {calculatedDetails.gstAmount > 0 && (
-                       <div className="flex justify-between items-center text-sm mt-1.5">
-                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
-                           GST ({restaurantData?.restaurant?.gstRate || 5}%)
-                         </span>
-                         <span className="font-medium">+ ₹{calculatedDetails.gstAmount.toFixed(2)}</span>
-                       </div>
-                     )}
+                  {/* Price Breakdown */}
+                  <div className={`px-4 py-3 border-t ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-orange-100 bg-orange-50/50"}`}>
+                    {/* Subtotal */}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Subtotal</span>
+                      <span className="font-medium">₹{calculatedDetails.subtotal.toFixed(2)}</span>
+                    </div>
 
-                     {/* Delivery Charges */}
-                     {calculatedDetails.deliveryCharges > 0 && (
-                       <div className="flex justify-between items-center text-sm mt-1.5">
-                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Delivery Charges</span>
-                         <span className="font-medium">+ ₹{calculatedDetails.deliveryCharges.toFixed(2)}</span>
-                       </div>
-                     )}
+                    {/* GST */}
+                    {calculatedDetails.gstAmount > 0 && (
+                      <div className="flex justify-between items-center text-sm mt-1.5">
+                        <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
+                          GST ({restaurantData?.restaurant?.gstRate || 5}%)
+                        </span>
+                        <span className="font-medium">+ ₹{calculatedDetails.gstAmount.toFixed(2)}</span>
+                      </div>
+                    )}
 
-                     {/* Total Amount */}
-                     <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-dashed font-bold text-lg">
-                       <span>Total Amount</span>
-                       <span className="text-primary">₹{calculatedDetails.totalAmount.toFixed(2)}</span>
-                     </div>
-                   </div>
+                    {/* Delivery Charges */}
+                    {calculatedDetails.deliveryCharges > 0 && (
+                      <div className="flex justify-between items-center text-sm mt-1.5">
+                        <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Delivery Charges</span>
+                        <span className="font-medium">+ ₹{calculatedDetails.deliveryCharges.toFixed(2)}</span>
+                      </div>
+                    )}
 
-                   {/* Footer CTA */}
-                   <div
-                     className={`sticky bottom-0 border-t px-4 pt-4 pb-6 ${
-                       isDarkMode
-                         ? "border-slate-700 bg-slate-900/95"
-                         : "border-slate-200 bg-white"
-                     }`}
-                     style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-                   >
+                    {/* Total Amount */}
+                    <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-dashed font-bold text-lg">
+                      <span>Total Amount</span>
+                      <span className="text-primary">₹{calculatedDetails.totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer CTA */}
+                  <div
+                    className={`sticky bottom-0 border-t px-4 pt-4 pb-6 ${isDarkMode
+                      ? "border-slate-700 bg-slate-900/95"
+                      : "border-slate-200 bg-white"
+                      }`}
+                    style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+                  >
                     {!isRestaurantOpen ? (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
@@ -1289,11 +1283,10 @@ export default function Header({
                           setIsAccordionOpen(false);
                           onSidebarToggle?.(false);
                         }}
-                        className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${
-                          cartCount === 0
-                            ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
-                            : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
-                        }`}
+                        className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${cartCount === 0
+                          ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
+                          : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
+                          }`}
                       />
                     )}
                   </div>
@@ -1305,11 +1298,10 @@ export default function Header({
 
         {/* Main Header */}
         <header
-          className={`relative flex items-center justify-between px-3 py-2.5 sm:p-3 ${
-            isDarkMode
-              ? "bg-gradient-to-r from-slate-900 via-slate-800/70 to-slate-900"
-              : "bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40"
-          }`}
+          className={`relative flex items-center justify-between px-3 py-2.5 sm:p-3 ${isDarkMode
+            ? "bg-gradient-to-r from-slate-900 via-slate-800/70 to-slate-900"
+            : "bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40"
+            }`}
           ref={searchRef}
         >
           <Link to="/" className="flex items-center space-x-2">
@@ -1317,18 +1309,17 @@ export default function Header({
             <span
               style={{
                 fontSize:
-                  (siteName?.length || 0) <= 8  ? "22px" :
-                  (siteName?.length || 0) <= 12 ? "20px" :
-                  (siteName?.length || 0) <= 16 ? "18px" :
-                  (siteName?.length || 0) <= 20 ? "16px" :
-                  (siteName?.length || 0) <= 25 ? "14px" :
-                                                  "12px",
+                  (siteName?.length || 0) <= 8 ? "22px" :
+                    (siteName?.length || 0) <= 12 ? "20px" :
+                      (siteName?.length || 0) <= 16 ? "18px" :
+                        (siteName?.length || 0) <= 20 ? "16px" :
+                          (siteName?.length || 0) <= 25 ? "14px" :
+                            "12px",
               }}
-              className={`font-fredoka font-semibold tracking-wide ${
-                isDarkMode
-                  ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]"
-                  : "text-orange-600 drop-shadow-[0_0_8px_rgba(234,88,12,0.4)]"
-              }`}
+              className={`font-fredoka font-semibold tracking-wide ${isDarkMode
+                ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]"
+                : "text-orange-600 drop-shadow-[0_0_8px_rgba(234,88,12,0.4)]"
+                }`}
             >
               {siteName}
             </span>
@@ -1338,11 +1329,10 @@ export default function Header({
             {/* Dark mode toggle */}
             <button
               onClick={onToggleDarkMode}
-              className={`client-theme-toggle relative rounded-full p-1.5 transition-colors sm:p-2 ${
-                isDarkMode
-                  ? "border border-slate-600 bg-slate-800 text-amber-300 hover:bg-slate-700"
-                  : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+              className={`client-theme-toggle relative rounded-full p-1.5 transition-colors sm:p-2 ${isDarkMode
+                ? "border border-slate-600 bg-slate-800 text-amber-300 hover:bg-slate-700"
+                : "bg-orange-50 text-primary hover:bg-orange-100"
+                }`}
               aria-label="Toggle dark mode"
               title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
@@ -1356,13 +1346,12 @@ export default function Header({
             {/* Search */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${
-                isSearchOpen
-                  ? "bg-primary text-white shadow-md"
-                  : isDarkMode
+              className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${isSearchOpen
+                ? "bg-primary text-white shadow-md"
+                : isDarkMode
                   ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
                   : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+                }`}
             >
               <Search className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
@@ -1374,22 +1363,20 @@ export default function Header({
                 onSidebarToggle?.(true);
               }}
               ref={ordersButtonRef}
-              className={`relative rounded-full p-1.5 transition-all sm:p-2 ${
-                isOrdersIconHighlighted
-                  ? "ring-2 ring-orange-400/70 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"
-                  : isDarkMode
+              className={`relative rounded-full p-1.5 transition-all sm:p-2 ${isOrdersIconHighlighted
+                ? "ring-2 ring-orange-400/70 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"
+                : isDarkMode
                   ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
                   : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+                }`}
             >
               {isPreparingBanner && (
                 <span className="pointer-events-none absolute inset-0 rounded-full">
                   <span
-                    className={`absolute inset-0 rounded-full border-2 ${
-                      isDarkMode
-                        ? "border-emerald-400/70"
-                        : "border-emerald-500/70"
-                    } animate-ping`}
+                    className={`absolute inset-0 rounded-full border-2 ${isDarkMode
+                      ? "border-emerald-400/70"
+                      : "border-emerald-500/70"
+                      } animate-ping`}
                   />
                 </span>
               )}
@@ -1406,11 +1393,10 @@ export default function Header({
           <AnimatePresence>
             {isSearchOpen && (
               <motion.div
-                className={`absolute left-0 right-0 top-full z-50 shadow-lg ${
-                  isDarkMode
-                    ? "bg-slate-900 border-t border-slate-700"
-                    : "bg-white"
-                }`}
+                className={`absolute left-0 right-0 top-full z-50 shadow-lg ${isDarkMode
+                  ? "bg-slate-900 border-t border-slate-700"
+                  : "bg-white"
+                  }`}
                 initial={{ opacity: 0, y: -6, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.99 }}
@@ -1428,11 +1414,10 @@ export default function Header({
                         placeholder="Search for food items..."
                         value={search || ""}
                         onChange={(e) => safeOnSearch(e.target.value)}
-                        className={`w-full rounded-full border pl-10 pr-4 py-2.5 text-sm shadow-sm outline-none transition-all duration-200 ${
-                          isDarkMode
-                            ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:border-orange-400 focus:bg-slate-800 focus:shadow-md"
-                            : "border-orange-100 bg-white text-gray-800 placeholder-gray-400 focus:border-primary focus:bg-white focus:shadow-md"
-                        }`}
+                        className={`w-full rounded-full border pl-10 pr-4 py-2.5 text-sm shadow-sm outline-none transition-all duration-200 ${isDarkMode
+                          ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:border-orange-400 focus:bg-slate-800 focus:shadow-md"
+                          : "border-orange-100 bg-white text-gray-800 placeholder-gray-400 focus:border-primary focus:bg-white focus:shadow-md"
+                          }`}
                         autoFocus
                       />
                     </div>
@@ -1461,19 +1446,17 @@ export default function Header({
                 animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 36, y: -2, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className={`fixed left-3 right-3 top-2 z-[70] rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:left-auto sm:right-4 sm:top-3 sm:w-[360px] ${
-                  isDarkMode
-                    ? "border-emerald-500/30 bg-slate-900/95 text-emerald-100 shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
-                    : "border-emerald-200 bg-white text-emerald-900"
-                }`}
+                className={`fixed left-3 right-3 top-2 z-[70] rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:left-auto sm:right-4 sm:top-3 sm:w-[360px] ${isDarkMode
+                  ? "border-emerald-500/30 bg-slate-900/95 text-emerald-100 shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                  : "border-emerald-200 bg-white text-emerald-900"
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      isDarkMode
-                        ? "bg-emerald-500/20 text-emerald-200"
-                        : "bg-emerald-100 text-emerald-700"
-                    }`}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full ${isDarkMode
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "bg-emerald-100 text-emerald-700"
+                      }`}
                   >
                     <Clock className="h-4 w-4" />
                   </div>
@@ -1484,11 +1467,10 @@ export default function Header({
                   </div>
                   <button
                     onClick={() => setOrderStatusBanner(null)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
-                      isDarkMode
-                        ? "text-emerald-100/80 hover:bg-emerald-500/20"
-                        : "text-emerald-700 hover:bg-emerald-100"
-                    }`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${isDarkMode
+                      ? "text-emerald-100/80 hover:bg-emerald-500/20"
+                      : "text-emerald-700 hover:bg-emerald-100"
+                      }`}
                     aria-label="Close notification"
                   >
                     <X className="h-4 w-4" />
@@ -1520,25 +1502,22 @@ export default function Header({
         <AnimatePresence>
           {isCartOpen && (
             <motion.div
-              className={`fixed top-0 right-0 z-50 flex h-full w-[87%] max-w-sm flex-col border-l shadow-2xl ${
-                isDarkMode
-                  ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
-                  : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
-              }`}
+              className={`fixed top-0 right-0 z-50 flex h-full w-[87%] max-w-sm flex-col border-l shadow-2xl ${isDarkMode
+                ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
+                : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
+                }`}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               <div
-                className={`flex items-center justify-between border-b p-4 ${
-                  isDarkMode ? "border-slate-700" : "border-orange-100"
-                }`}
+                className={`flex items-center justify-between border-b p-4 ${isDarkMode ? "border-slate-700" : "border-orange-100"
+                  }`}
               >
                 <h2
-                  className={`text-lg font-semibold sm:text-xl ${
-                    isDarkMode ? "text-slate-100" : "text-gray-800"
-                  }`}
+                  className={`text-lg font-semibold sm:text-xl ${isDarkMode ? "text-slate-100" : "text-gray-800"
+                    }`}
                 >
                   Your Orders
                 </h2>
@@ -1547,16 +1526,14 @@ export default function Header({
                     setIsCartOpen(false);
                     onSidebarToggle?.(false);
                   }}
-                  className={`p-1 transition-colors ${
-                    isDarkMode
-                      ? "text-slate-300 hover:text-slate-100"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`p-1 transition-colors ${isDarkMode
+                    ? "text-slate-300 hover:text-slate-100"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   <X
-                    className={`w-5 h-5 ${
-                      isDarkMode ? "text-slate-300" : "text-gray-600"
-                    }`}
+                    className={`w-5 h-5 ${isDarkMode ? "text-slate-300" : "text-gray-600"
+                      }`}
                   />
                 </button>
               </div>
@@ -1567,9 +1544,8 @@ export default function Header({
                     0 ? (
                     <div className="text-center py-8">
                       <FiShoppingCart
-                        className={`w-12 h-12 mx-auto mb-3 ${
-                          isDarkMode ? "text-slate-500" : "text-gray-300"
-                        }`}
+                        className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? "text-slate-500" : "text-gray-300"
+                          }`}
                       />
                       <p
                         className={
@@ -1595,11 +1571,10 @@ export default function Header({
                         return (
                           <div
                             key={order._id || order.id || order.orderId}
-                            className={`overflow-hidden rounded-2xl border shadow-sm ${
-                              isDarkMode
-                                ? "border-slate-700 bg-slate-900"
-                                : "border-orange-100 bg-white"
-                            }`}
+                            className={`overflow-hidden rounded-2xl border shadow-sm ${isDarkMode
+                              ? "border-slate-700 bg-slate-900"
+                              : "border-orange-100 bg-white"
+                              }`}
                           >
                             {/* Meta rows */}
                             <div className="px-4 pt-4 pb-3 space-y-2.5">
@@ -1618,33 +1593,36 @@ export default function Header({
                               {/* Badges */}
                               <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                 {/* Order type badge */}
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  isDarkMode
-                                    ? orderTypeNormalized === "delivery" ? "bg-orange-500/15 text-orange-300"
-                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-500/15 text-blue-300"
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${isDarkMode
+                                  ? orderTypeNormalized === "delivery" ? "bg-orange-500/15 text-orange-300"
+                                    : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-500/15 text-blue-300"
                                       : "bg-green-500/15 text-green-300"
-                                    : orderTypeNormalized === "delivery" ? "bg-orange-50 text-orange-700"
-                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-50 text-blue-700"
+                                  : orderTypeNormalized === "delivery" ? "bg-orange-50 text-orange-700"
+                                    : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-50 text-blue-700"
                                       : "bg-green-50 text-green-700"
-                                }`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${
-                                    orderTypeNormalized === "delivery" ? "bg-orange-400"
+                                  }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${orderTypeNormalized === "delivery" ? "bg-orange-400"
                                     : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-400"
-                                    : "bg-green-400"
-                                  }`} />
+                                      : "bg-green-400"
+                                    }`} />
                                   {orderTypeLabel}
                                 </span>
 
                                 {/* Status badge */}
                                 {order.status && (() => {
-                                  const s = String(order.status).toLowerCase();
-                                  const colorDark = s === "pending" ? "bg-amber-500/15 text-amber-300" : s === "preparing" ? "bg-teal-500/15 text-teal-300" : s === "ready" ? "bg-blue-500/15 text-blue-300" : s === "completed" ? "bg-green-500/15 text-green-300" : s === "cancelled" ? "bg-red-500/15 text-red-300" : "bg-slate-700 text-slate-300";
-                                  const colorLight = s === "pending" ? "bg-amber-50 text-amber-700" : s === "preparing" ? "bg-teal-50 text-teal-700" : s === "ready" ? "bg-blue-50 text-blue-700" : s === "completed" ? "bg-green-50 text-green-700" : s === "cancelled" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600";
-                                  const dot = s === "pending" ? "bg-amber-400" : s === "preparing" ? "bg-teal-400" : s === "ready" ? "bg-blue-400" : s === "completed" ? "bg-green-400" : s === "cancelled" ? "bg-red-400" : "bg-gray-400";
+                                  let s = String(order.status).toLowerCase();
+                                  let isBilledState = false;
+                                  if (s === "completed" && !order.paymentMethod) {
+                                    s = "billed";
+                                    isBilledState = true;
+                                  }
+                                  const colorDark = s === "pending" ? "bg-amber-500/15 text-amber-300" : s === "preparing" ? "bg-teal-500/15 text-teal-300" : s === "ready" ? "bg-blue-500/15 text-blue-300" : s === "billed" ? "bg-blue-500/15 text-blue-300" : s === "completed" ? "bg-green-500/15 text-green-300" : s === "cancelled" ? "bg-red-500/15 text-red-300" : "bg-slate-700 text-slate-300";
+                                  const colorLight = s === "pending" ? "bg-amber-50 text-amber-700" : s === "preparing" ? "bg-teal-50 text-teal-700" : s === "ready" ? "bg-blue-50 text-blue-700" : s === "billed" ? "bg-blue-50 text-blue-700" : s === "completed" ? "bg-green-50 text-green-700" : s === "cancelled" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600";
+                                  const dot = s === "pending" ? "bg-amber-400" : s === "preparing" ? "bg-teal-400" : s === "ready" ? "bg-blue-400" : s === "billed" ? "bg-blue-400" : s === "completed" ? "bg-green-400" : s === "cancelled" ? "bg-red-400" : "bg-gray-400";
                                   return (
                                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${isDarkMode ? colorDark : colorLight}`}>
                                       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                                      {order.status}
+                                      {isBilledState ? "billed" : order.status}
                                     </span>
                                   );
                                 })()}
@@ -1680,9 +1658,8 @@ export default function Header({
                                 return (
                                   <div
                                     key={index}
-                                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
-                                      index !== 0 ? isDarkMode ? "border-t border-slate-700/50" : "border-t border-orange-50" : ""
-                                    } ${isCompleted ? isDarkMode ? "bg-green-900/10" : "bg-green-50/50" : ""}`}
+                                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${index !== 0 ? isDarkMode ? "border-t border-slate-700/50" : "border-t border-orange-50" : ""
+                                      } ${isCompleted ? isDarkMode ? "bg-green-900/10" : "bg-green-50/50" : ""}`}
                                   >
                                     <div className="flex min-w-0 items-center gap-2">
                                       {isCompleted && <span className="shrink-0 text-green-500 text-xs">✔</span>}
@@ -1744,6 +1721,7 @@ export default function Header({
 
         {/* Order Form Modal */}
         <OrderFormModal
+          qrInfo={qrInfo}
           showModal={showModal}
           setShowModal={setShowModal}
           customerName={customerName}

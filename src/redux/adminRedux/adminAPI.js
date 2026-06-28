@@ -1,6 +1,30 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "../../config";
 
+const addAdminModifiedOrderId = (id) => {
+  if (!id) return;
+  try {
+    const data = JSON.parse(sessionStorage.getItem("adminModifiedOrderIds") || "{}");
+    let record = {};
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      record = { ...data };
+    } else if (Array.isArray(data)) {
+      data.forEach((oldId) => {
+        record[String(oldId)] = Date.now();
+      });
+    }
+    record[String(id)] = Date.now();
+    const now = Date.now();
+    const pruned = {};
+    Object.entries(record).forEach(([key, val]) => {
+      if (now - Number(val) < 30000) {
+        pruned[key] = val;
+      }
+    });
+    sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
+  } catch (_) {}
+};
+
 const normalizeIndexedText = (value) => {
   if (!value || typeof value !== "object") return "";
   const numericKeys = Object.keys(value).filter((key) => /^\d+$/.test(key));
@@ -106,8 +130,8 @@ export const adminApi = createApi({
       query: (credentials) => ({ url: "/auth/login", method: "POST", body: credentials }),
       invalidatesTags: ["Admin"],
     }),
-    getRestaurantProfile: builder.query({
-      query: () => "/restaurant/admin",
+    getRestaurant: builder.query({
+      query: () => "/restaurant/private",
       transformResponse: (response) => {
         if (response?.data) return { restaurant: normalizeRestaurantProfile(response.data) };
         if (response?.restaurant) return { ...response, restaurant: normalizeRestaurantProfile(response.restaurant) };
@@ -116,20 +140,43 @@ export const adminApi = createApi({
       },
       providesTags: ["Restaurant"],
     }),
-    updateRestaurantProfile: builder.mutation({
+    updateRestaurant: builder.mutation({
       query: (formData) => ({ url: "/restaurant/", method: "PUT", body: formData }),
       invalidatesTags: ["Restaurant"],
     }),
     reorderCategories: builder.mutation({
-      query: (orderedCategoryNames) => ({ url: "/restaurant/reorder-categories", method: "POST", body: { orderedCategoryNames } }),
+      query: (orderedCategoryNames) => ({ url: "/restaurant/categories/reorder", method: "POST", body: { orderedCategoryNames } }),
       invalidatesTags: ["Restaurant"],
     }),
-    toggleRestaurant: builder.mutation({
+    updateRestaurantGST: builder.mutation({
+      query: (gstData) => ({ url: "/restaurant/gst", method: "PATCH", body: gstData }),
+      invalidatesTags: ["Restaurant"],
+    }),
+    createCategories: builder.mutation({
+      query: (categoryData) => ({ url: "/restaurant/categories", method: "POST", body: categoryData }),
+      invalidatesTags: ["Restaurant"],
+    }),
+    updateCategory: builder.mutation({
+      query: ({ categoryId, newName }) => ({ url: `/restaurant/categories/${categoryId}`, method: "PATCH", body: { newName } }),
+      invalidatesTags: ["Restaurant", "Menu"],
+    }),
+    deleteCategory: builder.mutation({
+      query: (categoryId) => ({ url: `/restaurant/categories/${categoryId}`, method: "DELETE" }),
+      invalidatesTags: ["Restaurant", "Menu"],
+    }),
+    updateRestaurantStatus: builder.mutation({
       query: ({ isOpen }) => ({ url: "/restaurant/status", method: "PATCH", body: { isOpen } }),
       invalidatesTags: ["Restaurant"],
     }),
     createOrderByAdmin: builder.mutation({
       query: (orderData) => ({ url: "/order/protected", method: "POST", body: orderData }),
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const orderId = data?.order?._id || data?._id;
+          if (orderId) addAdminModifiedOrderId(orderId);
+        } catch (_) {}
+      },
       invalidatesTags: [{ type: "Order", id: "LIST" }],
     }),
     getOrders: builder.query({
@@ -153,14 +200,26 @@ export const adminApi = createApi({
     }),
     updateOrder: builder.mutation({
       query: ({ orderId, updatedData }) => ({ url: `/order/${orderId}`, method: "PUT", body: updatedData }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, { type: "Order", id: "ACTIVE_LIST" }],
     }),
     toggleItemReady: builder.mutation({
       query: ({ orderId, itemId }) => ({ url: `/order/${orderId}/items/${itemId}/toggle-ready`, method: "PATCH" }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, { type: "Order", id: "ACTIVE_LIST" }],
     }),
-    deleteOrder: builder.mutation({
+    cancelOrder: builder.mutation({
       query: (orderId) => ({ url: `/order/${orderId}`, method: "DELETE" }),
+      invalidatesTags: ["Order"],
+    }),
+    cancelRoomBooking: builder.mutation({
+      query: (orderId) => ({ url: `/order/${orderId}/cancel-booking`, method: "POST" }),
       invalidatesTags: ["Order"],
     }),
     getAnalytics: builder.query({
@@ -242,40 +301,77 @@ export const adminApi = createApi({
       query: (staffId) => ({ url: `/auth/${staffId}`, method: "DELETE" }),
       invalidatesTags: ["Staff"],
     }),
-    addUnits: builder.mutation({
-      query: (body) => ({ url: "/restaurant/units", method: "POST", body }),
+    createSectionsAndUnits: builder.mutation({
+      query: (body) => ({ url: "/restaurant/sections", method: "POST", body }),
+      invalidatesTags: ["Restaurant", "Units"],
+    }),
+    updateSections: builder.mutation({
+      query: (body) => ({ url: "/restaurant/sections", method: "PATCH", body }),
+      invalidatesTags: ["Restaurant", "Units"],
+    }),
+    deleteSection: builder.mutation({
+      query: (sectionId) => ({ url: `/restaurant/sections/${sectionId}`, method: "DELETE" }),
+      invalidatesTags: ["Restaurant", "Units"],
+    }),
+    deleteUnit: builder.mutation({
+      query: (unitId) => ({ url: `/restaurant/sections/units/${unitId}`, method: "DELETE" }),
       invalidatesTags: ["Restaurant", "Units"],
     }),
     toggleUnitActive: builder.mutation({
       query: ({ unitId, isActive }) => ({
-        url: `/restaurant/units/${unitId}/active`,
+        url: "/restaurant/sections",
         method: "PATCH",
-        body: { isActive },
+        body: {
+          unitUpdates: [{ unitId, isActive }]
+        },
       }),
       invalidatesTags: ["Restaurant", "Units"],
     }),
-    getLiveUnits: builder.query({
+    getLiveOccupancy: builder.query({
       query: () => "/restaurant/units/live-status",
       providesTags: ["Units", "Restaurant"],
     }),
-    bookRoom: builder.mutation({
-      query: (payload) => ({ url: "/restaurant/book", method: "POST", body: payload }),
+    createRoomBooking: builder.mutation({
+      query: (payload) => ({ url: "/restaurant/room-booking", method: "POST", body: payload }),
+      async onQueryStarted(payload, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const orderId = data?.order?._id || data?._id;
+          if (orderId) addAdminModifiedOrderId(orderId);
+        } catch (_) {}
+      },
       invalidatesTags: ["Units", "Restaurant", "Order"],
     }),
     checkoutOrder: builder.mutation({
       query: (orderId) => ({ url: `/order/${orderId}/bill`, method: "POST" }),
+      async onQueryStarted(orderId, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: (result, error, orderId) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
     }),
     billOrder: builder.mutation({
       query: (orderId) => ({ url: `/order/${orderId}/bill`, method: "POST" }),
+      async onQueryStarted(orderId, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: (result, error, orderId) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
     }),
     payOrder: builder.mutation({
       query: ({ orderId, paymentMethod, settlementAmount }) => ({ url: `/order/${orderId}/pay`, method: "POST", body: { paymentMethod, settlementAmount } }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
     }),
     moveOrder: builder.mutation({
       query: ({ orderId, unitId }) => ({ url: `/order/${orderId}/move`, method: "POST", body: { unitId } }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
       invalidatesTags: ["Order", "Units", "Restaurant"],
     }),
     getOrderById: builder.query({
@@ -287,31 +383,39 @@ export const adminApi = createApi({
 
 export const {
   useLoginMutation,
-  useGetRestaurantProfileQuery,
-  useUpdateRestaurantProfileMutation,
+  useGetRestaurantQuery,
+  useUpdateRestaurantMutation,
   useReorderCategoriesMutation,
+  useUpdateRestaurantGSTMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
   useCreateOrderByAdminMutation,
   useGetOrdersQuery,
   useUpdateOrderMutation,
   useToggleItemReadyMutation,
-  useDeleteOrderMutation,
+  useCancelOrderMutation,
+  useCancelRoomBookingMutation,
   useGetAnalyticsQuery,
   useGetMenuQuery,
   useCreateMenuItemMutation,
   useUpdateMenuItemMutation,
   useDeleteMenuItemMutation,
   useReorderMenuItemsMutation,
-  useToggleRestaurantMutation,
+  useUpdateRestaurantStatusMutation,
   useGetTopSellingProductsQuery,
   useGetTopSellingCategoriesQuery,
   useGetStaffQuery,
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
-  useAddUnitsMutation,
+  useCreateSectionsAndUnitsMutation,
+  useUpdateSectionsMutation,
+  useDeleteSectionMutation,
+  useDeleteUnitMutation,
   useToggleUnitActiveMutation,
-  useGetLiveUnitsQuery,
-  useBookRoomMutation,
+  useGetLiveOccupancyQuery,
+  useCreateRoomBookingMutation,
   useCheckoutOrderMutation,
   useBillOrderMutation,
   usePayOrderMutation,

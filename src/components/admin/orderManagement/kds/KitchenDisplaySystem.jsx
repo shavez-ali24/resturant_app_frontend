@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import audio from "@/assets/orderRing.mp3";
 import { useNotification } from "../../Bell/NotificationContext";
-import { useGetOrdersQuery, useUpdateOrderMutation } from "../../../../redux/adminRedux/adminAPI";
+import { useGetOrdersQuery, useUpdateOrderMutation, useLazyGetOrderByIdQuery } from "../../../../redux/adminRedux/adminAPI";
 import {
   Activity,
   ChefHat,
@@ -28,7 +28,10 @@ const POLLING_INTERVAL = 60000;
 const NEW_ORDER_HIGHLIGHT_MS = 12000;
 
 const getOrders = (response) => (Array.isArray(response?.orders) ? response.orders : []);
-const getOrderId = (order) => String(order?._id || order?.id || order?.orderId || "");
+const getOrderId = (order) => {
+  const actualOrder = order?.order || order;
+  return String(actualOrder?._id || actualOrder?.id || actualOrder?.orderId || "");
+};
 const getOrderCreatedAt = (order) =>
   new Date(order?.createdAt || order?.updatedAt || Date.now()).getTime();
 const getOrderStatus = (order) => String(order?.status || "").trim().toLowerCase();
@@ -73,6 +76,37 @@ const keepKitchenStatusesOnly = (orders) =>
 const readAdminTheme = () => {
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem("admin-theme") === "dark";
+};
+
+const checkAndClearAdminModifiedOrderId = (id) => {
+  if (!id) return false;
+  try {
+    const data = JSON.parse(sessionStorage.getItem("adminModifiedOrderIds") || "{}");
+    if (Array.isArray(data)) {
+      const index = data.indexOf(String(id));
+      if (index !== -1) {
+        data.splice(index, 1);
+        sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(data));
+        return true;
+      }
+      return false;
+    }
+    const now = Date.now();
+    let isFound = false;
+    const pruned = {};
+    Object.entries(data).forEach(([key, val]) => {
+      if (now - Number(val) < 30000) {
+        pruned[key] = val;
+      }
+    });
+    const timestamp = data[String(id)];
+    if (timestamp && now - Number(timestamp) < 15000) {
+      isFound = true;
+    }
+    sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
+    return isFound;
+  } catch (_) {}
+  return false;
 };
 
 const KitchenDisplaySystem = () => {
@@ -173,6 +207,7 @@ const KitchenDisplaySystem = () => {
   );
 
   const [updateOrderApi] = useUpdateOrderMutation();
+  const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
   const pendingOrders = useMemo(() => getOrders(pendingData), [pendingData]);
   const preparingOrders = useMemo(() => getOrders(preparingData), [preparingData]);
@@ -256,124 +291,130 @@ const KitchenDisplaySystem = () => {
     };
   }, []);
 
-  // Rely purely on backend SSE event data for live updates (no refetch when connected)
-  useEffect(() => {
-    if (!sseConnected) {
-      if (!["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type)) return;
-      refetchPending();
-      refetchPreparing();
-      refetchReady();
-    }
-  }, [sseEvent, refetchPending, refetchPreparing, refetchReady, sseConnected]);
-
   useEffect(() => {
     if (
-      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent?.type) ||
-      !sseEvent?.data
+      !sseEvent?.type ||
+      !sseEvent?.data ||
+      !["NEW_ORDER", "ORDER_STATUS_CHANGED", "ORDER_UPDATED"].includes(sseEvent.type)
     ) {
       return;
     }
 
-    const normalizedOrder = normalizeIncomingOrder(sseEvent.data);
-    if (!normalizedOrder) return;
+    const incomingId = getOrderId(sseEvent.data);
+    if (!incomingId) return;
 
-    const incomingId = getOrderId(normalizedOrder);
-    const incomingStatus = getOrderStatus(normalizedOrder);
-    const eventTimestamp = sseEvent?.ts || Date.now();
+    fetchOrderById(incomingId).unwrap().then((fetchedOrder) => {
+      if (!fetchedOrder) return;
 
-    // Debug: Log all order status changes
-    console.log("KDS SSE received:", {
-      type: sseEvent.type,
-      orderId: incomingId,
-      status: incomingStatus,
-      willRemove: !["pending", "preparing", "ready"].includes(incomingStatus)
-    });
+      const normalizedOrder = normalizeIncomingOrder(fetchedOrder);
+      if (!normalizedOrder) return;
 
+      const incomingStatus = getOrderStatus(normalizedOrder);
+      const eventTimestamp = sseEvent?.ts || Date.now();
 
-
-    if (incomingStatus === "preparing") {
-      const preparingStartedAtMs =
-        getOrderPreparingStartedAt(normalizedOrder) ||
-        rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
-
-      if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
-        normalizedOrder.preparingStartedAt = new Date(
-          preparingStartedAtMs
-        ).toISOString();
-      }
-    } else if (incomingStatus) {
-      clearOrderPreparingStartedAt(incomingId);
-    }
-
-    setEventOrdersById((prev) => {
-      const next = { ...prev };
-      if (["pending", "preparing", "ready"].includes(incomingStatus)) {
-        next[incomingId] = mergeOrderData(prev[incomingId], normalizedOrder);
-      } else {
-        // Order is completed or cancelled - remove from KDS view immediately
-        delete next[incomingId];
-      }
-      return next;
-    });
-
-    // Also update optimistic status to ensure immediate UI update
-    setOptimisticStatusById((prev) => {
-      const next = { ...prev };
-      if (!["pending", "preparing", "ready"].includes(incomingStatus)) {
-        delete next[incomingId];
-      } else {
-        next[incomingId] = incomingStatus;
-      }
-      return next;
-    });
-
-    if (
-      sseEvent.type === "NEW_ORDER" &&
-      incomingStatus === "pending" &&
-      !knownOrderIds.current.has(incomingId)
-    ) {
-      setHiddenOrderIds((prev) => {
-        if (!prev.has(incomingId)) return prev;
-        const next = new Set(prev);
-        next.delete(incomingId);
-        return next;
+      // Debug: Log all order status changes
+      console.log("KDS SSE received:", {
+        type: sseEvent.type,
+        orderId: incomingId,
+        status: incomingStatus,
+        willRemove: !["pending", "preparing", "ready"].includes(incomingStatus)
       });
 
-      setNewOrderIds((prev) => {
-        const next = new Set(prev);
-        next.add(incomingId);
-        const existingTimer = newOrderTimers.current.get(incomingId);
-        if (existingTimer) window.clearTimeout(existingTimer);
-        const timer = window.setTimeout(() => {
-          setNewOrderIds((current) => {
-            const updated = new Set(current);
-            updated.delete(incomingId);
-            return updated;
-          });
-          newOrderTimers.current.delete(incomingId);
-        }, NEW_ORDER_HIGHLIGHT_MS);
-        newOrderTimers.current.set(incomingId, timer);
-        return next;
-      });
+      if (incomingStatus === "preparing") {
+        const preparingStartedAtMs =
+          getOrderPreparingStartedAt(normalizedOrder) ||
+          rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
 
-      if (notificationSound) {
-        try {
-          notificationSound.currentTime = 0;
-          const playPromise = notificationSound.play();
-          if (playPromise?.catch) {
-            playPromise.catch(() => {
-              // Autoplay blocked — will play on next user interaction
-            });
-          }
-        } catch {
-          // Ignore
+        if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
+          normalizedOrder.preparingStartedAt = new Date(
+            preparingStartedAtMs
+          ).toISOString();
         }
+      } else if (incomingStatus) {
+        clearOrderPreparingStartedAt(incomingId);
       }
 
-      notify(`New kitchen order ${incomingId.slice(-4)} received.`, "success");
-      knownOrderIds.current.add(incomingId);
-    }
-  }, [notificationSound, notify, sseEvent]);
+      setEventOrdersById((prev) => {
+        const next = { ...prev };
+        if (["pending", "preparing", "ready"].includes(incomingStatus)) {
+          next[incomingId] = mergeOrderData(prev[incomingId], normalizedOrder);
+        } else {
+          // Order is completed or cancelled - remove from KDS view immediately
+          delete next[incomingId];
+        }
+        return next;
+      });
+
+      // Also update optimistic status to ensure immediate UI update
+      setOptimisticStatusById((prev) => {
+        const next = { ...prev };
+        if (!["pending", "preparing", "ready"].includes(incomingStatus)) {
+          delete next[incomingId];
+        } else {
+          next[incomingId] = incomingStatus;
+        }
+        return next;
+      });
+
+      const isAdminAction = checkAndClearAdminModifiedOrderId(incomingId);
+
+      if (
+        ["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type) &&
+        incomingStatus === "pending"
+      ) {
+        if (!isAdminAction) {
+          setHiddenOrderIds((prev) => {
+            if (!prev.has(incomingId)) return prev;
+            const next = new Set(prev);
+            next.delete(incomingId);
+            return next;
+          });
+
+          setNewOrderIds((prev) => {
+            const next = new Set(prev);
+            next.add(incomingId);
+            const existingTimer = newOrderTimers.current.get(incomingId);
+            if (existingTimer) window.clearTimeout(existingTimer);
+            const timer = window.setTimeout(() => {
+              setNewOrderIds((current) => {
+                const updated = new Set(current);
+                updated.delete(incomingId);
+                return updated;
+              });
+              newOrderTimers.current.delete(incomingId);
+            }, NEW_ORDER_HIGHLIGHT_MS);
+            newOrderTimers.current.set(incomingId, timer);
+            return next;
+          });
+
+          if (notificationSound) {
+            try {
+              notificationSound.currentTime = 0;
+              const playPromise = notificationSound.play();
+              if (playPromise?.catch) {
+                playPromise.catch(() => {});
+              }
+            } catch {
+              // Ignore
+            }
+          }
+
+          const msg = sseEvent.type === "NEW_ORDER"
+            ? `New kitchen order ${incomingId.slice(-4)} received.`
+            : `Kitchen order ${incomingId.slice(-4)} updated.`;
+          notify(msg, "success");
+        }
+        knownOrderIds.current.add(incomingId);
+      }
+
+      // ALWAYS refetch queries for real-time update
+      refetchPending();
+      refetchPreparing();
+      refetchReady();
+    }).catch((err) => {
+      console.error("Failed to fetch order details in KDS SSE:", err);
+    });
+  }, [notificationSound, notify, sseEvent, fetchOrderById, refetchPending, refetchPreparing, refetchReady]);
 
   useEffect(() => {
     setEventOrdersById((prev) => {
@@ -410,7 +451,14 @@ const KitchenDisplaySystem = () => {
 
     const freshPendingOrders = activeOrders.filter((order) => {
       const id = getOrderId(order);
-      return id && getOrderStatus(order) === "pending" && !knownOrderIds.current.has(id);
+      if (id && getOrderStatus(order) === "pending" && !knownOrderIds.current.has(id)) {
+        if (checkAndClearAdminModifiedOrderId(id)) {
+          knownOrderIds.current.add(id);
+          return false;
+        }
+        return true;
+      }
+      return false;
     });
 
     if (freshPendingOrders.length > 0) {

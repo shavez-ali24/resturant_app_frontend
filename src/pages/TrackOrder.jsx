@@ -9,11 +9,13 @@ import { ArrowLeft, Package, Clock, ChevronRight, Wifi, WifiOff } from "lucide-r
 import fingerprintService from "@/service/fingerprintService";
 import config from "@/config";
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
+import { getFriendlyErrorMessage } from "@/utils/errorHelpers";
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   preparing: "bg-orange-100 text-orange-800 border-orange-200",
   ready: "bg-green-100 text-green-800 border-green-200",
+  billed: "bg-blue-100 text-blue-800 border-blue-200",
   completed: "bg-gray-100 text-gray-600 border-gray-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
 };
@@ -22,6 +24,7 @@ const statusLabels = {
   pending: "Pending",
   preparing: "Preparing",
   ready: "Ready",
+  billed: "Billed",
   completed: "Completed",
   cancelled: "Cancelled",
 };
@@ -137,15 +140,14 @@ export default function TrackOrder() {
         <Package className="h-12 w-12 text-orange-400" />
         <p className="text-base font-bold">Could not load orders</p>
         <p className="text-sm opacity-70">
-          {error?.data?.message || error?.message || "Something went wrong"}
+          {getFriendlyErrorMessage(error, "We couldn't load your active orders right now. Please check your internet connection.")}
         </p>
         <Link
           to="/"
-          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-            isDarkMode
-              ? "bg-orange-600 text-white hover:bg-orange-500"
-              : "bg-orange-500 text-white hover:bg-orange-600"
-          }`}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${isDarkMode
+            ? "bg-orange-600 text-white hover:bg-orange-500"
+            : "bg-orange-500 text-white hover:bg-orange-600"
+            }`}
         >
           <ArrowLeft size={16} />
           Back to Menu
@@ -164,11 +166,10 @@ export default function TrackOrder() {
         </p>
         <Link
           to="/"
-          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-            isDarkMode
-              ? "bg-orange-600 text-white hover:bg-orange-500"
-              : "bg-orange-500 text-white hover:bg-orange-600"
-          }`}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${isDarkMode
+            ? "bg-orange-600 text-white hover:bg-orange-500"
+            : "bg-orange-500 text-white hover:bg-orange-600"
+            }`}
         >
           Browse Menu
           <ChevronRight size={16} />
@@ -182,9 +183,8 @@ export default function TrackOrder() {
       {/* Back button */}
       <Link
         to="/"
-        className={`mb-4 inline-flex items-center gap-1.5 text-sm font-semibold ${
-          isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-700"
-        }`}
+        className={`mb-4 inline-flex items-center gap-1.5 text-sm font-semibold ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-700"
+          }`}
       >
         <ArrowLeft size={16} />
         Back to Menu
@@ -206,24 +206,25 @@ export default function TrackOrder() {
         {recentOrders.map((order) => {
           const orderId = order?._id || order?.id || "";
           const shortId = orderId.length > 6 ? orderId.slice(-6) : orderId;
-          const status = (order?.status || "pending").toLowerCase();
+          let status = (order?.status || "pending").toLowerCase();
+          if (status === "completed" && !order?.paymentMethod) {
+            status = "billed";
+          }
           const statusColor = statusColors[status] || statusColors.pending;
 
           return (
             <div
               key={orderId}
-              className={`rounded-xl border p-4 shadow-sm ${
-                isDarkMode
-                  ? "border-slate-700 bg-slate-800/60"
-                  : "border-gray-200 bg-white"
-              }`}
+              className={`rounded-xl border p-4 shadow-sm ${isDarkMode
+                ? "border-slate-700 bg-slate-800/60"
+                : "border-gray-200 bg-white"
+                }`}
             >
               {/* Header row */}
               <div className="mb-3 flex items-center justify-between">
                 <span
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase ${
-                    isDarkMode ? "bg-slate-700 text-slate-300" : "bg-gray-100 text-gray-500"
-                  }`}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-gray-100 text-gray-500"
+                    }`}
                 >
                   #{shortId}
                 </span>
@@ -237,17 +238,15 @@ export default function TrackOrder() {
               {/* Order type + table */}
               <div className="mb-3 flex flex-wrap gap-2 text-xs font-semibold">
                 <span
-                  className={`rounded-md px-2 py-0.5 ${
-                    isDarkMode ? "bg-slate-700 text-slate-300" : "bg-orange-50 text-orange-700"
-                  }`}
+                  className={`rounded-md px-2 py-0.5 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-orange-50 text-orange-700"
+                    }`}
                 >
                   {order?.orderType || "Take Away"}
                 </span>
                 {order?.source?.unitName && (
                   <span
-                    className={`rounded-md px-2 py-0.5 ${
-                      isDarkMode ? "bg-slate-700 text-slate-300" : "bg-blue-50 text-blue-700"
-                    }`}
+                    className={`rounded-md px-2 py-0.5 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-blue-50 text-blue-700"
+                      }`}
                   >
                     {order.source.unitName}
                     {order.source.sectionName ? ` · ${order.source.sectionName}` : ""}
@@ -301,11 +300,10 @@ export default function TrackOrder() {
 
               {/* Payment info */}
               {order?.paymentMethod && (
-                <div className={`mt-2 rounded-lg px-3 py-1.5 text-center text-xs font-bold ${
-                  isDarkMode
-                    ? "bg-green-900/40 text-green-300"
-                    : "bg-green-50 text-green-700"
-                }`}>
+                <div className={`mt-2 rounded-lg px-3 py-1.5 text-center text-xs font-bold ${isDarkMode
+                  ? "bg-green-900/40 text-green-300"
+                  : "bg-green-50 text-green-700"
+                  }`}>
                   Paid via {order.paymentMethod}
                 </div>
               )}

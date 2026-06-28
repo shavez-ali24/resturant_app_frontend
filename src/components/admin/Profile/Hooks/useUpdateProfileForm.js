@@ -1,5 +1,8 @@
 import { useState, useCallback, useRef } from "react";
-import { useUpdateRestaurantProfileMutation } from "@/redux/adminRedux/adminAPI";
+import {
+    useUpdateRestaurantMutation,
+    useUpdateRestaurantGSTMutation
+} from "@/redux/adminRedux/adminAPI";
 
 const getCategoryText = (value) => {
     if (value === null || value === undefined) return "";
@@ -91,8 +94,10 @@ const uniqueCategories = (values = []) => {
 };
 
 export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClose) => { // Added onClose parameter
-    // Redux Mutation
-    const [updateRestaurantProfile, { isLoading: isSubmitting }] = useUpdateRestaurantProfileMutation();
+    // Redux Mutations
+    const [updateRestaurantProfile, { isLoading: isProfileSubmitting }] = useUpdateRestaurantMutation();
+    const [updateGSTSettings, { isLoading: isGSTSubmitting }] = useUpdateRestaurantGSTMutation();
+    const isSubmitting = isProfileSubmitting || isGSTSubmitting;
 
     const [formData, setFormData] = useState({
         restaurantName: initialData.restaurantName || initialData.name || "",
@@ -376,9 +381,16 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
         try {
             const formDataToUpload = new FormData();
 
-            // Append all form data fields EXCEPT orderModes and sections
+            // Append all form data fields EXCEPT orderModes, sections, and GST fields
             Object.keys(formData).forEach((key) => {
-                if (key !== "orderModes" && key !== "sections") {
+                if (
+                    key !== "orderModes" &&
+                    key !== "sections" &&
+                    key !== "gstEnabled" &&
+                    key !== "gstRate" &&
+                    key !== "gstNumber" &&
+                    key !== "publicId"
+                ) {
                     formDataToUpload.append(key, formData[key]);
                 }
             });
@@ -398,50 +410,19 @@ export const useUpdateProfileForm = (initialData, token, onUpdateSuccess, onClos
                 formDataToUpload.append("file", file);
             }
 
-            const categoriesChanged = hasCategoryChanges(
-                categories,
-                initialCategoriesRef.current
-            );
 
-            if (categoryMode.mode === "object") {
-                if (categoriesChanged) {
-                    categories.forEach((category, index) => {
-                        formDataToUpload.append(
-                            `categories[${index}][${categoryMode.key}]`,
-                            category
-                        );
-                        formDataToUpload.append(
-                            `categories[${index}][displayOrder]`,
-                            index
-                        );
-                    });
-                }
-            } else {
-                // Append categories array as strings
-                // categories.forEach((category) => {
-                //     formDataToUpload.append("categories", category);
-                // });
 
-                categories.forEach((category, index) => {
-    formDataToUpload.append(
-        `categories[${index}][name]`,
-        category
-    );
-    formDataToUpload.append(
-        `categories[${index}][displayOrder]`,
-        index
-    );
-});
-
-                if (categories.length === 0) {
-                    formDataToUpload.append("categories", ""); // To clear array on backend
-                }
-            }
-
-            // Use Redux mutation
-            const result = await updateRestaurantProfile(formDataToUpload).unwrap();
+            // Use Redux mutations (profile update and GST settings patch) in parallel
+            const [profileResult, gstResult] = await Promise.all([
+                updateRestaurantProfile(formDataToUpload).unwrap(),
+                updateGSTSettings({
+                    gstEnabled: formData.gstEnabled,
+                    gstRate: Number(formData.gstRate),
+                    gstNumber: formData.gstNumber
+                }).unwrap()
+            ]);
             
-            if (result) {
+            if (profileResult && gstResult) {
                 // CLOSE MODAL FIRST
                 if (onClose) {
                     onClose();

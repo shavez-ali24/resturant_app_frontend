@@ -28,10 +28,13 @@ import {
   useDeleteMenuItemMutation,
   useUpdateMenuItemMutation,
   useCreateMenuItemMutation,
-  useGetRestaurantProfileQuery,
-  useUpdateRestaurantProfileMutation,
+  useGetRestaurantQuery,
+  useUpdateRestaurantMutation,
   useReorderMenuItemsMutation,
   useReorderCategoriesMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
 const extractTextCandidate = (value, priorityKeys = []) => {
@@ -448,7 +451,7 @@ const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
-  const { data: restaurantData } = useGetRestaurantProfileQuery();
+  const { data: restaurantData } = useGetRestaurantQuery();
   const isDarkMode = localStorage.getItem("admin-theme") === "dark";
   const navigate = useNavigate();
   const location = useLocation();
@@ -462,8 +465,11 @@ const Menu = () => {
   const [updateMenuItem] = useUpdateMenuItemMutation();
   const [deleteMenuItem] = useDeleteMenuItemMutation();
   const [reorderMenuItems] = useReorderMenuItemsMutation();
-  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
+  const [updateRestaurantProfile] = useUpdateRestaurantMutation();
   const [reorderCategories] = useReorderCategoriesMutation();
+  const [createCategory] = useCreateCategoriesMutation();
+  const [updateCategory] = useUpdateCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
   const [restaurantCategories, setRestaurantCategories] = useState([]);
   const [menuOrder, setMenuOrder] = useState([]);
   const [draggingId, setDraggingId] = useState(null);
@@ -772,18 +778,21 @@ const Menu = () => {
         return { ok: true, category: duplicate, duplicate: true };
       }
 
-      const updateResult = await persistRestaurantCategories(
-        [...restaurantCategories, categoryName],
-        `Category "${categoryName}" added.`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      return { ok: true, category: categoryName };
+      try {
+        await createCategory({ name: categoryName }).unwrap();
+        notify(`Category "${categoryName}" added.`, "success");
+        return { ok: true, category: categoryName };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to add category.";
+        notify(message, "error");
+        return { ok: false, message };
+      }
     },
     [
+      createCategory,
       normalizeCategoryKey,
       normalizeCategoryLabel,
-      persistRestaurantCategories,
+      notify,
       restaurantCategories,
     ]
   );
@@ -825,23 +834,30 @@ const Menu = () => {
         };
       }
 
-      const updatedCategories = restaurantCategories.map((category) =>
-        category === currentCategory ? updatedCategory : category
+      const categoryObj = restaurantData?.restaurant?.categories?.find(
+        (c) =>
+          normalizeCategoryKey(c.name || c.label) ===
+          normalizeCategoryKey(currentCategoryName)
       );
+      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
 
-      const updateResult = await persistRestaurantCategories(
-        updatedCategories,
-        `Category "${currentCategory}" renamed to "${updatedCategory}".`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      return { ok: true, oldCategory: currentCategory, category: updatedCategory };
+      try {
+        await updateCategory({ categoryId: categoryObj._id, newName: updatedCategory }).unwrap();
+        notify(`Category renamed to "${updatedCategory}".`, "success");
+        return { ok: true, oldCategory: currentCategory, category: updatedCategory };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to rename category.";
+        notify(message, "error");
+        return { ok: false, message };
+      }
     },
     [
       normalizeCategoryKey,
       normalizeCategoryLabel,
-      persistRestaurantCategories,
+      notify,
       restaurantCategories,
+      restaurantData,
+      updateCategory,
     ]
   );
 
@@ -861,52 +877,32 @@ const Menu = () => {
         return { ok: false, message: "Only admins can delete categories." };
       }
 
-      const targetKey = normalizeCategoryKey(targetCategory);
-      const itemsToDelete = normalizedItems.filter(
-        (item) => normalizeCategoryKey(item?.category) === targetKey
+      const categoryObj = restaurantData?.restaurant?.categories?.find(
+        (c) =>
+          normalizeCategoryKey(c.name || c.label) ===
+          normalizeCategoryKey(categoryNameToDelete)
       );
+      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
 
-      let deletedItemsCount = 0;
-      if (itemsToDelete.length) {
-        try {
-          await Promise.all(
-            itemsToDelete.map((item) => deleteMenuItem(item._id).unwrap())
-          );
-          deletedItemsCount = itemsToDelete.length;
-        } catch (error) {
-          const message = getFriendlyMenuError(error, "delete");
-          notify(message, "error");
-          return { ok: false, message };
-        }
-      }
-
-      const updatedCategories = restaurantCategories.filter(
-        (category) => category !== targetCategory
-      );
-
-      const updateResult = await persistRestaurantCategories(
-        updatedCategories,
-        deletedItemsCount
-          ? `Category "${targetCategory}" deleted with ${deletedItemsCount} items.`
-          : `Category "${targetCategory}" deleted.`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      if (deletedItemsCount > 0) {
+      try {
+        await deleteCategory(categoryObj._id).unwrap();
+        notify(`Category "${targetCategory}" deleted.`, "success");
         refetch();
+        return { ok: true, deletedCategory: targetCategory };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to delete category.";
+        notify(message, "error");
+        return { ok: false, message };
       }
-      return { ok: true, deletedCategory: targetCategory };
     },
     [
-      deleteMenuItem,
-      getFriendlyMenuError,
+      deleteCategory,
       isAdmin,
       normalizeCategoryKey,
-      normalizedItems,
       notify,
-      persistRestaurantCategories,
       refetch,
       restaurantCategories,
+      restaurantData,
     ]
   );
 
@@ -1755,7 +1751,9 @@ const prepareFormData = (formData, file) => {
                               : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] pl-4 pr-4 dark:text-slate-200 dark:hover:bg-slate-800/60"
                           }`}
                         >
-                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">{category.label}</span>
+                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">
+                            {category.label}
+                          </span>
                           <span className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-semibold transition ${
                             isActive
                               ? "border-orange-200 bg-orange-100 text-orange-850 dark:border-orange-500/30 dark:bg-orange-950/40 dark:text-orange-350"

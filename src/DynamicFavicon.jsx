@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useGetRestaurantQuery } from "@/redux/clientRedux/clientAPI";
+import { useGetPublicRestaurantQuery } from "@/redux/clientRedux/clientAPI";
 
 import logoFallback from "@/assets/tapNbite.png";
 
 const DynamicFavicon = () => {
-  const { data, isLoading, isError } = useGetRestaurantQuery();
+  const { data, isLoading, isError } = useGetPublicRestaurantQuery();
 
   useEffect(() => {
     if (isLoading || isError) return;

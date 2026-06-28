@@ -96,9 +96,8 @@ const OrderRow = ({
               {orderIdDisplay || "—"}
             </span>
             {order.hasNewClientItems && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500 text-white animate-pulse shadow-sm border border-white">
+              <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white animate-pulse shadow-sm border border-white">
                 <Bell size={10} className="animate-bounce" />
-                <span>NEW ORDER</span>
               </span>
             )}
           </td>

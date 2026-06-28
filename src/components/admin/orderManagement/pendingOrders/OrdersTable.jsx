@@ -259,8 +259,8 @@ const OrdersTable = ({
                 <div
                   key={getOrderId(order) || order?.createdAt}
                   className={`w-full rounded-xl border p-3 space-y-2.5 ${isDarkMode
-                      ? "border-slate-700/60 bg-slate-800/60"
-                      : "border-[#ede8e3] bg-white"
+                    ? "border-slate-700/60 bg-slate-800/60"
+                    : "border-[#ede8e3] bg-white"
                     }`}
                 >
                   {/* Row 1: ID + Time */}
@@ -270,9 +270,8 @@ const OrdersTable = ({
                         {getOrderIdShort(order)}
                       </span>
                       {hasNewClientItems && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500 text-white animate-pulse shadow-sm border border-white">
-                          <Bell size={8} className="animate-bounce" />
-                          <span>NEW ORDER</span>
+                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white animate-pulse shadow-sm border border-white">
+                          <Bell size={10} className="animate-bounce" />
                         </span>
                       )}
                     </div>

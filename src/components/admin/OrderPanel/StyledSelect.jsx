@@ -28,6 +28,7 @@ const StyledSelect = React.memo(function StyledSelect({
   placeholder,
   isDarkMode,
   className = "",
+  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
@@ -50,11 +51,16 @@ const StyledSelect = React.memo(function StyledSelect({
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setIsOpen((p) => !p)}
+        disabled={disabled}
+        onClick={() => { if (!disabled) setIsOpen((p) => !p); }}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none ${
-          isDarkMode
-            ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
-            : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
+          disabled
+            ? isDarkMode
+              ? "bg-slate-800/40 border-slate-700/60 text-slate-500 cursor-not-allowed"
+              : "bg-gray-100 border-[#ede8e3] text-gray-400 cursor-not-allowed"
+            : isDarkMode
+              ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
+              : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
         }`}
       >
         <span className={selectedOption ? "" : isDarkMode ? "text-slate-500" : "text-slate-400"}>

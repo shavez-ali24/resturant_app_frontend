@@ -56,31 +56,27 @@ export default function CreateOrderModal({
       onClick={onClose}
     >
       <div
-        className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border ${
-          isDarkMode ? "bg-[#1e293b] border-slate-700" : "bg-white border-[#ede8e3]"
-        }`}
+        className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border ${isDarkMode ? "bg-[#1e293b] border-slate-700" : "bg-white border-[#ede8e3]"
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-4 border-b ${
-            isDarkMode ? "border-slate-700" : "border-[#ede8e3]"
-          }`}
+          className={`flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"
+            }`}
         >
           <h3
-            className={`text-base font-extrabold ${
-              isDarkMode ? "text-slate-100" : "text-[#1c1917]"
-            }`}
+            className={`text-base font-extrabold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"
+              }`}
           >
             New Order — {table.unitType === "ROOM" ? "Room" : "Table"} {table.tableNumber}
           </h3>
           <button
             onClick={onClose}
-            className={`rounded-xl p-1.5 transition-colors border border-transparent ${
-              isDarkMode
+            className={`rounded-xl p-1.5 transition-colors border border-transparent ${isDarkMode
                 ? "hover:bg-slate-700 text-slate-400"
                 : "hover:bg-[#f7f3ef] text-[#78716c] hover:border-stone-200"
-            }`}
+              }`}
           >
             <X size={18} />
           </button>
@@ -93,9 +89,8 @@ export default function CreateOrderModal({
           {/* Customer Name (optional) */}
           <div>
             <label
-              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                isDarkMode ? "text-slate-300" : "text-[#87807b]"
-              }`}
+              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#87807b]"
+                }`}
             >
               Customer Name *
             </label>
@@ -103,17 +98,18 @@ export default function CreateOrderModal({
               type="text"
               value={customerName}
               onChange={(e) => {
-                setCustomerName(e.target.value);
+                const filtered = e.target.value.replace(/[^A-Za-z\s]/g, "").slice(0, 15);
+                const capitalized = filtered.replace(/^(\s*)([a-z])/, (_, s, c) => `${s}${c.toUpperCase()}`);
+                setCustomerName(capitalized);
                 if (formErrors.customerName) {
                   setFormErrors((prev) => ({ ...prev, customerName: undefined }));
                 }
               }}
               placeholder="Customer name"
-              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${
-                isDarkMode
+              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${isDarkMode
                   ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                   : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-105"
-              }`}
+                }`}
             />
             {formErrors.customerName && (
               <p className="mt-1 text-xs text-red-500">{formErrors.customerName}</p>
@@ -123,9 +119,8 @@ export default function CreateOrderModal({
           {/* Customer Phone */}
           <div>
             <label
-              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                isDarkMode ? "text-slate-300" : "text-[#87807b]"
-              }`}
+              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#87807b]"
+                }`}
             >
               Phone Number *
             </label>
@@ -140,11 +135,10 @@ export default function CreateOrderModal({
               }}
               placeholder="Phone number"
               maxLength={10}
-              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${
-                isDarkMode
+              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${isDarkMode
                   ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                   : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-105"
-              }`}
+                }`}
             />
             {formErrors.customerPhone && (
               <p className="mt-1 text-xs text-red-500">{formErrors.customerPhone}</p>
@@ -154,18 +148,16 @@ export default function CreateOrderModal({
           {/* Order Type (read-only) */}
           <div>
             <label
-              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                isDarkMode ? "text-slate-300" : "text-[#87807b]"
-              }`}
+              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#87807b]"
+                }`}
             >
               Order Type
             </label>
             <div
-              className={`w-full rounded-xl px-4 py-3 text-sm font-bold flex items-center gap-2 border ${
-                isDarkMode
+              className={`w-full rounded-xl px-4 py-3 text-sm font-bold flex items-center gap-2 border ${isDarkMode
                   ? "bg-slate-800 text-slate-400 border-slate-700"
                   : "bg-[#fbfaf8] text-[#57524e] border-[#ede8e3]"
-              }`}
+                }`}
             >
               <svg
                 width="16"
@@ -190,11 +182,10 @@ export default function CreateOrderModal({
             <button
               type="button"
               onClick={onClose}
-              className={`flex-1 rounded-xl py-3 text-sm font-extrabold border transition-all duration-150 ${
-                isDarkMode
+              className={`flex-1 rounded-xl py-3 text-sm font-extrabold border transition-all duration-150 ${isDarkMode
                   ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-slate-100"
                   : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
-              }`}
+                }`}
             >
               Cancel
             </button>

@@ -3,22 +3,24 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Minus, Plus, Trash2, ShoppingBag,
-  AlertCircle, CheckCircle2, X, ChevronDown
+  AlertCircle, CheckCircle2, X, ChevronDown, IndianRupee
 } from "lucide-react";
+import PayModal from "../orderManagement/pendingOrders/PayModal";
 import {
   addToCart,
   removeFromCart,
   clearCart
 } from "../../../redux/clientRedux/clientSlice";
 import {
-  useGetRestaurantQuery,
-  useGetMenuQuery,
+  useGetPublicRestaurantQuery,
 } from "../../../redux/clientRedux/clientAPI";
 import {
   useCreateOrderByAdminMutation,
   useUpdateOrderMutation,
   useBillOrderMutation,
-  useGetLiveUnitsQuery,
+  useGetLiveOccupancyQuery,
+  useCreateRoomBookingMutation,
+  useGetMenuQuery,
 } from "../../../redux/adminRedux/adminAPI";
 import { showBill } from "../../../redux/adminRedux/billSlice";
 import { useAdminTour } from "../../../hooks/useAdminTour";
@@ -197,6 +199,7 @@ const makeUnitSelectValue = (sectionName, unitName) => {
   const unitKey = String(unitName || "").toLowerCase().replace(/\s+/g, "_");
   return sectionKey && unitKey ? `${sectionKey}:${unitKey}` : "";
 };
+// 
 
 const makeCartItemFromOrderItem = (orderItem) => {
   return {
@@ -487,11 +490,74 @@ function OrderSummaryPanel({
   inputStyle, border, textPrimary, textSecondary, summaryBg,
   isMobile = false, // stickies buttons on mobile only
   editingOrder,
+  dineInType, setDineInType,
+  isBilled = false,
+  setShowPayModal,
+  setBookingOrderId,
 }) {
   const { notify, newItemsByOrderId } = useNotification() || {};
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
+  const isEditing = Boolean(editingOrder?._id);
+  const showTableSelector = !isEditing || (editingOrder?.orderType !== "Eat Here" && editingOrder?.orderType !== "Room Stay");
+
+  const [createRoomBooking, { isLoading: isBookingRoom }] = useCreateRoomBookingMutation();
+  const [bookingRoomOpt, setBookingRoomOpt] = useState(null);
+  const [bookingGuestName, setBookingGuestName] = useState("");
+  const [bookingGuestPhone, setBookingGuestPhone] = useState("");
+  const [bookingErrors, setBookingErrors] = useState({});
+
+  const handleConfirmBooking = async (e) => {
+    e?.preventDefault?.();
+    setBookingErrors({});
+    const errors = {};
+    if (!bookingGuestName.trim()) {
+      errors.name = "Customer name is required";
+    }
+    if (!bookingGuestPhone.trim()) {
+      errors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(bookingGuestPhone.trim())) {
+      errors.phone = "Valid 10-digit phone number is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setBookingErrors(errors);
+      return;
+    }
+
+    try {
+      const payload = {
+        unitId: bookingRoomOpt.unitId,
+        customerName: bookingGuestName.trim(),
+        customerPhone: bookingGuestPhone.trim(),
+      };
+      const bookingResponse = await createRoomBooking(payload).unwrap();
+      const bookedOrder = bookingResponse?.order || bookingResponse;
+      if (bookedOrder?._id) {
+        setBookingOrderId(bookedOrder._id);
+      }
+
+      setTableId(bookingRoomOpt.value);
+      setCustomerName(bookingGuestName.trim());
+      setCustomerPhone(bookingGuestPhone.trim());
+      notify(`Room ${bookingRoomOpt.unitName || bookingRoomOpt.label} booked successfully`, "success");
+      setBookingRoomOpt(null);
+    } catch (err) {
+      console.error("Room booking failed:", err);
+      const errMsg = err?.data?.message || err?.data?.error || "Booking failed. Please try again.";
+      setBookingErrors({ submit: errMsg });
+    }
+  };
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {isBilled && (
+        <div className={`mx-3 mt-3 flex items-center gap-2 rounded-xl border px-3.5 py-2.5 shadow-sm transition-all duration-350 bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:bg-emerald-500/5 dark:border-emerald-500/20 dark:text-emerald-400 shrink-0`}>
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-black uppercase tracking-wider">Billed (Awaiting Payment)</p>
+            <p className="text-[11px] font-medium opacity-80 mt-0.5">Order items are locked. Please record final payment below.</p>
+          </div>
+        </div>
+      )}
 
       {/* Cart Items */}
       <div className="overflow-y-auto p-3 space-y-2 flex-1">
@@ -511,12 +577,12 @@ function OrderSummaryPanel({
               <div
                 key={id}
                 className={`flex items-center gap-3 rounded-xl p-3 border transition-all duration-350 ${isNewItem
-                    ? isDarkMode
-                      ? "border-rose-500/50 bg-rose-950/20 shadow-[0_0_12px_rgba(244,63,94,0.15)] animate-pulse"
-                      : "border-rose-300 bg-rose-50/45 shadow-[0_0_12px_rgba(244,63,94,0.06)]"
-                    : isDarkMode
-                      ? "border-slate-700/60 bg-slate-800/60"
-                      : "border-[#ede8e3] bg-[#f7f3ef]"
+                  ? isDarkMode
+                    ? "border-rose-500/50 bg-rose-950/20 shadow-[0_0_12px_rgba(244,63,94,0.15)] animate-pulse"
+                    : "border-rose-300 bg-rose-50/45 shadow-[0_0_12px_rgba(244,63,94,0.06)]"
+                  : isDarkMode
+                    ? "border-slate-700/60 bg-slate-800/60"
+                    : "border-[#ede8e3] bg-[#f7f3ef]"
                   }`}
               >
                 <div className="flex-1 min-w-0">
@@ -548,23 +614,42 @@ function OrderSummaryPanel({
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
+                    disabled={isBilled}
                     onClick={() => dispatch(removeFromCart(id))}
-                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode ? "border-slate-600 bg-slate-800 text-orange-400 hover:bg-slate-700" : "border-orange-200 bg-white text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
+                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                      ? isDarkMode
+                        ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                        : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                      : isDarkMode
+                        ? "border-slate-600 bg-slate-800 text-orange-400 hover:bg-slate-700"
+                        : "border-orange-200 bg-white text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
                       }`}
                   >
                     <Minus className="h-4 w-4" />
                   </button>
                   <span className={`w-5 text-center text-sm font-bold ${textPrimary}`}>{item.quantity}</span>
                   <button
+                    disabled={isBilled}
                     onClick={() => dispatch(addToCart({ id, item, quantity: 1 }))}
-                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode ? "border-slate-700 bg-slate-800 text-orange-400 hover:bg-slate-700" : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                      ? isDarkMode
+                        ? "border-slate-705 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                        : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                      : isDarkMode
+                        ? "border-slate-700 bg-slate-800 text-orange-400 hover:bg-slate-700"
+                        : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
                       }`}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                   <button
+                    disabled={isBilled}
                     onClick={() => handleRemoveAll(id, item.quantity)}
-                    className={`h-8 w-8 rounded-lg flex items-center justify-center ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${isBilled
+                      ? "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-40"
+                      : isDarkMode
+                        ? "text-red-400 hover:bg-red-900/20"
+                        : "text-red-400 hover:bg-red-50"
                       }`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -603,49 +688,108 @@ function OrderSummaryPanel({
                 Order Type
               </label>
               <div className="flex gap-2">
-                {["Eat Here", "Take Away", "Delivery"].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      setOrderType(type);
-                      if (type !== "Eat Here") setTableId("");
-                      notify(`Order type changed to ${type}!`, "success");
-                    }}
-                    className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${orderType === type
-                      ? isDarkMode
-                        ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
-                        : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
-                      : isDarkMode
-                        ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
-                        : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
-                      }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                {["Eat Here", "Take Away", "Delivery"].map((type) => {
+                  const isRoomStay = editingOrder?.orderType === "Room Stay";
+                  if (isRoomStay && (type === "Take Away" || type === "Delivery")) {
+                    return null;
+                  }
+                  const isActive = orderType === type || (type === "Eat Here" && orderType === "Room Stay");
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      disabled={isBilled}
+                      onClick={() => {
+                        if (type === "Eat Here") {
+                          setOrderType(dineInType === "ROOM" ? "Room Stay" : "Eat Here");
+                        } else {
+                          setOrderType(type);
+                          setTableId("");
+                        }
+                        notify(`Order type changed to ${type}!`, "success");
+                      }}
+                      className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${isActive
+                        ? isDarkMode
+                          ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
+                          : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
+                        : isDarkMode
+                          ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
+                          : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
+                        } ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Table / Room selector — only when Eat Here */}
-            {orderType === "Eat Here" && (
-              <div>
-                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                  Table / Room
-                </label>
-                <StyledSelect
-                  value={tableId}
-                  onChange={(val) => {
-                    setTableId(val);
-                    const opt = tableOptions.find((o) => o.value === val);
-                    if (opt) {
-                      notify(`Selected table: ${opt.label}`, "success");
-                    }
-                  }}
-                  options={tableOptions}
-                  placeholder="Select table / room"
-                  isDarkMode={isDarkMode}
-                />
+            {/* Table / Room selector — only when Eat Here or Room Stay, and showTableSelector is true */}
+            {(orderType === "Eat Here" || orderType === "Room Stay") && showTableSelector && (
+              <div className="space-y-3">
+                {/* Dine In Type sub-toggle (only when showTableSelector is true) */}
+                {showTableSelector && (
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                      Unit Type
+                    </label>
+                    <div className="flex gap-2">
+                      {[
+                        { key: "TABLE", label: "Table (Dine In)", orderTypeTarget: "Eat Here" },
+                        { key: "ROOM", label: "Room (Stay)", orderTypeTarget: "Room Stay" },
+                      ].map(({ key, label, orderTypeTarget }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          disabled={isBilled}
+                          onClick={() => {
+                            setDineInType(key);
+                            setOrderType(orderTypeTarget);
+                            setTableId(""); // clear table selection when switching types
+                            notify(`Switched to ${label} mode`, "success");
+                          }}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all border ${dineInType === key
+                            ? isDarkMode
+                              ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
+                              : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
+                            : isDarkMode
+                              ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
+                              : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
+                            } ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                    {dineInType === "ROOM" ? "Room Number" : "Table Number"}
+                  </label>
+                  <StyledSelect
+                    value={tableId}
+                    onChange={(val) => {
+                      const opt = tableOptions.find((o) => o.value === val);
+                      if (dineInType === "ROOM" && opt) {
+                        setBookingRoomOpt(opt);
+                        setBookingGuestName(customerName || "");
+                        setBookingGuestPhone(customerPhone || "");
+                        setBookingErrors({});
+                      } else {
+                        setTableId(val);
+                        if (opt) {
+                          notify(`Selected ${dineInType === "ROOM" ? "room" : "table"}: ${opt.label}`, "success");
+                        }
+                      }
+                    }}
+                    options={tableOptions}
+                    placeholder={dineInType === "ROOM" ? "Select room" : "Select table"}
+                    isDarkMode={isDarkMode}
+                    disabled={isBilled}
+                  />
+                </div>
               </div>
             )}
 
@@ -659,6 +803,7 @@ function OrderSummaryPanel({
                 onChange={handleNameChange}
                 placeholder="Customer name"
                 className={inputStyle}
+                disabled={isBilled}
               />
             </div>
 
@@ -673,6 +818,7 @@ function OrderSummaryPanel({
                 placeholder="10-digit phone"
                 maxLength={10}
                 className={inputStyle}
+                disabled={isBilled}
               />
             </div>
 
@@ -688,6 +834,7 @@ function OrderSummaryPanel({
                   placeholder="Delivery address"
                   rows={3}
                   className={`${inputStyle} resize-none`}
+                  disabled={isBilled}
                 />
               </div>
             )}
@@ -761,73 +908,214 @@ function OrderSummaryPanel({
       <div className={`flex gap-2.5 p-4 border-t shrink-0 ${isMobile ? "sticky bottom-0" : "mt-auto"
         } ${isDarkMode ? `${summaryBg} border-slate-700/60` : `${summaryBg} border-[#ede8e3]`
         }`}>
-        <button
-          onClick={() => handleSubmit("save")}
-          disabled={
-            cartCount === 0 ||
-            isSubmitting ||
-            !isRestaurantOpen ||
-            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
-          }
-          className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-            }`}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
-              Processing...
-            </span>
-          ) : (
-            "Save"
-          )}
-        </button>
-        <button
-          onClick={() => handleSubmit("kot")}
-          disabled={
-            cartCount === 0 ||
-            isSubmitting ||
-            !isRestaurantOpen ||
-            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
-          }
-          className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-            }`}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
-              Processing...
-            </span>
-          ) : (
-            "KOT & Add"
-          )}
-        </button>
-        <button
-          onClick={() => handleSubmit("print_bill")}
-          disabled={
-            cartCount === 0 ||
-            isSubmitting ||
-            !isRestaurantOpen ||
-            (orderType === "Eat Here" && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
-          }
-          className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-            ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-            : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-            }`}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
-              Processing...
-            </span>
-          ) : (
-            "Bill Order"
-          )}
-        </button>
+        {isBilled ? (
+          <button
+            type="button"
+            onClick={() => setShowPayModal(true)}
+            className={`w-full h-12 rounded-xl text-sm font-black transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] ${isDarkMode
+              ? "bg-emerald-950/20 border-emerald-500/35 text-emerald-400 hover:bg-emerald-950/40 hover:border-emerald-500/50"
+              : "bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-350"
+              }`}
+          >
+            <IndianRupee className="h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+            Record Payment
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => handleSubmit("save")}
+              disabled={
+                cartCount === 0 ||
+                isSubmitting ||
+                !isRestaurantOpen ||
+                ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+              }
+              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
+                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+                : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+                }`}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  Processing...
+                </span>
+              ) : (
+                "Save"
+              )}
+            </button>
+            <button
+              onClick={() => handleSubmit("kot")}
+              disabled={
+                cartCount === 0 ||
+                isSubmitting ||
+                !isRestaurantOpen ||
+                ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+              }
+              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
+                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+                : "bg-[#fff8f5] border-[#ede8e3] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+                }`}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  Processing...
+                </span>
+              ) : (
+                "KOT & Add"
+              )}
+            </button>
+            <button
+              onClick={() => handleSubmit("print_bill")}
+              disabled={
+                cartCount === 0 ||
+                isSubmitting ||
+                !isRestaurantOpen ||
+                ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
+              }
+              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
+                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
+                : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+                }`}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  Processing...
+                </span>
+              ) : (
+                "Bill Order"
+              )}
+            </button>
+          </>
+        )}
       </div>
+
+      {bookingRoomOpt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setBookingRoomOpt(null)}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl shadow-2xl border overflow-hidden p-6 space-y-5 transition-all duration-300 ${isDarkMode
+                ? "bg-slate-900 border-slate-700/60 text-slate-100"
+                : "bg-white border-[#ede8e3] text-gray-800"
+              }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b pb-3.5">
+              <h3 className="text-lg font-black tracking-wide">
+                Book Room — {bookingRoomOpt.unitName}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setBookingRoomOpt(null)}
+                className={`p-1.5 rounded-lg transition-all ${isDarkMode
+                    ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                    : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                  }`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Prompt */}
+            <p className={`text-sm font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+              Do you want to book this room? Please enter customer details to confirm the stay.
+            </p>
+
+            {/* Form */}
+            <form onSubmit={handleConfirmBooking} className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-gray-700"}`}>
+                  Customer Name *
+                </label>
+                <input
+                  type="text"
+                  value={bookingGuestName}
+                  onChange={(e) => {
+                    const filtered = e.target.value.replace(/[^A-Za-z\s]/g, "").slice(0, 15);
+                    const capitalized = filtered.replace(/^(\s*)([a-z])/, (_, s, c) => `${s}${c.toUpperCase()}`);
+                    setBookingGuestName(capitalized);
+                    if (bookingErrors.name) setBookingErrors(p => ({ ...p, name: null }));
+                  }}
+                  placeholder="Enter guest name"
+                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none ${isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+                    }`}
+                  required
+                />
+                {bookingErrors.name && (
+                  <p className="mt-1 text-xs text-red-500 font-medium">{bookingErrors.name}</p>
+                )}
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-gray-700"}`}>
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  value={bookingGuestPhone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setBookingGuestPhone(val);
+                    if (bookingErrors.phone) setBookingErrors(p => ({ ...p, phone: null }));
+                  }}
+                  placeholder="10-digit phone number"
+                  maxLength={10}
+                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none ${isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+                    }`}
+                  required
+                />
+                {bookingErrors.phone && (
+                  <p className="mt-1 text-xs text-red-500 font-medium">{bookingErrors.phone}</p>
+                )}
+              </div>
+
+              {bookingErrors.submit && (
+                <p className="text-xs text-red-500 font-semibold text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20">{bookingErrors.submit}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2.5">
+                <button
+                  type="button"
+                  onClick={() => setBookingRoomOpt(null)}
+                  className={`flex-1 h-10 rounded-xl border text-sm font-semibold transition-all ${isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                      : "bg-white border-gray-200 text-gray-650 hover:bg-gray-55"
+                    }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isBookingRoom}
+                  className="flex-1 h-10 rounded-xl border text-sm font-extrabold text-white bg-orange-600 hover:bg-orange-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isBookingRoom ? (
+                    <>
+                      <span className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-white" />
+                      Booking...
+                    </>
+                  ) : (
+                    "Confirm Booking"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -844,8 +1132,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     0
   );
 
-  const { data: restaurantData } = useGetRestaurantQuery();
-  const { data: liveUnitsData } = useGetLiveUnitsQuery();
+  const { data: restaurantData } = useGetPublicRestaurantQuery();
+  const { data: liveUnitsData } = useGetLiveOccupancyQuery();
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
   const [createOrder, { isLoading: isCreating }] = useCreateOrderByAdminMutation();
   const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
@@ -855,6 +1143,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [selectedVariants, setSelectedVariants] = useState({});
   const [variantPickerItem, setVariantPickerItem] = useState(null);
   const [orderType, setOrderType] = useState("Eat Here");
+  const [dineInType, setDineInType] = useState("TABLE"); // "TABLE" | "ROOM"
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [tableId, setTableId] = useState("");
@@ -863,8 +1152,11 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [success, setSuccess] = useState(false);
   const [originalOrderItems, setOriginalOrderItems] = useState([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [bookingOrderId, setBookingOrderId] = useState(null);
 
   const isEditing = Boolean(editingOrder?._id);
+  const isBilled = editingOrder && editingOrder.status === "completed" && !editingOrder.paymentMethod;
   const isSubmitting = isCreating || isUpdating;
   const restaurant = restaurantData?.restaurant || {};
 
@@ -884,22 +1176,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       });
     } catch (_) { /* ignore */ }
 
-    // 🔧 RESTRICTION: Determine allowed type (TABLE or ROOM) to enforce table-to-table / room-to-room only
-    const allowedUnitType = (() => {
-      if (editingOrder?.source?.type) {
-        return editingOrder.source.type; // "TABLE" or "ROOM"
-      }
-      if (tableId) {
-        for (const section of sections) {
-          const units = Array.isArray(section.units) ? section.units : [];
-          const match = units.find(u => makeUnitSelectValue(section.name, u.name || u.unitId) === tableId);
-          if (match) {
-            return match.type; // "TABLE" or "ROOM"
-          }
-        }
-      }
-      return null;
-    })();
+    // 🔧 Segregate options by dineInType (TABLE vs ROOM)
+    const allowedUnitType = dineInType;
 
     sections.forEach((section) => {
       const units = Array.isArray(section.units) ? section.units : [];
@@ -947,6 +1225,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
         if (tableInfo.customerName) setCustomerName(tableInfo.customerName);
         if (tableInfo.customerPhone) setCustomerPhone(tableInfo.customerPhone);
         if (tableInfo.address) setAddress(tableInfo.address);
+
+        if (tableInfo.unitType) {
+          setDineInType(tableInfo.unitType);
+        } else if (tableInfo.type) {
+          setDineInType(tableInfo.type);
+        }
+
         sessionStorage.removeItem("selectedTable");
       } else {
         // 🔧 FRESH START: If not pre-filled and not editing, always start fresh and clear any stale local state/cart
@@ -957,6 +1242,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
           setTableId("");
           setAddress("");
           setOrderType("Eat Here");
+          setDineInType("TABLE");
         }
       }
     } catch (_) { /* ignore parse errors */ }
@@ -967,19 +1253,32 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     if (!editingOrder) return;
 
     dispatch(clearCart());
-    setOrderType(editingOrder.orderType || "Eat Here");
+    const oType = editingOrder.orderType || "Eat Here";
+    setOrderType(oType);
     setCustomerName(editingOrder.customerName || "");
     setCustomerPhone(editingOrder.customerPhone || "");
     setAddress(editingOrder.address || "");
     setOriginalOrderItems(editingOrder.items || []);
 
+    const uType = editingOrder.source?.type || (oType === "Room Stay" ? "ROOM" : "TABLE");
+    setDineInType(uType);
+
     // 🔧 FIX: tableOptions use sectionKey:unitKey format, match by unitId if available
-    if (editingOrder.orderType === "Eat Here" && editingOrder.source) {
+    if ((oType === "Eat Here" || oType === "Room Stay") && editingOrder.source) {
       const unitId = editingOrder.source.unitId;
       if (unitId) {
-        const match = tableOptions.find((o) => String(o.unitId) === String(unitId));
-        if (match) {
-          setTableId(match.value);
+        let matchValue = "";
+        const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+        for (const section of sections) {
+          const units = Array.isArray(section.units) ? section.units : [];
+          const matchUnit = units.find(u => String(u._id) === String(unitId));
+          if (matchUnit) {
+            matchValue = makeUnitSelectValue(section.name, matchUnit.name || matchUnit.unitId);
+            break;
+          }
+        }
+        if (matchValue) {
+          setTableId(matchValue);
         }
       } else {
         // Fallback: match by sectionName + unitName
@@ -996,10 +1295,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       const cartKey = getCartItemKey(cartItem);
       dispatch(addToCart({ id: cartKey, item: cartItem, quantity: Number(orderItem.quantity || 1) }));
     });
-  }, [dispatch, editingOrder]);
+  }, [dispatch, editingOrder, restaurant.sections]);
 
   // ── Menu Data ────────────────────────────────────────────────────────────────
-  const menuItems = menuData?.menu || [];
+  const menuItems = Array.isArray(menuData) ? menuData : (menuData?.menu || []);
   const restaurantCategories = restaurantData?.restaurant?.categories || [];
 
   const groupedMenu = menuItems.reduce((acc, item) => {
@@ -1043,6 +1342,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   };
 
   const handleAddItem = (item) => {
+    if (isBilled) return;
     const selectedVariant = item.pricingType === "variant" ? selectedVariants[item._id] : null;
     const cartKey = selectedVariant ? `${item._id}-${selectedVariant}` : item._id;
     let basePrice = Number(item.price) || 0;
@@ -1123,20 +1423,24 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       }
     }
 
+    const isOriginalEatHere = editingOrder?.orderType === "Eat Here" || editingOrder?.orderType === "Room Stay";
     const payload = {
       orderType: normalizedOrderType,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
     };
 
-    // 🔧 FIX: Backend createOrderByAdminOrStaff expects source.unitId (MongoDB _id), not {section, number, type}
-    if (normalizedOrderType === "Eat Here" && tableId) {
+    if ((normalizedOrderType === "Eat Here" || normalizedOrderType === "Room Stay") && !isOriginalEatHere && tableId) {
       const selectedOption = tableOptions.find((o) => o.value === tableId);
       payload.source = { unitId: selectedOption?.unitId || null };
     }
 
     if (normalizedOrderType === "Delivery") {
       payload.address = address;
+      payload.source = { section: null, number: null, type: "NONE", unitId: null };
+    } else if (normalizedOrderType === "Take Away") {
+      payload.source = { section: null, number: null, type: "NONE", unitId: null };
+      payload.address = null;
     }
 
     if (removeItemIds.length) payload.removeItemIds = removeItemIds;
@@ -1158,10 +1462,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     }
 
     let errorMessage = "";
-    if (normalizedOrderType === "Eat Here" && !tableId) errorMessage = "Please select a table.";
-    else if (normalizedOrderType === "Eat Here" && tableId) {
+    const isDineInOrStay = normalizedOrderType === "Eat Here" || normalizedOrderType === "Room Stay";
+    if (isDineInOrStay && !tableId) {
+      errorMessage = `Please select a ${dineInType === "ROOM" ? "room" : "table"}.`;
+    } else if (isDineInOrStay && tableId) {
       const [sec, num] = tableId.split(":");
-      if (!sec || !num) errorMessage = "Please select a table/room number.";
+      if (!sec || !num) errorMessage = `Please select a ${dineInType === "ROOM" ? "room" : "table"} number.`;
     }
     if (normalizedOrderType === "Delivery" && !address.trim()) {
       errorMessage = "Please provide a delivery address.";
@@ -1181,7 +1487,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       };
 
       // 🔧 FIX: Backend createOrderByAdminOrStaff expects source.unitId (MongoDB _id), not {section, number, type}
-      if (normalizedOrderType === "Eat Here" && tableId) {
+      if ((normalizedOrderType === "Eat Here" || normalizedOrderType === "Room Stay") && tableId) {
         const selectedOption = tableOptions.find((o) => o.value === tableId);
         orderData.source = { unitId: selectedOption?.unitId || null };
       }
@@ -1191,7 +1497,11 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       }
 
       let response;
-      if (isEditing && editingOrder?._id) {
+      if (bookingOrderId) {
+        const updatePayload = buildOrderUpdatePayload();
+        response = await updateOrder({ orderId: bookingOrderId, updatedData: updatePayload }).unwrap();
+        setBookingOrderId(null);
+      } else if (isEditing && editingOrder?._id) {
         const updatePayload = buildOrderUpdatePayload();
         response = await updateOrder({ orderId: editingOrder._id, updatedData: updatePayload }).unwrap();
       } else {
@@ -1259,6 +1569,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setAddress("");
     setOrderType("Take Away");
     setError("");
+    setBookingOrderId(null);
   };
 
   // ── Styles ───────────────────────────────────────────────────────────────────
@@ -1287,6 +1598,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     handleNameChange, handlePhoneChange,
     inputStyle, border, textPrimary, textSecondary, summaryBg,
     editingOrder,
+    dineInType, setDineInType,
+    isBilled,
+    setShowPayModal,
+    setBookingOrderId,
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -1468,43 +1783,52 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       {item.pricingType === "variant" && Object.keys(item.variantRates || {}).length > 0 ? (
                         <button
                           onClick={() => setVariantPickerItem(item)}
-                          disabled={!isRestaurantOpen}
+                          disabled={!isRestaurantOpen || isBilled}
                           className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
                             ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
                             : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
-                            }`}
+                            } ${isBilled ? "opacity-45 cursor-not-allowed" : ""}`}
                         >
                           + Add
                         </button>
                       ) : quantity === 0 ? (
                         <button
                           onClick={() => handleAddItem(item)}
-                          disabled={!isRestaurantOpen}
+                          disabled={!isRestaurantOpen || isBilled}
                           className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
                             ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
                             : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
-                            }`}
+                            } ${isBilled ? "opacity-45 cursor-not-allowed" : ""}`}
                         >
                           + Add
                         </button>
                       ) : (
                         <div className="flex items-center justify-between gap-1.5">
                           <button
+                            disabled={isBilled}
                             onClick={() => dispatch(removeFromCart(cartKey))}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode
-                              ? "border-orange-500/30 bg-[#ea580c]/10 text-orange-400 hover:bg-[#ea580c]/20"
-                              : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                              ? isDarkMode
+                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                              : isDarkMode
+                                ? "border-orange-500/30 bg-[#ea580c]/10 text-orange-400 hover:bg-[#ea580c]/20"
+                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
                               }`}
                           >
                             <Minus className="h-4 w-4" />
                           </button>
                           <span className={`text-sm font-extrabold px-1 ${isDarkMode ? 'text-slate-100' : 'text-[#1c1917]'}`}>{quantity}</span>
                           <button
+                            disabled={!isRestaurantOpen || isBilled}
                             onClick={() => handleAddItem(item)}
-                            disabled={!isRestaurantOpen}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isDarkMode
-                              ? "border-orange-500/30 bg-[#ea580c]/15 text-orange-400 hover:bg-[#ea580c]/25"
-                              : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                              ? isDarkMode
+                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                              : isDarkMode
+                                ? "border-orange-500/30 bg-[#ea580c]/15 text-orange-400 hover:bg-[#ea580c]/25"
+                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
                               }`}
                           >
                             <Plus className="h-4 w-4" />
@@ -1628,6 +1952,18 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             </button>
           </div>
         </div>
+      )}
+
+      {showPayModal && (
+        <PayModal
+          order={editingOrder}
+          onClose={() => {
+            setShowPayModal(false);
+            if (onOrderSuccess) {
+              onOrderSuccess("pay");
+            }
+          }}
+        />
       )}
     </div>
   );

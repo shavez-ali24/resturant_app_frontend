@@ -42,14 +42,15 @@ const ORDER_PANEL_FRESH_CREATE_KEY = "adminOrderPanelFreshCreate";
 import {
   useGetOrdersQuery,
   useGetMenuQuery,
-  useGetRestaurantProfileQuery,
+  useGetRestaurantQuery,
   useUpdateOrderMutation,
-  useDeleteOrderMutation,
+  useCancelOrderMutation,
   useToggleItemReadyMutation,
-  useGetLiveUnitsQuery,
-  useBookRoomMutation,
+  useGetLiveOccupancyQuery,
+  useCreateRoomBookingMutation,
   useCheckoutOrderMutation,
   useLazyGetOrderByIdQuery,
+  useCancelRoomBookingMutation,
 } from "../../../../redux/adminRedux/adminAPI";
 const getOrderItemCartKey = (orderItem) => {
   if (!orderItem) return "";
@@ -58,6 +59,37 @@ const getOrderItemCartKey = (orderItem) => {
   const variantPart = variant ? `${itemId}-${variant}` : `${itemId}`;
   const customizations = orderItem.customizations ? `:${String(orderItem.customizations).trim()}` : "";
   return `${variantPart}${customizations}`;
+};
+
+const checkAndClearAdminModifiedOrderId = (id) => {
+  if (!id) return false;
+  try {
+    const data = JSON.parse(sessionStorage.getItem("adminModifiedOrderIds") || "{}");
+    if (Array.isArray(data)) {
+      const index = data.indexOf(String(id));
+      if (index !== -1) {
+        data.splice(index, 1);
+        sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(data));
+        return true;
+      }
+      return false;
+    }
+    const now = Date.now();
+    let isFound = false;
+    const pruned = {};
+    Object.entries(data).forEach(([key, val]) => {
+      if (now - Number(val) < 30000) {
+        pruned[key] = val;
+      }
+    });
+    const timestamp = data[String(id)];
+    if (timestamp && now - Number(timestamp) < 15000) {
+      isFound = true;
+    }
+    sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
+    return isFound;
+  } catch (_) {}
+  return false;
 };
 
 const Orders = () => {
@@ -241,16 +273,17 @@ const Orders = () => {
     isLoading: restaurantLoading,
     error: restaurantError,
     refetch: refetchRestaurant
-  } = useGetRestaurantProfileQuery(undefined, {
+  } = useGetRestaurantQuery(undefined, {
     pollingInterval,
     refetchOnFocus: refetchOnAction,
     refetchOnReconnect: refetchOnAction,
   });
 
   const [updateOrderApi] = useUpdateOrderMutation();
-  const [deleteOrderApi] = useDeleteOrderMutation();
+  const [cancelOrderApi] = useCancelOrderMutation();
+  const [cancelRoomBookingApi] = useCancelRoomBookingMutation();
   const [toggleItemReadyApi] = useToggleItemReadyMutation();
-  const [bookRoomApi] = useBookRoomMutation();
+  const [createRoomBookingApi] = useCreateRoomBookingMutation();
   const [checkoutOrderApi] = useCheckoutOrderMutation();
   const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
@@ -258,158 +291,173 @@ const Orders = () => {
     data: liveUnitsData,
     isLoading: liveUnitsLoading,
     refetch: refetchLiveUnits,
-  } = useGetLiveUnitsQuery(undefined, {
+  } = useGetLiveOccupancyQuery(undefined, {
     pollingInterval,
     refetchOnFocus: refetchOnAction,
     refetchOnReconnect: refetchOnAction,
   });
 
   useEffect(() => {
-    if (
-      // 🔧 FIX: Backend only emits "NEW_ORDER" and "ORDER_UPDATED" (see orderListener.js)
-      // "ORDER_STATUS_CHANGED" does not exist — status changes come via ORDER_UPDATED
-      !["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent?.type) ||
-      !sseEvent?.data
-    ) {
+    if (!sseEvent?.type || !sseEvent?.data) return;
+
+    // Refetch live units layout immediately on occupancy status changes
+    if (sseEvent.type === "OCCUPANCY_CHANGED") {
+      refetchLiveUnits?.();
       return;
     }
+
+    if (!["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type)) {
+      return;
+    }
+
+    // New or updated orders also update table occupancy states and amounts
+    refetchLiveUnits?.();
 
     const incoming = sseEvent.data;
     const incomingId = getOrderIdValue(incoming);
     if (!incomingId) return;
 
-    const normalizedOrder = normalizeIncomingOrder(incoming);
-    if (!normalizedOrder) return;
-    const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
-    const eventTimestamp = sseEvent?.ts || Date.now();
+    fetchOrderById(incomingId).unwrap().then((fetchedOrder) => {
+      if (!fetchedOrder) return;
 
-    // ─── SHOW BADGE FOR NEW ORDER OR ADDED ITEMS (admin or client) ───
-    const getOrderTotalItemsQuantity = (order) => {
-      if (!order || !Array.isArray(order.items)) return 0;
-      return order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
-    };
+      const normalizedOrder = normalizeIncomingOrder(fetchedOrder);
+      if (!normalizedOrder) return;
+      const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
+      const eventTimestamp = sseEvent?.ts || Date.now();
 
-    if (sseEvent.type === "NEW_ORDER") {
-      // Any new order (from client or admin) → show badge
-      setNewlyAddedItemsOrderIds((prevSet) => {
-        const next = new Set(prevSet);
-        next.add(String(incomingId));
-        return next;
-      });
-      // Store all item keys in this new order as new
-      if (Array.isArray(normalizedOrder.items)) {
-        const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
-        setNewItemsByOrderId((prevMap) => {
-          const next = new Map(prevMap);
-          next.set(String(incomingId), itemKeys);
-          return next;
-        });
-      }
-    } else {
-      // ORDER_UPDATED — show badge if total quantity increased (admin or client added items)
-      const previousVersion = sseOrders.find(
-        (order) => getOrderIdValue(order) === incomingId
-      ) || [...(pendingOrders || []), ...(preparingOrders || []), ...(readyOrders || []), ...(completedOrders || [])].find(
-        (order) => getOrderIdValue(order) === incomingId
-      );
+      const isAdminAction = checkAndClearAdminModifiedOrderId(incomingId);
 
-      if (previousVersion) {
-        const prevQty = getOrderTotalItemsQuantity(previousVersion);
-        const newQty = getOrderTotalItemsQuantity(normalizedOrder);
-        if (newQty > prevQty) {
+      // ─── SHOW BADGE FOR NEW ORDER OR ADDED ITEMS (client only, admin actions are silenced) ───
+      const getOrderTotalItemsQuantity = (order) => {
+        if (!order || !Array.isArray(order.items)) return 0;
+        return order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+      };
+
+      if (!isAdminAction) {
+        if (sseEvent.type === "NEW_ORDER") {
+          // Any new order (from client) → show badge
           setNewlyAddedItemsOrderIds((prevSet) => {
             const next = new Set(prevSet);
             next.add(String(incomingId));
             return next;
           });
-
-          // Determine which items are new/increased
-          const prevItemsMap = new Map();
-          if (Array.isArray(previousVersion.items)) {
-            previousVersion.items.forEach((item) => {
-              const key = getOrderItemCartKey(item);
-              prevItemsMap.set(key, (prevItemsMap.get(key) || 0) + (Number(item.quantity) || 0));
-            });
-          }
-
-          const newKeys = new Set();
+          // Store all item keys in this new order as new
           if (Array.isArray(normalizedOrder.items)) {
-            normalizedOrder.items.forEach((item) => {
-              const key = getOrderItemCartKey(item);
-              const prevQtyForItem = prevItemsMap.get(key) || 0;
-              const newQtyForItem = Number(item.quantity) || 0;
-              if (newQtyForItem > prevQtyForItem) {
-                newKeys.add(key);
-              }
-            });
-          }
-
-          if (newKeys.size > 0) {
+            const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
             setNewItemsByOrderId((prevMap) => {
               const next = new Map(prevMap);
-              const existingKeys = next.get(String(incomingId)) || new Set();
-              const updatedKeys = new Set([...existingKeys, ...newKeys]);
-              next.set(String(incomingId), updatedKeys);
+              next.set(String(incomingId), itemKeys);
               return next;
             });
           }
+        } else {
+          // ORDER_UPDATED — show badge if total quantity increased (client added items)
+          const previousVersion = sseOrders.find(
+            (order) => getOrderIdValue(order) === incomingId
+          ) || [...(pendingOrders || []), ...(preparingOrders || []), ...(readyOrders || []), ...(completedOrders || [])].find(
+            (order) => getOrderIdValue(order) === incomingId
+          );
+
+          if (previousVersion) {
+            const prevQty = getOrderTotalItemsQuantity(previousVersion);
+            const newQty = getOrderTotalItemsQuantity(normalizedOrder);
+            if (newQty > prevQty) {
+              setNewlyAddedItemsOrderIds((prevSet) => {
+                const next = new Set(prevSet);
+                next.add(String(incomingId));
+                return next;
+              });
+
+              // Determine which items are new/increased
+              const prevItemsMap = new Map();
+              if (Array.isArray(previousVersion.items)) {
+                previousVersion.items.forEach((item) => {
+                  const key = getOrderItemCartKey(item);
+                  prevItemsMap.set(key, (prevItemsMap.get(key) || 0) + (Number(item.quantity) || 0));
+                });
+              }
+
+              const newKeys = new Set();
+              if (Array.isArray(normalizedOrder.items)) {
+                normalizedOrder.items.forEach((item) => {
+                  const key = getOrderItemCartKey(item);
+                  const prevQtyForItem = prevItemsMap.get(key) || 0;
+                  const newQtyForItem = Number(item.quantity) || 0;
+                  if (newQtyForItem > prevQtyForItem) {
+                    newKeys.add(key);
+                  }
+                });
+              }
+
+              if (newKeys.size > 0) {
+                setNewItemsByOrderId((prevMap) => {
+                  const next = new Map(prevMap);
+                  const existingKeys = next.get(String(incomingId)) || new Set();
+                  const updatedKeys = new Set([...existingKeys, ...newKeys]);
+                  next.set(String(incomingId), updatedKeys);
+                  return next;
+                });
+              }
+            }
+          } else {
+            // Fallback: if previous version is not found, treat all items in incoming as new
+            if (Array.isArray(normalizedOrder.items)) {
+              const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
+              setNewItemsByOrderId((prevMap) => {
+                const next = new Map(prevMap);
+                next.set(String(incomingId), itemKeys);
+                return next;
+              });
+            }
+          }
         }
-      } else {
-        // Fallback: if previous version is not found, treat all items in incoming as new
-        if (Array.isArray(normalizedOrder.items)) {
-          const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
-          setNewItemsByOrderId((prevMap) => {
-            const next = new Map(prevMap);
-            next.set(String(incomingId), itemKeys);
-            return next;
-          });
+      }
+
+      if (normalizedStatus === "preparing") {
+        const preparingStartedAtMs =
+          getOrderPreparingStartedAt(normalizedOrder) ||
+          rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
+
+        if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
+          normalizedOrder.preparingStartedAt = new Date(
+            preparingStartedAtMs
+          ).toISOString();
         }
-      }
-    }
-
-    if (normalizedStatus === "preparing") {
-      const preparingStartedAtMs =
-        getOrderPreparingStartedAt(normalizedOrder) ||
-        rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
-
-      if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
-        normalizedOrder.preparingStartedAt = new Date(
-          preparingStartedAtMs
-        ).toISOString();
-      }
-    } else if (normalizedStatus) {
-      clearOrderPreparingStartedAt(incomingId);
-    }
-
-    setSseOrders((prev) => {
-      const remainingOrders = prev.filter(
-        (order) => getOrderIdValue(order) !== incomingId
-      );
-
-      if (!["pending", "preparing", "ready", "completed"].includes(normalizedStatus)) {
-        return remainingOrders;
+      } else if (normalizedStatus) {
+        clearOrderPreparingStartedAt(incomingId);
       }
 
-      const previousVersion = prev.find(
-        (order) => getOrderIdValue(order) === incomingId
-      );
-      return [
-        mergeOrderData(previousVersion, normalizedOrder),
-        ...remainingOrders,
-      ].slice(0, combinedFetchLimit);
-    });
+      setSseOrders((prev) => {
+        const remainingOrders = prev.filter(
+          (order) => getOrderIdValue(order) !== incomingId
+        );
 
-    setCurrentPage(1);
+        if (!["pending", "preparing", "ready", "completed"].includes(normalizedStatus)) {
+          return remainingOrders;
+        }
 
-    // Use backend SSE event for live updates (no extra refetch when connected)
-    if (!sseConnected) {
+        const previousVersion = prev.find(
+          (order) => getOrderIdValue(order) === incomingId
+        );
+        return [
+          mergeOrderData(previousVersion, normalizedOrder),
+          ...remainingOrders,
+        ].slice(0, combinedFetchLimit);
+      });
+
+      setCurrentPage(1);
+
+      // ALWAYS refetch queries for real-time update
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
       refetchCompletedOrders();
       refetchRestaurant();
-    }
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected]);
+    }).catch((err) => {
+      console.error("Failed to fetch order details on SSE event:", err);
+    });
+
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected, refetchLiveUnits, fetchOrderById]);
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -856,18 +904,50 @@ const Orders = () => {
     }
   };
 
-  // Delete Order
-  const deleteOrder = async (orderId) => {
+  // Cancel Order
+  const cancelOrder = async (orderId) => {
     try {
-      await deleteOrderApi(orderId).unwrap();
-      notify("Order deleted successfully!", "success");
+      await cancelOrderApi(orderId).unwrap();
+      notify("Order cancelled successfully!", "success");
+      refetchPendingOrders();
+      refetchPreparingOrders();
+      refetchReadyOrders();
+      refetchCompletedOrders();
+      refetchLiveUnits();
+      setShowConfirmDelete(null);
+    } catch (err) {
+      notify(getFriendlyOrderError(err, "delete"), "error");
+    }
+  };
+
+  // Cancel Room Booking
+  const cancelRoomBooking = async (orderId) => {
+    try {
+      await cancelRoomBookingApi(orderId).unwrap();
+      notify("Room booking cancelled successfully!", "success");
+      refetchPendingOrders();
+      refetchPreparingOrders();
+      refetchReadyOrders();
+      refetchCompletedOrders();
+      refetchLiveUnits();
+      setShowConfirmDelete(null);
+    } catch (err) {
+      notify(err?.data?.message || "Failed to cancel room booking", "error");
+    }
+  };
+
+  // Cancel Food Only (stays active room booking)
+  const cancelFoodOnly = async (orderId) => {
+    try {
+      await updateOrderApi({ orderId, updatedData: { status: "cancelled" } }).unwrap();
+      notify("Food items cancelled successfully!", "success");
       refetchPendingOrders();
       refetchPreparingOrders();
       refetchReadyOrders();
       refetchCompletedOrders();
       setShowConfirmDelete(null);
     } catch (err) {
-      notify(getFriendlyOrderError(err, "delete"), "error");
+      notify(err?.data?.message || "Failed to cancel food items", "error");
     }
   };
 
@@ -1124,7 +1204,7 @@ const Orders = () => {
         customerName: payload.customerName || payload.guest?.name,
         customerPhone: payload.customerPhone || payload.guest?.phone,
       };
-      await bookRoomApi(requestBody).unwrap();
+      await createRoomBookingApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked successfully`, "success");
       refetchLiveUnits?.();
       refetchPendingOrders?.();
@@ -1136,7 +1216,7 @@ const Orders = () => {
     } finally {
       setRoomActionLoadingId(null);
     }
-  }, [bookRoomApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
+  }, [createRoomBookingApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
 
   const handleCheckoutRoom = useCallback(async (roomInfo) => {
     if (!roomInfo) {
@@ -1197,7 +1277,7 @@ const Orders = () => {
         customerPhone: payload.customerPhone || payload.guest?.phone,
       };
       console.log("Calling book-room with:", requestBody);
-      await bookRoomApi(requestBody).unwrap();
+      await createRoomBookingApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked`, "success");
 
       refetchLiveUnits?.();
@@ -1211,7 +1291,31 @@ const Orders = () => {
     } finally {
       setRoomActionLoadingId(null);
     }
-  }, [bookRoomApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
+  }, [createRoomBookingApi, notify, refetchLiveUnits, refetchPendingOrders, refetchPreparingOrders]);
+
+  const handleCancelBookingFromLayout = useCallback(async (roomInfo) => {
+    if (!roomInfo) return;
+    const orderId = roomInfo.currentOrderId || roomInfo.orderId;
+    if (!orderId) {
+      notify("No active stay order found to cancel.", "error");
+      return;
+    }
+    try {
+      const freshOrder = await fetchOrderById(orderId).unwrap();
+      if (freshOrder?._id) {
+        setShowConfirmDelete(freshOrder);
+        return;
+      }
+    } catch (_) { }
+
+    // Fallback: search in combinedOrders
+    const matchedOrder = combinedOrders.find((o) => String(o._id) === String(orderId));
+    if (matchedOrder) {
+      setShowConfirmDelete(matchedOrder);
+    } else {
+      notify("Stay order not found. Try refreshing.", "error");
+    }
+  }, [fetchOrderById, combinedOrders, notify]);
 
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
@@ -1365,10 +1469,10 @@ const Orders = () => {
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "table"); setViewMode("table"); }}
               className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "table"
-                  ? isDarkMode ? "bg-orange-950/30 border border-orange-500/50 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
-                  : isDarkMode
-                    ? "text-slate-400 border border-transparent hover:text-slate-200"
-                    : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
+                ? isDarkMode ? "bg-orange-950/30 border border-orange-500/50 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
+                : isDarkMode
+                  ? "text-slate-400 border border-transparent hover:text-slate-200"
+                  : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
                 }`}
               title="Table View"
             >
@@ -1378,10 +1482,10 @@ const Orders = () => {
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
               className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "layout"
-                  ? isDarkMode ? "bg-orange-950/30 border border-orange-500/40 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
-                  : isDarkMode
-                    ? "text-slate-400 border border-transparent hover:text-slate-200"
-                    : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
+                ? isDarkMode ? "bg-orange-950/30 border border-orange-500/40 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
+                : isDarkMode
+                  ? "text-slate-400 border border-transparent hover:text-slate-200"
+                  : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
                 }`}
               title="Layout View"
             >
@@ -1393,8 +1497,8 @@ const Orders = () => {
           <button
             onClick={() => setSearchParams({ view: "create" })}
             className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all sm:text-sm shadow-sm active:scale-[0.97] whitespace-nowrap shrink-0 ${isDarkMode
-                ? "bg-orange-950/20 border border-orange-500/35 text-orange-400 hover:bg-orange-950/40"
-                : "bg-[#fff8f5] border border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
+              ? "bg-orange-950/20 border border-orange-500/35 text-orange-400 hover:bg-orange-950/40"
+              : "bg-[#fff8f5] border border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
               }`}
             title="Create New Order"
           >
@@ -1434,6 +1538,7 @@ const Orders = () => {
               onPrintBill={handlePrintBillFromLayout}
               onBookRoom={handleBookRoomPrompt}
               onCheckoutRoom={handleCheckoutRoom}
+              onCancelBooking={handleCancelBookingFromLayout}
               roomActionLoadingId={roomActionLoadingId}
               newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
             />
@@ -1443,8 +1548,8 @@ const Orders = () => {
         <div
           data-tour="orders-table"
           className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${isDarkMode
-              ? "border-slate-700/60 bg-[#1e293b]"
-              : "border-[#ede8e3] bg-white"
+            ? "border-slate-700/60 bg-[#1e293b]"
+            : "border-[#ede8e3] bg-white"
             }`}
         >
           <Suspense
@@ -1511,12 +1616,12 @@ const Orders = () => {
                           href="#"
                           isActive={currentPage === pageNum}
                           className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm font-extrabold transition-all ${currentPage === pageNum
-                              ? isDarkMode
-                                ? "bg-orange-950/30 border-orange-500/50 text-orange-400"
-                                : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
-                              : isDarkMode
-                                ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                                : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                            ? isDarkMode
+                              ? "bg-orange-950/30 border-orange-500/50 text-orange-400"
+                              : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
+                            : isDarkMode
+                              ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
                             }`}
                           onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}
                         >
@@ -1585,7 +1690,9 @@ const Orders = () => {
           <DeleteModal
             order={showConfirmDelete}
             onCancel={() => setShowConfirmDelete(null)}
-            onDelete={() => deleteOrder(showConfirmDelete._id)}
+            onDelete={() => cancelOrder(showConfirmDelete._id)}
+            onCancelRoomBooking={() => cancelRoomBooking(showConfirmDelete._id)}
+            onCancelFoodOnly={() => cancelFoodOnly(showConfirmDelete._id)}
           />
         )}
         {payModalOrder && (

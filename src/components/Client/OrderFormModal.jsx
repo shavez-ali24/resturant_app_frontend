@@ -19,6 +19,7 @@ const capitalizeFirstLetter = (value) =>
   String(value || "").replace(/^(\s*)([a-z])/, (_, spaces, char) => `${spaces}${char.toUpperCase()}`);
 
 export default function OrderFormModal({
+  qrInfo = null,
   showModal,
   setShowModal,
   customerName,
@@ -58,6 +59,15 @@ export default function OrderFormModal({
     } catch { return null; }
   });
 
+  // Auto-select orderType for room QR stays to bypass type selection
+  useEffect(() => {
+    const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+    if (isRoomQR && orderType !== "Eat Here") {
+      setOrderType("Eat Here");
+      setSelectedOrderType("Eat Here");
+    }
+  }, [qrInfo, orderType, setOrderType]);
+
   // Auto-select section when only one section exists and Eat Here is chosen
   useEffect(() => {
     if (orderType !== "Eat Here") return;
@@ -74,7 +84,7 @@ export default function OrderFormModal({
   const cartItemsArray = Object.values(cartItems);
 
   const orderTypeOptions = useMemo(() => {
-    const baseOptions = [
+    let baseOptions = [
       {
         value: "Eat Here",
         label: "Eat Here",
@@ -100,6 +110,13 @@ export default function OrderFormModal({
         modeKey: "delivery",
       },
     ];
+
+    // Filter out Eat Here if not accessed via table/room QR stay scan
+    const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const hasQrUnitId = urlParams ? !!urlParams.get("unitId") : false;
+    if (!hasQrUnitId) {
+      baseOptions = baseOptions.filter((opt) => opt.value !== "Eat Here");
+    }
 
     if (!orderModes || typeof orderModes !== "object") {
       return baseOptions;
@@ -141,13 +158,16 @@ export default function OrderFormModal({
       console.error("Error getting location:", error);
       setAddress("");
       setUseCurrentLocation(false);
-      alert(error.message || "Unable to get your location. Please enter address manually.");
+      alert("We couldn't retrieve your current location automatically. Please enter your address manually.");
     } finally {
       setIsGettingLocation(false);
     }
   };
 
   const isFormValid = () => {
+    const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+    if (isRoomQR) return true;
+
     const trimmedName = customerName.trim();
     const isNameValid = NAME_VALID_PATTERN.test(trimmedName);
 
@@ -293,50 +313,68 @@ export default function OrderFormModal({
             </div>
           ) : (
             <>
-              {/* Customer Name */}
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Your Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  value={customerName}
-                  onChange={(e) => {
-                    const { value } = e.target;
-                    if (value.length <= 15 && NAME_INPUT_PATTERN.test(value)) {
-                      setCustomerName(capitalizeFirstLetter(value));
-                    }
-                  }}
-                  maxLength={15}
-                  className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  Max 15 characters ({15 - customerName.length} left)
-                </p>
-              </div>
+              {qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo ? (
+                <div className={`mb-6 rounded-xl border p-4 shadow-sm ${
+                  isDarkMode
+                    ? "border-orange-500/20 bg-orange-500/5 text-orange-200"
+                    : "border-orange-200 bg-orange-50/50 text-gray-700"
+                }`}>
+                  <p className="font-bold text-sm">Ordering for Room Stay</p>
+                  {qrInfo?.customerName && (
+                    <p className="text-xs mt-1.5 font-semibold text-gray-600 dark:text-slate-300">Guest Name: {qrInfo.customerName}</p>
+                  )}
+                  <p className="text-[11px] mt-1.5 text-gray-400">
+                    Your details are linked automatically to the active room stay booking.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Customer Name */}
+                  <div className="mb-4">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Your Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      value={customerName}
+                      onChange={(e) => {
+                        const { value } = e.target;
+                        if (value.length <= 15 && NAME_INPUT_PATTERN.test(value)) {
+                          setCustomerName(capitalizeFirstLetter(value));
+                        }
+                      }}
+                      maxLength={15}
+                      className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      Max 15 characters ({15 - customerName.length} left)
+                    </p>
+                  </div>
 
-              {/* Phone Number */}
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  placeholder="Enter 10-digit phone number"
-                  value={customerPhone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    if (value.length <= 10) setCustomerPhone(value);
-                  }}
-                  maxLength={10}
-                  inputMode="numeric"
-                  className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  10-digit phone number required
-                </p>
-              </div>
+                  {/* Phone Number */}
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Enter 10-digit phone number"
+                      value={customerPhone}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+                        if (value.length <= 10) setCustomerPhone(value);
+                      }}
+                      maxLength={10}
+                      inputMode="numeric"
+                      className="w-full rounded-xl border border-orange-200 bg-white p-3.5 text-sm text-gray-800 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                      10-digit phone number required
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* Conditional Fields Based on Order Type */}
               <div className="space-y-4">

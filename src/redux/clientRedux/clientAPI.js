@@ -3,7 +3,7 @@ import config from '../../config';
 
 export const clientApi = createApi({
   reducerPath: 'clientApi',
-  baseQuery: fetchBaseQuery({ 
+  baseQuery: fetchBaseQuery({
     baseUrl: config.BASE_URL,
     prepareHeaders: (headers) => {
       headers.set('Content-Type', 'application/json');
@@ -12,7 +12,7 @@ export const clientApi = createApi({
   }),
   tagTypes: ['Restaurant', 'Menu', 'Order'],
   endpoints: (builder) => ({
-    getRestaurant: builder.query({
+    getPublicRestaurant: builder.query({
       query: () => '/api/restaurant/public',
       providesTags: ['Restaurant'],
     }),
@@ -45,12 +45,19 @@ export const clientApi = createApi({
       }),
       providesTags: ['Order'],
     }),
+    getQrInfo: builder.query({
+      query: (unitId) => ({
+        url: '/api/restaurant/public/qr-info',
+        params: { unitId },
+      }),
+    }),
   }),
 });
 
 export const {
-  useGetRestaurantQuery,
+  useGetPublicRestaurantQuery,
   useGetMenuQuery,
   useCreateOrderMutation,
   useGetOrdersByFingerprintQuery,
+  useGetQrInfoQuery,
 } = clientApi;

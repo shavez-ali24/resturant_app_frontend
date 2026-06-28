@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import {
   useBillOrderMutation,
   useToggleItemReadyMutation,
+  useLazyGetOrderByIdQuery,
 } from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
@@ -89,6 +90,7 @@ const BillPage = ({
   const [itemChecks, setItemChecks] = useState({});
   const [toggleItemReady] = useToggleItemReadyMutation();
   const [billOrder, { isLoading: isBilling }] = useBillOrderMutation();
+  const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
   // ✅ FIX: Ref to block SSE overwrite during post-save restore window
   const restoringRef = useRef(false);
@@ -264,28 +266,34 @@ const BillPage = ({
     // Skip SSE overwrite during edit mode
     if (isEditMode) return;
 
-    const updatedOrder = sseEvent.data;
-    const updatedOrderId = updatedOrder._id || updatedOrder.id || updatedOrder.orderId;
+    const incomingData = sseEvent.data;
+    const actualOrder = incomingData?.order || incomingData;
+    const updatedOrderId = actualOrder?._id || actualOrder?.id || actualOrder?.orderId;
 
     if (String(updatedOrderId) === String(orderStorageKey)) {
-      if (updatedOrder.items && showItemChecks) {
-        const sseChecks = {};
-        updatedOrder.items.forEach(item => {
-          if (item._id) {
-            sseChecks[item._id] = !!item.isReady;
-          }
-        });
-
-        setItemChecks(prev => {
-          const merged = { ...prev };
-          Object.keys(sseChecks).forEach(key => {
-            merged[key] = sseChecks[key];
+      fetchOrderById(orderStorageKey).unwrap().then((fetchedOrder) => {
+        if (fetchedOrder && fetchedOrder.items && showItemChecks) {
+          const sseChecks = {};
+          fetchedOrder.items.forEach(item => {
+            const itemId = item._id || item.id;
+            if (itemId) {
+              sseChecks[itemId] = !!item.isReady;
+            }
           });
-          return merged;
-        });
-      }
+
+          setItemChecks(prev => {
+            const merged = { ...prev };
+            Object.keys(sseChecks).forEach(key => {
+              merged[key] = sseChecks[key];
+            });
+            return merged;
+          });
+        }
+      }).catch((err) => {
+        console.error("Failed to fetch order in BillPage SSE:", err);
+      });
     }
-  }, [sseEvent, orderStorageKey, showItemChecks, isEditMode]);
+  }, [sseEvent, orderStorageKey, showItemChecks, isEditMode, fetchOrderById]);
 
   const toggleItemCheck = async (itemKey) => {
     const currentValue = itemChecks[itemKey] || false;
@@ -663,6 +671,36 @@ const BillPage = ({
     setIsSubmitting(true);
     setError("");
 
+    // Helper to map selectedTableId to unitId from restaurantDetails sections
+    const findUnitId = (tableIdVal, restDetails) => {
+      if (!tableIdVal || !restDetails || !Array.isArray(restDetails.sections)) {
+        return null;
+      }
+      const [sectionKey, tableNum] = tableIdVal.split(":");
+      if (!sectionKey || !tableNum) return null;
+
+      const section = restDetails.sections.find(
+        (s) => s.name.toLowerCase() === sectionKey.toLowerCase()
+      );
+      if (section && Array.isArray(section.units)) {
+        const unit = section.units.find(
+          (u) =>
+            String(u.name).toLowerCase() === String(tableNum).toLowerCase() ||
+            String(u.name).toLowerCase() === `t${tableNum}`.toLowerCase() ||
+            String(u.name).toLowerCase() === `table ${tableNum}`.toLowerCase() ||
+            String(u.name).toLowerCase() === `room ${tableNum}`.toLowerCase() ||
+            String(u._id) === String(tableNum)
+        );
+        if (unit) return unit._id;
+
+        const idx = parseInt(tableNum, 10) - 1;
+        if (idx >= 0 && idx < section.units.length) {
+          return section.units[idx]._id;
+        }
+      }
+      return null;
+    };
+
     try {
       const initialStatus = initialOrderSnapshot?.status;
       const currentStatus = localOrderData.status;
@@ -670,38 +708,77 @@ const BillPage = ({
       const currentItemCount = localOrderData.items.length;
       const isAddingNewItems = currentItemCount > initialItemCount;
 
-      // ✅ FIX 1: Capture ready items by STABLE KEY before save
-      // Backend gives new _id after edit — so we match by menuItemId+variant+customizations
-      const readyStableKeys = new Set();
-      (order?.items || []).forEach(item => {
-        if (item.isReady === true && item._id) {
-          readyStableKeys.add(buildItemCheckBase(item));
+      const originalItems = order?.items || [];
+      const currentItems = localOrderData?.items || [];
+
+      const existingByKey = new Map();
+      originalItems.forEach((item) => {
+        existingByKey.set(buildItemCheckBase(item), item);
+      });
+
+      const currentByKey = new Map();
+      currentItems.forEach((item) => {
+        currentByKey.set(buildItemCheckBase(item), item);
+      });
+
+      const removeItemIds = [];
+      const updateQuantities = [];
+      const newItems = [];
+
+      existingByKey.forEach((existingItem, key) => {
+        const currentItem = currentByKey.get(key);
+        if (!currentItem) {
+          removeItemIds.push(existingItem._id);
+        } else if (Number(currentItem.quantity) !== Number(existingItem.quantity)) {
+          updateQuantities.push({
+            itemId: existingItem._id,
+            quantity: Number(currentItem.quantity),
+          });
         }
       });
 
-      // ✅ FIX 2: Send isReady in payload for existing items
-      // This preserves isReady on backend even if backend resets it
+      currentByKey.forEach((currentItem, key) => {
+        if (!existingByKey.has(key)) {
+          newItems.push({
+            menuItemId: currentItem.menuItemId,
+            quantity: Number(currentItem.quantity),
+            variant: currentItem.variantName || null,
+            customizations: currentItem.customizations || "",
+          });
+        }
+      });
+
       const payload = {
         orderType: localOrderData.orderType,
-         replaceItems: true,
-        items: localOrderData.items.map(item => {
-          const payloadItem = {
-            menuItemId: item.menuItemId,
-            quantity: item.quantity,
-            variant: item.variantName || null,
-            customizations: item.customizations || "",
-          };
-
-          if (item._id) {
-            payloadItem._id = item._id;
-            // ✅ KEY FIX: Send isReady so backend preserves it
-            // Previously this was MISSING — causing undefined/false on backend
-            payloadItem.isReady = item.isReady === true ? true : false;
-          }
-
-          return payloadItem;
-        })
       };
+
+      if (selectedOrderTypeKey === "delivery") {
+        payload.address = address.trim();
+        payload.deliveryCharges =
+          parseAmount(localOrderData?.deliveryCharges) ||
+          parseAmount(restaurantDetails?.deliveryCharges) ||
+          0;
+        payload.source = { section: null, number: null, type: "NONE", unitId: null };
+      } else if (selectedOrderTypeKey === "take_away") {
+        payload.source = { section: null, number: null, type: "NONE", unitId: null };
+        payload.address = null;
+      } else if (selectedOrderTypeKey === "eat_here") {
+        if (order?.orderType !== "Eat Here") {
+          const [secKey, numVal] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+          const resolvedUnitId = findUnitId(selectedTableId, restaurantDetails);
+          payload.source = {
+            section: secKey || null,
+            number: numVal ? parseInt(numVal, 10) : null,
+            unitId: resolvedUnitId || null,
+            type: secKey === "rooms" ? "ROOM" : "TABLE"
+          };
+          payload.address = null;
+        }
+      }
+
+      if (removeItemIds.length) payload.removeItemIds = removeItemIds;
+      if (updateQuantities.length) payload.updateQuantities = updateQuantities;
+      if (newItems.length) payload.items = newItems;
 
       let statusChanged = false;
       if (initialStatus === "ready" && isAddingNewItems) {
@@ -712,83 +789,13 @@ const BillPage = ({
         statusChanged = true;
       }
 
-      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        const [section, numStr] = selectedTableId.split(":");
-        const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
-        payload.source = { section, number, type };
-      }
-
-      if (selectedOrderTypeKey === "delivery" && address.trim()) {
-        payload.address = address.trim();
-        payload.deliveryCharges =
-          parseAmount(localOrderData?.deliveryCharges) ||
-          parseAmount(restaurantDetails?.deliveryCharges) ||
-          0;
-      }
-
-      if (selectedOrderTypeKey === "take_away") {
-        payload.source = { section: null, number: null, type: "NONE" };
-        payload.address = null;
-      }
-
-      const saveResult = await updateOrder({
+      await updateOrder({
         orderId: localOrderData._id,
         updatedData: payload,
       }).unwrap();
 
       if (statusChanged && payload.status) {
         broadcastOrderStatus(localOrderData._id, payload.status);
-      }
-
-      // ✅ FIX 3: Restore isReady for previously-ready items
-      // Match by stable key because backend assigns new _id after edit
-      if (readyStableKeys.size > 0) {
-        // Try all possible response formats from updateOrder API
-        const savedItems =
-          saveResult?.order?.items ||
-          saveResult?.items ||
-          saveResult?.data?.items ||
-          saveResult?.data?.order?.items ||
-          [];
-
-        const itemsToRestore = savedItems.filter(
-          newItem => newItem._id && readyStableKeys.has(buildItemCheckBase(newItem))
-        );
-
-        if (itemsToRestore.length > 0) {
-          // ✅ FIX 4: Block SSE + itemChecks useEffect during restore window
-          restoringRef.current = true;
-
-          // Optimistically set restored items as checked in UI immediately
-          setItemChecks(prev => {
-            const next = { ...prev };
-            itemsToRestore.forEach(item => {
-              next[item._id] = true;
-            });
-            return next;
-          });
-
-          try {
-            await Promise.all(
-              itemsToRestore.map(item =>
-                toggleItemReady({
-                  orderId: localOrderData._id,
-                  itemId: item._id
-                }).unwrap().then(() => {
-                  broadcastItemReady(localOrderData._id, item._id, true);
-                })
-              )
-            );
-          } catch (err) {
-            console.warn("Failed to restore some item ready states:", err);
-          } finally {
-            // Release restore lock after 600ms so SSE can resume
-            setTimeout(() => {
-              restoringRef.current = false;
-            }, 600);
-          }
-        }
       }
 
       setIsEditMode(false);
@@ -1295,28 +1302,40 @@ const BillPage = ({
                     </SelectTrigger>
                     <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                       <SelectGroup>
-                        <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
-                          <div className="flex items-center gap-2">
-                            <Utensils size={16} /> Eat Here
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Take Away" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}>
-                          <div className="flex items-center gap-2">
-                            <Home size={16} /> Take Away
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Delivery" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}>
-                          <div className="flex items-center gap-2">
-                            <Truck size={16} /> Delivery
-                          </div>
-                        </SelectItem>
+                        {order?.orderType === "Room Stay" ? (
+                          <SelectItem value="Room Stay" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
+                            <div className="flex items-center gap-2">
+                              <Utensils size={16} /> Room Stay
+                            </div>
+                          </SelectItem>
+                        ) : (
+                          <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
+                            <div className="flex items-center gap-2">
+                              <Utensils size={16} /> Eat Here
+                            </div>
+                          </SelectItem>
+                        )}
+                        {order?.orderType !== "Room Stay" && (
+                          <>
+                            <SelectItem value="Take Away" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}>
+                              <div className="flex items-center gap-2">
+                                <Home size={16} /> Take Away
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Delivery" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}>
+                              <div className="flex items-center gap-2">
+                                <Truck size={16} /> Delivery
+                              </div>
+                            </SelectItem>
+                          </>
+                        )}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Table / Room Selection - Eat Here */}
-                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (() => {
+                 {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && order?.orderType !== "Eat Here" && order?.orderType !== "Room Stay" && (() => {
                   const sec = restaurantDetails?.sections || {};
                   const indoorCount  = sec.indoor?.tables  || restaurantDetails?.tableNumbers || 0;
                   const outdoorCount = sec.outdoor?.tables || 0;

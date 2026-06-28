@@ -18,6 +18,7 @@ import ComboPriceSection   from "./ComponentsMenu/AddItemModal/components/ComboP
 import CategoryTypeSelectors from "./ComponentsMenu/AddItemModal/components/CategoryTypeSelectors";
 import ImageUpload         from "./ComponentsMenu/AddItemModal/components/ImageUpload";
 import AvailabilityToggle  from "./ComponentsMenu/AddItemModal/components/AvailabilityToggle";
+import VisibilityToggle    from "./ComponentsMenu/AddItemModal/components/VisibilityToggle";
 import SubmitButton        from "./ComponentsMenu/AddItemModal/components/SubmitButton";
 import DescriptionField    from "./ComponentsMenu/AddItemModal/components/DescriptionField";
 
@@ -30,10 +31,13 @@ import {
 
 import {
   useGetMenuQuery,
-  useGetRestaurantProfileQuery,
+  useGetRestaurantQuery,
   useUpdateMenuItemMutation,
-  useUpdateRestaurantProfileMutation,
+  useUpdateRestaurantMutation,
   useReorderCategoriesMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 import { useNotify } from "../common/NotificationModal";
 
@@ -137,9 +141,12 @@ export default function EditItemPage() {
   }, []);
 
   const [updateMenuItem]          = useUpdateMenuItemMutation();
-  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
+  const [updateRestaurantProfile] = useUpdateRestaurantMutation();
   const [reorderCategories]       = useReorderCategoriesMutation();
-  const { data: restaurantData }  = useGetRestaurantProfileQuery();
+  const [createCategory]          = useCreateCategoriesMutation();
+  const [updateCategory]          = useUpdateCategoryMutation();
+  const [deleteCategory]          = useDeleteCategoryMutation();
+  const { data: restaurantData }  = useGetRestaurantQuery();
   const { data: apiResponse = {}, isLoading: isLoadingMenuItems } = useGetMenuQuery();
 
   const [restaurantCategories, setRestaurantCategories] = useState([]);
@@ -234,6 +241,7 @@ export default function EditItemPage() {
       category:    categoryValue,
       type:        normalizedType || "veg",
       available:   itemToEdit.available ?? true,
+      visibility:  itemToEdit.visibility || "PUBLIC",
       discount:    normalizedDiscount,
       variantRates: Object.keys(incomingVariantRates).length
                       ? normalizedVariantRates
@@ -308,50 +316,95 @@ export default function EditItemPage() {
 
     setIsSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("name",        formData.name        || "");
-      fd.append("description", formData.description || "");
-      fd.append("pricingType", formData.pricingType || "single");
-      fd.append("type",        formData.type        || "veg");
-      fd.append("category",    formData.category    || "");
-      fd.append("available",   formData.available ? "true" : "false");
+      let payload;
 
-      if (formData.pricingType === "single") {
-        fd.append("price", (formData.price ?? "0").toString());
-        const disc = sanitizeDiscount(formData.discount);
-        fd.append("discount[type]",   disc.type);
-        fd.append("discount[value]",  disc.value.toString());
-        fd.append("discount[active]", disc.active.toString());
+      if (addFile) {
+        // Send as FormData (multipart/form-data)
+        const fd = new FormData();
+        fd.append("name",        formData.name        || "");
+        fd.append("description", formData.description || "");
+        fd.append("pricingType", formData.pricingType || "single");
+        fd.append("type",        formData.type        || "veg");
+        fd.append("category",    formData.category    || "");
+        fd.append("available",   formData.available ? "true" : "false");
+        fd.append("visibility",  formData.visibility  || "PUBLIC");
+
+        if (formData.pricingType === "single") {
+          fd.append("price", (formData.price ?? "0").toString());
+          const disc = sanitizeDiscount(formData.discount);
+          fd.append("discount[type]",   disc.type || "");
+          fd.append("discount[value]",  disc.value.toString());
+          fd.append("discount[active]", disc.active ? "true" : "");
+        }
+
+        if (formData.pricingType === "variant") {
+          Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
+            if (val?.price !== undefined) {
+              fd.append(`variantRates[${key}][price]`, val.price.toString());
+              const disc = sanitizeDiscount(val.discount);
+              fd.append(`variantRates[${key}][discount][type]`,   disc.type || "");
+              fd.append(`variantRates[${key}][discount][value]`,  disc.value.toString());
+              fd.append(`variantRates[${key}][discount][active]`, disc.active ? "true" : "");
+            }
+          });
+        }
+
+        if (formData.pricingType === "combo") {
+          fd.append("comboPrice", (formData.comboPrice ?? "0").toString());
+          const disc = sanitizeDiscount(formData.discount);
+          fd.append("discount[type]",   disc.type || "");
+          fd.append("discount[value]",  disc.value.toString());
+          fd.append("discount[active]", disc.active ? "true" : "");
+          comboItems.forEach((item, i) => {
+            fd.append(`comboItems[${i}][menuItemId]`, item.menuItemId);
+            fd.append(`comboItems[${i}][variant]`,    item.variant || "");
+            fd.append(`comboItems[${i}][quantity]`,   (item.quantity ?? 1).toString());
+          });
+        }
+
+        fd.append("file", addFile);
+        payload = fd;
+      } else {
+        // Send as a clean JSON object to preserve actual data types (especially booleans)
+        payload = {
+          name:        formData.name        || "",
+          description: formData.description || "",
+          pricingType: formData.pricingType || "single",
+          type:        formData.type        || "veg",
+          category:    formData.category    || "",
+          available:   formData.available,
+          visibility:  formData.visibility  || "PUBLIC",
+        };
+
+        if (formData.pricingType === "single") {
+          payload.price = Number(formData.price ?? 0);
+          payload.discount = sanitizeDiscount(formData.discount);
+        }
+
+        if (formData.pricingType === "variant") {
+          payload.variantRates = {};
+          Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
+            if (val?.price !== undefined && val?.price !== "") {
+              payload.variantRates[key] = {
+                price: Number(val.price),
+                discount: sanitizeDiscount(val.discount),
+              };
+            }
+          });
+        }
+
+        if (formData.pricingType === "combo") {
+          payload.comboPrice = Number(formData.comboPrice ?? 0);
+          payload.discount = sanitizeDiscount(formData.discount);
+          payload.comboItems = comboItems.map(item => ({
+            menuItemId: item.menuItemId,
+            variant:    item.variant || null,
+            quantity:   Number(item.quantity ?? 1) || 1,
+          }));
+        }
       }
 
-      if (formData.pricingType === "variant") {
-        Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
-          if (val?.price !== undefined) {
-            fd.append(`variantRates[${key}][price]`, val.price.toString());
-            const disc = sanitizeDiscount(val.discount);
-            fd.append(`variantRates[${key}][discount][type]`,   disc.type);
-            fd.append(`variantRates[${key}][discount][value]`,  disc.value.toString());
-            fd.append(`variantRates[${key}][discount][active]`, disc.active.toString());
-          }
-        });
-      }
-
-      if (formData.pricingType === "combo") {
-        fd.append("comboPrice", (formData.comboPrice ?? "0").toString());
-        const disc = sanitizeDiscount(formData.discount);
-        fd.append("discount[type]",   disc.type);
-        fd.append("discount[value]",  disc.value.toString());
-        fd.append("discount[active]", disc.active.toString());
-        comboItems.forEach((item, i) => {
-          fd.append(`comboItems[${i}][menuItemId]`, item.menuItemId);
-          fd.append(`comboItems[${i}][variant]`,    item.variant || "");
-          fd.append(`comboItems[${i}][quantity]`,   (item.quantity ?? 1).toString());
-        });
-      }
-
-      if (addFile) fd.append("file", addFile);
-
-      await updateMenuItem({ itemId, updatedData: fd }).unwrap();
+      await updateMenuItem({ itemId, updatedData: payload }).unwrap();
       notify("Menu item updated successfully.", "success");
       navigate("/admin/menu", { state: { selectCategory: formData.category } });
     } catch (err) {
@@ -371,16 +424,14 @@ export default function EditItemPage() {
     if (!name) return { ok: false, message: "Please enter a valid category name." };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (dup) return { ok: true, category: dup, duplicate: true };
-    const cats = sortUniqueCategories([...restaurantCategories, name]);
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await createCategory({ name }).unwrap();
       notify(`Category "${name}" added.`, "success");
       return { ok: true, category: name };
-    } catch { return { ok: false, message: "Unable to add category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to add category." };
+    }
+  }, [restaurantCategories, createCategory, notify]);
 
   const handleRenameRestaurantCategory = useCallback(async (oldName, rawNew) => {
     const newName = normalizeCategoryLabel(rawNew);
@@ -391,30 +442,40 @@ export default function EditItemPage() {
       return { ok: true, category: current, unchanged: true };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(newName));
     if (dup) return { ok: false, message: `"${newName}" already exists.` };
-    const cats = sortUniqueCategories(restaurantCategories.map(c => c === current ? newName : c));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+    
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(oldName)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await updateCategory({ categoryId: categoryObj._id, newName }).unwrap();
       notify(`Category renamed to "${newName}".`, "success");
       return { ok: true, oldCategory: current, category: newName };
-    } catch { return { ok: false, message: "Unable to rename category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to rename category." };
+    }
+  }, [restaurantCategories, restaurantData, updateCategory, notify]);
 
   const handleDeleteRestaurantCategory = useCallback(async (name) => {
     const target = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (!target) return { ok: false, message: "Category not found." };
-    const cats = sortUniqueCategories(restaurantCategories.filter(c => c !== target));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(name)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await deleteCategory(categoryObj._id).unwrap();
       notify(`Category "${target}" deleted.`, "success");
       return { ok: true, deletedCategory: target };
-    } catch { return { ok: false, message: "Unable to delete category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to delete category." };
+    }
+  }, [restaurantCategories, restaurantData, deleteCategory, notify]);
+
+
 
   // ── Loading / not found states ─────────────────────────────────────────────
   const bg = isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]";
@@ -502,7 +563,10 @@ export default function EditItemPage() {
                   value={formData.description} onChange={handleChange}
                   error={formErrors.description}
                 />
-                <AvailabilityToggle available={formData.available} handleChange={handleChange} />
+                 <div className="flex flex-wrap gap-4">
+                  <AvailabilityToggle available={formData.available} handleChange={handleChange} />
+                  <VisibilityToggle visibility={formData.visibility} handleChange={handleChange} />
+                </div>
               </div>
 
               {/* Col 2 — Category + Food Type + Pricing Type + Price */}

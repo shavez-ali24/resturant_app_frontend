@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, IndianRupee, Loader2, CheckCircle, Percent } from "lucide-react";
-import { usePayOrderMutation } from "@/redux/adminRedux/adminAPI";
+import { usePayOrderMutation, useBillOrderMutation, useLazyGetOrderByIdQuery } from "@/redux/adminRedux/adminAPI";
 import { useNotification } from "../../Bell/NotificationContext";
 
 const PAYMENT_METHODS = [
@@ -14,14 +14,21 @@ export default function PayModal({ order, onClose }) {
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const [payOrder, { isLoading }] = usePayOrderMutation();
+  const [billOrder, { isLoading: isBilling }] = useBillOrderMutation();
+  const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
+  const [currentOrder, setCurrentOrder] = useState(order);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [settlementMode, setSettlementMode] = useState("percent");
   const [settlementPercent, setSettlementPercent] = useState("");
   const [settlementAmount, setSettlementAmount] = useState("");
 
-  const totalAmount = Number(order?.totalAmount || 0);
-  const isAlreadyPaid = Boolean(order?.paymentMethod);
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
+
+  const totalAmount = Number(currentOrder?.totalAmount || 0);
+  const isAlreadyPaid = Boolean(currentOrder?.paymentMethod);
 
   const percentValue =
     settlementPercent === "" ? 0 : Number(settlementPercent);
@@ -49,13 +56,28 @@ export default function PayModal({ order, onClose }) {
       settlementValue > totalAmount ||
       (settlementMode === "percent" && (percentValue < 0 || percentValue > 100)));
 
+  const handleGenerateBill = async () => {
+    if (!currentOrder?._id) return;
+    try {
+      await billOrder(currentOrder._id).unwrap();
+      const updatedOrder = await fetchOrderById(currentOrder._id).unwrap();
+      if (updatedOrder) {
+        setCurrentOrder(updatedOrder);
+        notify("Bill generated successfully!", "success");
+      }
+    } catch (err) {
+      const msg = err?.data?.message || err?.message || "Failed to generate bill";
+      notify(msg, "error");
+    }
+  };
+
   const handleConfirm = async (e) => {
     e.preventDefault();
-    if (!isValid || !paymentMethod) return;
+    if (!isValid || !paymentMethod || !currentOrder?._id) return;
 
     try {
       await payOrder({
-        orderId: order._id,
+        orderId: currentOrder._id,
         paymentMethod,
         settlementAmount:
           settlementValue === totalAmount ? undefined : Number(settlementValue.toFixed(2)),
@@ -113,17 +135,25 @@ export default function PayModal({ order, onClose }) {
               Payment already completed
             </p>
             <p className="mt-1 text-sm text-green-600 dark:text-green-400">
-              Paid via {order.paymentMethod}
+              Paid via {currentOrder.paymentMethod}
             </p>
           </div>
-        ) : order?.status !== "completed" ? (
-          <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-center dark:border-orange-700 dark:bg-orange-900/30">
-            <p className="font-bold text-orange-700 dark:text-orange-300">
+        ) : currentOrder?.status !== "completed" ? (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-5 text-center dark:border-orange-850 dark:bg-orange-950/20">
+            <p className="font-extrabold text-orange-700 dark:text-orange-400 text-base mb-2">
               Order not billed yet
             </p>
-            <p className="mt-1 text-sm text-orange-600 dark:text-orange-400">
-              Please bill the order first before accepting payment.
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-5">
+              To process payment, the order must first be billed to finalize room stay charges (if any) and food totals.
             </p>
+            <button
+              onClick={handleGenerateBill}
+              disabled={isBilling}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-extrabold border border-orange-250 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all"
+            >
+              {isBilling && <Loader2 size={16} className="animate-spin" />}
+              {isBilling ? "Generating Bill..." : "Generate Bill & Proceed"}
+            </button>
           </div>
         ) : (
           <form onSubmit={handleConfirm} className="space-y-5">
@@ -177,7 +207,7 @@ export default function PayModal({ order, onClose }) {
                       settlementMode === "percent"
                         ? isDarkMode
                           ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
-                          : "border border-orange-200 bg-orange-50 text-orange-700 shadow-sm"
+                          : "border border-orange-200 bg-orange-55 text-orange-700 shadow-sm"
                         : "text-gray-500 dark:text-slate-300 border border-transparent"
                     }`}
                   >
@@ -190,7 +220,7 @@ export default function PayModal({ order, onClose }) {
                       settlementMode === "amount"
                         ? isDarkMode
                           ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
-                          : "border border-orange-200 bg-orange-50 text-orange-700 shadow-sm"
+                          : "border border-orange-200 bg-orange-55 text-orange-700 shadow-sm"
                         : "text-gray-500 dark:text-slate-300 border border-transparent"
                     }`}
                   >
@@ -271,7 +301,7 @@ export default function PayModal({ order, onClose }) {
         {/* Cancel button */}
         <button
           onClick={onClose}
-          disabled={isLoading}
+          disabled={isLoading || isBilling}
           className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700"
         >
           Cancel

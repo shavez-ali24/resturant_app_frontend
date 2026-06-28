@@ -19,6 +19,7 @@ export default function LayoutView({
   onPrintBill,
   onBookRoom,
   onCheckoutRoom,
+  onCancelBooking,
   roomActionLoadingId = null,
   isDarkMode = false,
   isLoading = false,
@@ -251,6 +252,7 @@ export default function LayoutView({
           onView={onViewOrder}
           onMove={handleMoveOrder}
           onPay={handlePayOrder}
+          onCancelBooking={onCancelBooking}
           isLoading={roomActionLoadingId === selectedRoom.unitId}
         />
       )}

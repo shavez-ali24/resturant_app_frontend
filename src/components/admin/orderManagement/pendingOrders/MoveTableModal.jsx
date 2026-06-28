@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { X, Loader2, Move, ArrowRight } from "lucide-react";
-import { useMoveOrderMutation, useGetLiveUnitsQuery } from "@/redux/adminRedux/adminAPI";
+import { useMoveOrderMutation, useGetLiveOccupancyQuery } from "@/redux/adminRedux/adminAPI";
 import { useNotification } from "../../Bell/NotificationContext";
 
 const UNIT_STATUS_LABELS = {
@@ -19,7 +19,7 @@ export default function MoveTableModal({ order, onClose }) {
   const { notify } = useNotification();
 
   const [moveOrder, { isLoading }] = useMoveOrderMutation();
-  const { data: liveUnitsData } = useGetLiveUnitsQuery();
+  const { data: liveUnitsData } = useGetLiveOccupancyQuery();
 
   const [selectedUnitId, setSelectedUnitId] = useState(null);
 

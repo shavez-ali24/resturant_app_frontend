@@ -16,7 +16,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { setRestaurantDetails } from "@/redux/adminRedux/billSlice";
 import { 
-  useGetRestaurantProfileQuery, 
+  useGetRestaurantQuery, 
   useGetMenuQuery,
   useUpdateOrderMutation
 } from "@/redux/adminRedux/adminAPI";
@@ -35,7 +35,7 @@ export default function AdminHeader({
     data: restaurantData,
     error: restaurantError, 
     isLoading: restaurantLoading 
-  } = useGetRestaurantProfileQuery();
+  } = useGetRestaurantQuery();
   // console.log("Restaurant Data:", restaurantData);
   
   // Fetch menu items

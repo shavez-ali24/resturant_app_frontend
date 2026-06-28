@@ -12,6 +12,7 @@ export default function RoomActionModal({
   onView,
   onMove,
   onPay,
+  onCancelBooking,
   isLoading = false,
 }) {
   const isOccupied = room?.rawStatus === "OCCUPIED";
@@ -75,13 +76,14 @@ export default function RoomActionModal({
     }
   };
 
+  const handleCancelBookingClick = (e) => {
+    e.stopPropagation();
+    onCancelBooking?.(room);
+    onClose?.();
+  };
+
   const handleEditClick = (e) => {
     e.stopPropagation();
-    if (isBilled) {
-      onPay?.(room);
-      onClose?.();
-      return;
-    }
     onEdit?.(room);
     onClose?.();
   };
@@ -91,6 +93,13 @@ export default function RoomActionModal({
     onView?.(room);
     onClose?.();
   };
+
+  const handlePayClick = (e) => {
+    e.stopPropagation();
+    onPay?.(room);
+    onClose?.();
+  };
+
   const handleMoveClick = (e) => {
     e.stopPropagation();
     onMove?.(room);
@@ -140,8 +149,8 @@ export default function RoomActionModal({
           <button
             onClick={onClose}
             className={`rounded-lg p-1.5 transition-colors ${isDarkMode
-                ? "hover:bg-slate-700 text-slate-400"
-                : "hover:bg-[#f7f3ef] text-[#78716c]"
+              ? "hover:bg-slate-700 text-slate-400"
+              : "hover:bg-[#f7f3ef] text-[#78716c]"
               }`}
           >
             <X size={18} />
@@ -169,24 +178,32 @@ export default function RoomActionModal({
                 {room?.roomCategory?.name || "Room"} • ₹{price}/night
               </div>
 
-              {/* 🔧 FIX: Add Edit + View Bill buttons (like TableCard bottom icons) */}
+              {/* 🔧 FIX: Add Edit + View Bill + Pay buttons */}
               {(room?.currentOrderId || room?.orderId) && (
-                <div className="flex gap-3 pt-1">
+                <div className="grid grid-cols-3 gap-2.5 pt-1">
                   <button
                     onClick={handleEditClick}
-                    className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-orange-200 bg-white text-xs font-extrabold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
-                    title={isBilled ? "Pay Order" : "Edit Order"}
+                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    title="Edit Order"
                   >
-                    {isBilled ? <IndianRupee size={16} /> : <SquarePen size={16} />}
-                    <span className="text-xs font-bold">{isBilled ? "Pay" : "Edit"}</span>
+                    <SquarePen size={15} />
+                    <span>Edit</span>
                   </button>
                   <button
                     onClick={handleViewClick}
-                    className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-orange-200 bg-white text-xs font-extrabold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
                     title="View Bill"
                   >
-                    <Printer size={16} />
-                    <span className="text-xs font-bold">Bill</span>
+                    <Printer size={15} />
+                    <span>Bill</span>
+                  </button>
+                  <button
+                    onClick={handlePayClick}
+                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    title="Pay Order"
+                  >
+                    <IndianRupee size={15} />
+                    <span>Pay</span>
                   </button>
                 </div>
               )}
@@ -200,9 +217,19 @@ export default function RoomActionModal({
                 <button
                   onClick={handleCheckout}
                   disabled={isLoading}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold border border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all duration-150 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {isLoading ? "Checking out..." : "Check Out"}
+                </button>
+              )}
+
+              {(room?.currentOrderId || room?.orderId) && (
+                <button
+                  onClick={handleCancelBookingClick}
+                  disabled={isLoading}
                   className="w-full py-2.5 rounded-lg text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25 transition-all duration-150 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                 >
-                  {isLoading ? "..." : "Check Out"}
+                  Cancel Booking
                 </button>
               )}
             </div>
@@ -220,15 +247,17 @@ export default function RoomActionModal({
                   type="text"
                   value={guestName}
                   onChange={(e) => {
-                    setGuestName(e.target.value);
+                    const filtered = e.target.value.replace(/[^A-Za-z\s]/g, "").slice(0, 15);
+                    const capitalized = filtered.replace(/^(\s*)([a-z])/, (_, s, c) => `${s}${c.toUpperCase()}`);
+                    setGuestName(capitalized);
                     if (formErrors.guestName) {
                       setFormErrors((prev) => ({ ...prev, guestName: undefined }));
                     }
                   }}
                   placeholder="Customer name"
                   className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
-                      ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                      : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     }`}
                 />
                 {formErrors.guestName && (
@@ -257,8 +286,8 @@ export default function RoomActionModal({
                   placeholder="Phone number"
                   maxLength={10}
                   className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
-                      ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                      : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     }`}
                 />
                 {formErrors.phone && (
@@ -276,8 +305,8 @@ export default function RoomActionModal({
                 </label>
                 <div
                   className={`w-full rounded-lg px-3 py-2.5 text-sm font-medium border ${isDarkMode
-                      ? "bg-slate-800 text-slate-400 border-slate-600"
-                      : "bg-[#f7f3ef] text-[#78716c] border-[#ede8e3]"
+                    ? "bg-slate-800 text-slate-400 border-slate-600"
+                    : "bg-[#f7f3ef] text-[#78716c] border-[#ede8e3]"
                     }`}
                 >
                   {room?.tableNumber} • {room?.roomCategory?.name || "-"} • ₹{price}/night
@@ -294,8 +323,8 @@ export default function RoomActionModal({
                   type="button"
                   onClick={onClose}
                   className={`flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-all duration-150 ${isDarkMode
-                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
-                      : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+                    ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+                    : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
                     }`}
                 >
                   Cancel

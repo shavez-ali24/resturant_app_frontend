@@ -48,7 +48,8 @@ const getOrderIdFromValue = (orderOrId) => {
     return String(orderOrId);
   }
 
-  return String(orderOrId?._id || orderOrId?.id || orderOrId?.orderId || "");
+  const actualOrder = orderOrId?.order || orderOrId;
+  return String(actualOrder?._id || actualOrder?.id || actualOrder?.orderId || "");
 };
 
 const findPreparingHistoryTimestamp = (historyEntries) => {
@@ -76,8 +77,10 @@ const findPreparingHistoryTimestamp = (historyEntries) => {
   return null;
 };
 
-export const getOrderIdValue = (order) =>
-  String(order?._id || order?.id || order?.orderId || "");
+export const getOrderIdValue = (order) => {
+  const actualOrder = order?.order || order;
+  return String(actualOrder?._id || actualOrder?.id || actualOrder?.orderId || "");
+};
 
 export const getOrderIdShortValue = (order, visibleChars = 4) => {
   const fullId = getOrderIdFromValue(order).toUpperCase();
@@ -256,6 +259,8 @@ export const getStatusBadge = (status) => {
       return "bg-teal-100 text-teal-800 ring-teal-300 hover:bg-teal-200 data-[state=open]:bg-teal-200 dark:bg-teal-200 dark:text-teal-900 dark:ring-teal-400";
     case "ready":
       return "bg-blue-100 text-blue-800 ring-blue-300 hover:bg-blue-200 data-[state=open]:bg-blue-200 dark:bg-blue-200 dark:text-blue-900 dark:ring-blue-400";
+    case "billed":
+      return "bg-blue-100 text-blue-800 ring-blue-300 hover:bg-blue-200 data-[state=open]:bg-blue-200 dark:bg-blue-200 dark:text-blue-900 dark:ring-blue-400";
     case "completed":
       return "bg-emerald-100 text-emerald-800 ring-emerald-300 hover:bg-emerald-200 data-[state=open]:bg-emerald-200 dark:bg-emerald-200 dark:text-emerald-900 dark:ring-emerald-400";
     case "cancelled":
@@ -272,6 +277,8 @@ export const getStatusRowClass = (status) => {
     case "preparing":
       return "bg-transparent dark:bg-transparent";
     case "ready":
+      return "bg-blue-50 dark:bg-transparent";
+    case "billed":
       return "bg-blue-50 dark:bg-transparent";
     case "completed":
       return "bg-transparent dark:bg-transparent";

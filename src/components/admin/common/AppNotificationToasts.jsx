@@ -187,7 +187,7 @@ const AppNotificationToasts = ({ notifications, onClose }) => {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 top-4 z-[9999] flex justify-end sm:inset-x-auto sm:right-5 sm:top-5">
+    <div className="pointer-events-none fixed inset-x-4 top-4 z-[99999] flex justify-end sm:inset-x-auto sm:right-5 sm:top-5">
       <div className="flex w-full max-w-sm flex-col gap-3">
         <AnimatePresence initial={false}>
           {notifications.map((notification) => (
