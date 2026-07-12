@@ -9,20 +9,20 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { defaultAddFormState } from "./Lib/constants";
-import ErrorDisplay       from "./ComponentsMenu/AddItemModal/components/ErrorDisplay";
-import FormInput          from "./ComponentsMenu/AddItemModal/components/FormInput";
+import ErrorDisplay from "./ComponentsMenu/AddItemModal/components/ErrorDisplay";
+import FormInput from "./ComponentsMenu/AddItemModal/components/FormInput";
 import PricingTypeSelector from "./ComponentsMenu/AddItemModal/components/PricingTypeSelector";
-import SinglePriceSection  from "./ComponentsMenu/AddItemModal/components/SinglePriceSection";
+import SinglePriceSection from "./ComponentsMenu/AddItemModal/components/SinglePriceSection";
 import VariantPriceSection from "./ComponentsMenu/AddItemModal/components/VariantPriceSection";
-import ComboPriceSection   from "./ComponentsMenu/AddItemModal/components/ComboPriceSection";
+import ComboPriceSection from "./ComponentsMenu/AddItemModal/components/ComboPriceSection";
 import CategoryTypeSelectors from "./ComponentsMenu/AddItemModal/components/CategoryTypeSelectors";
-import ImageUpload         from "./ComponentsMenu/AddItemModal/components/ImageUpload";
-import AvailabilityToggle  from "./ComponentsMenu/AddItemModal/components/AvailabilityToggle";
-import VisibilityToggle    from "./ComponentsMenu/AddItemModal/components/VisibilityToggle";
-import SubmitButton        from "./ComponentsMenu/AddItemModal/components/SubmitButton";
-import DescriptionField    from "./ComponentsMenu/AddItemModal/components/DescriptionField";
+import ImageUpload from "./ComponentsMenu/AddItemModal/components/ImageUpload";
+import AvailabilityToggle from "./ComponentsMenu/AddItemModal/components/AvailabilityToggle";
+import VisibilityToggle from "./ComponentsMenu/AddItemModal/components/VisibilityToggle";
+import SubmitButton from "./ComponentsMenu/AddItemModal/components/SubmitButton";
+import DescriptionField from "./ComponentsMenu/AddItemModal/components/DescriptionField";
 
-import { validateForm }    from "./ComponentsMenu/AddItemModal/utils/validators";
+import { validateForm } from "./ComponentsMenu/AddItemModal/utils/validators";
 import {
   handleAddFormChange,
   handleAddFormFileChange,
@@ -66,7 +66,7 @@ const sortUniqueCategories = (categories = []) => {
 
 const detectCategoryObjectKey = (cat) => {
   if (!cat || typeof cat !== "object") return "name";
-  return ["name","category","categoryName","label","title","value","displayName"]
+  return ["name", "category", "categoryName", "label", "title", "value", "displayName"]
     .find(k => typeof cat[k] === "string" && cat[k].trim()) || "name";
 };
 
@@ -118,9 +118,9 @@ const resolveCategoryValue = (rawCategory, restaurantCategories = []) => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function EditItemPage() {
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
   const { itemId } = useParams();
-  const notify     = useNotify();
+  const notify = useNotify();
 
   // ── Dark mode ────────────────────────────────────────────────────────────
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -140,18 +140,18 @@ export default function EditItemPage() {
     return () => obs.disconnect();
   }, []);
 
-  const [updateMenuItem]          = useUpdateMenuItemMutation();
+  const [updateMenuItem] = useUpdateMenuItemMutation();
   const [updateRestaurantProfile] = useUpdateRestaurantMutation();
-  const [reorderCategories]       = useReorderCategoriesMutation();
-  const [createCategory]          = useCreateCategoriesMutation();
-  const [updateCategory]          = useUpdateCategoryMutation();
-  const [deleteCategory]          = useDeleteCategoryMutation();
-  const { data: restaurantData }  = useGetRestaurantQuery();
+  const [reorderCategories] = useReorderCategoriesMutation();
+  const [createCategory] = useCreateCategoriesMutation();
+  const [updateCategory] = useUpdateCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
+  const { data: restaurantData } = useGetRestaurantQuery();
   const { data: apiResponse = {}, isLoading: isLoadingMenuItems } = useGetMenuQuery();
 
   const [restaurantCategories, setRestaurantCategories] = useState([]);
-  const [formData, setFormData]     = useState(defaultAddFormState);
-  const [addFile, setAddFile]       = useState(null);
+  const [formData, setFormData] = useState(defaultAddFormState);
+  const [addFile, setAddFile] = useState(null);
   const [addFileError, setAddFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -203,17 +203,17 @@ export default function EditItemPage() {
 
     const incomingDiscount = itemToEdit.discount || { ...defaultDiscount };
     const normalizedDiscount = {
-      type:   incomingDiscount.type  || "flat",
-      value:  incomingDiscount.value !== undefined && incomingDiscount.value !== null
-                ? String(incomingDiscount.value) : "",
+      type: incomingDiscount.type || "flat",
+      value: incomingDiscount.value !== undefined && incomingDiscount.value !== null
+        ? String(incomingDiscount.value) : "",
       active: !!incomingDiscount.active,
     };
 
     const incomingVariantRates = itemToEdit.variantRates || {};
     const normalizedVariantRates = {
       quarter: { price: "", discount: { ...defaultDiscount } },
-      half:    { price: "", discount: { ...defaultDiscount } },
-      full:    { price: "", discount: { ...defaultDiscount } },
+      half: { price: "", discount: { ...defaultDiscount } },
+      full: { price: "", discount: { ...defaultDiscount } },
     };
     Object.keys(normalizedVariantRates).forEach(key => {
       const src = incomingVariantRates[key] || {};
@@ -221,9 +221,9 @@ export default function EditItemPage() {
       normalizedVariantRates[key] = {
         price: src.price !== undefined && src.price !== null ? String(src.price) : "",
         discount: {
-          type:   srcDiscount.type  || "flat",
-          value:  srcDiscount.value !== undefined && srcDiscount.value !== null
-                    ? String(srcDiscount.value) : "",
+          type: srcDiscount.type || "flat",
+          value: srcDiscount.value !== undefined && srcDiscount.value !== null
+            ? String(srcDiscount.value) : "",
           active: !!srcDiscount.active,
         },
       };
@@ -231,28 +231,28 @@ export default function EditItemPage() {
 
     setFormData({
       ...defaultAddFormState,
-      name:        itemToEdit.name        || "",
+      name: itemToEdit.name || "",
       description: itemToEdit.description || "",
       pricingType: itemToEdit.pricingType || "single",
-      price:       itemToEdit.price !== undefined && itemToEdit.price !== null
-                     ? String(itemToEdit.price) : "",
-      comboPrice:  itemToEdit.comboPrice !== undefined && itemToEdit.comboPrice !== null
-                     ? String(itemToEdit.comboPrice) : "",
-      category:    categoryValue,
-      type:        normalizedType || "veg",
-      available:   itemToEdit.available ?? true,
-      visibility:  itemToEdit.visibility || "PUBLIC",
-      discount:    normalizedDiscount,
+      price: itemToEdit.price !== undefined && itemToEdit.price !== null
+        ? String(itemToEdit.price) : "",
+      comboPrice: itemToEdit.comboPrice !== undefined && itemToEdit.comboPrice !== null
+        ? String(itemToEdit.comboPrice) : "",
+      category: categoryValue,
+      type: normalizedType || "veg",
+      available: itemToEdit.available ?? true,
+      visibility: itemToEdit.visibility || "PUBLIC",
+      discount: normalizedDiscount,
       variantRates: Object.keys(incomingVariantRates).length
-                      ? normalizedVariantRates
-                      : defaultAddFormState.variantRates,
+        ? normalizedVariantRates
+        : defaultAddFormState.variantRates,
     });
 
     const formattedComboItems = (itemToEdit.comboItems || []).map(ci => ({
       menuItemId: typeof ci.menuItemId === "object" ? ci.menuItemId?._id : ci.menuItemId || "",
-      variant:    ci.variant   || "",
-      quantity:   ci.quantity  || 1,
-      name:       ci.name      || "",
+      variant: ci.variant || "",
+      quantity: ci.quantity || 1,
+      name: ci.name || "",
     }));
     setComboItems(formattedComboItems);
     setItemLoaded(true);
@@ -269,7 +269,7 @@ export default function EditItemPage() {
     setPricingType(type, setFormErrors, setFormData, setComboItems);
 
   const scrollToFirstError = (errors = {}) => {
-    const fieldOrder = ["name","category","type","price","variantRates","comboPrice","comboItems","discount","description"];
+    const fieldOrder = ["name", "category", "type", "price", "variantRates", "comboPrice", "comboItems", "discount", "description"];
     const first = fieldOrder.find(f => {
       const v = errors[f];
       if (v === undefined || v === null || v === "") return false;
@@ -295,8 +295,8 @@ export default function EditItemPage() {
     if (!d) return { type: "flat", value: 0, active: false };
     const val = parseInt((d.value || "0").toString().trim(), 10);
     return {
-      type:   d.type === "flat" || d.type === "percentage" ? d.type : "flat",
-      value:  isNaN(val) ? 0 : val,
+      type: d.type === "flat" || d.type === "percentage" ? d.type : "flat",
+      value: isNaN(val) ? 0 : val,
       active: d.active === true || d.active === "true",
     };
   };
@@ -316,95 +316,51 @@ export default function EditItemPage() {
 
     setIsSubmitting(true);
     try {
-      let payload;
+      const fd = new FormData();
+      fd.append("name", formData.name || "");
+      fd.append("description", formData.description || "");
+      fd.append("pricingType", formData.pricingType || "single");
+      fd.append("type", formData.type || "veg");
+      fd.append("category", formData.category || "");
+      fd.append("available", formData.available ? "true" : "false");
+      fd.append("visibility", formData.visibility || "PUBLIC");
 
-      if (addFile) {
-        // Send as FormData (multipart/form-data)
-        const fd = new FormData();
-        fd.append("name",        formData.name        || "");
-        fd.append("description", formData.description || "");
-        fd.append("pricingType", formData.pricingType || "single");
-        fd.append("type",        formData.type        || "veg");
-        fd.append("category",    formData.category    || "");
-        fd.append("available",   formData.available ? "true" : "false");
-        fd.append("visibility",  formData.visibility  || "PUBLIC");
-
-        if (formData.pricingType === "single") {
-          fd.append("price", (formData.price ?? "0").toString());
-          const disc = sanitizeDiscount(formData.discount);
-          fd.append("discount[type]",   disc.type || "");
-          fd.append("discount[value]",  disc.value.toString());
-          fd.append("discount[active]", disc.active ? "true" : "");
-        }
-
-        if (formData.pricingType === "variant") {
-          Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
-            if (val?.price !== undefined) {
-              fd.append(`variantRates[${key}][price]`, val.price.toString());
-              const disc = sanitizeDiscount(val.discount);
-              fd.append(`variantRates[${key}][discount][type]`,   disc.type || "");
-              fd.append(`variantRates[${key}][discount][value]`,  disc.value.toString());
-              fd.append(`variantRates[${key}][discount][active]`, disc.active ? "true" : "");
-            }
-          });
-        }
-
-        if (formData.pricingType === "combo") {
-          fd.append("comboPrice", (formData.comboPrice ?? "0").toString());
-          const disc = sanitizeDiscount(formData.discount);
-          fd.append("discount[type]",   disc.type || "");
-          fd.append("discount[value]",  disc.value.toString());
-          fd.append("discount[active]", disc.active ? "true" : "");
-          comboItems.forEach((item, i) => {
-            fd.append(`comboItems[${i}][menuItemId]`, item.menuItemId);
-            fd.append(`comboItems[${i}][variant]`,    item.variant || "");
-            fd.append(`comboItems[${i}][quantity]`,   (item.quantity ?? 1).toString());
-          });
-        }
-
-        fd.append("file", addFile);
-        payload = fd;
-      } else {
-        // Send as a clean JSON object to preserve actual data types (especially booleans)
-        payload = {
-          name:        formData.name        || "",
-          description: formData.description || "",
-          pricingType: formData.pricingType || "single",
-          type:        formData.type        || "veg",
-          category:    formData.category    || "",
-          available:   formData.available,
-          visibility:  formData.visibility  || "PUBLIC",
-        };
-
-        if (formData.pricingType === "single") {
-          payload.price = Number(formData.price ?? 0);
-          payload.discount = sanitizeDiscount(formData.discount);
-        }
-
-        if (formData.pricingType === "variant") {
-          payload.variantRates = {};
-          Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
-            if (val?.price !== undefined && val?.price !== "") {
-              payload.variantRates[key] = {
-                price: Number(val.price),
-                discount: sanitizeDiscount(val.discount),
-              };
-            }
-          });
-        }
-
-        if (formData.pricingType === "combo") {
-          payload.comboPrice = Number(formData.comboPrice ?? 0);
-          payload.discount = sanitizeDiscount(formData.discount);
-          payload.comboItems = comboItems.map(item => ({
-            menuItemId: item.menuItemId,
-            variant:    item.variant || null,
-            quantity:   Number(item.quantity ?? 1) || 1,
-          }));
-        }
+      if (formData.pricingType === "single") {
+        fd.append("price", (formData.price ?? "0").toString());
+        const disc = sanitizeDiscount(formData.discount);
+        fd.append("discount[type]", disc.type);
+        fd.append("discount[value]", disc.value.toString());
+        fd.append("discount[active]", disc.active.toString());
       }
 
-      await updateMenuItem({ itemId, updatedData: payload }).unwrap();
+      if (formData.pricingType === "variant") {
+        Object.entries(formData.variantRates || {}).forEach(([key, val]) => {
+          if (val?.price !== undefined) {
+            fd.append(`variantRates[${key}][price]`, val.price.toString());
+            const disc = sanitizeDiscount(val.discount);
+            fd.append(`variantRates[${key}][discount][type]`, disc.type);
+            fd.append(`variantRates[${key}][discount][value]`, disc.value.toString());
+            fd.append(`variantRates[${key}][discount][active]`, disc.active.toString());
+          }
+        });
+      }
+
+      if (formData.pricingType === "combo") {
+        fd.append("comboPrice", (formData.comboPrice ?? "0").toString());
+        const disc = sanitizeDiscount(formData.discount);
+        fd.append("discount[type]", disc.type);
+        fd.append("discount[value]", disc.value.toString());
+        fd.append("discount[active]", disc.active.toString());
+        comboItems.forEach((item, i) => {
+          fd.append(`comboItems[${i}][menuItemId]`, item.menuItemId);
+          fd.append(`comboItems[${i}][variant]`, item.variant || "");
+          fd.append(`comboItems[${i}][quantity]`, (item.quantity ?? 1).toString());
+        });
+      }
+
+      if (addFile) fd.append("file", addFile);
+
+      await updateMenuItem({ itemId, updatedData: fd }).unwrap();
       notify("Menu item updated successfully.", "success");
       navigate("/admin/menu", { state: { selectCategory: formData.category } });
     } catch (err) {
@@ -442,7 +398,7 @@ export default function EditItemPage() {
       return { ok: true, category: current, unchanged: true };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(newName));
     if (dup) return { ok: false, message: `"${newName}" already exists.` };
-    
+
     const categoryObj = restaurantData?.restaurant?.categories?.find(
       c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(oldName)
     );
@@ -516,9 +472,8 @@ export default function EditItemPage() {
         <button
           type="button"
           onClick={() => navigate("/admin/menu")}
-          className={`flex items-center gap-1 text-xs font-extrabold transition-all sm:gap-1.5 sm:text-sm ${
-            isDarkMode ? "text-orange-400 hover:text-orange-355" : "text-orange-700 hover:text-orange-850"
-          }`}
+          className={`flex items-center gap-1 text-xs font-extrabold transition-all sm:gap-1.5 sm:text-sm ${isDarkMode ? "text-orange-400 hover:text-orange-355" : "text-orange-700 hover:text-orange-850"
+            }`}
         >
           <ArrowLeft size={14} className="sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Back to Menu</span>
@@ -563,7 +518,7 @@ export default function EditItemPage() {
                   value={formData.description} onChange={handleChange}
                   error={formErrors.description}
                 />
-                 <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-4">
                   <AvailabilityToggle available={formData.available} handleChange={handleChange} />
                   <VisibilityToggle visibility={formData.visibility} handleChange={handleChange} />
                 </div>
