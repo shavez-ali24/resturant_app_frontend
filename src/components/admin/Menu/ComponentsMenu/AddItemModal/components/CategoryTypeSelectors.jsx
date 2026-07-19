@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 import {
@@ -137,6 +138,13 @@ const CategoryTypeSelectors = ({
   onRenameCategory,
   onDeleteCategory,
 }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+  const [categoryFocused, setCategoryFocused] = useState(false);
+  const [typeFocused, setTypeFocused] = useState(false);
+  const [addFocused, setAddFocused] = useState(false);
+  const [editFocused, setEditFocused] = useState(false);
+
   const [showAddCategoryInput, setShowAddCategoryInput] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const [newCategoryError, setNewCategoryError] = useState("");
@@ -466,9 +474,15 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
-            className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:text-slate-100 ${
-              errors.category ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
+            onFocus={() => setCategoryFocused(true)}
+            onBlur={() => setCategoryFocused(false)}
+            className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none dark:text-slate-100 ${
+              errors.category ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-slate-800"
             }`}
+            style={!errors.category ? {
+              borderColor: categoryFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+              boxShadow: categoryFocused ? `0 0 0 2px ${colors.primary}20` : "none",
+            } : {}}
           >
             <SelectValue placeholder="Select a Category" />
           </SelectTrigger>
@@ -483,15 +497,16 @@ const CategoryTypeSelectors = ({
             <SelectGroup>
               <SelectItem
                 value={ADD_CATEGORY_VALUE}
-                className="font-semibold text-orange-700 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-800"
+                className="font-bold cursor-pointer transition-colors pr-20 data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 [&>span:first-child]:hidden"
+                style={{ color: colors.primary }}
               >
                 <span className="flex items-center gap-2">
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-3.5 w-3.5" style={{ color: colors.primary }} />
                   Add Category
                 </span>
               </SelectItem>
             </SelectGroup>
-            <SelectSeparator className="my-1 bg-orange-100" />
+            <SelectSeparator className="my-1" style={{ backgroundColor: `${colors.primary}25` }} />
             <SelectGroup>
               {categoryOptions.length === 0 ? (
                 <SelectItem value="no-cat" disabled>No categories found</SelectItem>
@@ -512,14 +527,20 @@ const CategoryTypeSelectors = ({
                               setEditCategoryInput(event.target.value);
                               if (categoryActionError) setCategoryActionError("");
                             }}
+                            onFocus={() => setEditFocused(true)}
+                            onBlur={() => setEditFocused(false)}
                             onKeyDown={handleRenameInputKeyDown}
-                            className="h-8 border-orange-200 bg-white text-xs focus-visible:ring-orange-300"
+                            className="h-8 bg-white text-xs dark:bg-slate-800 dark:text-slate-100"
+                            style={{
+                              borderColor: editFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                            }}
                             disabled={!!activeCategoryAction}
                             autoFocus
                           />
                           <button
                             type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-orange-500 text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{ backgroundColor: colors.primary }}
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={handleRenameCategorySubmit}
                             disabled={!!activeCategoryAction}
@@ -563,7 +584,7 @@ const CategoryTypeSelectors = ({
                           className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                           onPointerDown={(event) => handleActionIconClick(event, () => {})}
                           onClick={(event) =>
-                            handleActionIconClick(event, () => requestDeleteCategory(cat))
+                              handleActionIconClick(event, () => requestDeleteCategory(cat))
                           }
                           disabled={isSavingCategory || !!activeCategoryAction}
                           aria-label={`Delete ${cat}`}
@@ -572,7 +593,7 @@ const CategoryTypeSelectors = ({
                           {activeCategoryAction === `delete:${cat}` ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Trash size={16} />
+                            <Trash className="h-4 w-4" />
                           )}
                         </button>
                       </div>
@@ -593,9 +614,14 @@ const CategoryTypeSelectors = ({
                   setNewCategoryInput(e.target.value);
                   if (newCategoryError) setNewCategoryError("");
                 }}
+                onFocus={() => setAddFocused(true)}
+                onBlur={() => setAddFocused(false)}
                 onKeyDown={handleCategoryInputKeyDown}
                 placeholder="Type category name"
-                className="h-9 border-[#ede8e3] bg-white text-sm focus-visible:ring-orange-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="h-9 bg-white text-sm dark:bg-slate-800 dark:text-slate-100"
+                style={{
+                  borderColor: addFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                }}
                 disabled={isSavingCategory || !!activeCategoryAction}
               />
               <div className="flex gap-2">
@@ -603,7 +629,8 @@ const CategoryTypeSelectors = ({
                   type="button"
                   onClick={handleAddCategorySubmit}
                   disabled={isSavingCategory || !!activeCategoryAction}
-                  className="h-10 rounded-lg !bg-orange-500 px-3 text-sm font-semibold !text-white hover:!bg-orange-600 dark:!bg-orange-500 dark:hover:!bg-orange-400"
+                  className="h-10 rounded-lg px-3 text-sm font-semibold !text-white hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: colors.primary }}
                 >
                   {isSavingCategory ? (
                     <span className="flex items-center gap-1.5">
@@ -658,9 +685,15 @@ const CategoryTypeSelectors = ({
             }}
           >
             <SelectTrigger
-              className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:text-slate-100 ${
-                errors.type ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
+              onFocus={() => setTypeFocused(true)}
+              onBlur={() => setTypeFocused(false)}
+              className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none dark:text-slate-100 ${
+                errors.type ? "border-red-400 bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-slate-800"
               }`}
+              style={!errors.type ? {
+                borderColor: typeFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                boxShadow: typeFocused ? `0 0 0 2px ${colors.primary}20` : "none",
+              } : {}}
             >
               <SelectValue placeholder="Select Food Type" />
             </SelectTrigger>

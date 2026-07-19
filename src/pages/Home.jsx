@@ -131,12 +131,15 @@ export default function Home() {
 
   if (showLoader)
     return (
-      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]"}`}>
-        <div className={`pointer-events-none absolute inset-0 ${isDarkMode ? "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.22),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.14),transparent_42%)]" : "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.12),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.1),transparent_42%)]"}`} />
+      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${
+        isDarkMode 
+          ? "bg-gradient-to-b from-[#0f172a] to-[#020617]" 
+          : "bg-gradient-to-b from-[#fffdf7] to-[#fef2d8]"
+      }`}>
         <img
           src={loader}
           alt="Loading..."
-          className="relative h-60 w-auto drop-shadow-[0_14px_30px_rgba(249,115,22,0.22)]"
+          className="relative h-60 w-auto"
         />
       </div>
     );
@@ -231,7 +234,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className={`shrink-0 z-20 border-b shadow-[0_8px_20px_rgba(249,115,22,0.1)] ${isDarkMode ? "border-slate-700/70 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-800/80" : "border-orange-200/60 bg-gradient-to-b from-orange-50/95 via-orange-50/80 to-orange-50/45"}`}>
+      <div className={`shrink-0 z-20 border-b shadow-[0_8px_20px_rgba(239,159,39,0.1)] ${isDarkMode ? "border-slate-700/70 bg-slate-900" : "border-orange-200/50 bg-[#fffcf9]"}`}>
         <Header
           logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
           siteName={
@@ -257,11 +260,11 @@ export default function Home() {
         <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
       </div>
 
-      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
+      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-[#fffcf9]"}`}>
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
-              {filters.combo ? "No combo items available" :
+              {filters.combo ? "No only combo items available" :
                filters.veg ? "No veg items available" :
                filters.nonVeg ? "No non-veg items available" : 
                filters.mixed ? "No mixed items available" :

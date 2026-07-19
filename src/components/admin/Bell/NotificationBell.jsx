@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell } from "lucide-react";
@@ -225,49 +225,74 @@ export default function NotificationBell() {
 
   const displayCount = pendingOrdersCount > 99 ? "99+" : String(pendingOrdersCount);
 
-  // ── Theme tokens ──────────────────────────────────────────────────────────
-  const bg       = isDarkMode ? "bg-[#0f172a]"  : "bg-white";
-  const border   = isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]";
-  const divider  = isDarkMode ? "divide-slate-700/60" : "divide-[#f0ebe5]";
-  const rowHover = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-[#faf7f4]";
-  const textPri  = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
-  const textSec  = isDarkMode ? "text-slate-400"  : "text-[#78716c]";
-  const textMut  = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
-  const footerBg = isDarkMode ? "bg-[#0f172a]"   : "bg-[#faf7f4]";
+  // ── Dynamic Theme Tokens from Redux ──────────────────────────────────────────
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const bg = isDarkMode ? (colors.dark?.cardBg || "#0f172a") : "#ffffff";
+  const border = isDarkMode ? (colors.dark?.border || "border-slate-700/60") : (colors.border || "border-[#ede8e3]");
+  const textPri = isDarkMode ? (colors.dark?.textPrimary || "#f1f5f9") : (colors.textPrimary || "#1c1917");
+  const textSec = isDarkMode ? (colors.dark?.textSecondary || "#94a3b8") : (colors.textSecondary || "#57524e");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#87807b");
+  const footerBg = isDarkMode ? "rgba(15, 23, 42, 0.4)" : (colors.pageBg || "#faf7f4");
 
   const statusBadge = (status) => {
     const s = String(status || "").toLowerCase();
-    if (s === "preparing") return isDarkMode ? "bg-teal-500/15 text-teal-300" : "bg-teal-50 text-teal-700";
-    return isDarkMode ? "bg-yellow-500/15 text-yellow-300" : "bg-yellow-50 text-yellow-700";
+    if (s === "preparing") {
+      return {
+        backgroundColor: isDarkMode ? "rgba(20, 184, 166, 0.15)" : "#f0fdf4",
+        borderColor: isDarkMode ? "rgba(20, 184, 166, 0.4)" : "rgba(34, 197, 94, 0.2)",
+        color: isDarkMode ? "#2dd4bf" : "#166534",
+        borderWidth: "1px"
+      };
+    }
+    return {
+      backgroundColor: isDarkMode ? "rgba(234, 179, 8, 0.15)" : "#fef9c3",
+      borderColor: isDarkMode ? "rgba(234, 179, 8, 0.4)" : "rgba(234, 179, 8, 0.2)",
+      color: isDarkMode ? "#facc15" : "#854d0e",
+      borderWidth: "1px"
+    };
   };
 
   const typeBadge = (type) => {
     const t = String(type || "").toLowerCase().replace(/\s+/g, "");
-    if (t === "delivery")  return isDarkMode ? "bg-orange-500/15 text-orange-300" : "bg-orange-50 text-orange-700";
-    if (t === "takeaway")  return isDarkMode ? "bg-blue-500/15 text-blue-300"     : "bg-blue-50 text-blue-700";
-    if (t === "eathere")   return isDarkMode ? "bg-emerald-500/15 text-emerald-300" : "bg-emerald-50 text-emerald-700";
-    return isDarkMode ? "bg-slate-700 text-slate-300" : "bg-[#f7f3ef] text-[#78716c]";
+    if (t === "delivery") {
+      return {
+        backgroundColor: isDarkMode ? "rgba(239, 159, 39, 0.15)" : colors.primaryLight,
+        borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}20`,
+        color: isDarkMode ? colors.primary : colors.primaryText,
+        borderWidth: "1px"
+      };
+    }
+    if (t === "takeaway") {
+      return {
+        backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.15)" : "#eff6ff",
+        borderColor: isDarkMode ? "rgba(59, 130, 246, 0.4)" : "rgba(59, 130, 246, 0.2)",
+        color: isDarkMode ? "#60a5fa" : "#1e40af",
+        borderWidth: "1px"
+      };
+    }
+    // Eat Here / Dine In
+    return {
+      backgroundColor: isDarkMode ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
+      borderColor: isDarkMode ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.2)",
+      color: isDarkMode ? "#34d399" : "#065f46",
+      borderWidth: "1px"
+    };
   };
 
   return (
     <div className="relative" ref={bellRef}>
-      {/* ── Bell button ── */}
       <button
         onClick={() => setIsDropdownOpen((p) => !p)}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-200 ${
-          isDarkMode
-            ? "border-slate-700/50 bg-slate-900/50 text-orange-300 hover:bg-slate-800"
-            : "border-orange-500/40 bg-white text-orange-500 hover:bg-orange-50"
-        }`}
+        className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
         title="Order Notifications"
       >
-        <Bell size={17} />
+        <Bell size={20} className="stroke-[1.5]" />
         {pendingOrdersCount > 0 && (
           <MotionSpan
             key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="pointer-events-none absolute -right-1.5 -top-1.5 z-20 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white dark:ring-slate-950"
+            className="pointer-events-none absolute right-0.5 top-0.5 z-20 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white dark:ring-slate-950"
           >
             {displayCount}
           </MotionSpan>
@@ -282,51 +307,83 @@ export default function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.14 }}
-            className={`absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-xl md:w-96 ${bg} ${border}`}
+            className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl md:w-96"
+            style={{
+              backgroundColor: bg,
+              borderColor: border,
+            }}
           >
             {/* Header */}
-            <div className={`flex items-center justify-between border-b px-4 py-3 ${border} ${isDarkMode ? "bg-[#1e293b]" : "bg-[#f7f3ef]"}`}>
+            <div
+              className="flex items-center justify-between border-b px-4 py-3"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : "#ffffff",
+                borderBottomColor: border,
+              }}
+            >
               <div>
-                <h4 className={`text-sm font-bold ${textPri}`}>New Orders</h4>
-                <p className={`text-xs ${textMut}`}>Real-time notifications</p>
+                <h4 className="text-sm font-black tracking-tight" style={{ color: textPri }}>New Orders</h4>
+                <p className="text-[10px] font-bold" style={{ color: textMut }}>Real-time notifications</p>
               </div>
               {pendingOrdersCount > 0 && (
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-extrabold ${
-                  isDarkMode
-                    ? "bg-orange-950/20 border-orange-500/35 text-orange-400"
-                    : "bg-orange-50 border-orange-200 text-orange-700"
-                }`}>
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-black"
+                  style={{
+                    backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                    borderColor: isDarkMode ? `${colors.primary}40` : `${colors.primary}33`,
+                    color: isDarkMode ? colors.primary : colors.primaryText,
+                  }}
+                >
                   {displayCount} pending
                 </span>
               )}
             </div>
 
             {/* Orders list */}
-            <div className={`max-h-[420px] overflow-y-auto ${bg}`}>
+            <div
+              className="max-h-[420px] overflow-y-auto"
+              style={{ backgroundColor: bg }}
+            >
               {latestOrders.length > 0 ? (
-                <div className={`divide-y ${divider}`}>
+                <div
+                  className="divide-y"
+                  style={{ borderColor: border }}
+                >
                   {latestOrders.map((order, index) => (
                     <MotionDiv
                       key={order._id || index}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.04 }}
-                      className={`flex items-start justify-between gap-3 px-4 py-3 transition-colors ${rowHover}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors duration-150"
+                      style={{ borderBottomColor: border }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(255,255,255,0.02)" : "rgba(239,159,39,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
                       <div className="flex-1 min-w-0">
                         {/* Status + Type badges */}
-                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge(order.status)}`}>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                          <span
+                            className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border"
+                            style={statusBadge(order.status)}
+                          >
                             {String(order.status || "").toLowerCase() === "preparing" ? "Preparing" : "Pending"}
                           </span>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeBadge(order.orderType)}`}>
+                          <span
+                            className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border"
+                            style={typeBadge(order.orderType)}
+                          >
                             {order.orderType || "Unknown"}
                           </span>
                         </div>
                         {/* Customer info */}
-                        <p className={`text-sm font-semibold ${textPri}`}>{order.customerName || "Guest"}</p>
-                        <p className={`text-xs ${textSec}`}>{order.customerPhone || "—"}</p>
-                        <p className={`text-xs ${textMut}`}>
+                        <p className="text-sm font-extrabold" style={{ color: textPri }}>{order.customerName || "Guest"}</p>
+                        <p className="text-xs font-semibold" style={{ color: textSec }}>{order.customerPhone || "—"}</p>
+                        <p className="text-[10px] font-bold mt-0.5" style={{ color: textMut }}>
                           {order.createdAt
                             ? new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
                             : "Just now"}
@@ -336,11 +393,22 @@ export default function NotificationBell() {
                       {/* View Bill button */}
                       <button
                         onClick={() => handleViewBill(order)}
-                        className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                          isDarkMode
-                            ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                            : "border-[#ede8e3] bg-white text-orange-600 hover:bg-orange-50 hover:border-orange-200"
-                        }`}
+                        className="shrink-0 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97]"
+                        style={{
+                          backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+                          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                          color: isDarkMode ? colors.primary : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = colors.primary;
+                          e.currentTarget.style.color = colors.primaryText;
+                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+                          e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
+                          e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+                        }}
                       >
                         View Bill
                       </button>
@@ -348,19 +416,33 @@ export default function NotificationBell() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-                  <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${isDarkMode ? "bg-slate-800" : "bg-[#f7f3ef]"}`}>
-                    <Bell size={20} className={textMut} />
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                  <div
+                    className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: isDarkMode ? "rgba(255,255,255,0.03)" : colors.primaryLight }}
+                  >
+                    <Bell size={20} style={{ color: colors.primary }} />
                   </div>
-                  <p className={`text-sm font-semibold ${textPri}`}>No new orders</p>
-                  <p className={`mt-1 text-xs ${textMut}`}>New pending orders will appear here</p>
+                  <p className="text-sm font-black" style={{ color: textPri }}>No new orders</p>
+                  <p className="mt-1 text-xs font-medium" style={{ color: textMut }}>New pending orders will appear here</p>
                   <button
                     onClick={handleManualRefresh}
-                    className={`mt-4 rounded-lg border px-4 py-1.5 text-xs font-semibold transition-colors ${
-                      isDarkMode
-                        ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                        : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
-                    }`}
+                    className="mt-4 rounded-xl border px-4 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97] shadow-sm"
+                    style={{
+                      backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                      color: isDarkMode ? colors.primary : colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.primary;
+                      e.currentTarget.style.color = colors.primaryText;
+                      e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+                      e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
+                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+                    }}
                   >
                     Check for orders
                   </button>
@@ -369,19 +451,31 @@ export default function NotificationBell() {
             </div>
 
             {/* Footer */}
-            <div className={`flex items-center justify-between border-t px-4 py-2.5 ${border} ${footerBg}`}>
+            <div
+              className="flex items-center justify-between border-t px-4 py-2.5"
+              style={{
+                backgroundColor: footerBg,
+                borderTopColor: border,
+              }}
+            >
               <button
                 onClick={handleClearAll}
                 disabled={latestOrders.length === 0}
-                className={`text-xs font-semibold transition-colors ${
-                  latestOrders.length > 0
-                    ? "text-orange-500 hover:text-orange-600"
-                    : `${textMut} cursor-not-allowed`
-                }`}
+                className="text-xs font-black transition-colors"
+                style={{
+                  color: latestOrders.length > 0 ? colors.primary : textMut,
+                  cursor: latestOrders.length > 0 ? "pointer" : "not-allowed",
+                }}
+                onMouseEnter={(e) => {
+                  if (latestOrders.length > 0) e.currentTarget.style.color = colors.primaryHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (latestOrders.length > 0) e.currentTarget.style.color = colors.primary;
+                }}
               >
                 Clear all
               </button>
-              <span className={`text-xs ${textMut}`}>
+              <span className="text-xs font-bold" style={{ color: textMut }}>
                 {latestOrders.length} order{latestOrders.length !== 1 ? "s" : ""}
               </span>
             </div>

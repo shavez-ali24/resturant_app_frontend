@@ -1,25 +1,30 @@
 /* eslint-disable no-unused-vars */
 import React from 'react'
+import { useSelector } from 'react-redux';
 import { FormCard } from './commanProfile/FormCard'
 import { FormField } from './commanProfile/FormField'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const Toggle = ({ id, checked, onChange }) => (
+const Toggle = ({ id, checked, onChange, colors }) => (
     <label className="relative inline-flex cursor-pointer items-center">
         <input type="checkbox" id={id} className="sr-only peer" checked={checked} onChange={onChange} />
-        <div className={`
-            relative w-10 h-5 rounded-full transition-all duration-200
-            bg-[#ede8e3] peer-checked:bg-orange-500
-            dark:bg-slate-700 dark:peer-checked:bg-orange-500
-            peer-focus:ring-2 peer-focus:ring-orange-200 dark:peer-focus:ring-orange-950 peer-focus:ring-offset-1
-            after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-            after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm
-            after:transition-all peer-checked:after:translate-x-5
-        `}></div>
+        <div 
+            className={`
+                relative w-10 h-5 rounded-full transition-all duration-200
+                bg-[#ede8e3] dark:bg-slate-700
+                after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm
+                after:transition-all peer-checked:after:translate-x-5
+            `}
+            style={checked ? { backgroundColor: colors.primary } : {}}
+        ></div>
     </label>
 );
 
 export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange }) {
+    const colors = useSelector((state) => state.admin.theme.colors);
+    const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+
     const gstNumberError = formData.gstEnabled && !String(formData.gstNumber || "").trim()
         ? "GST number is required." : "";
     const gstRateMissing = formData.gstEnabled && (formData.gstRate === "" || formData.gstRate === null || formData.gstRate === undefined || Number(formData.gstRate) <= 0);
@@ -36,17 +41,29 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
                     onChange={handleChange}
                     placeholder="e.g. 50"
                 />
-                <div className={`flex items-center justify-between rounded-lg border px-3 py-2 transition-all duration-200 ${
-                    formData.gstEnabled
-                        ? "border-orange-200 bg-orange-50/60 dark:border-orange-500/30 dark:bg-orange-950/20"
-                        : "border-[#ede8e3] bg-[#f7f3ef] dark:border-slate-600 dark:bg-slate-800/40"
-                }`}>
-                    <label htmlFor="gst-toggle" className={`text-xs font-semibold cursor-pointer ${
-                        formData.gstEnabled ? "text-orange-700 dark:text-orange-400" : "text-[#1c1917] dark:text-slate-200"
-                    }`}>
+                <div 
+                    className="flex items-center justify-between rounded-lg border px-3 py-2 transition-all duration-200"
+                    style={{
+                        borderColor: formData.gstEnabled 
+                            ? (isDarkMode ? `${colors.primary}50` : `${colors.primary}33`) 
+                            : (isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3"),
+                        backgroundColor: formData.gstEnabled 
+                            ? (isDarkMode ? `${colors.primary}20` : colors.primaryLight) 
+                            : (isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#f7f3ef")
+                    }}
+                >
+                    <label 
+                        htmlFor="gst-toggle" 
+                        className="text-xs font-semibold cursor-pointer"
+                        style={{
+                            color: formData.gstEnabled 
+                                ? (isDarkMode ? colors.primary : colors.primaryText) 
+                                : (isDarkMode ? "#e2e8f0" : "#1c1917")
+                        }}
+                    >
                         Enable GST
                     </label>
-                    <Toggle id="gst-toggle" checked={formData.gstEnabled} onChange={handleGstToggle} />
+                    <Toggle id="gst-toggle" checked={formData.gstEnabled} onChange={handleGstToggle} colors={colors} />
                 </div>
             </div>
             <AnimatePresence>

@@ -1,5 +1,6 @@
 // src/components/admin/tableManagement/TableManagement.jsx
 import React, { useState, useMemo, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,7 +11,7 @@ import {
   useDeleteUnitMutation,
   useUpdateSectionsMutation,
 } from "@/redux/adminRedux/adminAPI";
-import { Download, Loader2, Power, PowerOff, QrCode, Table2, BedDouble, Plus, Minus, Trash2, ArrowLeft, SquarePen } from "lucide-react";
+import { Download, Loader2, Power, PowerOff, QrCode, Table2, BedDouble, Plus, Minus, Trash, ArrowLeft, SquarePen } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -121,9 +122,9 @@ const typeIcon = (type) => {
    ADD SECTION / UNITS FORM
    ─────────────────────────────────────────── */
 
-function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories = [] }) {
+function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories = [], isDarkMode }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [addUnits, { isLoading }] = useCreateSectionsAndUnitsMutation();
-  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const [sectionName, setSectionName] = useState("");
   const [isCreatingNewSection, setIsCreatingNewSection] = useState(false);
@@ -246,15 +247,15 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
         name: u.name.trim(),
         ...(type === "ROOM"
           ? {
-              roomCategory: {
-                ...buildRoomCategoryPayload({
-                  categorySelection: u.categorySelection,
-                  categoryName: u.categoryName,
-                  pricePerNight: u.pricePerNight,
-                  fallbackName: u.name,
-                }),
-              },
-            }
+            roomCategory: {
+              ...buildRoomCategoryPayload({
+                categorySelection: u.categorySelection,
+                categoryName: u.categoryName,
+                pricePerNight: u.pricePerNight,
+                fallbackName: u.name,
+              }),
+            },
+          }
           : {}),
       })),
     };
@@ -275,10 +276,23 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
 
   /* ── STYLES ── */
   const inputBase =
-    "w-full rounded-lg border border-[#ede8e3] bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-orange-950 dark:focus:border-orange-500";
+    "w-full rounded-lg border bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none transition-all dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500";
   const labelCls = "text-xs font-semibold uppercase tracking-wider text-[#78716c] dark:text-slate-400";
   const btnBase =
     "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-150";
+
+  const handleInputFocus = (e) => {
+    e.currentTarget.style.borderColor = colors.primary;
+    e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+  };
+  const handleInputBlur = (e) => {
+    e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+    e.currentTarget.style.boxShadow = "none";
+  };
+
+  const inputStyle = {
+    borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -290,7 +304,12 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
           value={isCreatingNewSection ? "__new__" : sectionName}
           onValueChange={handleSectionChange}
         >
-          <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-200 focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+          <SelectTrigger 
+            className="w-full bg-white text-sm font-medium text-[#1c1917] dark:bg-slate-800 dark:text-slate-100"
+            style={inputStyle}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+          >
             <SelectValue 
               placeholder={
                 existingSectionNames?.length 
@@ -311,7 +330,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
             ))}
             <SelectItem 
               value="__new__" 
-              className="cursor-pointer text-orange-600 focus:bg-[#f7f3ef] dark:focus:bg-slate-700 dark:text-orange-400"
+              className="cursor-pointer font-bold focus:bg-[#f7f3ef] dark:focus:bg-slate-700"
+              style={{ color: colors.primary }}
             >
               + Create New Section
             </SelectItem>
@@ -325,6 +345,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
             value={newSectionInput}
             onChange={(e) => setNewSectionInput(e.target.value)}
             className={inputBase}
+            style={inputStyle}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             required
           />
         )}
@@ -348,11 +371,14 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
               onClick={() => setType(t)}
               className={`${btnBase} ${
                 type === t
-                  ? isDarkMode
-                    ? "border border-orange-500/35 bg-orange-950/20 text-orange-400 font-extrabold shadow-sm"
-                    : "border border-orange-200 bg-orange-50 text-orange-700 font-extrabold shadow-sm"
+                  ? "shadow-sm border font-extrabold"
                   : "bg-white text-[#78716c] border border-[#ede8e3] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               }`}
+              style={type === t ? {
+                borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                color: isDarkMode ? colors.primary : colors.primaryText,
+              } : {}}
             >
               {t === "TABLE" ? <Table2 size={14} /> : <BedDouble size={14} />}
               {t}
@@ -374,6 +400,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                   value={u.name}
                   onChange={(e) => handleCustomChange(idx, "name", e.target.value)}
                   className={inputBase}
+                  style={inputStyle}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
                 />
                 {type === "ROOM" && (
                   <>
@@ -381,7 +410,12 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                       value={u.categorySelection || undefined}
                       onValueChange={(value) => handleCustomCategorySelect(idx, value)}
                     >
-                      <SelectTrigger className="w-full border-[#ede8e3] bg-white text-sm font-medium text-[#1c1917] focus:ring-orange-200 focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <SelectTrigger 
+                        className="w-full bg-white text-sm font-medium text-[#1c1917] dark:bg-slate-800 dark:text-slate-100"
+                        style={inputStyle}
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
+                      >
                         <SelectValue placeholder="Select existing category or create new" />
                       </SelectTrigger>
                       <SelectContent className="border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800">
@@ -397,7 +431,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                         ))}
                         <SelectItem
                           value="__new__"
-                          className="cursor-pointer text-orange-600 focus:bg-[#f7f3ef] dark:focus:bg-slate-700 dark:text-orange-400"
+                          className="cursor-pointer font-bold focus:bg-[#f7f3ef] dark:focus:bg-slate-700"
+                          style={{ color: colors.primary }}
                         >
                           + Create New Category
                         </SelectItem>
@@ -410,6 +445,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                         value={u.categoryName}
                         onChange={(e) => handleCustomChange(idx, "categoryName", e.target.value)}
                         className={inputBase}
+                        style={inputStyle}
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
                       />
                     )}
                     <input
@@ -418,6 +456,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                       value={u.pricePerNight}
                       onChange={(e) => handleCustomChange(idx, "pricePerNight", e.target.value)}
                       className={inputBase}
+                      style={inputStyle}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
                       min="0"
                       step="1"
                     />
@@ -428,9 +469,9 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                 <button
                   type="button"
                   onClick={() => handleRemoveCustomRow(idx)}
-                  className="mt-1 rounded-lg p-2 text-[#a8a29e] hover:bg-red-50 hover:text-red-500 transition-colors dark:text-slate-400 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+                  className="mt-1 rounded-lg p-2 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 transition-colors"
                 >
-                  <Trash2 size={14} />
+                  <Trash size={14} />
                 </button>
               )}
             </div>
@@ -438,7 +479,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
           <button
             type="button"
             onClick={handleAddCustomRow}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors dark:text-orange-400 dark:hover:text-orange-300"
+            className="inline-flex items-center gap-1 text-xs font-semibold hover:opacity-85 transition-colors"
+            style={{ color: colors.primary }}
           >
             <Plus size={14} /> Add another
           </button>
@@ -454,7 +496,12 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
       <button
         type="submit"
         disabled={isLoading}
-        className={`${btnBase} w-full flex items-center justify-center gap-2 border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400`}
+        className={`${btnBase} w-full flex items-center justify-center gap-2 border shadow-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+        style={{
+          backgroundColor: colors.primary,
+          color: "#ffffff",
+          borderColor: "transparent",
+        }}
       >
         {isLoading ? "Adding..." : `Add ${type === "TABLE" ? "Tables" : "Rooms"}`}
       </button>
@@ -466,7 +513,8 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
    UNIT CARD (single table/room)
    ─────────────────────────────────────────── */
 
-function UnitCard({ unit, onDeleteUnit, onEditRoom }) {
+function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [imgError, setImgError] = useState(false);
   const { notify } = useNotification();
   const [toggleUnitActive, { isLoading: isToggleLoading }] = useToggleUnitActiveMutation();
@@ -511,88 +559,118 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom }) {
     onDeleteUnit(unitId, unit.name, isRoom);
   };
 
+  const getStatusStyles = (status, isDarkMode, colors) => {
+    const primaryColor = colors?.primary || "#EF9F27";
+    const primaryText = colors?.primaryText || "#7c2d12";
+    const primaryLight = colors?.primaryLight || "#fff8f5";
+
+    if (status === "OCCUPIED") {
+      return {
+        bg: isDarkMode ? `${primaryColor}1a` : primaryLight,
+        border: isDarkMode ? `1.5px solid ${primaryColor}60` : `1.5px solid ${primaryColor}40`,
+        statusText: isDarkMode ? primaryColor : primaryText,
+        subText: isDarkMode ? primaryColor : primaryText,
+        numColor: isDarkMode ? "#ffffff" : "#1c1917",
+        qrColor: isDarkMode ? primaryColor : primaryText,
+        btnBorder: isDarkMode ? `${primaryColor}50` : `${primaryColor}33`,
+        btnBg: isDarkMode ? `${primaryColor}20` : primaryLight,
+        btnColor: isDarkMode ? primaryColor : primaryText,
+      };
+    }
+    if (status === "BILLED") {
+      return {
+        bg: isDarkMode ? "rgba(16, 185, 129, 0.1)" : "#f0fdf4",
+        border: isDarkMode ? "1.5px solid rgba(16, 185, 129, 0.4)" : "1.5px solid rgba(16, 185, 129, 0.3)",
+        statusText: isDarkMode ? "#34d399" : "#15803d",
+        subText: isDarkMode ? "#34d399" : "#15803d",
+        numColor: isDarkMode ? "#ffffff" : "#1c1917",
+        qrColor: isDarkMode ? "#34d399" : "#15803d",
+        btnBorder: isDarkMode ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.2)",
+        btnBg: isDarkMode ? "rgba(16, 185, 129, 0.15)" : "#f0fdf4",
+        btnColor: isDarkMode ? "#34d399" : "#15803d",
+      };
+    }
+    // AVAILABLE / OTHER
+    return {
+      bg: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+      border: isDarkMode ? "1.5px solid rgb(51, 65, 85)" : "1.5px solid #e5e5e5",
+      statusText: isDarkMode ? "#10b981" : "#15803d", // Green AVAILABLE text
+      subText: isDarkMode ? "#94a3b8" : "#a8a29e", // Gray 'Table' / 'Room' label
+      numColor: isDarkMode ? "#ffffff" : "#1c1917",
+      qrColor: isDarkMode ? "#64748b" : "#a8a29e",
+      btnBorder: isDarkMode ? "rgb(71, 85, 105)" : "#e5e5e5",
+      btnBg: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+      btnColor: isDarkMode ? "#94a3b8" : "#78716c",
+    };
+  };
+
+  const statusStyle = getStatusStyles(unit.status, isDarkMode, colors);
+
   return (
     <div
-      className={`relative rounded-xl border bg-white p-2 transition-all duration-150 hover:shadow-sm dark:bg-[#1e293b] ${
-        isRoom && !isActive
-          ? "border-[#d6cfc8] bg-[#faf7f4] opacity-80 dark:border-slate-600 dark:bg-slate-900/70"
-          : "border-[#ede8e3] dark:border-slate-700"
-      }`}
+      className={`relative rounded-xl p-3 transition-all duration-150 hover:shadow-md flex flex-col justify-between`}
+      style={{
+        background: statusStyle.bg,
+        border: statusStyle.border,
+        opacity: isRoom && !isActive ? 0.75 : 1,
+        minHeight: "140px",
+      }}
     >
-      {/* TOP BADGES ROW */}
-      <div className="flex items-center justify-between gap-1.5 mb-2.5">
-        {isRoom ? (
+      {/* Top Row: status on left, small QR icon on right */}
+      <div className="flex items-center justify-between gap-1 mb-1">
+        <div className="flex items-center gap-1">
+          {isRoom && (
+            <span
+              className="text-[9px] font-extrabold tracking-wider"
+              style={{ color: isActive ? "rgb(16, 185, 129)" : "rgb(156, 163, 175)" }}
+            >
+              {isActive ? "ACTIVE" : "INACTIVE"}
+            </span>
+          )}
+          {isRoom && <span className="text-[#ede8e3] dark:text-slate-600">|</span>}
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
-              isActive
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                : "bg-[#ede8e3] text-[#78716c] dark:bg-slate-700 dark:text-slate-300"
-            }`}
+            className="text-[9.5px] font-extrabold uppercase tracking-wider"
+            style={{ color: statusStyle.statusText }}
           >
-            {isActive ? "Active" : "Inactive"}
+            {unit.status}
           </span>
-        ) : (
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap bg-orange-100 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400">
-            Table
-          </span>
-        )}
+        </div>
+        
+        <QrCode size={14} style={{ color: statusStyle.qrColor }} />
+      </div>
 
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
-            unit.status === "AVAILABLE"
-              ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
-              : unit.status === "OCCUPIED"
-              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300"
-              : unit.status === "BILLED"
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
-          }`}
+      {/* Center: Large Name/Number & label */}
+      <div className="text-center my-2 space-y-0.5">
+        <p className="text-2xl font-extrabold" style={{ color: statusStyle.numColor }}>
+          {unit.name}
+        </p>
+        <p
+          className="text-[9.5px] font-bold uppercase tracking-widest"
+          style={{ color: statusStyle.subText }}
         >
-          {unit.status}
-        </span>
-      </div>
-
-      {/* QR CODE */}
-      <div className="flex justify-center mb-3 mt-1.5">
-        {unit.qrCode?.url && !imgError ? (
-          <img
-            src={unit.qrCode.url}
-            alt={`QR for ${unit.name}`}
-            loading="lazy"
-            className={`h-20 w-20 rounded-md border border-[#ede8e3] object-contain ${
-              isRoom && !isActive ? "grayscale" : ""
-            }`}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed border-[#ede8e3] bg-[#f7f3ef] dark:border-slate-600 dark:bg-slate-800/60">
-            <QrCode size={30} className="text-[#a8a29e] dark:text-slate-500" />
-          </div>
-        )}
-      </div>
-
-      {/* NAME + TYPE */}
-      <div className="text-center space-y-0.5">
-        <p className="text-base font-bold text-[#1c1917] truncate dark:text-slate-100">{unit.name}</p>
-        <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
-          {typeIcon(unit.type)}
           {unit.type}
           {unit.type === "ROOM" && (unit.roomCategory?.pricePerNight > 0 || unit.roomCategory?.priceConfig?.pricePerNight > 0) && (
-            <> · ₹{unit.roomCategory?.priceConfig?.pricePerNight ?? unit.roomCategory?.pricePerNight}</>
+            <> • ₹{unit.roomCategory?.priceConfig?.pricePerNight ?? unit.roomCategory?.pricePerNight}</>
           )}
         </p>
       </div>
 
-      {/* ACTIONS */}
-      <div className="mt-3 flex flex-col gap-1.5">
+      {/* Bottom Actions Row */}
+      <div className="mt-1 space-y-1">
         <div className="flex gap-1.5 w-full">
           {unit.qrCode?.url && (
             <button
               type="button"
               onClick={handleDownload}
-              className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] px-2 py-1.5 text-[11px] font-extrabold text-[#1c1917] transition-colors hover:bg-[#ede8e3] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-700 whitespace-nowrap shadow-sm"
+              className="flex-1 inline-flex items-center justify-center rounded-lg border py-1 text-[10px] font-bold transition-all active:scale-[0.97] shadow-sm hover:opacity-90"
+              style={{
+                borderColor: statusStyle.btnBorder,
+                backgroundColor: statusStyle.btnBg,
+                color: statusStyle.btnColor,
+              }}
+              title="Download QR Code"
             >
-              <Download size={13} /> QR
+              <Download size={12} className="mr-0.5" /> QR
             </button>
           )}
 
@@ -601,26 +679,24 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom }) {
               type="button"
               onClick={handleToggleRoomActive}
               disabled={!canToggleRoom || isToggleLoading}
-              className={`inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-extrabold transition-all active:scale-[0.97] whitespace-nowrap shadow-sm ${
-                canToggleRoom && !isToggleLoading
-                  ? isActive
-                    ? "border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5]"
-                    : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "cursor-not-allowed bg-[#ede8e3] text-[#a8a29e] dark:bg-slate-700 dark:text-slate-500"
-              }`}
+              className="flex-1 inline-flex items-center justify-center rounded-lg border py-1 text-[10px] font-bold transition-all active:scale-[0.97] shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={canToggleRoom && !isToggleLoading ? {
+                borderColor: isActive ? "rgba(239, 68, 68, 0.4)" : "rgba(16, 185, 129, 0.4)",
+                backgroundColor: isActive ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                color: isActive ? "rgb(239, 68, 68)" : "rgb(16, 185, 129)",
+              } : {
+                borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+                backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+                color: isDarkMode ? "#94a3b8" : "#78716c",
+              }}
+              title={isActive ? "Deactivate Room" : "Activate Room"}
             >
               {isToggleLoading ? (
-                <>
-                  <Loader2 size={13} className="animate-spin" />
-                </>
+                <Loader2 size={12} className="animate-spin" />
               ) : isActive ? (
-                <>
-                  <PowerOff size={13} /> Inactive
-                </>
+                <PowerOff size={12} />
               ) : (
-                <>
-                  <Power size={13} /> Active
-                </>
+                <Power size={12} />
               )}
             </button>
           )}
@@ -637,25 +713,25 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom }) {
                   pricePerNight: String(unit.roomCategory?.priceConfig?.pricePerNight ?? unit.roomCategory?.pricePerNight ?? "0"),
                 });
               }}
-              className="inline-flex items-center justify-center rounded-lg border border-orange-200 bg-white p-1.5 text-orange-600 hover:bg-[#fff8f5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm"
+              className="inline-flex items-center justify-center rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-[0.97]"
               title="Edit Room Category/Price"
             >
-              <SquarePen size={13} />
+              <SquarePen size={12} />
             </button>
           )}
 
           <button
             type="button"
             onClick={handleDeleteUnit}
-            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 shadow-sm"
+            className="inline-flex items-center justify-center rounded-lg p-1 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 transition-colors active:scale-[0.97]"
             title={`Delete ${isRoom ? "Room" : "Table"}`}
           >
-            <Trash2 size={13} />
+            <Trash size={12} />
           </button>
         </div>
 
         {isRoom && !canToggleRoom && (
-          <p className="text-center text-[9px] font-bold text-[#a8a29e] dark:text-slate-500 leading-tight">
+          <p className="text-center text-[8px] font-bold text-[#a8a29e] dark:text-slate-500 leading-tight">
             Can toggle room only when Available
           </p>
         )}
@@ -668,7 +744,8 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom }) {
    SECTION BLOCK
    ─────────────────────────────────────────── */
 
-function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, onEditRoom }) {
+function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, onEditRoom, isDarkMode }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(section.name);
 
@@ -710,13 +787,25 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="w-full rounded-md border border-[#ede8e3] bg-white px-2 py-1 text-xs font-bold text-[#1c1917] outline-none focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border bg-white px-2 py-1 text-xs font-bold text-[#1c1917] outline-none dark:bg-slate-800 dark:text-slate-100"
+                style={{
+                  borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = colors.primary;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
                 required
                 autoFocus
               />
               <button
                 type="submit"
-                className="rounded-md bg-orange-500 text-white px-2.5 py-1 text-xs font-extrabold hover:bg-orange-600 transition-colors shadow-sm"
+                className="rounded-md text-white px-2.5 py-1 text-xs font-extrabold transition-colors shadow-sm hover:opacity-90"
+                style={{ backgroundColor: colors.primary }}
               >
                 Save
               </button>
@@ -734,7 +823,7 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
               <button
                 type="button"
                 onClick={() => setIsEditingName(true)}
-                className="rounded-md p-1.5 text-[#a8a29e] hover:bg-[#ede8e3]/45 hover:text-orange-500 transition-colors dark:text-slate-400"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
                 title="Rename Section"
               >
                 <SquarePen size={15} />
@@ -748,10 +837,10 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
         <button
           type="button"
           onClick={handleDeleteSection}
-          className="rounded-lg p-2 text-[#a8a29e] hover:bg-red-50 hover:text-red-500 transition-colors dark:text-slate-400 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+          className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 transition-colors"
           title="Delete Section"
         >
-          <Trash2 size={18} />
+          <Trash size={18} />
         </button>
       </div>
 
@@ -762,9 +851,9 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <Table2 size={16} /> Tables ({tables.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
               {tables.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} />
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
               ))}
             </div>
           </div>
@@ -775,9 +864,9 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <BedDouble size={16} /> Rooms ({rooms.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
               {rooms.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} />
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
               ))}
             </div>
           </div>
@@ -793,6 +882,7 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
 
 export default function TableManagement() {
   const navigate = useNavigate();
+  const colors = useSelector((state) => state.admin.theme.colors);
   const {
     data: restaurantData,
     isLoading,
@@ -867,8 +957,36 @@ export default function TableManagement() {
     [sections]
   );
 
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof localStorage !== "undefined") {
+      const savedTheme = localStorage.getItem("admin-theme");
+      if (savedTheme) return savedTheme === "dark";
+    }
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      return root.classList.contains("admin-dark") || root.classList.contains("dark");
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () => {
+      const savedTheme = localStorage.getItem("admin-theme");
+      if (savedTheme) {
+        setIsDarkMode(savedTheme === "dark");
+      } else {
+        setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+      }
+    };
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   const handleSuccess = () => setShowForm(false);
-  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
@@ -877,7 +995,12 @@ export default function TableManagement() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/admin/profile")}
-            className="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-[#fff8f5] px-3.5 py-2 text-sm font-extrabold text-orange-700 shadow-sm transition-all hover:bg-[#ffedd5] active:scale-[0.97] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
+            className="inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] hover:opacity-90"
+            style={{
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            }}
           >
             <ArrowLeft size={16} />
           </button>
@@ -897,11 +1020,15 @@ export default function TableManagement() {
           </div>
           <button
             onClick={() => setShowForm((p) => !p)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] ${
-              showForm
+            className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] ${showForm
                 ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
-            }`}
+                : "hover:opacity-90"
+              }`}
+            style={!showForm ? {
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            } : {}}
           >
             {showForm ? <Minus size={16} /> : <Plus size={16} />}
             {showForm ? "Close" : "Add Section"}
@@ -910,11 +1037,15 @@ export default function TableManagement() {
         <div className="sm:hidden flex justify-end">
           <button
             onClick={() => setShowForm((p) => !p)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] ${
-              showForm
+            className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] ${showForm
                 ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
-            }`}
+                : "hover:opacity-90"
+              }`}
+            style={!showForm ? {
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            } : {}}
           >
             {showForm ? <Minus size={16} /> : <Plus size={16} />}
             {showForm ? "Close" : "Add Section"}
@@ -933,6 +1064,7 @@ export default function TableManagement() {
                 onSuccess={handleSuccess}
                 existingSectionNames={existingSectionNames}
                 existingRoomCategories={existingRoomCategories}
+                isDarkMode={isDarkMode}
               />
             </div>
           </div>
@@ -943,7 +1075,7 @@ export default function TableManagement() {
           {/* LOADING */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ede8e3] border-t-orange-500 dark:border-slate-600" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#ede8e3] dark:border-slate-600" style={{ borderTopColor: colors.primary }} />
             </div>
           )}
 
@@ -963,7 +1095,12 @@ export default function TableManagement() {
               </p>
               <button
                 onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400"
+                className="inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-extrabold shadow-sm transition-all active:scale-[0.97] hover:opacity-90"
+                style={{
+                  borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                  backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                  color: isDarkMode ? colors.primary : colors.primaryText,
+                }}
               >
                 <Plus size={14} /> Add Your First Section
               </button>
@@ -981,6 +1118,7 @@ export default function TableManagement() {
                   onDeleteUnit={(id, name, isRoom) => setDeleteTarget({ type: "unit", id, name, isRoom })}
                   onEditSection={handleSaveSectionRename}
                   onEditRoom={setEditRoomTarget}
+                  isDarkMode={isDarkMode}
                 />
               ))}
             </div>
@@ -1054,7 +1192,16 @@ export default function TableManagement() {
                   name="categoryName"
                   defaultValue={editRoomTarget.categoryName}
                   required
-                  className="w-full rounded-lg border border-[#ede8e3] bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-orange-950 dark:focus:border-orange-500"
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none transition-all dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                  style={{ borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3" }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
               </div>
               <div className="space-y-1">
@@ -1068,7 +1215,16 @@ export default function TableManagement() {
                   min="0"
                   step="1"
                   required
-                  className="w-full rounded-lg border border-[#ede8e3] bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-orange-950 dark:focus:border-orange-500"
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-sm font-medium text-[#1c1917] placeholder:text-[#a8a29e] focus:outline-none transition-all dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                  style={{ borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3" }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
               </div>
               <div className="mt-6 flex justify-end gap-2">
@@ -1083,7 +1239,8 @@ export default function TableManagement() {
                 <button
                   type="submit"
                   disabled={isUpdatingSections}
-                  className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50 hover:opacity-90"
+                  style={{ backgroundColor: colors.primary }}
                 >
                   {isUpdatingSections && <Loader2 size={14} className="animate-spin" />}
                   Save

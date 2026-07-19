@@ -24,7 +24,7 @@ export default function MainLayout() {
       className={`client-app-shell relative mx-auto min-h-screen max-w-[520px] overflow-hidden font-mostrate font-semibold ${
         isDarkMode
           ? "client-dark dark bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 text-slate-100"
-          : "bg-gradient-to-b from-orange-50/80 via-white to-white text-slate-900"
+          : "bg-gradient-to-b from-orange-50/80 via-[#fffcf9] to-[#fffbf6] text-slate-900"
       }`}
     >
       <div
@@ -34,7 +34,7 @@ export default function MainLayout() {
             : "bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.14),transparent_58%)]"
         }`}
       />
-      <main className={`relative min-h-screen ${isDarkMode ? "bg-slate-950/70" : "bg-white"}`}>
+      <main className={`relative min-h-screen ${isDarkMode ? "bg-slate-950/70" : "bg-[#fffcf9]"}`}>
         <Outlet context={{ isDarkMode, toggleDarkMode }} />
       </main>
     </div>

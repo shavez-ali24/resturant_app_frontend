@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,7 @@ import { getStatusBadge } from "../commonOrderFile/utils";
 import { ClipboardCheck, Hourglass, Timer, X, CheckCircle } from "lucide-react";
 
 const StatusDropdown = ({ order, updateOrder }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const normalizedStatus = String(order?.status || "").toLowerCase();
   const isCompleted = normalizedStatus === "completed";
 
@@ -60,9 +62,12 @@ const StatusDropdown = ({ order, updateOrder }) => {
       <SelectTrigger
         data-tour="orders-status-dropdown"
         aria-label={`Change order status — currently ${order.status}`}
-        className={`h-9 w-full min-w-[130px] rounded-lg border px-3 text-xs font-semibold uppercase tracking-wide transition-all hover:brightness-95 focus:ring-2 focus:ring-orange-200 focus:ring-offset-1 md:h-8 md:w-[140px] ${getStatusBadge(
+        className={`h-9 w-full min-w-[130px] rounded-lg border px-3 text-xs font-semibold uppercase tracking-wide transition-all hover:brightness-95 focus:ring-2 focus:ring-offset-1 md:h-8 md:w-[140px] ${getStatusBadge(
           order.status
         )}`}
+        style={{
+          '--tw-ring-color': colors.primary
+        }}
       >
         <span className="mx-auto">
           <SelectValue />

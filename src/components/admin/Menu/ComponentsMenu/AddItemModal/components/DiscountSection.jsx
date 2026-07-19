@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import {
   Select, SelectContent, SelectGroup,
   SelectItem, SelectTrigger, SelectValue,
@@ -10,6 +11,11 @@ const DiscountSection = ({
   label = "Apply Discount", prefix = "discount",
 }) => {
   const [localErrors, setLocalErrors] = useState({});
+  const [selectFocused, setSelectFocused] = useState(false);
+  const [valueFocused, setValueFocused] = useState(false);
+
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const safeDiscount = {
     active: discount?.active || false,
@@ -71,13 +77,6 @@ const DiscountSection = ({
     }
   }, [safeDiscount.type, setFormData]);
 
-  const inputCls = (hasErr) =>
-    `h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-500/20 ${
-      hasErr
-        ? "border-red-400 bg-red-50 focus:border-red-400 dark:bg-red-900/20 dark:border-red-500 text-[#1c1917] dark:text-slate-100"
-        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8] focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:border-slate-600 dark:focus:border-orange-500"
-    }`;
-
   return (
     <div className="rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-4 dark:border-slate-700 dark:bg-slate-800/60">
       {/* Checkbox toggle */}
@@ -86,7 +85,8 @@ const DiscountSection = ({
           type="checkbox"
           checked={safeDiscount.active}
           onChange={handleCheckboxChange}
-          className="h-4 w-4 accent-orange-500"
+          className="h-4 w-4"
+          style={{ accentColor: colors.primary }}
         />
         <span className="text-sm font-semibold text-[#1c1917] dark:text-slate-100">{label}</span>
       </label>
@@ -97,15 +97,23 @@ const DiscountSection = ({
           <div>
             <label className="mb-1 block text-xs font-medium text-[#78716c] dark:text-slate-400">Type *</label>
             <Select value={safeDiscount.type} onValueChange={handleTypeChange}>
-              <SelectTrigger className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 ${
-                localErrors.type ? "border-red-400 bg-red-50" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600"
-              }`}>
+              <SelectTrigger
+                onFocus={() => setSelectFocused(true)}
+                onBlur={() => setSelectFocused(false)}
+                className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
+                  localErrors.type ? "border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-500" : "bg-white dark:bg-slate-800 dark:text-slate-100"
+                }`}
+                style={!localErrors.type ? {
+                  borderColor: selectFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  boxShadow: selectFocused ? `0 0 0 2px ${colors.primary}20` : "none",
+                } : {}}
+              >
                 <SelectValue placeholder="Select type">
                   {safeDiscount.type === "flat" && "Flat (₹)"}
                   {safeDiscount.type === "percentage" && "Percentage (%)"}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg">
+              <SelectContent className="rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                 <SelectGroup>
                   <SelectItem value="flat" className="cursor-pointer rounded-md text-sm text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] dark:text-slate-200 dark:data-[highlighted]:bg-slate-700">Flat (₹)</SelectItem>
                   <SelectItem value="percentage" className="cursor-pointer rounded-md text-sm text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] dark:text-slate-200 dark:data-[highlighted]:bg-slate-700">Percentage (%)</SelectItem>
@@ -125,7 +133,17 @@ const DiscountSection = ({
                 type="text"
                 value={safeDiscount.value}
                 onChange={handleValueChange}
-                className={`${inputCls(localErrors.value)} pl-7`}
+                onFocus={() => setValueFocused(true)}
+                onBlur={() => setValueFocused(false)}
+                className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all pl-7 ${
+                  localErrors.value
+                    ? "border-red-400 bg-red-50 focus:border-red-400 dark:bg-red-900/20 dark:border-red-500 text-[#1c1917] dark:text-slate-100"
+                    : "bg-white text-[#1c1917] dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                }`}
+                style={!localErrors.value ? {
+                  borderColor: valueFocused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  boxShadow: valueFocused ? `0 0 0 2px ${colors.primary}20` : "none",
+                } : {}}
                 placeholder={safeDiscount.type === "percentage" ? "e.g. 10" : "e.g. 50"}
                 disabled={!safeDiscount.type}
               />

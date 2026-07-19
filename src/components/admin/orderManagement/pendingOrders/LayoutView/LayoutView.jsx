@@ -148,9 +148,9 @@ export default function LayoutView({
             <div
               key={i}
               style={{
-                width: 120,
-                height: 130,
-                borderRadius: 8,
+                width: 140,
+                height: 112,
+                borderRadius: 14,
                 background: isDarkMode ? "#334155" : "#ede8e3",
                 animation: "pulse 1.5s ease-in-out infinite",
               }}

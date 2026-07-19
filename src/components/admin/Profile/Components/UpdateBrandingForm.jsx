@@ -1,10 +1,5 @@
-/**
- * UpdateBrandingForm.jsx
- * Logo upload with crop/zoom/reposition.
- * Frontend-only — sends final cropped File via existing handleFileChange prop.
- */
-
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useSelector } from "react-redux";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
@@ -19,11 +14,15 @@ export default function UpdateBrandingForm({
   fileError,
   currentLogo,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+
   const fileInputRef = useRef(null);
 
   const [rawPreview, setRawPreview] = useState("");
   const [rawFile, setRawFile]       = useState(null);
   const [showCropper, setShowCropper] = useState(false);
+  const [isHovered, setIsHovered]     = useState(false);
 
   const croppedPreviewUrl = useMemo(
     () => (file ? URL.createObjectURL(file) : ""),
@@ -72,11 +71,23 @@ export default function UpdateBrandingForm({
         </p>
 
         <div
-          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
-            fileError
-              ? "border-red-400 bg-red-50 dark:bg-red-500/10"
-              : "border-[#d6cfc8] bg-[#f7f3ef] hover:border-orange-400 hover:bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-orange-500"
-          } ${displayImage ? "flex w-fit" : "flex w-full"}`}
+          className={`relative cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+            displayImage ? "flex w-fit" : "flex w-full"
+          }`}
+          style={{
+            borderColor: fileError
+              ? "#f87171"
+              : isHovered 
+                ? colors.primary 
+                : (isDarkMode ? "rgb(71, 85, 105)" : "#d6cfc8"),
+            backgroundColor: fileError
+              ? (isDarkMode ? "rgba(239, 68, 68, 0.1)" : "#fef2f2")
+              : isHovered 
+                ? (isDarkMode ? `${colors.primary}20` : colors.primaryLight) 
+                : (isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#f7f3ef")
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           onClick={() => fileInputRef.current?.click()}
         >
           <div className={`relative ${displayImage ? "" : "h-36 w-full"}`}>
@@ -125,7 +136,8 @@ export default function UpdateBrandingForm({
           imageSrc={rawPreview}
           aspect={1}
           title="Crop Restaurant Logo"
-          outputFileName={rawFile?.name || "logo.jpg"}
+          outputFileName={rawFile?.name || "logo.png"}
+          mimeType={rawFile?.type}
           onCropDone={handleCropDone}
           onCancel={handleCropCancel}
         />

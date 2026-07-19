@@ -100,7 +100,7 @@ export default function MoveTableModal({ order, onClose }) {
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-slate-200 outline-none focus:outline-none focus-visible:outline-none focus:ring-0"
           >
             <X size={20} />
           </button>
@@ -155,10 +155,10 @@ export default function MoveTableModal({ order, onClose }) {
                             key={unit._id}
                             type="button"
                             onClick={() => setSelectedUnitId(unit._id)}
-                            className={`rounded-xl border-2 p-2.5 text-center transition-all ${
+                            className={`rounded-xl border-2 p-2.5 text-center transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 ${
                               isSelected
-                                ? "border-orange-500 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/30"
-                                : `${UNIT_STATUS_COLORS[unit.status] || "border-gray-200 bg-white dark:border-slate-600 dark:bg-slate-700"} hover:border-orange-300`
+                                ? "border-primary bg-primary/10 text-primary dark:border-primary/80 dark:bg-primary/20"
+                                : `${UNIT_STATUS_COLORS[unit.status] || "border-gray-200 bg-white dark:border-slate-600 dark:bg-slate-700"} hover:border-primary/50`
                             }`}
                           >
                             <p className="text-base font-extrabold">{unit.name}</p>
@@ -178,9 +178,9 @@ export default function MoveTableModal({ order, onClose }) {
             <button
               onClick={handleMove}
               disabled={!selectedUnitId || isLoading}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold text-white transition-all ${
+              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold text-white transition-all outline-none focus:outline-none focus-visible:outline-none focus:ring-0 ${
                 selectedUnitId && !isLoading
-                  ? "bg-orange-500 shadow-[0_8px_18px_rgba(249,115,22,0.3)] hover:bg-orange-600"
+                  ? "bg-primary shadow-[0_8px_18px_rgba(239,159,39,0.35)] hover:bg-primary/95"
                   : "cursor-not-allowed bg-gray-300 dark:bg-slate-600"
               }`}
             >
@@ -198,7 +198,7 @@ export default function MoveTableModal({ order, onClose }) {
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700"
+          className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700 outline-none focus:outline-none focus-visible:outline-none focus:ring-0"
         >
           Cancel
         </button>

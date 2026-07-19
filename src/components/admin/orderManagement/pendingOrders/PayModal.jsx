@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { X, IndianRupee, Loader2, CheckCircle, Percent } from "lucide-react";
 import { usePayOrderMutation, useBillOrderMutation, useLazyGetOrderByIdQuery } from "@/redux/adminRedux/adminAPI";
 import { useNotification } from "../../Bell/NotificationContext";
@@ -10,6 +11,7 @@ const PAYMENT_METHODS = [
 ];
 
 export default function PayModal({ order, onClose }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const { notify } = useNotification();
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
@@ -111,6 +113,12 @@ export default function PayModal({ order, onClose }) {
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] cursor-pointer"
     >
+      <style>{`
+        .theme-focus:focus {
+          border-color: ${colors.primary} !important;
+          box-shadow: 0 0 0 1px ${colors.primary}80 !important;
+        }
+      `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800 cursor-default"
@@ -139,7 +147,7 @@ export default function PayModal({ order, onClose }) {
             </p>
           </div>
         ) : currentOrder?.status !== "completed" ? (
-          <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-5 text-center dark:border-orange-850 dark:bg-orange-950/20">
+          <div className="rounded-xl border border-orange-200 bg-[#fff8f5] p-5 text-center dark:border-orange-950/20 dark:bg-orange-950/10">
             <p className="font-extrabold text-orange-700 dark:text-orange-400 text-base mb-2">
               Order not billed yet
             </p>
@@ -149,7 +157,11 @@ export default function PayModal({ order, onClose }) {
             <button
               onClick={handleGenerateBill}
               disabled={isBilling}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-extrabold border border-orange-250 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/30 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-extrabold border text-white hover:opacity-90 shadow-sm transition-all"
+              style={{
+                backgroundColor: colors.primary,
+                borderColor: colors.primary
+              }}
             >
               {isBilling && <Loader2 size={16} className="animate-spin" />}
               {isBilling ? "Generating Bill..." : "Generate Bill & Proceed"}
@@ -176,20 +188,30 @@ export default function PayModal({ order, onClose }) {
                 Payment Method
               </label>
               <div className="flex gap-2">
-                {PAYMENT_METHODS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setPaymentMethod(key)}
-                    className={`flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-extrabold uppercase tracking-wider transition-all ${
-                      paymentMethod === key
-                        ? "border-orange-500 bg-orange-50 text-orange-700 dark:border-orange-400 dark:bg-orange-900/30 dark:text-orange-300"
-                        : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-slate-500"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {PAYMENT_METHODS.map(({ key, label }) => {
+                  const isActive = paymentMethod === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setPaymentMethod(key)}
+                      className="flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-extrabold uppercase tracking-wider transition-all"
+                      style={{
+                        backgroundColor: isActive
+                          ? colors.primary
+                          : (isDarkMode ? "#334155" : "#ffffff"),
+                        borderColor: isActive
+                          ? colors.primary
+                          : (isDarkMode ? "#475569" : "#e5e7eb"),
+                        color: isActive
+                          ? "#ffffff"
+                          : (isDarkMode ? "#94a3b8" : "#6b7280")
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -203,26 +225,24 @@ export default function PayModal({ order, onClose }) {
                   <button
                     type="button"
                     onClick={() => setSettlementMode("percent")}
-                    className={`rounded-md px-2 py-1 text-xs font-extrabold transition-all ${
-                      settlementMode === "percent"
-                        ? isDarkMode
-                          ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
-                          : "border border-orange-200 bg-orange-55 text-orange-700 shadow-sm"
-                        : "text-gray-500 dark:text-slate-300 border border-transparent"
-                    }`}
+                    className="rounded-md px-2.5 py-1 text-xs font-extrabold transition-all"
+                    style={{
+                      backgroundColor: settlementMode === "percent" ? colors.primary : "transparent",
+                      color: settlementMode === "percent" ? "#ffffff" : (isDarkMode ? "#94a3b8" : "#6b7280"),
+                      boxShadow: settlementMode === "percent" ? "0 1px 2px 0 rgba(0, 0, 0, 0.05)" : "none"
+                    }}
                   >
                     %
                   </button>
                   <button
                     type="button"
                     onClick={() => setSettlementMode("amount")}
-                    className={`rounded-md px-2 py-1 text-xs font-extrabold transition-all ${
-                      settlementMode === "amount"
-                        ? isDarkMode
-                          ? "border border-orange-500/35 bg-orange-950/20 text-orange-400"
-                          : "border border-orange-200 bg-orange-55 text-orange-700 shadow-sm"
-                        : "text-gray-500 dark:text-slate-300 border border-transparent"
-                    }`}
+                    className="rounded-md px-2.5 py-1 text-xs font-extrabold transition-all"
+                    style={{
+                      backgroundColor: settlementMode === "amount" ? colors.primary : "transparent",
+                      color: settlementMode === "amount" ? "#ffffff" : (isDarkMode ? "#94a3b8" : "#6b7280"),
+                      boxShadow: settlementMode === "amount" ? "0 1px 2px 0 rgba(0, 0, 0, 0.05)" : "none"
+                    }}
                   >
                     ₹
                   </button>
@@ -254,10 +274,10 @@ export default function PayModal({ order, onClose }) {
                       }
                     }
                   }}
-                  className={`w-full rounded-xl border-2 py-2.5 pl-9 pr-3 text-sm font-bold outline-none transition-all ${
+                  className={`w-full rounded-xl border-2 py-2.5 pl-9 pr-3 text-sm font-bold outline-none transition-all theme-focus ${
                     settlementInputInvalid
                       ? "border-red-400 bg-red-50 text-red-600 dark:border-red-500 dark:bg-red-900/20 dark:text-red-300"
-                      : "border-gray-200 bg-white text-gray-800 focus:border-orange-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-orange-400"
+                      : "border-gray-200 bg-white text-gray-800 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                   }`}
                 />
               </div>
@@ -272,7 +292,7 @@ export default function PayModal({ order, onClose }) {
                 </p>
               )}
               {settlementValue >= 0 && settlementValue <= totalAmount && settlementValue !== totalAmount && (
-                <p className="mt-1 text-xs font-semibold text-orange-500">
+                <p className="mt-1 text-xs font-semibold" style={{ color: colors.primary }}>
                   Final settlement: ₹{settlementValue.toFixed(2)}
                 </p>
               )}
@@ -284,11 +304,13 @@ export default function PayModal({ order, onClose }) {
               disabled={!isValid || isLoading}
               className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold transition-all active:scale-[0.97] ${
                 isValid && !isLoading
-                  ? isDarkMode
-                    ? "border border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
-                    : "border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm"
+                  ? "text-white hover:opacity-90 shadow-sm"
                   : "cursor-not-allowed bg-gray-200 text-gray-400 border border-transparent dark:bg-slate-700 dark:text-slate-500"
               }`}
+              style={isValid && !isLoading ? {
+                backgroundColor: colors.primary,
+                borderColor: colors.primary
+              } : {}}
             >
               {isLoading && <Loader2 size={18} className="animate-spin" />}
               {isLoading

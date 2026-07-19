@@ -1,5 +1,6 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/CreateOrderModal.jsx
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { X, ArrowRight } from "lucide-react";
 
 /**
@@ -19,6 +20,7 @@ export default function CreateOrderModal({
   onClose,
   onProceed,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [formErrors, setFormErrors] = useState({});
@@ -55,6 +57,12 @@ export default function CreateOrderModal({
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={onClose}
     >
+      <style>{`
+        .theme-focus:focus {
+          border-color: ${colors.primary} !important;
+          box-shadow: 0 0 0 1px ${colors.primary}80 !important;
+        }
+      `}</style>
       <div
         className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border ${isDarkMode ? "bg-[#1e293b] border-slate-700" : "bg-white border-[#ede8e3]"
           }`}
@@ -106,9 +114,9 @@ export default function CreateOrderModal({
                 }
               }}
               placeholder="Customer name"
-              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${isDarkMode
-                  ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                  : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-105"
+              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium theme-focus ${isDarkMode
+                  ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60"
+                  : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e]"
                 }`}
             />
             {formErrors.customerName && (
@@ -135,9 +143,9 @@ export default function CreateOrderModal({
               }}
               placeholder="Phone number"
               maxLength={10}
-              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium ${isDarkMode
-                  ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                  : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-105"
+              className={`w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200 border font-medium theme-focus ${isDarkMode
+                  ? "bg-[#0f172a]/30 text-slate-100 border-slate-700/80 placeholder-slate-400/60"
+                  : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e]"
                 }`}
             />
             {formErrors.customerPhone && (
@@ -191,7 +199,11 @@ export default function CreateOrderModal({
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl py-3 text-sm font-black border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm"
+              className="flex-1 rounded-xl py-3 text-sm font-black border transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm text-white hover:opacity-90"
+              style={{
+                backgroundColor: colors.primary,
+                borderColor: colors.primary
+              }}
             >
               Proceed
               <ArrowRight size={16} strokeWidth={2.5} />

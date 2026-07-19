@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import ProfileHeader from "./components/ProfileHeader";
 import ProfileDetails from "./components/ProfileDetails";
 import { LoadingSpinner } from "./Components/commanProfile/LoadingSpinner";
@@ -67,6 +68,7 @@ function ProfileEditForm({ resData, token, isDarkMode, onSuccess, onClose }) {
 
 // ── Main Profile component ────────────────────────────────────────────────────
 const Profile = () => {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [token] = useState(() => localStorage.getItem("admin_token") || "");
   const [isEditing, setIsEditing] = useState(false);
   const notify = useNotify();
@@ -107,7 +109,10 @@ const Profile = () => {
   if (error) return <ErrorMessage error={error?.data?.message || error?.message || "Failed to load profile"} />;
 
   return (
-    <div className={`flex h-full flex-col overflow-hidden ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
+    <div 
+      className="flex h-full flex-col overflow-hidden animate-in fade-in duration-300"
+      style={{ backgroundColor: isDarkMode ? "#0f172a" : "#f8f3ef" }}
+    >
       <div className="shrink-0 p-3 pb-0 md:p-6 md:pb-0">
         <ProfileHeader
           onUpdateClick={() => setIsEditing((v) => !v)}

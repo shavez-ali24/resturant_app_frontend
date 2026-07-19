@@ -102,13 +102,13 @@ const Filter = memo(function Filter({
       <button
         type="button"
         onClick={() => onChange("combo", !filters.combo)}
-        className={`ml-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
+        className={`ml-1 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
           filters.combo
             ? "client-add-button text-white"
             : "client-add-button-outline"
         }`}
       >
-        Combo
+        Only Combo
       </button>
     </motion.div>
   );

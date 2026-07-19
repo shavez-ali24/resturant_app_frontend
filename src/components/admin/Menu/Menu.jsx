@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import { AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  SquarePen,
+  Trash,
   Search,
   CheckCircle,
   XCircle,
@@ -428,31 +431,54 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   );
 };
 
-const TabButton = ({ active, onClick, children }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`relative px-3 pb-2 text-sm font-semibold transition ${
-      active
-        ? "text-orange-700 dark:text-orange-400"
-        : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
-    }`}
-  >
-    {children}
-    <span
-      className={`absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition ${
-        active ? "bg-orange-600 dark:bg-orange-500" : "bg-transparent"
+const TabButton = ({ active, onClick, children }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
+        active
+          ? ""
+          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
       }`}
-    />
-  </button>
-);
+      style={{
+        color: active ? colors.primary : undefined
+      }}
+    >
+      {children}
+      <span
+        className="absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition-all duration-150"
+        style={{
+          backgroundColor: active ? colors.primary : "transparent"
+        }}
+      />
+    </button>
+  );
+};
 
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
   const { data: restaurantData } = useGetRestaurantQuery();
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
@@ -1562,7 +1588,16 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-xs text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-xs text-[#1c1917] outline-none transition focus:ring-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  style={{
+                    borderColor: isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3";
+                  }}
                 />
               </div>
               <button
@@ -1577,15 +1612,18 @@ const prepareFormData = (formData, file) => {
                 data-tour="menu-filters-btn"
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-bold transition-all sm:px-4 ${
-                  isFilterOpen
-                    ? isDarkMode
-                      ? "border-orange-500/50 bg-orange-950/40 text-orange-300 hover:bg-orange-950/60"
-                      : "border-orange-300 bg-orange-100/90 text-orange-850 hover:bg-orange-200/90 shadow-sm"
-                    : isDarkMode
-                      ? "border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-                      : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 shadow-sm"
-                }`}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-bold transition-all sm:px-4 active:scale-[0.98]"
+                style={{
+                  borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                  backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                  color: isDarkMode ? colors.primary : colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                }}
               >
                 <SlidersHorizontal size={14} />
                 <span className="hidden sm:inline">Filters</span>
@@ -1601,7 +1639,16 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-sm text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-sm text-[#1c1917] outline-none transition focus:ring-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  style={{
+                    borderColor: isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3";
+                  }}
                 />
               </div>
             </div>
@@ -1669,25 +1716,30 @@ const prepareFormData = (formData, file) => {
                     <div
                       key={category}
                       data-category-chip={category}
-                      className={`group relative w-full max-w-none overflow-hidden rounded-lg border px-2 py-1.5 transition ${
-                        isActive
-                          ? "border-orange-400 bg-orange-50"
-                          : "border-[#ede8e3] bg-white hover:border-orange-300 hover:bg-[#f7f3ef]"
-                      } dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-slate-600`}
+                      className="group relative w-full max-w-none overflow-hidden rounded-lg border px-2 py-1.5 transition-all duration-150"
+                      style={{
+                        borderColor: isActive
+                          ? colors.primary
+                          : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                        backgroundColor: isActive
+                          ? isDarkMode ? "rgba(30, 41, 59, 0.4)" : colors.primaryLight
+                          : isDarkMode ? "rgba(30, 41, 59, 0.2)" : "#ffffff",
+                      }}
                     >
-                      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
-                      <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
+                      <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `linear-gradient(to bottom, ${colors.primary}, ${colors.primaryHover || colors.primary})` }} />
+                      <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full blur-2xl" style={{ backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}33` }} />
 
                       <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
                         <button
                           type="button"
                           data-tour="menu-drag-category"
                           onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                          className={`order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border px-1.5 py-1 transition active:cursor-grabbing sm:order-2 sm:ml-auto ${
-                             isDarkMode
-                               ? "border-slate-600 bg-slate-700 text-orange-400 hover:bg-slate-600"
-                               : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-                           }`}
+                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border px-1.5 py-1 transition-all duration-150 active:cursor-grabbing sm:order-2 sm:ml-auto"
+                          style={{
+                            borderColor: isDarkMode ? "rgb(71, 85, 105)" : `${colors.primary}33`,
+                            backgroundColor: isDarkMode ? "rgb(51, 65, 85)" : colors.primaryLight,
+                            color: isDarkMode ? colors.primary : colors.primaryText,
+                          }}
                           aria-label={`Drag ${category} to reorder`}
                           title="Hold and drag to reorder"
                         >
@@ -1723,7 +1775,8 @@ const prepareFormData = (formData, file) => {
                     type="button"
                     data-tour="menu-manage-btn"
                     onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
-                    className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300"
+                    className="text-xs font-semibold hover:underline"
+                    style={{ color: colors.primary }}
                   >
                     {isCategoryManagerOpen ? "Close" : "Manage"}
                   </button>
@@ -1745,21 +1798,23 @@ const prepareFormData = (formData, file) => {
                           key={categoryKey}
                           type="button"
                           onClick={() => setSelectedCategory(category.label)}
-                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 py-2.5 text-left text-sm font-semibold transition ${
+                          className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
                             isActive
-                              ? "border-l-orange-500 bg-orange-50 text-orange-700 rounded-r-xl rounded-l-none pl-3 pr-4 shadow-none dark:border-l-orange-500 dark:bg-orange-950/20 dark:text-orange-400"
-                              : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] pl-4 pr-4 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                              ? ""
+                              : isDarkMode
+                                ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
+                                : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
                           }`}
+                          style={isActive ? {
+                            backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                            borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                            color: isDarkMode ? "#ffffff" : colors.primary,
+                            borderLeft: `4px solid ${colors.primary}`,
+                            paddingLeft: "12px"
+                          } : {}}
                         >
                           <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">
                             {category.label}
-                          </span>
-                          <span className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-semibold transition ${
-                            isActive
-                              ? "border-orange-200 bg-orange-100 text-orange-850 dark:border-orange-500/30 dark:bg-orange-950/40 dark:text-orange-350"
-                              : "border-[#ede8e3] bg-[#f7f3ef] text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                          }`}>
-                            {category.items.length}
                           </span>
                         </button>
                       );
@@ -1789,11 +1844,18 @@ const prepareFormData = (formData, file) => {
                       <button
                         type="button"
                         onClick={() => navigate("/admin/menu/add")}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-extrabold transition-all shadow-sm active:scale-[0.97] ${
-                          isDarkMode
-                            ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
-                            : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-                        }`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-extrabold transition-all shadow-sm active:scale-[0.97]"
+                        style={{
+                          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                          backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                          color: isDarkMode ? colors.primary : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                        }}
                         data-tour="menu-add-item-btn"
                       >
                         <CirclePlus size={14} />
@@ -1951,10 +2013,10 @@ const prepareFormData = (formData, file) => {
                                 <button
                                   type="button"
                                   onClick={() => navigate(`/admin/menu/edit/${item._id}`)}
-                                  className="rounded-lg p-1.5 text-[#78716c] transition-colors hover:bg-[#f7f3ef] hover:text-[#1c1917] dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                  className="rounded-lg p-2 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                                   aria-label="Edit menu item"
                                 >
-                                  <Edit size={15} />
+                                  <SquarePen size={15} />
                                 </button>
                                 <button
                                   type="button"
@@ -1964,10 +2026,10 @@ const prepareFormData = (formData, file) => {
                                       name: item.name,
                                     })
                                   }
-                                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-slate-700"
+                                  className="rounded-lg p-2 text-rose-500 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/20"
                                   aria-label="Delete menu item"
                                 >
-                                  <Trash2 size={15} />
+                                  <Trash size={15} />
                                 </button>
                               </div>
                             )}

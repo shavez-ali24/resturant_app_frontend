@@ -235,7 +235,7 @@ export default function TrackOrder() {
                 </span>
               </div>
 
-              {/* Order type + table */}
+              {/* Order type + customer name + phone + table */}
               <div className="mb-3 flex flex-wrap gap-2 text-xs font-semibold">
                 <span
                   className={`rounded-md px-2 py-0.5 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-orange-50 text-orange-700"
@@ -243,6 +243,14 @@ export default function TrackOrder() {
                 >
                   {order?.orderType || "Take Away"}
                 </span>
+                {(order?.customerName || order?.customerPhone || order?.phone) && (
+                  <span
+                    className={`rounded-md px-2 py-0.5 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-gray-100 text-gray-700"
+                      }`}
+                  >
+                    {order.customerName || "Guest"}{(order.customerPhone || order.phone) ? ` · ${order.customerPhone || order.phone}` : ""}
+                  </span>
+                )}
                 {order?.source?.unitName && (
                   <span
                     className={`rounded-md px-2 py-0.5 ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-blue-50 text-blue-700"

@@ -71,7 +71,7 @@ const PendingOrderMobileControls = ({
             onClick={() => setShowConfirmDelete?.(order)}
             className="flex h-9 w-full items-center justify-center rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
           >
-            Cancel
+            Delete
           </button>
         )}
       </div>

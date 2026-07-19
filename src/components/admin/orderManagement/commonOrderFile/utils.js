@@ -435,6 +435,7 @@ export const formatOrderTableId = (tableId, source) => {
     if (s === "outdoor") return "OUT";
     if (s === "rooftop") return "ROOF";
     if (s === "rooms" || s === "room") return "RM";
+    if (s === "table" || s === "tables" || s === "tbl") return "";
     return sec;
   };
 
@@ -444,7 +445,8 @@ export const formatOrderTableId = (tableId, source) => {
     if (String(source.type).toUpperCase() === "ROOM") {
       return `RM ${source.number}`;
     } else {
-      return `${shortSec} TBL ${source.number}`;
+      const prefix = shortSec ? `${shortSec} ` : "";
+      return `${prefix}TBL ${source.number}`;
     }
   }
 
@@ -454,7 +456,8 @@ export const formatOrderTableId = (tableId, source) => {
     if (String(source.type).toUpperCase() === "ROOM") {
       return `RM ${source.unitName}`;
     } else {
-      return `${shortSec} TBL ${source.unitName}`;
+      const prefix = shortSec ? `${shortSec} ` : "";
+      return `${prefix}TBL ${source.unitName}`;
     }
   }
 
@@ -472,6 +475,12 @@ export const formatOrderTableId = (tableId, source) => {
   const raw = String(tableId).trim();
   if (!raw) return "";
 
+  // Remove redundant "Table TBL X" pattern
+  if (/^table\s+tbl\s+(\d+)$/i.test(raw)) {
+    const match = raw.match(/^table\s+tbl\s+(\d+)$/i);
+    return `TBL ${match[1]}`;
+  }
+
   const tableMatch = raw.match(/^table[-_\s]?(\d+)$/i);
   if (tableMatch?.[1]) return `TBL ${tableMatch[1]}`;
 
@@ -483,6 +492,9 @@ export const formatOrderTableId = (tableId, source) => {
     .replace(/\brooftop\b/i, "ROOF")
     .replace(/\brooms?\b/i, "RM")
     .replace(/\btables?\b/i, "TBL");
+
+  // If replaced becomes "TBL TBL X", clean it to "TBL X"
+  replaced = replaced.replace(/\bTBL\s+TBL\b/i, "TBL");
 
   return replaced;
 };

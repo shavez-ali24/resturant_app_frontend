@@ -70,7 +70,7 @@ export default function Category({
         <button
           type="button"
           onClick={() => onCategoryClick?.(null)}
-          className={`h-7 flex-shrink-0 rounded-full px-3 text-xs font-semibold transition-all ${
+          className={`h-7 flex-shrink-0 rounded-xl px-3 text-xs font-semibold transition-all ${
             activeCategory === null && !hasActiveFilter
               ? "client-add-button text-white"
               : "client-add-button-outline"
@@ -101,9 +101,9 @@ export default function Category({
                   key={`cat-${item.category || index}`}
                   type="button"
                   onClick={() => onCategoryClick?.(item.category)}
-                  className={`client-category-chip relative h-[54px] w-[116px] min-w-[116px] flex-shrink-0 overflow-hidden rounded-2xl border border-orange-200/80 transition-all duration-200 shadow-sm hover:shadow-md ${
+                  className={`client-category-chip relative h-[54px] w-[116px] min-w-[116px] flex-shrink-0 overflow-hidden rounded-2xl border border-primary/20 transition-all duration-200 shadow-sm hover:shadow-md ${
                     isActive
-                      ? "border-primary ring-2 ring-primary/30 shadow-[0_10px_20px_rgba(249,115,22,0.24)]"
+                      ? "border-primary ring-2 ring-primary/30 shadow-[0_10px_20px_rgba(239,159,39,0.24)]"
                       : ""
                   }`}
                 >
@@ -127,7 +127,7 @@ export default function Category({
                         className={`absolute bottom-1.5 left-2 inline-flex max-w-[calc(100%-16px)] items-center rounded-md px-2 py-0.5 text-[12px] font-semibold leading-tight backdrop-blur-[3px] shadow-[0_4px_10px_rgba(0,0,0,0.22)] ${
                           isActive
                             ? "bg-white/26 text-white"
-                            : "bg-black/24 text-orange-50"
+                            : "bg-black/24 text-slate-100"
                         }`}
                       >
                         <span className="truncate">{item?.category}</span>

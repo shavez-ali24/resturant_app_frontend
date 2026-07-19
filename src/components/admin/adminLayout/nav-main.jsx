@@ -2,6 +2,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
+import { useSelector } from "react-redux";
 
 import {
   Collapsible,
@@ -23,6 +24,7 @@ export function NavMain({ items, isDarkMode = false }) {
   const location = useLocation();
   const { newlyAddedItemsOrderIds } = useNotification() || {};
   const hasNewItems = newlyAddedItemsOrderIds && newlyAddedItemsOrderIds.size > 0;
+  const colors = useSelector((state) => state.admin.theme.colors);
 
   return (
     <SidebarGroup>
@@ -35,6 +37,7 @@ export function NavMain({ items, isDarkMode = false }) {
           const isActive = item.items
             ? item.items.some((sub) => sub.url === location.pathname)
             : item.url === location.pathname;
+          const isDirectActive = item.url === location.pathname;
 
           return (
             <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
@@ -45,26 +48,40 @@ export function NavMain({ items, isDarkMode = false }) {
                   <button
                     type="button"
                     className={`
-          flex items-center w-full text-left px-3.5 py-2 text-[13px] rounded-xl transition-all duration-150 group
-          group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
-          ${isActive
-            ? isDarkMode
-              ? "!bg-orange-500/10 !text-orange-400 font-bold"
-              : "!bg-orange-50/60 !text-orange-700 font-bold border-l-4 border-l-orange-500 pl-2.5 rounded-r-xl rounded-l-none shadow-none"
-            : isDarkMode
-              ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100 border-l-4 border-l-transparent"
-              : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917] border-l-4 border-l-transparent pl-3.5"
-          }
-        `}
+                      flex items-center w-full text-left py-2 text-[13px] transition-all duration-150 group
+                      group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
+                      ${isDirectActive
+                        ? "font-bold"
+                        : isDarkMode
+                          ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
+                          : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
+                      }
+                    `}
+                    style={{
+                      borderLeft: isDirectActive
+                        ? `4px solid ${colors.primary}`
+                        : '4px solid transparent',
+                      paddingLeft: isDirectActive ? '10px' : '14px',
+                      color: isDirectActive 
+                        ? (isDarkMode ? colors.primary : '#1c1917')
+                        : undefined,
+                      backgroundColor: 'transparent'
+                    }}
                   >
                     <div className="relative mr-2.5 flex shrink-0 group-data-[collapsible=icon]:mr-0">
                       <item.icon
                         className={`
-              w-4 h-4 transition-colors duration-150
-              ${isActive
-                            ? isDarkMode ? "!text-orange-400" : "!text-orange-600"
-                            : isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#87807b] group-hover:text-[#1c1917]"}
-            `}
+                          w-4 h-4 transition-colors duration-150
+                          ${!isDirectActive 
+                            ? (isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#87807b] group-hover:text-[#1c1917]") 
+                            : ""
+                          }
+                        `}
+                        style={{
+                          color: isDirectActive 
+                            ? (isDarkMode ? colors.primary : '#1c1917')
+                            : undefined
+                        }}
                       />
                       {item.title === "Orders" && hasNewItems && (
                         <span className="absolute -top-1 -right-1 flex h-2 w-2">
@@ -79,11 +96,17 @@ export function NavMain({ items, isDarkMode = false }) {
                     {item.items?.length && (
                       <ChevronRight
                         className={`
-              w-3.5 h-3.5 transition-transform duration-150 group-data-[collapsible=icon]:hidden
-              ${isActive
-                            ? isDarkMode ? "rotate-90 !text-orange-400" : "rotate-90 !text-orange-600"
-                            : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#87807b] group-data-[state=open]:rotate-90"}
-            `}
+                          w-3.5 h-3.5 transition-transform duration-150 group-data-[collapsible=icon]:hidden
+                          ${isActive
+                            ? "rotate-90"
+                            : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#87807b] group-data-[state=open]:rotate-90"
+                          }
+                        `}
+                        style={{
+                          color: isDirectActive 
+                            ? (isDarkMode ? colors.primary : '#1c1917')
+                            : undefined
+                        }}
                       />
                     )}
                   </button>
@@ -102,16 +125,26 @@ export function NavMain({ items, isDarkMode = false }) {
                               target={subItem.target || undefined}
                               rel={subItem.target === "_blank" ? "noreferrer" : undefined}
                               className={`
-                       flex items-center justify-between px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-150
-                       ${isSubActive
-                                   ? isDarkMode
-                                     ? "!bg-orange-500/10 !text-orange-400 font-bold"
-                                     : "!bg-orange-50/50 !text-orange-700 font-bold border-l-2 border-l-orange-500 pl-2 rounded-r-lg rounded-l-none"
-                                   : isDarkMode
-                                     ? "text-slate-400 hover:!bg-slate-800 hover:!text-slate-100"
-                                     : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917] pl-3"
-                                 }
-                     `}
+                                flex items-center justify-between py-1.5 text-xs font-semibold transition-colors duration-150
+                                ${isSubActive
+                                  ? "font-extrabold"
+                                  : isDarkMode
+                                    ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
+                                    : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
+                                }
+                              `}
+                              style={{
+                                backgroundColor: 'transparent',
+                                color: isSubActive
+                                  ? (isDarkMode ? colors.primary : '#1c1917')
+                                  : undefined,
+                                borderLeft: isSubActive
+                                  ? `3px solid ${colors.primary}`
+                                  : '3px solid transparent',
+                                paddingLeft: isSubActive ? '10px' : '14px',
+                                borderTopLeftRadius: '0px',
+                                borderBottomLeftRadius: '0px',
+                              }}
                             >
                               <span>{subItem.title}</span>
                               {subItem.title === "Live Orders" && hasNewItems && (

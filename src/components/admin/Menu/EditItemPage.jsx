@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { defaultAddFormState } from "./Lib/constants";
@@ -121,6 +122,7 @@ export default function EditItemPage() {
   const navigate = useNavigate();
   const { itemId } = useParams();
   const notify = useNotify();
+  const colors = useSelector((state) => state.admin.theme.colors);
 
   // ── Dark mode ────────────────────────────────────────────────────────────
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -455,7 +457,8 @@ export default function EditItemPage() {
         <button
           type="button"
           onClick={() => navigate("/admin/menu")}
-          className="text-sm font-semibold text-orange-500 hover:text-orange-600"
+          className="text-sm font-semibold hover:underline"
+          style={{ color: colors.primary }}
         >
           ← Back to Menu
         </button>
@@ -464,16 +467,26 @@ export default function EditItemPage() {
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  const pageBg = isDarkMode ? (colors.dark?.pageBg || "#0f172a") : (colors.pageBg || "#fbfaf8");
+  const textPri = isDarkMode ? (colors.dark?.textPrimary || "#f1f5f9") : (colors.textPrimary || "#1c1917");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#a8a29e");
+
   return (
-    <div className={`flex h-full flex-col ${bg} px-4 py-4 sm:px-6 sm:py-5`}>
+    <div className="flex h-full flex-col px-4 py-4 sm:px-6 sm:py-5" style={{ backgroundColor: pageBg }}>
 
       {/* ── Header row ── */}
       <div className="relative mb-6 flex items-center shrink-0 sm:mb-8">
         <button
           type="button"
           onClick={() => navigate("/admin/menu")}
-          className={`flex items-center gap-1 text-xs font-extrabold transition-all sm:gap-1.5 sm:text-sm ${isDarkMode ? "text-orange-400 hover:text-orange-355" : "text-orange-700 hover:text-orange-850"
-            }`}
+          className="flex items-center gap-1 text-xs font-extrabold transition-all duration-150 active:scale-[0.98] sm:gap-1.5 sm:text-sm"
+          style={{ color: colors.primary }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.primaryHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.primary;
+          }}
         >
           <ArrowLeft size={14} className="sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Back to Menu</span>
@@ -481,12 +494,12 @@ export default function EditItemPage() {
         </button>
         {/* Title centered */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3">
-          <Pencil size={20} className="text-orange-600 dark:text-orange-400 shrink-0 sm:w-6 sm:h-6" />
+          <Pencil size={20} className="shrink-0 sm:w-6 sm:h-6" style={{ color: colors.primary }} />
           <div>
-            <p className={`text-sm font-bold leading-tight sm:text-xl ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+            <p className="text-sm font-black leading-tight sm:text-xl" style={{ color: textPri }}>
               Edit Item
             </p>
-            <p className={`text-[11px] sm:text-sm truncate max-w-[160px] sm:max-w-xs ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+            <p className="text-[11px] sm:text-sm truncate max-w-[160px] sm:max-w-xs font-semibold" style={{ color: textMut }}>
               {itemToEdit?.name || ""}
             </p>
           </div>

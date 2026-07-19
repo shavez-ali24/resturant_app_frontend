@@ -2,11 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 
 export const ADMIN_COLORS = {
   // ── Brand ──────────────────────────────────────────────────────────────────
-  primary: '#f97316',   // orange-500  — buttons, active states, accents
-  primaryHover: '#ea580c',   // orange-600  — button hover
-  primaryLight: '#fff7ed',   // orange-50   — light bg tint
-  primaryMid: '#fed7aa',   // orange-200  — borders, dividers
-  primaryText: '#9a3412',   // orange-800  — text on light bg
+  primary: '#EF9F27',   // custom golden-orange
+  primaryHover: '#e08f1b',   // hover
+  primaryLight: '#fffbeb',   // light bg tint
+  primaryMid: '#fde68a',   // borders, dividers
+  primaryText: '#b45309',   // text on light bg
 
   // ── Page background ────────────────────────────────────────────────────────
   pageBg: '#fbfaf8',   // warm cream  — main content area

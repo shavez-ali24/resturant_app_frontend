@@ -13,7 +13,12 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
+import { useSelector } from 'react-redux';
+
 export default function ProfileDetails({ profileData }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+
   const userRole = localStorage.getItem("userRole") || "";
   const isStaff = userRole === "staff";
   const emailOfAdmin = localStorage.getItem("userEmail") || "";
@@ -21,15 +26,17 @@ export default function ProfileDetails({ profileData }) {
   const cardClass =
     "overflow-hidden rounded-2xl border border-[#ede8e3] bg-white shadow-sm dark:border-slate-700 dark:bg-[#1e293b]";
   const headerClass =
-    "border-b border-[#ede8e3]/50 px-6 py-4 dark:border-slate-700/50 bg-[#fff8f5] dark:bg-orange-950/20";
-  const titleRowClass = "flex items-center gap-2.5 text-base font-extrabold text-orange-700 dark:text-orange-400";
+    "border-b border-[#ede8e3]/50 px-6 py-4 dark:border-slate-700/50";
 
   if (isStaff) {
     return (
       <div className={cardClass}>
-        <div className={headerClass}>
-          <h2 className={titleRowClass}>
-            <Users className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0" />
+        <div 
+          className={headerClass}
+          style={{ backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight }}
+        >
+          <h2 className="flex items-center gap-2.5 text-base font-extrabold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
+            <Users className="h-5 w-5 shrink-0" style={{ color: colors.primary }} />
             Staff Information
           </h2>
         </div>
@@ -54,7 +61,7 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 1: Business Profile */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Store className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <Store className="h-4 w-4" style={{ color: colors.primary }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Business Profile
             </h3>
@@ -80,7 +87,7 @@ export default function ProfileDetails({ profileData }) {
             {/* Billing & Taxes Column */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <Building className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <Building className="h-4 w-4" style={{ color: colors.primary }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Billing & Taxes
                 </h3>
@@ -96,7 +103,7 @@ export default function ProfileDetails({ profileData }) {
             {/* Service Modes Column */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <SlidersHorizontal className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <SlidersHorizontal className="h-4 w-4" style={{ color: colors.primary }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Service Modes
                 </h3>
@@ -113,14 +120,20 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 3: Brand Identity */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Image className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <Image className="h-4 w-4" style={{ color: colors.primary }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Brand Identity
             </h3>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {profileData?.logo ? (
-              <div className="relative overflow-hidden rounded-xl border border-orange-100 bg-[#fff8f5] p-2 dark:border-slate-700 dark:bg-slate-800 shrink-0">
+              <div 
+                className="relative overflow-hidden rounded-xl border p-2 shrink-0 animate-in fade-in duration-300"
+                style={{
+                  borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}20`,
+                  backgroundColor: isDarkMode ? `${colors.primary}10` : colors.primaryLight,
+                }}
+              >
                 <img
                   src={profileData?.logo?.url}
                   alt="Logo"
@@ -128,8 +141,14 @@ export default function ProfileDetails({ profileData }) {
                 />
               </div>
             ) : (
-              <div className="flex h-20 w-32 items-center justify-center rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 shrink-0">
-                <Image className="h-8 w-8 text-orange-300" />
+              <div 
+                className="flex h-20 w-32 items-center justify-center rounded-xl border-2 border-dashed shrink-0"
+                style={{
+                  borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                  backgroundColor: isDarkMode ? `${colors.primary}10` : colors.primaryLight,
+                }}
+              >
+                <Image className="h-8 w-8" style={{ color: colors.primary, opacity: 0.6 }} />
               </div>
             )}
             <div className="min-w-0">

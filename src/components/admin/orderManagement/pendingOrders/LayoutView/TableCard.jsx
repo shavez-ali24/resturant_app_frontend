@@ -1,48 +1,60 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/TableCard.jsx
 import React from "react";
+import { useSelector } from "react-redux";
 import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
-// Prompt-specified colors + existing extended statuses
-const getStatusBg = (status, rawStatus, isDark) => {
-  // Priority: raw backend status for rooms
-  if (rawStatus === "AVAILABLE") {
-    return { bg: isDark ? "#1e293b" : "#ffffff", border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` };
-  }
-  if (rawStatus === "OCCUPIED") {
-    return { bg: isDark ? "#3a3520" : "#fefce8", border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` };
-  }
-  if (rawStatus === "BILLED") {
-    return { bg: isDark ? "#1a3a2a" : "#dcfce7", border: `1.5px solid ${isDark ? "#22c55e" : "#4ade80"}` };
+const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
+  const primaryColor = themeColors?.primary || "#EF9F27";
+
+  // AVAILABLE / Blank status
+  if (rawStatus === "AVAILABLE" || status === "blank") {
+    return {
+      bg: isDark ? "rgba(30, 41, 59, 0.2)" : "#ffffff",
+      border: `1.5px solid ${isDark ? "#334155" : "#f1f0ee"}`,
+      labelColor: isDark ? "#64748b" : "#a8a29e",
+      numColor: isDark ? "#ffffff" : "#1c1917"
+    };
   }
 
-  // Fallback to derived status for food tables
-  const map = {
-    blank: { bg: isDark ? "#1e293b" : "#ffffff", border: `1.5px dashed ${isDark ? "#475569" : "#d6cfc8"}` },
-    running: { bg: isDark ? "#3a3520" : "#FFFDE7", border: `1.5px solid ${isDark ? "#eab308" : "#FDE047"}` },
-    running_kot: { bg: isDark ? "#1e3a5f" : "#EBF5FF", border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
-    printed: { bg: isDark ? "#1e3a5f" : "#EBF5FF", border: `1.5px solid ${isDark ? "#3b82f6" : "#93C5FD"}` },
-    paid: { bg: isDark ? "#1a3a2a" : "#EFFFEF", border: `1.5px solid ${isDark ? "#22c55e" : "#86EFAC"}` },
-    booked: { bg: isDark ? "#3a3520" : "#fefce8", border: `1.5px solid ${isDark ? "#fde047" : "#fde047"}` },
+  // OCCUPIED / running statuses
+  if (
+    rawStatus === "OCCUPIED" ||
+    status === "running" ||
+    status === "running_kot" ||
+    status === "printed" ||
+    status === "booked"
+  ) {
+    return {
+      bg: hovered
+        ? (isDark ? `${primaryColor}33` : `${primaryColor}10`)
+        : (isDark ? `${primaryColor}1a` : `${primaryColor}05`),
+      border: `1.5px solid ${primaryColor}`,
+      labelColor: isDark ? primaryColor : (themeColors?.primaryText || primaryColor),
+      numColor: isDark ? "#ffffff" : "#1c1917"
+    };
+  }
+
+  // BILLED / paid statuses
+  if (rawStatus === "BILLED" || status === "paid" || status === "billed") {
+    return {
+      bg: hovered
+        ? "rgba(34, 197, 94, 0.2)"
+        : "rgba(34, 197, 94, 0.05)",
+      border: "1.5px solid rgba(34, 197, 94, 0.5)",
+      labelColor: isDark ? "#4ade80" : "#15803d",
+      numColor: isDark ? "#ffffff" : "#1c1917"
+    };
+  }
+
+  // Fallback
+  return {
+    bg: isDark ? "#1e293b" : "#ffffff",
+    border: `1.5px solid ${isDark ? "#475569" : "#ede8e3"}`,
+    labelColor: isDark ? "#94a3b8" : "#78716c",
+    numColor: isDark ? "#ffffff" : "#1c1917"
   };
-  return map[status] || map.blank;
-};
-
-const getStatusText = (status, rawStatus, isDark) => {
-  if (rawStatus === "AVAILABLE") return isDark ? "#64748b" : "#78716c";
-  if (rawStatus === "OCCUPIED") return isDark ? "#fde047" : "#854d0e";
-  if (rawStatus === "BILLED") return isDark ? "#86efac" : "#166534";
-
-  const map = {
-    blank: isDark ? "#64748b" : "#a8a29e",
-    running: isDark ? "#fde047" : "#854d0e",
-    running_kot: isDark ? "#93c5fd" : "#1e40af",
-    printed: isDark ? "#93c5fd" : "#1e40af",
-    paid: isDark ? "#86efac" : "#166534",
-    booked: isDark ? "#fde047" : "#854d0e",
-  };
-  return map[status] || map.blank;
 };
 
 const ICON_BTN = (isDark) => ({
@@ -72,6 +84,9 @@ const TableCard = React.memo(function TableCard({
   isDarkMode = false,
   newlyAddedItemsOrderIds,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const [isHovered, setIsHovered] = React.useState(false);
+
   const {
     tableNumber,
     status,
@@ -83,11 +98,10 @@ const TableCard = React.memo(function TableCard({
 
   const isRoom = unitType === "ROOM";
   const isAvailable = rawStatus === "AVAILABLE" || status === "blank";
-  const isOccupied = rawStatus === "OCCUPIED";
-  const isBilled = rawStatus === "BILLED";
+  const isOccupied = rawStatus === "OCCUPIED" || status === "running" || status === "running_kot" || status === "printed" || status === "booked";
+  const isBilled = rawStatus === "BILLED" || status === "paid" || status === "billed";
 
-  const bgInfo = getStatusBg(status, rawStatus, isDarkMode);
-  const textColor = getStatusText(status, rawStatus, isDarkMode);
+  const cardStyle = getCardStyle(rawStatus, status, isDarkMode, colors, isHovered);
 
   const { newlyAddedItemsOrderIds: ctxOrderIds, setNewlyAddedItemsOrderIds } = useNotification() || {};
 
@@ -138,25 +152,30 @@ const TableCard = React.memo(function TableCard({
   const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
 
   const orderId = table.currentOrderId || table.orderId;
-  // Use context directly so it works even if prop chain is broken (LayoutView doesn't forward the prop)
   const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
   const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
+
+  // Prefix T to numeric numbers only for tables (not rooms)
+  const displayNum = !isRoom && /^\d+$/.test(String(tableNumber || "")) ? `T${tableNumber}` : tableNumber;
 
   return (
     <div
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`transition-all duration-200 active:scale-95 ${!isAvailable ? "hover:shadow-md hover:-translate-y-0.5" : ""}`}
       style={{
-        width: 120,
-        height: 130,
-        borderRadius: 8,
+        width: 140,
+        height: 112,
+        borderRadius: 14,
         cursor: isLoading ? "wait" : "pointer",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        background: bgInfo.bg,
-        border: bgInfo.border,
+        background: cardStyle.bg,
+        border: cardStyle.border,
         boxSizing: "border-box",
         opacity: isLoading ? 0.55 : 1,
       }}
@@ -193,25 +212,25 @@ const TableCard = React.memo(function TableCard({
 
       {/* Top status / time */}
       {!hasNewClientItems && (
-        <div style={{ position: "absolute", top: 8, fontSize: 11, fontWeight: 800, color: textColor, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-          {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : elapsed != null ? `${elapsed} MINS` : ""}
+        <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: cardStyle.labelColor, textTransform: "uppercase", letterSpacing: "0.6px" }}>
+          {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : "OCCUPIED"}
         </div>
       )}
 
-      {/* Main number - styled duller and slightly larger */}
-      <div style={{ fontSize: 19, fontWeight: 700, color: isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.3)", marginTop: 12 }}>
-        {tableNumber}
+      {/* Main number - bold dark, matches mockup */}
+      <div style={{ fontSize: 20, fontWeight: 700, color: cardStyle.numColor, marginTop: 14 }}>
+        {displayNum}
       </div>
 
       {/* Room category + price or table amount */}
       {!isAvailable && (
-        <div style={{ fontSize: 15, color: textColor, marginTop: 4, fontWeight: 800, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, color: cardStyle.labelColor, marginTop: 2, fontWeight: 700, textAlign: 'center' }}>
           {table.currentAmount != null ? (
             formatAmount(table.currentAmount)
           ) : isRoom && roomCategory ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 10 }}>
               <span style={{ opacity: 0.8, fontWeight: 500 }}>{roomCategory.name}</span>
-              {roomCategory.pricePerNight ? <span style={{ fontSize: 14, fontWeight: 800 }}>{formatAmount(roomCategory.pricePerNight)}</span> : ''}
+              {roomCategory.pricePerNight ? <span style={{ fontSize: 13, fontWeight: 800 }}>{formatAmount(roomCategory.pricePerNight)}</span> : ''}
             </div>
           ) : ''}
         </div>
@@ -219,20 +238,20 @@ const TableCard = React.memo(function TableCard({
 
       {/* Bottom icons - only for occupied TABLES */}
       {showBottomIcons && (
-        <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10 }}>
+        <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10, zIndex: 10 }}>
           <button
             onClick={isBilled ? (e) => { e.stopPropagation(); onPay?.(table); } : handleEdit}
             style={ICON_BTN(isDarkMode)}
             title={isBilled ? "Pay Order" : "Edit Order"}
           >
-            {isBilled ? <IndianRupee size={22} /> : <SquarePen size={22} />}
+            {isBilled ? <IndianRupee size={18} /> : <SquarePen size={18} />}
           </button>
           <button
             onClick={handlePrint}
             style={ICON_BTN(isDarkMode)}
             title="Print"
           >
-            <Printer size={22} />
+            <Printer size={18} />
           </button>
           {!isBilled && (
             <button
@@ -240,7 +259,7 @@ const TableCard = React.memo(function TableCard({
               style={ICON_BTN(isDarkMode)}
               title="Move Table/Room"
             >
-              <Move size={22} />
+              <Move size={18} />
             </button>
           )}
         </div>

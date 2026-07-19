@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   useGetStaffQuery,
@@ -15,7 +16,7 @@ import {
   EyeOff,
   X,
   SquarePen,
-  Trash2,
+  Trash,
   ArrowLeft,
 } from "lucide-react";
 import Heading from "../common/Heading";
@@ -60,19 +61,45 @@ const StaffManagement = () => {
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [formError, setFormError] = useState("");
 
+  const colors = useSelector((state) => state.admin.theme.colors);
+
   // ── theme helpers ──────────────────────────────────────────────────────────
-  const bg      = isDarkMode ? "bg-[#0f172a]"  : "bg-[#f7f3ef]";
+  const bg      = isDarkMode ? "bg-[#0f172a]"  : "bg-[#fbfaf8]";
   const card    = isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white";
   const tp      = isDarkMode ? "text-slate-100" : "text-[#1c1917]";
   const ts      = isDarkMode ? "text-slate-400" : "text-[#78716c]";
   const divider = isDarkMode ? "border-slate-700" : "border-[#ede8e3]";
-  const inputCls = `h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 ${
+  const inputCls = `h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
     isDarkMode
-      ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 hover:border-slate-500 focus:border-orange-500 dark:focus:ring-orange-500/20"
-      : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] hover:border-[#d6cfc8] focus:border-orange-400"
+      ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500"
+      : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e]"
   }`;
   const rowHover = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-[#faf7f4]";
   const rowBorder = isDarkMode ? "border-slate-700" : "border-[#f0ebe5]";
+
+  const inputBaseStyle = {
+      borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+  };
+  const handleInputFocus = (e) => {
+      e.currentTarget.style.borderColor = colors.primary;
+      e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+  };
+  const handleInputBlur = (e) => {
+      e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+      e.currentTarget.style.boxShadow = "none";
+  };
+
+  const btnStyle = {
+      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+      backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+      color: isDarkMode ? colors.primary : colors.primaryText,
+  };
+  const handleMouseEnter = (e) => {
+      e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}35` : `${colors.primary}22`;
+  };
+  const handleMouseLeave = (e) => {
+      e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+  };
 
   // ── input handlers ─────────────────────────────────────────────────────────
   const sanitizeNameInput  = (v = "") => String(v).replace(/[^A-Za-z\s]/g, "").replace(/\s{2,}/g, " ");
@@ -144,13 +171,16 @@ const StaffManagement = () => {
   );
 
   return (
-    <div className={`flex h-full flex-col overflow-hidden ${bg} px-3 py-3 sm:px-4 sm:py-4 md:px-6`}>
+    <div 
+      className="flex h-full flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 md:px-6 animate-in fade-in duration-300"
+      style={{ backgroundColor: isDarkMode ? "#0f172a" : (colors.pageBg || "#fbfaf8") }}
+    >
 
       {/* ── Add / Edit Modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/45 backdrop-blur-[2px]" onClick={handleCloseModal} />
-          <div className={`relative z-10 w-full max-w-md rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.45)] ${card}`}>
+          <div className={`relative z-10 w-full max-w-md rounded-2xl border shadow-xl ${card}`}>
             {/* Close */}
             <button onClick={handleCloseModal} className={`absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#a8a29e] hover:bg-[#f7f3ef] hover:text-[#1c1917]"}`}>
               <X size={18} />
@@ -158,7 +188,14 @@ const StaffManagement = () => {
             {/* Header */}
             <div className={`rounded-t-2xl border-b p-5 pb-4 ${divider} ${isDarkMode ? "bg-slate-800/60" : "bg-[#f7f3ef]"}`}>
               <h2 className={`flex items-center gap-2.5 text-lg font-semibold ${tp}`}>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200 bg-[#fff8f5] text-orange-600 dark:border-orange-500/30 dark:bg-orange-950/20 dark:text-orange-400 shadow-sm shrink-0">
+                <div 
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm shrink-0"
+                  style={{
+                    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                    backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                    color: colors.primary
+                  }}
+                >
                   {isEditing ? <SquarePen size={16} /> : <Plus size={16} />}
                 </div>
                 {isEditing ? "Edit Staff" : "Add New Staff"}
@@ -177,7 +214,18 @@ const StaffManagement = () => {
               ].map(({ id, label, type, placeholder }) => (
                 <div key={id} className="space-y-1.5">
                   <label htmlFor={id} className={`block text-xs font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>{label}</label>
-                  <input id={id} name={id} type={type} value={formData[id]} onChange={handleInputChange} placeholder={placeholder} className={inputCls} />
+                  <input 
+                    id={id} 
+                    name={id} 
+                    type={type} 
+                    value={formData[id]} 
+                    onChange={handleInputChange} 
+                    placeholder={placeholder} 
+                    className={inputCls} 
+                    style={inputBaseStyle}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                  />
                 </div>
               ))}
               <div className="space-y-1.5">
@@ -185,7 +233,18 @@ const StaffManagement = () => {
                   {isEditing ? "New Password (optional)" : "Password"}
                 </label>
                 <div className="relative">
-                  <input id="password" name="password" type={showPassword ? "text" : "password"} value={formData.password} onChange={handleInputChange} placeholder={isEditing ? "Leave blank to keep current" : "Enter password"} className={`${inputCls} pr-10`} />
+                  <input 
+                    id="password" 
+                    name="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={formData.password} 
+                    onChange={handleInputChange} 
+                    placeholder={isEditing ? "Leave blank to keep current" : "Enter password"} 
+                    className={`${inputCls} pr-10`} 
+                    style={inputBaseStyle}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                  />
                   <button type="button" onClick={() => setShowPassword((v) => !v)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors ${isDarkMode ? "text-slate-400 hover:text-slate-100" : "text-[#a8a29e] hover:text-[#1c1917]"}`}>
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -200,7 +259,10 @@ const StaffManagement = () => {
               <button
                 onClick={handleSubmit}
                 disabled={isCreating || isUpdating}
-                className="h-9 flex-1 rounded-lg border border-orange-200 bg-[#fff8f5] text-sm font-semibold text-orange-700 transition-colors hover:bg-[#ffedd5] hover:border-orange-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm"
+                className="h-9 flex-1 rounded-lg border text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+                style={btnStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 {isCreating || isUpdating ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Staff" : "Create Staff")}
               </button>
@@ -244,13 +306,23 @@ const StaffManagement = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/admin/profile")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-200 bg-white text-orange-600 hover:bg-[#fff8f5] hover:text-orange-700 hover:border-orange-300 dark:border-orange-500/30 dark:bg-orange-950/10 dark:text-orange-400 dark:hover:bg-orange-950/20 dark:hover:text-orange-300 transition-all duration-150 shadow-sm shrink-0"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-150 shadow-sm shrink-0"
+              style={btnStyle}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
               title="Back to Profile"
             >
               <ArrowLeft size={16} />
             </button>
             <Heading title="Staff Management" />
-            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-[#ede8e3] bg-[#f7f3ef] text-[#78716c]"}`}>
+            <span 
+              className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
+              style={{
+                borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                color: isDarkMode ? colors.primary : colors.primaryText,
+              }}
+            >
               {filteredStaff.length}
             </span>
           </div>
@@ -264,12 +336,18 @@ const StaffManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`${inputCls} pl-8`}
+                style={inputBaseStyle}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
               />
             </div>
             <button
               data-tour="staff-add-btn"
               onClick={handleAddNew}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-orange-200 bg-[#fff8f5] px-3 text-sm font-semibold text-orange-700 transition-colors hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-5 text-sm font-semibold transition-colors shadow-sm"
+              style={btnStyle}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
               <Plus size={15} />
               <span className="hidden sm:inline">Add Staff</span>
@@ -297,7 +375,7 @@ const StaffManagement = () => {
                 <tr>
                   <td colSpan={5} className="py-16 text-center">
                     <div className={`flex items-center justify-center gap-2 text-sm ${ts}`}>
-                      <Users size={18} className="animate-pulse text-orange-500" />
+                      <Users size={18} className="animate-pulse" style={{ color: colors.primary }} />
                       Loading staff...
                     </div>
                   </td>
@@ -306,7 +384,7 @@ const StaffManagement = () => {
                 <tr>
                   <td colSpan={5} className="py-16 text-center">
                     <div className={`flex flex-col items-center gap-2 text-sm ${ts}`}>
-                      <Users size={36} className="text-orange-200" />
+                      <Users size={36} style={{ color: colors.primary, opacity: 0.3 }} />
                       <p>{searchTerm ? "No staff found matching your search." : "No staff members yet. Add your first one."}</p>
                     </div>
                   </td>
@@ -316,15 +394,25 @@ const StaffManagement = () => {
                   <tr key={member._id} className={`transition-colors ${rowHover}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-100">
-                          <Users size={14} className="text-orange-600" />
+                        <div 
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                          style={{ backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight }}
+                        >
+                          <Users size={14} style={{ color: colors.primary }} />
                         </div>
                         <span className={`text-sm font-medium ${tp}`}>{member.name}</span>
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-sm ${ts}`}>{member.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${isDarkMode ? "border-orange-500/30 bg-orange-500/10 text-orange-400" : "border-orange-200 bg-orange-50 text-orange-700"}`}>
+                      <span 
+                        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                        style={{
+                          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                          backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                          color: isDarkMode ? colors.primary : colors.primaryText,
+                        }}
+                      >
                         {member.role}
                       </span>
                     </td>
@@ -333,11 +421,21 @@ const StaffManagement = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleEdit(member)} className={`rounded-lg p-1.5 transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"}`} aria-label="Edit" title="Edit staff">
+                        <button 
+                          onClick={() => handleEdit(member)} 
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors" 
+                          aria-label="Edit" 
+                          title="Edit staff"
+                        >
                           <SquarePen size={15} />
                         </button>
-                        <button onClick={() => handleDeleteClick(member)} className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700" aria-label="Delete" title="Delete staff">
-                          <Trash2 size={15} />
+                        <button 
+                          onClick={() => handleDeleteClick(member)} 
+                          className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 transition-colors" 
+                          aria-label="Delete" 
+                          title="Delete staff"
+                        >
+                          <Trash size={15} />
                         </button>
                       </div>
                     </td>

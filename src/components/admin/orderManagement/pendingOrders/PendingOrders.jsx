@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../../../features/cartSlice";
 import { useNotification } from "../../Bell/NotificationContext";
 import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move } from "lucide-react";
@@ -93,6 +93,7 @@ const checkAndClearAdminModifiedOrderId = (id) => {
 };
 
 const Orders = () => {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds, newItemsByOrderId, setNewItemsByOrderId } = useNotification();
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
     if (typeof document === "undefined") return false;
@@ -1340,7 +1341,8 @@ const Orders = () => {
               refetchReadyOrders();
               refetchCompletedOrders();
             }}
-            className={`flex items-center gap-1.5 text-sm font-extrabold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-350" : "text-orange-700 hover:text-orange-850"}`}
+            className="flex items-center gap-1.5 text-sm font-extrabold transition-colors hover:opacity-85"
+            style={{ color: colors.primary }}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Live Orders
@@ -1349,7 +1351,7 @@ const Orders = () => {
         <div className="flex-1 overflow-hidden">
           <Suspense fallback={
             <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
-              <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+              <div className="h-8 w-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: colors.primary, borderTopColor: 'transparent' }} />
             </div>
           }>
             <AdminOrderPanel
@@ -1392,7 +1394,8 @@ const Orders = () => {
               refetchReadyOrders();
               refetchCompletedOrders();
             }}
-            className={`flex items-center gap-1.5 text-sm font-extrabold transition-colors ${isDarkMode ? "text-orange-400 hover:text-orange-350" : "text-orange-700 hover:text-orange-850"}`}
+            className="flex items-center gap-1.5 text-sm font-extrabold transition-colors hover:opacity-85"
+            style={{ color: colors.primary }}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Live Orders
@@ -1401,7 +1404,7 @@ const Orders = () => {
         <div className="flex-1 overflow-hidden">
           <Suspense fallback={
             <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
-              <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+              <div className="h-8 w-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: colors.primary, borderTopColor: 'transparent' }} />
             </div>
           }>
             {isUrlFetching ? (
@@ -1461,49 +1464,48 @@ const Orders = () => {
         className="mb-4 flex flex-shrink-0 flex-col gap-3.5 px-1 py-1 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-center gap-2.5">
-          <Heading title="Live Orders" showDot />
+          <Heading title="Live orders" showDot={false} />
         </div>
-        <div className="flex w-full items-center justify-between gap-2.5 sm:w-auto sm:justify-end sm:gap-3">
+        <div className="flex w-full items-center justify-between gap-6 sm:w-auto sm:justify-end sm:gap-6">
           {/* ── View Toggle ── */}
-          <div className={`flex items-center rounded-2xl border p-1 shadow-sm ${isDarkMode ? "border-slate-700 bg-slate-800" : "border-[#ede8e3] bg-white"}`}>
+          <div className="flex items-center gap-5">
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "table"); setViewMode("table"); }}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "table"
-                ? isDarkMode ? "bg-orange-950/30 border border-orange-500/50 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
-                : isDarkMode
-                  ? "text-slate-400 border border-transparent hover:text-slate-200"
-                  : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
+              className={`text-sm font-semibold transition-all duration-150 whitespace-nowrap shrink-0 pb-1 border-b-2 ${viewMode === "table"
+                ? "font-bold text-[#1c1917] dark:text-slate-100"
+                : "text-slate-400 dark:text-slate-500 hover:text-[#1c1917] dark:hover:text-slate-100"
                 }`}
+              style={{
+                borderBottomColor: viewMode === "table" ? colors.primary : 'transparent'
+              }}
               title="Table View"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-              <span>Table</span>
+              Table
             </button>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all sm:text-sm whitespace-nowrap shrink-0 ${viewMode === "layout"
-                ? isDarkMode ? "bg-orange-950/30 border border-orange-500/40 text-orange-400" : "bg-orange-50 border border-orange-200/80 text-orange-700 font-extrabold shadow-sm"
-                : isDarkMode
-                  ? "text-slate-400 border border-transparent hover:text-slate-200"
-                  : "text-[#57524e] border border-transparent hover:text-[#1c1917]"
+              className={`text-sm font-semibold transition-all duration-150 whitespace-nowrap shrink-0 pb-1 border-b-2 ${viewMode === "layout"
+                ? "font-bold text-[#1c1917] dark:text-slate-100"
+                : "text-slate-400 dark:text-slate-500 hover:text-[#1c1917] dark:hover:text-slate-100"
                 }`}
+              style={{
+                borderBottomColor: viewMode === "layout" ? colors.primary : 'transparent'
+              }}
               title="Layout View"
             >
-              <LayoutGrid className="h-3.5 w-3.5" strokeWidth={2.5} />
-              <span>Layout</span>
+              Layout
             </button>
           </div>
           {/* ── Create Order Button (right side) ── */}
           <button
             onClick={() => setSearchParams({ view: "create" })}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition-all sm:text-sm shadow-sm active:scale-[0.97] whitespace-nowrap shrink-0 ${isDarkMode
-              ? "bg-orange-950/20 border border-orange-500/35 text-orange-400 hover:bg-orange-950/40"
-              : "bg-[#fff8f5] border border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-              }`}
+            className="flex items-center justify-center rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:opacity-90 active:scale-[0.97] sm:text-sm whitespace-nowrap shrink-0"
+            style={{
+              backgroundColor: colors.primary
+            }}
             title="Create New Order"
           >
-            <Plus className="h-4 w-4" strokeWidth={3} />
-            <span>Create Order</span>
+            <span>+ Create order</span>
           </button>
         </div>
       </div>
@@ -1549,7 +1551,7 @@ const Orders = () => {
           data-tour="orders-table"
           className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${isDarkMode
             ? "border-slate-700/60 bg-[#1e293b]"
-            : "border-[#ede8e3] bg-white"
+            : "border-slate-100 bg-white"
             }`}
         >
           <Suspense

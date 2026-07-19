@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSelector } from "react-redux";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const SearchIcon = (props) => (
@@ -40,6 +41,8 @@ const availabilityOptions = [
 // ── FilterDropdown ────────────────────────────────────────────────────────────
 function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onToggle, isInModal = false }) {
   const ref = useRef(null);
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -58,14 +61,19 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
       <button
         type="button"
         onClick={onToggle}
-        className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-orange-200 ${
+        className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-orange-200/20 ${
           isActive
-            ? "border-orange-400 bg-orange-50 text-orange-600 dark:border-orange-500/60 dark:bg-orange-500/10 dark:text-orange-300"
+            ? ""
             : "border-[#ede8e3] bg-white text-[#44403c] hover:border-[#d6cfc8] hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600"
         }`}
+        style={isActive ? {
+          backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+          color: isDarkMode ? colors.primary : colors.primaryText,
+        } : {}}
       >
         <span className="truncate">
-          {label}: <span className="font-bold">{displayLabel}</span>
+          {label}: <span className="font-black">{displayLabel}</span>
         </span>
         <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""} text-[#a8a29e] dark:text-slate-500`} />
       </button>
@@ -73,21 +81,28 @@ function FilterDropdown({ label, options, selectedValue, onSelect, isOpen, onTog
       {isOpen && (
         <div className="absolute z-50 mt-1.5 w-full min-w-[160px] overflow-hidden rounded-lg border border-[#ede8e3] bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
           <div className="max-h-[160px] overflow-y-auto">
-          {options.map((option) => (
-            <button
-              key={String(option.value)}
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => onSelect(option.value)}
-              className={`block w-full px-3 py-2 text-left text-xs font-medium transition-colors ${
-                String(option.value) === String(selectedValue)
-                  ? "bg-[#f7f3ef] font-semibold text-orange-500 dark:bg-slate-800 dark:text-orange-300"
-                  : "text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+          {options.map((option) => {
+            const isItemActive = String(option.value) === String(selectedValue);
+            return (
+              <button
+                key={String(option.value)}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onSelect(option.value)}
+                className={`block w-full px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                  isItemActive
+                    ? ""
+                    : "text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800"
+                }`}
+                style={isItemActive ? {
+                  backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "rgb(247, 243, 239)",
+                  color: colors.primary,
+                } : {}}
+              >
+                {option.label}
+              </button>
+            );
+          })}
           </div>
         </div>
       )}
@@ -133,6 +148,7 @@ function FilterControls({
   isInModal = false, showSearch = true,
 }) {
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+  const colors = useSelector((state) => state.admin.theme.colors);
   return (
     <>
       {showSearch && (
@@ -145,7 +161,16 @@ function FilterControls({
             id="search"
             value={filters.search}
             onChange={handleSearchChange}
-            className="h-9 w-full rounded-lg border border-[#ede8e3] bg-white pl-9 pr-3 text-xs text-[#1c1917] outline-none transition hover:border-[#d6cfc8] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-500"
+            className="h-9 w-full rounded-lg border border-[#ede8e3] bg-white pl-9 pr-3 text-xs text-[#1c1917] outline-none transition hover:border-[#d6cfc8] focus:ring-2 focus:ring-orange-200/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            style={{
+              borderColor: isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = colors.primary;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3";
+            }}
             placeholder="Search by name or category..."
           />
         </div>
@@ -184,11 +209,18 @@ function FilterControls({
       <button
         type="button"
         onClick={handleResetFilters}
-        className={`h-9 w-full flex-shrink-0 rounded-lg px-3 text-xs font-extrabold transition-all border md:w-auto ${
-          isDarkMode
-            ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
-            : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-        }`}
+        className="h-9 w-full flex-shrink-0 rounded-lg px-3 text-xs font-extrabold transition-all duration-150 border md:w-auto active:scale-[0.98]"
+        style={{
+          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+          backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+          color: isDarkMode ? colors.primary : colors.primaryText,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+        }}
       >
         Reset
       </button>
@@ -200,6 +232,7 @@ function FilterControls({
 export default function MenuFilter({
   onFilterChange, categories, value, onResetNotify, layout = "auto", showSearch = true,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
   const isControlled = value != null && typeof onFilterChange === "function";
   const isPanelLayout = layout === "panel";
@@ -291,11 +324,18 @@ export default function MenuFilter({
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className={`mt-1 h-9 w-full rounded-lg border text-xs font-extrabold transition-all ${
-              isDarkMode
-                ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
-                : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-            }`}
+            className="mt-1 h-9 w-full rounded-lg border text-xs font-extrabold transition-all duration-150 active:scale-[0.98]"
+            style={{
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+            }}
           >
             Apply Filters
           </button>

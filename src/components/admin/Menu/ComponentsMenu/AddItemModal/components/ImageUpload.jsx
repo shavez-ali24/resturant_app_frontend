@@ -1,17 +1,5 @@
-/**
- * ImageUpload.jsx  (menu items — Add & Edit pages)
- * Adds crop / zoom / reposition via ImageCropperModal.
- * The cropped File is passed back through handleFileChange as a synthetic event
- * so existing form handlers (handleAddFormFileChange) work unchanged.
- *
- * Props (unchanged from original):
- *   addFile          — current File object in state
- *   addFileError     — validation error string
- *   handleFileChange — (e) => void  (called with synthetic event)
- *   existingImageUrl — optional current image URL (edit mode)
- */
-
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useSelector } from "react-redux";
 import { CheckCircle, Image, Crop, X } from "lucide-react";
 import ErrorDisplay from "./ErrorDisplay";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_KB } from "../../../Lib/constants";
@@ -29,6 +17,10 @@ const ImageUpload = ({
   const [rawFile, setRawFile]         = useState(null);
   const [rawPreview, setRawPreview]   = useState("");
   const [showCropper, setShowCropper] = useState(false);
+  const [hovered, setHovered]         = useState(false);
+
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   // Preview of the final (cropped) file
   const croppedPreviewUrl = useMemo(
@@ -112,11 +104,17 @@ const ImageUpload = ({
 
         {/* Upload / preview area */}
         <div
-          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer ${
             addFileError
               ? "border-red-400 bg-red-50 dark:bg-red-900/20"
-              : "border-[#d6cfc8] bg-[#f7f3ef] hover:border-orange-400 hover:bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-orange-500 dark:hover:bg-slate-700/60"
+              : "border-[#d6cfc8] bg-[#f7f3ef] dark:border-slate-600 dark:bg-slate-800/60"
           } ${displayUrl ? "flex w-fit" : "flex w-full"}`}
+          style={(!addFileError && hovered) ? {
+            borderColor: colors.primary,
+            backgroundColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}15`,
+          } : {}}
           onClick={() => fileInputRef.current?.click()}
         >
           <div className={`relative ${displayUrl ? "" : "flex items-center justify-center min-h-[100px] max-h-44 w-full"}`}>
@@ -184,7 +182,8 @@ const ImageUpload = ({
           imageSrc={rawPreview}
           aspect={1}
           title="Crop Product Image"
-          outputFileName={rawFile?.name || "product-image.jpg"}
+          outputFileName={rawFile?.name || "product-image.png"}
+          mimeType={rawFile?.type}
           onCropDone={handleCropDone}
           onCancel={handleCropCancel}
         />

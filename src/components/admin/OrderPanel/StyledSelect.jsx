@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { SELECT_ITEM_HEIGHT, SELECT_VISIBLE_ROWS } from "./AdminOrderPanel.constants";
@@ -30,6 +31,7 @@ const StyledSelect = React.memo(function StyledSelect({
   className = "",
   disabled = false,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
@@ -53,21 +55,21 @@ const StyledSelect = React.memo(function StyledSelect({
         type="button"
         disabled={disabled}
         onClick={() => { if (!disabled) setIsOpen((p) => !p); }}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none ${
-          disabled
-            ? isDarkMode
-              ? "bg-slate-800/40 border-slate-700/60 text-slate-500 cursor-not-allowed"
-              : "bg-gray-100 border-[#ede8e3] text-gray-400 cursor-not-allowed"
-            : isDarkMode
-              ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
-              : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
-        }`}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none"
+        style={disabled ? {} : {
+          backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+          borderColor: isOpen
+            ? colors.primary
+            : (isDarkMode ? "#475569" : "#ede8e3"),
+          color: isDarkMode ? "#cbd5e1" : "#1c1917"
+        }}
       >
         <span className={selectedOption ? "" : isDarkMode ? "text-slate-500" : "text-slate-400"}>
           {selectedOption ? selectedOption.label : placeholder || "Select..."}
         </span>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
+          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          style={{ color: isOpen ? colors.primary : (isDarkMode ? "#64748b" : "#a8a29e") }}
         />
       </button>
       <AnimatePresence>
@@ -99,18 +101,31 @@ const StyledSelect = React.memo(function StyledSelect({
                   disabled={isDisabled}
                   aria-disabled={isDisabled}
                   style={{ height: SELECT_ITEM_HEIGHT }}
-                  className={`w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2 ${
-                    isDisabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : value === opt.value
-                        ? isDarkMode ? "bg-orange-500/25 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                        : isDarkMode ? "text-slate-200 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
-                  }`}
+                  className="w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2"
+                  style={{
+                    height: SELECT_ITEM_HEIGHT,
+                    backgroundColor: value === opt.value
+                      ? (isDarkMode ? `${colors.primary}25` : `${colors.primary}10`)
+                      : "transparent",
+                    color: value === opt.value
+                      ? (isDarkMode ? "#ffffff" : colors.primary)
+                      : (isDarkMode ? "#cbd5e1" : "#1c1917")
+                  }}
+                  onMouseEnter={(e) => {
+                    if (value !== opt.value) {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(71, 85, 105, 0.4)" : "#f7f3ef";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (value !== opt.value) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2 w-2 rounded-full shrink-0 transition-colors"
-                      style={{ backgroundColor: value === opt.value ? "#f97316" : isDarkMode ? "#475569" : "#e2e8f0" }}
+                      style={{ backgroundColor: value === opt.value ? colors.primary : isDarkMode ? "#475569" : "#e2e8f0" }}
                     />
                     <span className="truncate">{opt.label}</span>
                   </div>

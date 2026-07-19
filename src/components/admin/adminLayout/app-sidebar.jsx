@@ -321,7 +321,8 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
             <SidebarMenuButton
               size="lg"
               asChild
-              className={`mt-0 sm:mt-20 group-data-[collapsible=icon]:mt-20 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:justify-center ${sidebarSectionClass}`}
+              className={`mt-0 sm:mt-20 group-data-[collapsible=icon]:mt-20 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:justify-center hover:!bg-transparent active:!bg-transparent focus:!bg-transparent ${sidebarSectionClass}`}
+              style={{ backgroundColor: 'transparent' }}
             >
               <Link
                 to={homeRoute}
@@ -353,10 +354,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
         />
       </SidebarContent>
 
-      {/* Footer */}
-      <SidebarFooter className={sidebarSectionClass}>
-        <NavUser user={userData} isDarkMode={isDarkMode} />
-      </SidebarFooter>
+
     </Sidebar>
   );
 }

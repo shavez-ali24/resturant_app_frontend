@@ -1,5 +1,6 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/RoomActionModal.jsx
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { X, IndianRupee, SquarePen, Printer, Move } from "lucide-react";
 
 export default function RoomActionModal({
@@ -15,6 +16,7 @@ export default function RoomActionModal({
   onCancelBooking,
   isLoading = false,
 }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const isOccupied = room?.rawStatus === "OCCUPIED";
   const isBilled = room?.rawStatus === "BILLED";
   const price = room?.roomCategory?.pricePerNight || room?.roomCategory?.priceConfig?.pricePerNight || 0;
@@ -108,27 +110,27 @@ export default function RoomActionModal({
 
   if (!room) return null;
 
-  const ICON_BTN = (isDark) => ({
-    width: 36,
-    height: 36,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: `1px solid ${isDark ? "#475569" : "#e5e5e5"}`,
-    background: isDark ? "#334155" : "#ffffff",
-    cursor: "pointer",
-    borderRadius: 8,
-    color: isDark ? "#f1f5f9" : "#1c1917",
-    padding: 0,
-    outline: "none",
-  });
-
   return (
     <div
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
     >
+      <style>{`
+        .theme-focus:focus {
+          border-color: ${colors.primary} !important;
+          box-shadow: 0 0 0 1px ${colors.primary}80 !important;
+        }
+        .theme-action-btn {
+          border-color: ${colors.primary}40 !important;
+          color: ${colors.primary} !important;
+          background-color: ${isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#ffffff"} !important;
+        }
+        .theme-action-btn:hover {
+          background-color: ${isDarkMode ? `${colors.primary}20` : `${colors.primary}10`} !important;
+          border-color: ${colors.primary} !important;
+        }
+      `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
         className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? "bg-[#1e293b]" : "bg-white"
@@ -143,7 +145,6 @@ export default function RoomActionModal({
             className={`text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"
               }`}
           >
-            {/* 🔧 FIX: Show "Manage Room" for occupied/billed rooms */}
             {isOccupied || isBilled ? "Manage Room" : "Book Room"} — {room.tableNumber}
           </h3>
           <button
@@ -172,18 +173,16 @@ export default function RoomActionModal({
                 </span>
               </div>
 
-              {/* 🔧 FIX: Backend doesn't store guestName/phone in unit.occupancy — it's created on Order */}
               <div className={`text-sm px-3 py-2 rounded-lg border ${isDarkMode ? "bg-slate-800/50 border-slate-700 text-slate-300" : "bg-[#f7f3ef] border-[#ede8e3] text-[#78716c]"
                 }`}>
                 {room?.roomCategory?.name || "Room"} • ₹{price}/night
               </div>
 
-              {/* 🔧 FIX: Add Edit + View Bill + Pay buttons */}
               {(room?.currentOrderId || room?.orderId) && (
                 <div className="grid grid-cols-3 gap-2.5 pt-1">
                   <button
                     onClick={handleEditClick}
-                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    className="theme-action-btn flex flex-col items-center justify-center gap-1 py-2 rounded-lg border text-[11px] font-bold shadow-sm transition-all duration-150"
                     title="Edit Order"
                   >
                     <SquarePen size={15} />
@@ -191,7 +190,7 @@ export default function RoomActionModal({
                   </button>
                   <button
                     onClick={handleViewClick}
-                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    className="theme-action-btn flex flex-col items-center justify-center gap-1 py-2 rounded-lg border text-[11px] font-bold shadow-sm transition-all duration-150"
                     title="View Bill"
                   >
                     <Printer size={15} />
@@ -199,7 +198,7 @@ export default function RoomActionModal({
                   </button>
                   <button
                     onClick={handlePayClick}
-                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg border border-orange-200 bg-white text-[11px] font-bold text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 shadow-sm transition-all duration-150"
+                    className="theme-action-btn flex flex-col items-center justify-center gap-1 py-2 rounded-lg border text-[11px] font-bold shadow-sm transition-all duration-150"
                     title="Pay Order"
                   >
                     <IndianRupee size={15} />
@@ -212,7 +211,6 @@ export default function RoomActionModal({
                 <p className="text-xs text-red-500">{formErrors.submit}</p>
               )}
 
-              {/* 🔧 FIX: Only show Check Out for OCCUPIED (not BILLED) */}
               {isOccupied && (
                 <button
                   onClick={handleCheckout}
@@ -235,7 +233,6 @@ export default function RoomActionModal({
             </div>
           ) : (
             <form onSubmit={handleSubmitBooking} className="space-y-4">
-              {/* Customer Name */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
@@ -255,9 +252,9 @@ export default function RoomActionModal({
                     }
                   }}
                   placeholder="Customer name"
-                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
-                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border theme-focus ${isDarkMode
+                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500"
+                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e]"
                     }`}
                 />
                 {formErrors.guestName && (
@@ -265,7 +262,6 @@ export default function RoomActionModal({
                 )}
               </div>
 
-              {/* Phone Number */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
@@ -285,9 +281,9 @@ export default function RoomActionModal({
                   }}
                   placeholder="Phone number"
                   maxLength={10}
-                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border ${isDarkMode
-                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-200 border theme-focus ${isDarkMode
+                    ? "bg-slate-800 text-slate-200 border-slate-600 placeholder-slate-500"
+                    : "bg-white text-[#1c1917] border-[#ede8e3] placeholder-[#a8a29e]"
                     }`}
                 />
                 {formErrors.phone && (
@@ -295,7 +291,6 @@ export default function RoomActionModal({
                 )}
               </div>
 
-              {/* Room Info (read-only) */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"
@@ -317,7 +312,6 @@ export default function RoomActionModal({
                 <p className="text-xs text-red-500">{formErrors.submit}</p>
               )}
 
-              {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -332,7 +326,11 @@ export default function RoomActionModal({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-extrabold border border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300 dark:border-orange-500/35 dark:bg-orange-950/20 dark:text-orange-400 dark:hover:bg-orange-950/40 transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm"
+                  className="flex-1 rounded-lg py-2.5 text-sm font-extrabold border transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm text-white hover:opacity-90"
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary
+                  }}
                 >
                   {isLoading ? "Booking..." : "Book Room"}
                 </button>

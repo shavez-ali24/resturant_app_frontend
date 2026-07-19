@@ -312,15 +312,15 @@ export default function FoodListing({
               __html: `
                 @keyframes expand {
                   0% { 
-                    background: linear-gradient(90deg, transparent 0%, #fb923c 50%, transparent 100%);
+                    background: linear-gradient(90deg, transparent 0%, #EF9F27 50%, transparent 100%);
                     transform: scaleX(0);
                   }
                   50% { 
-                    background: linear-gradient(90deg, transparent 0%, #fb923c 50%, transparent 100%);
+                    background: linear-gradient(90deg, transparent 0%, #EF9F27 50%, transparent 100%);
                     transform: scaleX(1);
                   }
                   100% { 
-                    background: linear-gradient(90deg, transparent 0%, #fb923c 50%, transparent 100%);
+                    background: linear-gradient(90deg, transparent 0%, #EF9F27 50%, transparent 100%);
                     transform: scaleX(0);
                   }
                 }
@@ -331,30 +331,30 @@ export default function FoodListing({
               <div className="relative h-2.5 w-2.5">
                 <div
                   className={`absolute inset-0 rounded-full animate-pulse ${isDarkMode
-                      ? "bg-gradient-to-r from-orange-300 via-orange-400 to-orange-500 shadow-[0_0_10px_rgba(251,146,60,0.9)]"
-                      : "bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700"
+                      ? "bg-gradient-to-r from-primary/70 via-primary to-primary shadow-[0_0_10px_rgba(239,159,39,0.9)]"
+                      : "bg-gradient-to-r from-primary/80 via-primary to-primary"
                     }`}
                 ></div>
                 <div
                   className={`absolute inset-0 rounded-full animate-ping ${isDarkMode
-                      ? "bg-gradient-to-r from-orange-200 via-orange-300 to-orange-400 opacity-70"
-                      : "bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"
+                      ? "bg-gradient-to-r from-primary/40 via-primary/70 to-primary opacity-70"
+                      : "bg-gradient-to-r from-primary/60 via-primary/80 to-primary"
                     }`}
                 ></div>
                 <div
                   className={`relative h-2.5 w-2.5 rounded-full ${isDarkMode
-                      ? "bg-orange-400 ring-1 ring-orange-300/80 shadow-[0_0_6px_rgba(251,146,60,0.95)]"
-                      : "bg-orange-600/95 ring-1 ring-orange-300"
+                      ? "bg-primary ring-1 ring-primary/80 shadow-[0_0_6px_rgba(239,159,39,0.95)]"
+                      : "bg-primary ring-1 ring-primary/65"
                     }`}
                 ></div>
               </div>
-              <h2 className={`text-base font-semibold tracking-wide ${isDarkMode ? "text-orange-50" : "text-gray-800"}`}>
+              <h2 className={`text-base font-semibold tracking-wide ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                 {category}
               </h2>
               <div
                 className="relative flex-1 h-px"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, #fb923c 50%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, #EF9F27 50%, transparent 100%)',
                   animation: 'expand 3s ease-in-out infinite',
                   transformOrigin: 'center'
                 }}
@@ -410,7 +410,7 @@ export default function FoodListing({
                         viewport={{ once: true, amount: 0.06 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         whileHover={{ y: -2 }}
-                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/20 bg-gradient-to-b from-[#fffbf4] to-[#fffcf9]"} shadow-[0_8px_18px_rgba(239,159,39,0.1)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                           } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
                         style={{
                           willChange: "auto"
@@ -460,7 +460,6 @@ export default function FoodListing({
                                   ? (() => {
                                     const discount = variantRates[selectedVariant]?.discount;
                                     const discountValue = Number(discount?.value || 0);
-                                    // console.log("🔥 FoodListing - Variant Discount Badge:", { selectedVariant, discount, discountValue });
                                     return discountValue > 0
                                       ? (discount?.type?.toLowerCase() === "percentage"
                                         ? `${discountValue}% OFF`
@@ -470,7 +469,6 @@ export default function FoodListing({
                                   : (() => {
                                     const discount = item.discount;
                                     const discountValue = Number(discount?.value || 0);
-                                    // console.log("🔥 FoodListing - Single Discount Badge:", { discount, discountValue });
                                     return discountValue > 0
                                       ? (discount?.type?.toLowerCase() === "percentage"
                                         ? `${discountValue}% OFF`
@@ -484,9 +482,9 @@ export default function FoodListing({
 
                           {/* Combo badge */}
                           {item.pricingType === "combo" && (
-                            <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-orange-600 px-2 py-1 text-white shadow-sm">
+                            <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-primary px-2 py-1 text-white shadow-sm">
                               <span className="text-xs font-bold">
-                                Combo
+                                Only Combo
                               </span>
                             </div>
                           )}
@@ -498,7 +496,7 @@ export default function FoodListing({
                         </div>
 
                         {/* ✅ Fixed Size Details Section */}
-                        <div className="flex h-28 flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 p-2">
+                        <div className={`flex h-28 flex-col gap-1 p-2 ${isDarkMode ? "bg-slate-900" : "bg-gradient-to-b from-[#fffbf4]/40 to-[#fffcf9]"}`}>
                           {/* Item Name with Pencil Icon */}
                           <h3 className="flex h-10 items-start justify-between text-xs font-semibold leading-tight text-gray-900">
                             <span className="flex-1 line-clamp-1 break-words pr-1">
@@ -531,7 +529,7 @@ export default function FoodListing({
                                       prev === item._id ? null : item._id
                                     );
                                   }}
-                                  className="text-orange-600 text-xs font-semibold hover:underline flex items-center gap-1 w-full justify-between"
+                                  className="text-primary text-xs font-semibold hover:underline flex items-center gap-1 w-full justify-between"
                                 >
                                   <span className="truncate">
                                     {selectedVariant && variantPrice != null && variantPrice !== undefined
@@ -548,7 +546,7 @@ export default function FoodListing({
                                       animate={{ opacity: 1, y: 0, scale: 1 }}
                                       exit={{ opacity: 0, y: 6, scale: 0.98 }}
                                       transition={{ duration: 0.18, ease: "easeOut" }}
-                                      className="absolute bottom-full left-0 z-[70] mb-1.5 w-[128px] overflow-hidden rounded-xl border border-orange-100 bg-white shadow-2xl"
+                                      className={`absolute bottom-full left-0 z-[70] mb-1.5 w-[128px] overflow-hidden rounded-xl border bg-white dark:bg-slate-900 shadow-2xl ${isDarkMode ? "border-slate-800" : "border-primary/20"}`}
                                       onClick={(event) =>
                                         event.stopPropagation()
                                       }
@@ -577,8 +575,12 @@ export default function FoodListing({
                                                 setOpenVariantMenu(null);
                                               }}
                                               className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition ${isActive
-                                                  ? "bg-gray-100 font-semibold text-orange-700"
-                                                  : "text-gray-700 hover:bg-orange-50"
+                                                  ? isDarkMode
+                                                    ? "bg-primary/20 font-semibold text-primary"
+                                                    : "bg-primary/10 font-semibold text-primary"
+                                                  : isDarkMode
+                                                    ? "text-slate-350 hover:bg-slate-800"
+                                                    : "text-gray-700 hover:bg-primary/5"
                                                 }`}
                                             >
                                               <span>{formatVariantLabel(key)}</span>
@@ -589,7 +591,7 @@ export default function FoodListing({
                                                   discountedVariantPrice :
                                                   Number(price.price);
                                                 return (
-                                                  <span className="text-xs font-semibold text-orange-600">
+                                                  <span className="text-xs font-semibold text-primary">
                                                     ₹{finalPrice.toFixed(2)}
                                                   </span>
                                                 );
@@ -611,12 +613,12 @@ export default function FoodListing({
                                     <span className="text-xs text-gray-400 line-through">
                                       ₹{Number(variantPrice.price).toFixed(2)}
                                     </span>
-                                    <span className="text-xs font-bold text-orange-600">
+                                    <span className="text-xs font-bold text-primary">
                                       ₹{Number(discountedPrice).toFixed(2)}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-xs font-bold text-orange-600">
+                                  <span className="text-xs font-bold text-primary">
                                     ₹{Number(variantPrice.price).toFixed(2)}
                                   </span>
                                 )}
@@ -631,12 +633,12 @@ export default function FoodListing({
                                     <span className="text-xs text-gray-400 line-through">
                                       ₹{Number(originalPrice).toFixed(2)}
                                     </span>
-                                    <span className="text-xs font-bold text-orange-600">
+                                    <span className="text-xs font-bold text-primary">
                                       ₹{Number(discountedPrice).toFixed(2)}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-xs font-bold text-orange-600">
+                                  <span className="text-xs font-bold text-primary">
                                     ₹{Number(originalPrice).toFixed(2)}
                                   </span>
                                 )}
@@ -652,24 +654,21 @@ export default function FoodListing({
                                 <div className="flex items-center gap-1">
                                   {quantity > 0 ? (
                                     <>
-                                      <div className="flex items-center gap-1 flex-shrink-0">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
+                                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             dispatch(removeFromCart(cartKey));
                                           }}
                                           disabled={!isRestaurantOpen}
-                                          className="h-6 w-6 rounded-lg border-gray-300 p-0 text-xs font-bold hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                          className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                          -
-                                        </Button>
-                                        <span className="min-w-[14px] text-center text-xs font-semibold">
+                                          −
+                                        </button>
+                                        <span className={`min-w-[14px] text-center text-xs font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
                                           {quantity}
                                         </span>
-                                        <Button
-                                          size="sm"
+                                        <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             dispatch(
@@ -695,10 +694,10 @@ export default function FoodListing({
                                             );
                                           }}
                                           disabled={!isRestaurantOpen || !canAdd}
-                                          className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
+                                          className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                           +
-                                        </Button>
+                                        </button>
                                       </div>
                                     </>
                                   ) : (
@@ -729,7 +728,7 @@ export default function FoodListing({
                                         );
                                       }}
                                       disabled={!isRestaurantOpen || !canAdd}
-                                      className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="client-add-button h-8 w-full rounded-xl px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Add
                                     </Button>
@@ -769,19 +768,8 @@ export default function FoodListing({
                   const discountedPrice = calculateDiscountedPrice(item, selectedVariant);
                   const hasDiscount = hasActiveDiscount(item, selectedVariant);
                   const originalPrice = basePrice;
-                  const comboItemsCount = getComboItemsCount(item);
                   const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice)) && isRestaurantOpen;
                   const isUnavailable = !item.available || !isRestaurantOpen;
-
-                  // Food type color coding
-                  const getFoodTypeColor = (type) => {
-                    switch (type?.toLowerCase()) {
-                      case 'veg': return 'border-green-500';
-                      case 'non-veg': return 'border-red-500';
-                      case 'mixed': return 'border-orange-500';
-                      default: return 'border-gray-300';
-                    }
-                  };
 
                   return (
                     <motion.div
@@ -791,7 +779,7 @@ export default function FoodListing({
                       viewport={{ once: true, amount: 0.06 }}
                       transition={{ duration: 0.25, ease: "easeOut" }}
                       whileHover={layoutMode === "single" ? { y: 0 } : { y: -2 }}
-                      className={`relative rounded-2xl border border-orange-200/75 bg-gradient-to-b from-white via-orange-50/18 to-white shadow-[0_8px_18px_rgba(249,115,22,0.14)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                      className={`relative rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/20 bg-gradient-to-b from-[#fffbf4] to-[#fffcf9]"} shadow-[0_8px_18px_rgba(239,159,39,0.1)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                         } ${layoutMode === "single"
                           ? "flex min-h-[128px] w-full self-start"
                           : "w-full"
@@ -844,7 +832,6 @@ export default function FoodListing({
                                 ? (() => {
                                   const discount = variantRates[selectedVariant]?.discount;
                                   const discountValue = Number(discount?.value || 0);
-                                  // console.log("🔥 FoodListing - Variant Discount Badge:", { selectedVariant, discount, discountValue });
                                   return discountValue > 0
                                     ? (discount?.type?.toLowerCase() === "percentage"
                                       ? `${discountValue}% OFF`
@@ -854,7 +841,6 @@ export default function FoodListing({
                                 : (() => {
                                   const discount = item.discount;
                                   const discountValue = Number(discount?.value || 0);
-                                  // console.log("🔥 FoodListing - Single Discount Badge:", { discount, discountValue });
                                   return discountValue > 0
                                     ? (discount?.type?.toLowerCase() === "percentage"
                                       ? `${discountValue}% OFF`
@@ -868,9 +854,9 @@ export default function FoodListing({
 
                         {/* Combo badge */}
                         {item.pricingType === "combo" && (
-                          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-orange-600 px-2 py-1 text-white shadow-sm">
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-primary px-2 py-1 text-white shadow-sm">
                             <span className="text-xs font-bold">
-                              Combo
+                              Only Combo
                             </span>
                           </div>
                         )}
@@ -883,7 +869,7 @@ export default function FoodListing({
 
                       {/* ✅ Fixed Size Details Section */}
                       <div
-                        className={`flex flex-col gap-1 bg-gradient-to-b from-white to-orange-50/35 ${layoutMode === "single"
+                        className={`flex flex-col gap-1 ${isDarkMode ? "bg-slate-900" : "bg-[#fffcf9]"} ${layoutMode === "single"
                             ? "min-h-[128px] flex-1 justify-start px-3 py-2"
                             : "h-28 p-2"
                           }`}
@@ -925,7 +911,7 @@ export default function FoodListing({
                                     prev === item._id ? null : item._id
                                   );
                                 }}
-                                className="text-orange-600 text-xs font-semibold hover:underline flex items-center gap-1 w-full justify-between"
+                                className="text-primary text-xs font-semibold hover:underline flex items-center gap-1 w-full justify-between"
                               >
                                 <span className="truncate">
                                   {selectedVariant && variantPrice != null && variantPrice !== undefined
@@ -942,7 +928,7 @@ export default function FoodListing({
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 6, scale: 0.98 }}
                                     transition={{ duration: 0.18, ease: "easeOut" }}
-                                    className="absolute left-0 top-full z-[70] mt-1.5 w-[128px] overflow-hidden rounded-xl border border-orange-100 bg-white shadow-2xl"
+                                    className={`absolute left-0 top-full z-[70] mt-1.5 w-[128px] overflow-hidden rounded-xl border bg-white dark:bg-slate-900 shadow-2xl ${isDarkMode ? "border-slate-800" : "border-primary/20"}`}
                                     onClick={(event) =>
                                       event.stopPropagation()
                                     }
@@ -971,8 +957,12 @@ export default function FoodListing({
                                               setOpenVariantMenu(null);
                                             }}
                                             className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition ${isActive
-                                                ? "bg-gray-100 font-semibold text-orange-700"
-                                                : "text-gray-700 hover:bg-orange-50"
+                                                ? isDarkMode
+                                                  ? "bg-primary/20 font-semibold text-primary"
+                                                  : "bg-primary/10 font-semibold text-primary"
+                                                : isDarkMode
+                                                  ? "text-slate-350 hover:bg-slate-800"
+                                                  : "text-gray-700 hover:bg-primary/5"
                                               }`}
                                           >
                                             <span>{formatVariantLabel(key)}</span>
@@ -983,7 +973,7 @@ export default function FoodListing({
                                                 discountedVariantPrice :
                                                 Number(price.price);
                                               return (
-                                                <span className="text-xs font-semibold text-orange-600">
+                                                <span className="text-xs font-semibold text-primary">
                                                   ₹{finalPrice.toFixed(2)}
                                                 </span>
                                               );
@@ -1005,12 +995,12 @@ export default function FoodListing({
                                   <span className="text-xs text-gray-400 line-through">
                                     ₹{Number(variantPrice.price).toFixed(2)}
                                   </span>
-                                  <span className="text-xs font-bold text-orange-600">
+                                  <span className="text-xs font-bold text-primary">
                                     ₹{Number(discountedPrice).toFixed(2)}
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-xs font-bold text-orange-600">
+                                <span className="text-xs font-bold text-primary">
                                   ₹{Number(variantPrice.price).toFixed(2)}
                                 </span>
                               )}
@@ -1025,12 +1015,12 @@ export default function FoodListing({
                                   <span className="text-xs text-gray-400 line-through">
                                     ₹{Number(originalPrice).toFixed(2)}
                                   </span>
-                                  <span className="text-xs font-bold text-orange-600">
+                                  <span className="text-xs font-bold text-primary">
                                     ₹{Number(discountedPrice).toFixed(2)}
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-xs font-bold text-orange-600">
+                                <span className="text-xs font-bold text-primary">
                                   ₹{Number(originalPrice).toFixed(2)}
                                 </span>
                               )}
@@ -1046,24 +1036,21 @@ export default function FoodListing({
                               <div className="flex items-center gap-1">
                                 {quantity > 0 ? (
                                   <>
-                                    <div className="flex items-center gap-1 flex-shrink-0">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           dispatch(removeFromCart(cartKey));
                                         }}
                                         disabled={!isRestaurantOpen}
-                                        className="h-6 w-6 rounded-lg border-gray-300 p-0 text-xs font-bold hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                                       >
-                                        -
-                                      </Button>
-                                      <span className="min-w-[14px] text-center text-xs font-semibold">
+                                        −
+                                      </button>
+                                      <span className={`min-w-[14px] text-center text-xs font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
                                         {quantity}
                                       </span>
-                                      <Button
-                                        size="sm"
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           dispatch(
@@ -1089,10 +1076,10 @@ export default function FoodListing({
                                           );
                                         }}
                                         disabled={!isRestaurantOpen || !canAdd}
-                                        className="client-add-button h-6 w-6 rounded-lg p-0 text-xs font-bold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                                       >
                                         +
-                                      </Button>
+                                      </button>
                                     </div>
                                   </>
                                 ) : (
@@ -1123,7 +1110,7 @@ export default function FoodListing({
                                       );
                                     }}
                                     disabled={!isRestaurantOpen || !canAdd}
-                                    className="client-add-button h-8 w-full rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="client-add-button h-8 w-full rounded-xl px-3 py-1 text-xs font-semibold tracking-wide text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     Add
                                   </Button>
@@ -1216,9 +1203,9 @@ export default function FoodListing({
                       </span>
                     )}
                     {descModal.item.pricingType === "combo" && (
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isDarkMode ? "bg-orange-500/20 text-orange-200 border border-orange-500/40" : "bg-orange-600/80 text-white"
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isDarkMode ? "bg-primary/20 text-primary border border-primary/30" : "bg-primary text-white"
                         }`}>
-                        Combo ({getComboItemsCount(descModal.item)} items)
+                        Only Combo ({getComboItemsCount(descModal.item)} items)
                       </span>
                     )}
                   </div>
@@ -1273,11 +1260,11 @@ export default function FoodListing({
                                   ₹{Number(originalPrice).toFixed(2)}
                                 </span>
                               )}
-                              <span className="text-base font-bold leading-none text-orange-600">
+                              <span className="text-base font-bold leading-none text-primary">
                                 ₹{Number(finalPrice).toFixed(2)}
                               </span>
                               {discountLabel ? (
-                                <span className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-orange-50 text-orange-600"
+                                <span className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${isDarkMode ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary"
                                   }`}>
                                   {discountLabel}
                                 </span>
@@ -1326,7 +1313,7 @@ export default function FoodListing({
                         const discountLabel = getDiscountLabel(item.discount);
 
                         return renderPriceLine(
-                          item.pricingType === "combo" ? "Combo" : "Price",
+                          item.pricingType === "combo" ? "Only Combo" : "Price",
                           originalItemPrice,
                           discountedItemPrice,
                           hasItemDiscount ? discountLabel : "",
@@ -1349,21 +1336,21 @@ export default function FoodListing({
 
                   {/* Combo items details */}
                   {descModal.item.pricingType === "combo" && descModal.item.comboItems && (
-                    <div className={`rounded-2xl p-4 border ${isDarkMode ? "bg-slate-900/80 border-slate-700" : "bg-orange-50 border-orange-100"
+                    <div className={`rounded-2xl p-4 border ${isDarkMode ? "bg-slate-900/80 border-slate-700" : "bg-primary/10 border-primary/20"
                       }`}>
-                      <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-orange-300" : "text-orange-800"}`}>
-                        Combo Includes ({descModal.item.comboItems.length} items)
+                      <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-primary" : "text-primary"}`}>
+                        Only Combo Includes ({descModal.item.comboItems.length} items)
                       </h4>
                       <div className="space-y-2">
                         {descModal.item.comboItems.map((comboItem, index) => (
-                          <div key={index} className={`flex justify-between items-center rounded-lg px-3 py-2 border ${isDarkMode ? "bg-slate-900 border-slate-600" : "bg-white border-orange-200"
+                          <div key={index} className={`flex justify-between items-center rounded-lg px-3 py-2 border ${isDarkMode ? "bg-slate-900 border-slate-600" : "bg-white border-primary/20"
                             }`}>
                             <span className={`text-sm ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
                               {getComboItemName(comboItem, menu)}
                             </span>
                             <div className="flex items-center gap-2">
                               {comboItem.variant && (
-                                <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? "text-orange-200 bg-orange-500/20" : "text-gray-500 bg-orange-100"}`}>
+                                <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? "text-primary bg-primary/20" : "text-gray-500 bg-primary/10"}`}>
                                   {comboItem.variant}
                                 </span>
                               )}

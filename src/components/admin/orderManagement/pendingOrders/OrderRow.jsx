@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
 import { Truck, Utensils, House, Bell } from "lucide-react";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
@@ -39,6 +39,7 @@ const OrderRow = ({
   isDarkMode = false,
 }) => {
   const dispatch = useDispatch();
+  const colors = useSelector((state) => state.admin.theme.colors);
 
   const { setNewlyAddedItemsOrderIds } = useNotification() || {};
 
@@ -81,7 +82,7 @@ const OrderRow = ({
   const tdBase = `px-4 py-3 text-sm align-middle ${isDarkMode ? "text-slate-300" : "text-[#44403c]"}`;
 
   return (
-    <tr className={`transition-colors ${isDarkMode ? "hover:bg-slate-700/30" : "hover:bg-[#faf7f4]"}`}>
+    <tr className={`transition-colors ${isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-50/60"}`}>
 
       {/* Date (non-pending) */}
       {tableType !== "pending" && (
@@ -92,7 +93,15 @@ const OrderRow = ({
         <>
           {/* ID */}
           <td className="px-4 py-3 align-middle text-center flex items-center justify-center gap-1.5">
-            <span className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#fbfaf8] border border-[#ede8e3] text-orange-600"}`}>
+            <span
+              className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg"
+              style={{
+                backgroundColor: isDarkMode ? `${colors.primary}1a` : `${colors.primary}05`,
+                borderColor: isDarkMode ? `${colors.primary}59` : `${colors.primary}33`,
+                color: isDarkMode ? colors.primary : colors.primaryText,
+                borderWidth: '1px'
+              }}
+            >
               {orderIdDisplay || "—"}
             </span>
             {order.hasNewClientItems && (
@@ -128,11 +137,23 @@ const OrderRow = ({
       <td className="px-4 py-3 align-middle text-center">
         <button
           onClick={handleBillClick}
-          className={`rounded-xl border px-4 py-2 text-xs font-extrabold transition-all duration-200 ${showBillAttention ? "bill-border-animate" : ""
-            } ${isDarkMode
-              ? "border-slate-600 bg-slate-800 text-orange-300 hover:bg-slate-700"
-              : "border-[#ede8e3] bg-[#fbfaf8] text-[#57524e] hover:bg-orange-50/50 hover:text-orange-700 hover:border-orange-200 shadow-sm"
-            }`}
+          className={`rounded-xl px-4 py-2 text-xs font-extrabold transition-all duration-200 shadow-sm ${showBillAttention ? "bill-border-animate" : ""}`}
+          style={{
+            backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#ffffff',
+            borderColor: isDarkMode ? '#475569' : '#ede8e3',
+            borderWidth: '1px',
+            color: isDarkMode ? 'rgba(241, 245, 249, 0.9)' : '#57524e'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(51, 65, 85, 0.6)' : `${colors.primary}08`;
+            e.currentTarget.style.borderColor = isDarkMode ? colors.primary : `${colors.primary}80`;
+            e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#ffffff';
+            e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#ede8e3';
+            e.currentTarget.style.color = isDarkMode ? 'rgba(241, 245, 249, 0.9)' : '#57524e';
+          }}
         >
           View Items & Bill
         </button>

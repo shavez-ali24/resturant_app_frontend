@@ -51,12 +51,18 @@ const formatValue = (value) => {
   return String(value);
 };
 
-export const ProfileField = React.memo(({ label, value, icon }) => (
-  <div className="flex flex-col min-w-0 transition-colors py-1">
-    <div className="mb-1 flex items-center gap-1.5">
-      {icon && <span className="text-orange-600 dark:text-orange-400 opacity-80 shrink-0">{icon}</span>}
-      <label className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">{label}</label>
+import { useSelector } from "react-redux";
+
+export const ProfileField = React.memo(({ label, value, icon }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+
+  return (
+    <div className="flex flex-col min-w-0 transition-colors py-1">
+      <div className="mb-1 flex items-center gap-1.5">
+        {icon && <span className="opacity-80 shrink-0" style={{ color: colors.primary }}>{icon}</span>}
+        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.primaryText }}>{label}</label>
+      </div>
+      <p className="text-sm font-extrabold text-[#1c1917] dark:text-slate-100 truncate">{formatValue(value)}</p>
     </div>
-    <p className="text-sm font-extrabold text-[#1c1917] dark:text-slate-100 truncate">{formatValue(value)}</p>
-  </div>
-));
+  );
+});

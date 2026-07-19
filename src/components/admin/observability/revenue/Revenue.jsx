@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react"
+import { useSelector } from "react-redux"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -92,6 +93,7 @@ const groupChartDataByDate = (data, range) => {
 }
 
 export default function RevenueAnalytics() {
+  const colors = useSelector((state) => state.admin.theme.colors)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false
     const root = document.documentElement
@@ -305,21 +307,13 @@ export default function RevenueAnalytics() {
   }
 
   const secondaryButtonClass =
-    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 px-4 text-sm font-bold ${isDarkMode ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40" : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"}`
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 px-4 text-sm font-bold`
   const primaryButtonClass =
-    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 px-4 text-sm font-semibold ${isDarkMode ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40" : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"}`
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 px-4 text-sm font-semibold`
   const inputClass =
-    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2 focus:ring-orange-100 ${
-      isDarkMode
-        ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 hover:border-slate-500 focus:border-orange-500"
-        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8] focus:border-orange-400"
-    }`
+    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2`
   const selectTriggerClass =
-    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 focus:ring-orange-100 sm:w-[190px] ${
-      isDarkMode
-        ? "border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500"
-        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8]"
-    }`
+    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 sm:w-[190px]`
   const selectContentClass =
     `z-[10050] rounded-xl border p-1 shadow-xl ${
       isDarkMode
@@ -332,6 +326,27 @@ export default function RevenueAnalytics() {
         ? "text-slate-200 data-[highlighted]:bg-slate-700 data-[highlighted]:text-slate-100"
         : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] data-[highlighted]:text-[#1c1917]"
     }`
+
+  const primaryBtnStyle = {
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    borderColor: "transparent",
+  }
+  const secondaryBtnStyle = {
+    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+    backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+    color: isDarkMode ? colors.primary : colors.primaryText,
+  }
+  const selectTriggerStyle = {
+    borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+    backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  }
+  const inputStyle = {
+    borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+    backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  }
 
   return (
     <div className={`min-h-screen p-4 sm:p-6 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
@@ -354,8 +369,8 @@ export default function RevenueAnalytics() {
               <div data-tour="revenue-date-filter" className="flex flex-col sm:flex-row gap-3">
               {/* Time Range Selector */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-                <SelectTrigger className={selectTriggerClass}>
-                  <Calendar className="w-4 h-4 mr-2 shrink-0 text-orange-500" />
+                <SelectTrigger className={selectTriggerClass} style={selectTriggerStyle}>
+                  <Calendar className="w-4 h-4 mr-2 shrink-0" style={{ color: colors.primary }} />
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
                 <SelectContent className={selectContentClass}>
@@ -375,15 +390,19 @@ export default function RevenueAnalytics() {
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all sm:w-auto ${
                     showDatePicker || isCustomRange
-                      ? isDarkMode
-                        ? "border-orange-500/50 bg-orange-950/30 text-orange-400"
-                        : "border-orange-300 bg-orange-50 text-orange-700 font-bold"
+                      ? ""
                       : isDarkMode
                         ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
                         : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] hover:border-[#d6cfc8]"
                   }`}
+                  style={(showDatePicker || isCustomRange) ? {
+                    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                    backgroundColor: isDarkMode ? `${colors.primary}30` : colors.primaryLight,
+                    color: isDarkMode ? colors.primary : colors.primaryText,
+                    fontWeight: "bold",
+                  } : {}}
                 >
-                  <CalendarDays className="w-4 h-4 shrink-0 text-orange-500" />
+                  <CalendarDays className="w-4 h-4 shrink-0" style={{ color: colors.primary }} />
                   <span>Custom Range</span>
                   {isCustomRange && (
                     <span className="ml-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">✓</span>
@@ -403,19 +422,50 @@ export default function RevenueAnalytics() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <label className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>From Date</label>
-                          <input type="date" className={inputClass} value={fromDate} onChange={e => setFromDate(e.target.value)} max={toDate} />
+                          <input
+                            type="date"
+                            className={inputClass}
+                            style={inputStyle}
+                            value={fromDate}
+                            onChange={e => setFromDate(e.target.value)}
+                            max={toDate}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                            }}
+                          />
                         </div>
                         <div className="space-y-2">
                           <label className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>To Date</label>
-                          <input type="date" className={inputClass} value={toDate} onChange={e => setToDate(e.target.value)} min={fromDate} />
+                          <input
+                            type="date"
+                            className={inputClass}
+                            style={inputStyle}
+                            value={toDate}
+                            onChange={e => setToDate(e.target.value)}
+                            min={fromDate}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                            }}
+                          />
                         </div>
                       </div>
 
                       {isCustomRange && (
-                        <div className={`p-3 rounded-lg border ${isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-50 border-orange-200"}`}>
+                        <div className={`p-3 rounded-lg border`}
+                             style={{
+                               backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight,
+                               borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}25`,
+                             }}
+                        >
                           <div className="flex items-center justify-between">
-                            <span className={`text-sm font-medium ${isDarkMode ? "text-orange-400" : "text-orange-700"}`}>Custom Range Active</span>
-                            <button onClick={handleClearCustomRange} className={`text-xs underline ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-800"}`}>Clear</button>
+                            <span className="text-sm font-medium" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>Custom Range Active</span>
+                            <button onClick={handleClearCustomRange} className="text-xs underline" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>Clear</button>
                           </div>
                           <p className={`text-xs mt-1 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
                             {formatFullDate(fromDate)} to {formatFullDate(toDate)}
@@ -427,7 +477,7 @@ export default function RevenueAnalytics() {
                         <button onClick={() => setShowDatePicker(false)} className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors ${
                           isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
                         }`}>Cancel</button>
-                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass}>Apply Range</button>
+                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass} style={primaryBtnStyle}>Apply Range</button>
                       </div>
                     </div>
                   </div>
@@ -440,6 +490,13 @@ export default function RevenueAnalytics() {
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
                 className={secondaryButtonClass}
+                style={secondaryBtnStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                }}
               >
                 <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                 <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
@@ -454,7 +511,13 @@ export default function RevenueAnalytics() {
         {/* Total Revenue Card */}
         <div className={`rounded-2xl border p-4 ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm"}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-xl border ${isDarkMode ? "bg-orange-950/20 border-orange-500/30 text-orange-400" : "bg-[#fff8f5] border border-orange-200 text-orange-600"}`}>
+            <div className="p-3 rounded-xl border"
+                 style={{
+                   backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                   borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                   color: isDarkMode ? colors.primary : colors.primaryText,
+                 }}
+            >
               <IndianRupee className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
@@ -462,8 +525,8 @@ export default function RevenueAnalytics() {
               <p className={`text-2xl font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                 {formatCurrency(totalRevenue)}
               </p>
-              <div className="mt-2 flex items-center text-xs text-orange-600">
-                <TrendingUp className="w-3 h-3 mr-1 text-orange-600" />
+              <div className="mt-2 flex items-center text-xs font-semibold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
+                <TrendingUp className="w-3 h-3 mr-1" style={{ color: colors.primary }} />
                 <span>From {totalOrders} orders</span>
               </div>
             </div>
@@ -473,7 +536,13 @@ export default function RevenueAnalytics() {
         {/* Total Orders Card */}
         <div className={`rounded-2xl border p-4 ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white shadow-sm"}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-xl border ${isDarkMode ? "bg-orange-950/20 border-orange-500/30 text-orange-400" : "bg-[#fff8f5] border border-orange-200 text-orange-600"}`}>
+            <div className="p-3 rounded-xl border"
+                 style={{
+                   backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                   borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                   color: isDarkMode ? colors.primary : colors.primaryText,
+                 }}
+            >
               <ShoppingBag className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
@@ -481,8 +550,8 @@ export default function RevenueAnalytics() {
               <p className={`text-2xl font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                 {totalOrders.toLocaleString()}
               </p>
-              <div className="mt-2 flex items-center text-xs text-orange-600">
-                <Clock className="w-3 h-3 mr-1 text-orange-600" />
+              <div className="mt-2 flex items-center text-xs font-semibold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
+                <Clock className="w-3 h-3 mr-1" style={{ color: colors.primary }} />
                 <span>{timeRangeLabels[timeRange]}</span>
               </div>
             </div>
@@ -513,13 +582,17 @@ export default function RevenueAnalytics() {
                       onClick={() => setActiveTab(tab)}
                       className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                         activeTab === tab
-                          ? isDarkMode
-                            ? "bg-orange-950/30 border border-orange-500/40 text-orange-400 shadow-sm"
-                            : "bg-orange-50 border border-orange-200 text-orange-700 font-bold shadow-sm"
+                          ? "shadow-sm"
                           : isDarkMode
-                            ? "border border-transparent text-slate-400 hover:text-slate-100"
-                            : "border border-transparent text-[#78716c] hover:text-[#1c1917]"
+                            ? "text-slate-400 hover:text-slate-100"
+                            : "text-[#78716c] hover:text-[#1c1917]"
                       }`}
+                      style={activeTab === tab ? {
+                        backgroundColor: isDarkMode ? `${colors.primary}25` : colors.primaryLight,
+                        borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                        color: isDarkMode ? colors.primary : colors.primaryText,
+                        borderWidth: "1px",
+                      } : {}}
                     >
                       {tab === "chart" ? <BarChartIcon className="w-4 h-4 shrink-0" /> : <TableIcon className="w-4 h-4 shrink-0" />}
                       {tab === "chart" ? "Chart" : "Table"}
@@ -535,7 +608,7 @@ export default function RevenueAnalytics() {
             <TabsContent value="chart" className="mt-0">
               {isLoading ? (
                 <div className={`h-[350px] flex flex-col items-center justify-center rounded-xl border ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-4"></div>
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 mb-4" style={{ borderBottomColor: colors.primary }}></div>
                   <p className={`font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Loading revenue data...</p>
                 </div>
               ) : error ? (
@@ -545,7 +618,7 @@ export default function RevenueAnalytics() {
                   </div>
                   <p className={`font-bold text-lg mb-2 ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>Failed to Load Data</p>
                   <p className={`text-center mb-6 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>{error.message || "Unable to fetch revenue analytics."}</p>
-                  <button onClick={handleRefresh} disabled={isRefreshing} className={primaryButtonClass}>
+                  <button onClick={handleRefresh} disabled={isRefreshing} className={primaryButtonClass} style={primaryBtnStyle}>
                     <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                     {isRefreshing ? "Refreshing..." : "Try Again"}
                   </button>
@@ -556,8 +629,8 @@ export default function RevenueAnalytics() {
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
+                          <stop offset="5%" stopColor={colors.primary} stopOpacity={0.8} />
+                          <stop offset="95%" stopColor={colors.primary} stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#ede8e3"} />
@@ -572,8 +645,8 @@ export default function RevenueAnalytics() {
                                 <p className={`text-sm font-semibold mb-2 border-b pb-2 ${isDarkMode ? "text-slate-100 border-slate-700" : "text-[#1c1917] border-[#ede8e3]"}`}>{formatTableDate(label, timeRange)}</p>
                                 <div className="space-y-1.5">
                                   <div className="flex justify-between items-center gap-4">
-                                    <span className={`text-xs flex items-center gap-1.5 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}><span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>Revenue</span>
-                                    <span className="text-sm font-bold text-orange-500">{formatCurrency(d.revenue)}</span>
+                                    <span className={`text-xs flex items-center gap-1.5 ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: colors.primary }}></span>Revenue</span>
+                                    <span className="text-sm font-bold" style={{ color: colors.primary }}>{formatCurrency(d.revenue)}</span>
                                   </div>
                                   {d.orders && (
                                     <div className="flex justify-between items-center gap-4">
@@ -587,9 +660,9 @@ export default function RevenueAnalytics() {
                           }
                           return null
                         }}
-                        cursor={{ stroke: "#f97316", strokeWidth: 1.5 }}
+                        cursor={{ stroke: colors.primary, strokeWidth: 1.5 }}
                       />
-                      <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2.5} fill="url(#revenueGradient)" dot={{ r: 3, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="revenue" stroke={colors.primary} strokeWidth={2.5} fill="url(#revenueGradient)" dot={{ r: 3, fill: colors.primary, stroke: "#fff", strokeWidth: 2 }} activeDot={{ r: 5, fill: colors.primary, stroke: "#fff", strokeWidth: 2 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -604,7 +677,7 @@ export default function RevenueAnalytics() {
                       ? `No completed orders found between ${new Date(fromDate).toLocaleDateString()} and ${new Date(toDate).toLocaleDateString()}`
                       : "No completed orders found for the selected time period."}
                   </p>
-                  <button onClick={() => setTimeRange("all")} className={secondaryButtonClass}>View All Time</button>
+                  <button onClick={() => setTimeRange("all")} className={secondaryButtonClass} style={secondaryBtnStyle}>View All Time</button>
                 </div>
               )}
             </TabsContent>
@@ -625,7 +698,7 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-3"></div>
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderBottomColor: colors.primary }}></div>
                               <p className={`text-sm font-medium ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>Loading table data...</p>
                             </div>
                           </TableCell>
@@ -635,17 +708,23 @@ export default function RevenueAnalytics() {
                           <TableRow key={row.displayDate || row._id || index} className={`border-b transition-colors ${isDarkMode ? "border-slate-700 hover:bg-slate-800/60" : "border-[#f0ebe5] hover:bg-[#faf7f4]"}`}>
                             <TableCell className="py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors.primary }}></div>
                                 <span className={`font-medium ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{row.displayDate}</span>
                               </div>
                             </TableCell>
                             <TableCell className="text-right py-3">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border"
+                                    style={{
+                                      backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                                      color: isDarkMode ? colors.primary : colors.primaryText,
+                                    }}
+                              >
                                 {row.orders}
                               </span>
                             </TableCell>
                             <TableCell className="text-right py-3">
-                              <span className="font-bold text-orange-500">{formatCurrency(row.revenue)}</span>
+                              <span className="font-bold" style={{ color: colors.primary }}>{formatCurrency(row.revenue)}</span>
                             </TableCell>
                           </TableRow>
                         ))
@@ -653,8 +732,12 @@ export default function RevenueAnalytics() {
                         <TableRow>
                           <TableCell colSpan={3} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/20">
-                                <TableIcon className="h-5 w-5 text-orange-500" />
+                              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+                                   style={{
+                                     backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                                   }}
+                              >
+                                <TableIcon className="h-5 w-5" style={{ color: colors.primary }} />
                               </div>
                               <p className={`mb-2 font-bold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>No Data Available</p>
                               <p className={`max-w-md text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
@@ -674,7 +757,7 @@ export default function RevenueAnalytics() {
                   <div className={`border-t px-4 py-3 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className={`text-sm ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
-                        Showing <span className="font-bold text-orange-500">{tableData.length}</span> records
+                        Showing <span className="font-bold" style={{ color: colors.primary }}>{tableData.length}</span> records
                         {timeRange === "custom" && fromDate && toDate && (
                           <span className="ml-2 text-xs">
                             ({new Date(fromDate).toLocaleDateString()} - {new Date(toDate).toLocaleDateString()})
@@ -683,7 +766,7 @@ export default function RevenueAnalytics() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>Total Revenue:</span>
-                        <span className="text-lg font-bold text-orange-500">
+                        <span className="text-lg font-bold" style={{ color: colors.primary }}>
                           {formatCurrency(tableData.reduce((sum, row) => sum + row.revenue, 0))}
                         </span>
                       </div>

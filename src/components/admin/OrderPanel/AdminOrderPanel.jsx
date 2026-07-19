@@ -237,6 +237,7 @@ function VegDot({ type }) {
 // Opens UPWARD — sits near bottom of panel so upward avoids clipping
 // Shows 4 rows (~176px) then scrolls for more tables
 function StyledSelect({ value, onChange, options, placeholder, isDarkMode, className = "" }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
@@ -259,16 +260,21 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
       <button
         type="button"
         onClick={() => setIsOpen((p) => !p)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none ${isDarkMode
-          ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-600 hover:border-orange-400"}`
-          : `bg-white text-[#1c1917] ${isOpen ? "border-orange-400 ring-2 ring-orange-100" : "border-[#ede8e3] hover:border-orange-300"}`
-          }`}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none"
+        style={{
+          backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+          borderColor: isOpen
+            ? colors.primary
+            : (isDarkMode ? "#475569" : "#ede8e3"),
+          color: isDarkMode ? "#cbd5e1" : "#1c1917"
+        }}
       >
         <span className={selectedOption ? "" : isDarkMode ? "text-slate-500" : "text-slate-400"}>
           {selectedOption ? selectedOption.label : (placeholder || "Select...")}
         </span>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
+          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          style={{ color: isOpen ? colors.primary : (isDarkMode ? "#64748b" : "#a8a29e") }}
         />
       </button>
       <AnimatePresence>
@@ -299,18 +305,31 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
                   onClick={() => { if (!isDisabled) { onChange(opt.value); setIsOpen(false); } }}
                   disabled={isDisabled}
                   aria-disabled={isDisabled}
-                  style={{ height: ITEM_HEIGHT }}
-                  className={`w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2 ${isDisabled
-                    ? "opacity-50 cursor-not-allowed"
-                    : value === opt.value
-                      ? isDarkMode ? "bg-orange-500/25 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                      : isDarkMode ? "text-slate-200 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
-                    }`}
+                  className="w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2"
+                  style={{
+                    height: ITEM_HEIGHT,
+                    backgroundColor: value === opt.value
+                      ? (isDarkMode ? `${colors.primary}25` : `${colors.primary}10`)
+                      : "transparent",
+                    color: value === opt.value
+                      ? (isDarkMode ? "#ffffff" : colors.primary)
+                      : (isDarkMode ? "#cbd5e1" : "#1c1917")
+                  }}
+                  onMouseEnter={(e) => {
+                    if (value !== opt.value) {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(71, 85, 105, 0.4)" : "#f7f3ef";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (value !== opt.value) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2 w-2 rounded-full shrink-0 transition-colors"
-                      style={{ backgroundColor: value === opt.value ? "#f97316" : isDarkMode ? "#475569" : "#e2e8f0" }}
+                      style={{ backgroundColor: value === opt.value ? colors.primary : isDarkMode ? "#475569" : "#e2e8f0" }}
                     />
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -329,6 +348,7 @@ function StyledSelect({ value, onChange, options, placeholder, isDarkMode, class
 
 // ─── VariantSelect ────────────────────────────────────────────────────────────
 function VariantSelect({ item, value, onChange, isDarkMode }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
@@ -363,16 +383,21 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setIsOpen((p) => !p); }}
-        className={`w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium border transition-all duration-200 outline-none ${isDarkMode
-          ? `bg-slate-800 text-slate-200 ${isOpen ? "border-orange-500" : "border-slate-700 hover:border-orange-400"}`
-          : `bg-[#f7f3ef] text-[#1c1917] ${isOpen ? "border-orange-400" : "border-[#ede8e3] hover:border-orange-300"}`
-          }`}
+        className="w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium border transition-all duration-200 outline-none"
+        style={{
+          backgroundColor: isDarkMode ? "#1e293b" : "#f7f3ef",
+          borderColor: isOpen
+            ? colors.primary
+            : (isDarkMode ? "#475569" : "#ede8e3"),
+          color: isDarkMode ? "#cbd5e1" : "#1c1917"
+        }}
       >
         <span className="truncate">
           {selectedDisplay ? `${selectedDisplay.label} — ₹${selectedDisplay.finalPrice.toFixed(2)}` : "Select variant"}
         </span>
         <ChevronDown
-          className={`h-3 w-3 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isDarkMode ? "text-slate-400" : "text-orange-500"}`}
+          className={`h-3 w-3 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          style={{ color: isOpen ? colors.primary : (isDarkMode ? "#64748b" : colors.primary) }}
         />
       </button>
       <AnimatePresence>
@@ -394,10 +419,25 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
                   key={key}
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onChange(key); setIsOpen(false); }}
-                  className={`w-full text-left px-2.5 py-2 text-[10px] font-medium transition-all duration-150 ${value === key
-                    ? isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                    : isDarkMode ? "text-slate-300 hover:bg-slate-700" : "text-[#1c1917] hover:bg-[#f7f3ef]"
-                    }`}
+                  className="w-full text-left px-2.5 py-2 text-[10px] font-medium transition-all duration-150"
+                  style={{
+                    backgroundColor: value === key
+                      ? (isDarkMode ? `${colors.primary}25` : `${colors.primary}10`)
+                      : "transparent",
+                    color: value === key
+                      ? (isDarkMode ? "#ffffff" : colors.primary)
+                      : (isDarkMode ? "#cbd5e1" : "#1c1917")
+                  }}
+                  onMouseEnter={(e) => {
+                    if (value !== key) {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(71, 85, 105, 0.4)" : "#f7f3ef";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (value !== key) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="truncate">{d.label}</span>
@@ -423,11 +463,11 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
 // ─── VariantPills ────────────────────────────────────────────────────────────
 // Big tappable buttons — instant selection, no dropdown
 function VariantPills({ item, value, onChange, isDarkMode }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v != null);
 
   const getVariantDisplay = (key, v) => {
     const vBasePrice = Number(v.price) || 0;
-    0;
     const vDiscount = v.discount;
     let vFinalPrice = vBasePrice;
     if (vDiscount?.active && vDiscount?.value && Number(vDiscount.value) > 0) {
@@ -449,20 +489,22 @@ function VariantPills({ item, value, onChange, isDarkMode }) {
             key={key}
             type="button"
             onClick={(e) => { e.stopPropagation(); onChange(key); }}
-            className={`flex-1 min-w-[80px] flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95 ${isSelected
-              ? isDarkMode
-                ? "bg-orange-950/40 border-orange-500/60 text-orange-400 font-extrabold"
-                : "bg-orange-50 border-orange-400 text-orange-700 font-extrabold shadow-none"
-              : isDarkMode
-                ? "bg-slate-800 border-slate-600 text-slate-200 hover:border-orange-400 hover:bg-slate-700"
-                : "bg-[#f7f3ef] border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-white"
-              }`}
+            className="flex-1 min-w-[80px] flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-150 active:scale-95"
+            style={{
+              backgroundColor: isSelected
+                ? (isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`)
+                : (isDarkMode ? "#1e293b" : "#f7f3ef"),
+              borderColor: isSelected ? colors.primary : (isDarkMode ? "#475569" : "#ede8e3"),
+              color: isSelected
+                ? (isDarkMode ? "#ffffff" : colors.primary)
+                : (isDarkMode ? "#cbd5e1" : "#1c1917")
+            }}
           >
             <span className="text-base">{d.label}</span>
-            <span className={`text-xs font-bold ${isSelected ? "text-white/90" : "text-orange-500"}`}>
+            <span className="text-xs font-bold" style={{ color: isSelected ? (isDarkMode ? "#ffffff" : colors.primary) : colors.primary }}>
               ₹{d.finalPrice.toFixed(0)}
               {d.hasDisc && (
-                <span className={`ml-1 line-through text-[10px] ${isSelected ? "text-white/60" : isDarkMode ? "text-slate-400/70" : "text-slate-400"}`}>
+                <span className="ml-1 line-through text-[10px]" style={{ color: isSelected ? (isDarkMode ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)") : (isDarkMode ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)") }}>
                   ₹{d.basePrice.toFixed(0)}
                 </span>
               )}
@@ -496,6 +538,7 @@ function OrderSummaryPanel({
   setBookingOrderId,
 }) {
   const { notify, newItemsByOrderId } = useNotification() || {};
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isFormCollapsed, setIsFormCollapsed] = useState(false);
   const isEditing = Boolean(editingOrder?._id);
   const showTableSelector = !isEditing || (editingOrder?.orderType !== "Eat Here" && editingOrder?.orderType !== "Room Stay");
@@ -595,13 +638,21 @@ function OrderSummaryPanel({
                     )}
                   </div>
                   {item.variantLabel && (
-                    <span className={`text-xs px-2 py-0.5 rounded-md mt-1 inline-block font-semibold ${isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-[#f7f3ef] text-orange-500"
-                      }`}>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-md mt-1 inline-block font-semibold"
+                      style={{
+                        backgroundColor: isDarkMode ? `${colors.primary}33` : `${colors.primary}10`,
+                        color: isDarkMode ? "#ffffff" : colors.primary
+                      }}
+                    >
                       {item.variantLabel}
                     </span>
                   )}
                   {item.customizations && (
-                    <div className={`text-xs mt-1 italic font-medium ${isDarkMode ? "text-orange-300" : "text-orange-600"}`}>
+                    <div
+                      className="text-xs mt-1 italic font-medium"
+                      style={{ color: isDarkMode ? "#ffffff" : colors.primary }}
+                    >
                       Customization: {item.customizations}
                     </div>
                   )}
@@ -620,10 +671,13 @@ function OrderSummaryPanel({
                       ? isDarkMode
                         ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
                         : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                      : isDarkMode
-                        ? "border-slate-600 bg-slate-800 text-orange-400 hover:bg-slate-700"
-                        : "border-orange-200 bg-white text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
+                      : "hover:opacity-90"
                       }`}
+                    style={!isBilled ? {
+                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}60`,
+                      backgroundColor: isDarkMode ? "transparent" : "#ffffff",
+                      color: isDarkMode ? "#ffffff" : colors.primary
+                    } : {}}
                   >
                     <Minus className="h-4 w-4" />
                   </button>
@@ -635,10 +689,13 @@ function OrderSummaryPanel({
                       ? isDarkMode
                         ? "border-slate-705 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
                         : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                      : isDarkMode
-                        ? "border-slate-700 bg-slate-800 text-orange-400 hover:bg-slate-700"
-                        : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                      : "hover:opacity-90"
                       }`}
+                    style={!isBilled ? {
+                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}60`,
+                      backgroundColor: isDarkMode ? "transparent" : `${colors.primary}10`,
+                      color: isDarkMode ? "#ffffff" : colors.primary
+                    } : {}}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -708,14 +765,19 @@ function OrderSummaryPanel({
                         }
                         notify(`Order type changed to ${type}!`, "success");
                       }}
-                      className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${isActive
-                        ? isDarkMode
-                          ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
-                          : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
-                        : isDarkMode
-                          ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
-                          : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
-                        } ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                      className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                      style={{
+                        backgroundColor: isActive
+                          ? colors.primary
+                          : (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#ffffff"),
+                        borderColor: isActive
+                          ? colors.primary
+                          : (isDarkMode ? "#475569" : "#ede8e3"),
+                        color: isActive
+                          ? "#ffffff"
+                          : (isDarkMode ? "#94a3b8" : "#78716c"),
+                        fontWeight: isActive ? "800" : "500"
+                      }}
                     >
                       {type}
                     </button>
@@ -748,14 +810,19 @@ function OrderSummaryPanel({
                             setTableId(""); // clear table selection when switching types
                             notify(`Switched to ${label} mode`, "success");
                           }}
-                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all border ${dineInType === key
-                            ? isDarkMode
-                              ? "bg-orange-950/30 border-orange-500/40 text-orange-400 font-extrabold"
-                              : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-none"
-                            : isDarkMode
-                              ? "bg-slate-800 text-slate-300 border-slate-600 hover:border-orange-400"
-                              : "bg-white text-[#78716c] border-[#ede8e3] hover:border-orange-300"
-                            } ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
+                          style={{
+                            backgroundColor: dineInType === key
+                              ? colors.primary
+                              : (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#ffffff"),
+                            borderColor: dineInType === key
+                              ? colors.primary
+                              : (isDarkMode ? "#475569" : "#ede8e3"),
+                            color: dineInType === key
+                              ? "#ffffff"
+                              : (isDarkMode ? "#94a3b8" : "#78716c"),
+                            fontWeight: dineInType === key ? "800" : "500"
+                          }}
                         >
                           {label}
                         </button>
@@ -863,7 +930,7 @@ function OrderSummaryPanel({
         )}
         <div className={`flex justify-between pt-2 border-t ${isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]"}`}>
           <span className={`font-bold text-base ${textPrimary}`}>Total</span>
-          <span className="font-bold text-lg text-orange-500">₹{total.toFixed(2)}</span>
+          <span className="font-bold text-lg" style={{ color: colors.primary }}>₹{total.toFixed(2)}</span>
         </div>
       </div>
 
@@ -912,36 +979,34 @@ function OrderSummaryPanel({
           <button
             type="button"
             onClick={() => setShowPayModal(true)}
-            className={`w-full h-12 rounded-xl text-sm font-black transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] ${isDarkMode
-              ? "bg-emerald-950/20 border-emerald-500/35 text-emerald-400 hover:bg-emerald-950/40 hover:border-emerald-500/50"
-              : "bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-350"
-              }`}
+            className="w-full h-12 rounded-xl text-sm font-black transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] text-white hover:opacity-90 bg-emerald-600 border border-emerald-600"
           >
-            <IndianRupee className="h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+            <IndianRupee className="h-4 w-4 shrink-0 text-white" />
             Record Payment
           </button>
         ) : (
           <>
             <button
-              onClick={() => handleSubmit("save")}
+              onClick={() => handleSubmit("print_bill")}
               disabled={
                 cartCount === 0 ||
                 isSubmitting ||
                 !isRestaurantOpen ||
                 ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
               }
-              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-                : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-                }`}
+              className="flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed text-white hover:opacity-90"
+              style={{
+                backgroundColor: colors.primary,
+                borderColor: colors.primary,
+              }}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  <span className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-white" />
                   Processing...
                 </span>
               ) : (
-                "Save"
+                "Bill Order"
               )}
             </button>
             <button
@@ -952,14 +1017,15 @@ function OrderSummaryPanel({
                 !isRestaurantOpen ||
                 ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
               }
-              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-                : "bg-[#fff8f5] border-[#ede8e3] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-                }`}
+              className="flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed text-white hover:opacity-90"
+              style={{
+                backgroundColor: colors.primary,
+                borderColor: colors.primary,
+              }}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  <span className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-white" />
                   Processing...
                 </span>
               ) : (
@@ -967,25 +1033,39 @@ function OrderSummaryPanel({
               )}
             </button>
             <button
-              onClick={() => handleSubmit("print_bill")}
+              onClick={() => handleSubmit("save")}
               disabled={
                 cartCount === 0 ||
                 isSubmitting ||
                 !isRestaurantOpen ||
                 ((orderType === "Eat Here" || orderType === "Room Stay") && (() => { const [s, n] = (tableId || "").split(":"); return !s || !n; })())
               }
-              className={`flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed ${isDarkMode
-                ? "bg-orange-950/20 border-orange-500/35 text-orange-400 hover:bg-orange-950/40 hover:border-orange-500/50"
-                : "bg-[#fff8f5] border-orange-200 text-orange-700 hover:bg-[#ffedd5] hover:border-orange-300"
-                }`}
+              className="flex-1 h-12 rounded-xl border text-sm font-black transition-all duration-200 flex items-center justify-center shadow-sm active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#ffffff",
+                borderColor: isDarkMode ? "#475569" : "#ede8e3",
+                color: isDarkMode ? "#cbd5e1" : "#57524e"
+              }}
+              onMouseEnter={(e) => {
+                if (cartCount > 0 && !isSubmitting && isRestaurantOpen) {
+                  e.currentTarget.style.borderColor = colors.primary;
+                  e.currentTarget.style.color = isDarkMode ? "#ffffff" : colors.primary;
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}15` : `${colors.primary}0a`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = isDarkMode ? "#475569" : "#ede8e3";
+                e.currentTarget.style.color = isDarkMode ? "#cbd5e1" : "#57524e";
+                e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#ffffff";
+              }}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-orange-400' : 'border-orange-700'}`} />
+                  <span className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: isDarkMode ? "#ffffff" : "#57524e", borderTopColor: 'transparent' }} />
                   Processing...
                 </span>
               ) : (
-                "Bill Order"
+                "Save"
               )}
             </button>
           </>
@@ -1044,9 +1124,9 @@ function OrderSummaryPanel({
                     if (bookingErrors.name) setBookingErrors(p => ({ ...p, name: null }));
                   }}
                   placeholder="Enter guest name"
-                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1070,9 +1150,9 @@ function OrderSummaryPanel({
                   }}
                   placeholder="10-digit phone number"
                   maxLength={10}
-                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+                  className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1100,7 +1180,11 @@ function OrderSummaryPanel({
                 <button
                   type="submit"
                   disabled={isBookingRoom}
-                  className="flex-1 h-10 rounded-xl border text-sm font-extrabold text-white bg-orange-600 hover:bg-orange-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 h-10 rounded-xl border text-sm font-extrabold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90"
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary
+                  }}
                 >
                   {isBookingRoom ? (
                     <>
@@ -1122,6 +1206,7 @@ function OrderSummaryPanel({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false, editingOrder = null }) {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const dispatch = useDispatch();
   const { notify, newItemsByOrderId } = useNotification() || {};
   useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
@@ -1475,8 +1560,32 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     if (errorMessage) { showError(errorMessage); return; }
 
     try {
+      const mergeDuplicateOrderItems = (itemsList) => {
+        const mergedMap = new Map();
+        for (const item of itemsList) {
+          const key = `${item.menuItemId}_${item.variant || "default"}`;
+          if (mergedMap.has(key)) {
+            const existing = mergedMap.get(key);
+            existing.quantity += item.quantity;
+            const currentCust = String(item.customizations || "").trim();
+            const existingCust = String(existing.customizations || "").trim();
+            if (currentCust && existingCust) {
+              if (existingCust.toLowerCase() !== currentCust.toLowerCase()) {
+                existing.customizations = `${existingCust}, ${currentCust}`;
+              }
+            } else if (currentCust) {
+              existing.customizations = currentCust;
+            }
+          } else {
+            mergedMap.set(key, { ...item });
+          }
+        }
+        return Array.from(mergedMap.values());
+      };
+
       const currentCartItems = Object.values(cartItems);
-      const orderItems = currentCartItems.map((cartItem) => buildOrderItemFromCartItem(cartItem));
+      const rawOrderItems = currentCartItems.map((cartItem) => buildOrderItemFromCartItem(cartItem));
+      const orderItems = mergeDuplicateOrderItems(rawOrderItems);
       const addedItemsPreview = buildAddedItemsPreview(currentCartItems, originalOrderItems);
 
       const orderData = {
@@ -1574,16 +1683,16 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
   // ── Styles ───────────────────────────────────────────────────────────────────
   const inputStyle = isDarkMode
-    ? "border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded-lg px-3 py-1.5 md:py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition w-full"
-    : "border border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] rounded-lg px-3 py-1.5 md:py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition w-full";
+    ? "border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded-lg px-3 py-1.5 md:py-2 text-sm outline-none transition w-full theme-focus"
+    : "border border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] rounded-lg px-3 py-1.5 md:py-2 text-sm outline-none transition w-full theme-focus";
 
   const bg = isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]";
   const border = isDarkMode ? "border-slate-700/60" : "border-[#ede8e3]";
   const textPrimary = isDarkMode ? "text-slate-100" : "text-[#1c1917]";
   const textSecondary = isDarkMode ? "text-slate-400" : "text-[#78716c]";
   const cardBg = isDarkMode
-    ? "bg-[#1e293b] border-slate-700/60 hover:border-orange-500/40"
-    : "bg-white border-[#ede8e3] hover:border-orange-300 hover:shadow-sm shadow-none";
+    ? "bg-[#1e293b] border-slate-700/60 theme-card-hover"
+    : "bg-white border-[#ede8e3] theme-card-hover hover:shadow-sm shadow-none";
   const summaryBg = isDarkMode ? "bg-[#1e293b]" : "bg-white";
   const headerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-white border-[#ede8e3]";
 
@@ -1611,6 +1720,15 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       className={`flex flex-col ${asModal ? "h-full" : "h-screen"} overflow-hidden ${bg}`}
       style={{ backgroundColor: isDarkMode ? "#0f172a" : "#f7f3ef" }}
     >
+      <style>{`
+        .theme-focus:focus {
+          border-color: ${colors.primary} !important;
+          box-shadow: 0 0 0 1px ${colors.primary}80 !important;
+        }
+        .theme-card-hover:hover {
+          border-color: ${colors.primary}60 !important;
+        }
+      `}</style>
 
       {/* STICKY HEADER — hidden when used as modal */}
       {!asModal && (
@@ -1625,7 +1743,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             </span>
             {cartCount > 0 && (
               <span
-                style={{ backgroundColor: "#f97316", color: "#ffffff" }}
+                style={{ backgroundColor: colors.primary, color: "#ffffff" }}
                 className="text-xs px-2.5 py-1 rounded-full font-semibold"
               >
                 {cartCount} in cart
@@ -1646,11 +1764,16 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             key={cat}
             onClick={() => setSelectedCategory(cat)}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap shrink-0 transition-all duration-150 border ${selectedCategory === cat
-              ? isDarkMode ? "bg-orange-950/30 border-orange-500/50 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-extrabold shadow-sm"
+              ? ""
               : isDarkMode
                 ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-100"
                 : "bg-white text-[#57524e] border-[#ede8e3] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
               }`}
+            style={selectedCategory === cat ? {
+              backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+              borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+              color: isDarkMode ? "#ffffff" : colors.primary
+            } : {}}
           >
             {cat}
           </button>
@@ -1671,12 +1794,19 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border ${selectedCategory === cat
-                ? isDarkMode ? "bg-orange-950/30 border-orange-500/40 text-orange-400" : "bg-orange-50 border-orange-200 text-orange-700 font-bold pl-3 shadow-none border-l-4 border-l-orange-500 rounded-r-xl rounded-l-none"
+              className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${selectedCategory === cat
+                ? ""
                 : isDarkMode
                   ? "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                   : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
                 }`}
+              style={selectedCategory === cat ? {
+                backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                color: isDarkMode ? "#ffffff" : colors.primary,
+                borderLeft: `4px solid ${colors.primary}`,
+                paddingLeft: "12px"
+              } : {}}
             >
               {cat}
             </button>
@@ -1727,13 +1857,15 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     key={item._id}
                     className={`relative flex flex-col justify-between min-h-[135px] rounded-2xl border p-3 transition-all duration-200 ${isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
                       } ${quantity > 0
-                        ? isDarkMode
-                          ? "border-orange-500/50 bg-[#1e293b] shadow-sm"
-                          : "border-orange-400 bg-white shadow-sm"
+                        ? "shadow-sm"
                         : isDarkMode
                           ? "border-slate-700/60 bg-[#1e293b] hover:border-slate-600"
-                          : "border-[#ede8e3] bg-white hover:border-slate-300"
+                          : "border-[#ede8e3] bg-[#ffffff] hover:border-slate-300"
                       }`}
+                    style={quantity > 0 ? {
+                      borderColor: colors.primary,
+                      backgroundColor: isDarkMode ? "#1e293b" : "#ffffff"
+                    } : {}}
                   >
                     <div className="flex items-start gap-1.5 mb-1.5">
                       <VegDot type={item.type} />
@@ -1743,16 +1875,26 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     </div>
 
                     {item.pricingType === "combo" && (
-                      <span className={`self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1 ${isDarkMode ? "bg-orange-500/20 text-orange-300" : "bg-orange-50 text-orange-500"
-                        }`}>
+                      <span
+                        className="self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1"
+                        style={{
+                          backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}10`,
+                          color: isDarkMode ? "#ffffff" : colors.primary
+                        }}
+                      >
                         Combo
                       </span>
                     )}
 
                     <div className="flex flex-wrap items-center gap-1 mb-1.5">
                       {item.pricingType === "variant" ? (
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-orange-50/50 text-orange-600"
-                          }`}>
+                        <span
+                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                          style={{
+                            backgroundColor: isDarkMode ? "rgba(71, 85, 105, 0.4)" : `${colors.primary}10`,
+                            color: isDarkMode ? "#cbd5e1" : colors.primary
+                          }}
+                        >
                           Variant
                         </span>
                       ) : hasDiscount ? (
@@ -1760,7 +1902,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                           <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-400/70" : "text-slate-400"}`}>
                             ₹{basePrice.toFixed(2)}
                           </span>
-                          <span className={`text-xs font-bold ${isDarkMode ? "text-orange-400" : "text-orange-500"}`}>₹{discountedPrice.toFixed(2)}</span>
+                          <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{discountedPrice.toFixed(2)}</span>
                           <span className={`text-[9px] px-1 py-0.5 rounded-full font-semibold ${isDarkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"
                             }`}>
                             OFF
@@ -1784,10 +1926,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         <button
                           onClick={() => setVariantPickerItem(item)}
                           disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
-                            ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-                            : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
-                            } ${isBilled ? "opacity-45 cursor-not-allowed" : ""}`}
+                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                          style={!isBilled ? {
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
+                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
+                            color: isDarkMode ? "#ffffff" : colors.primary
+                          } : {}}
                         >
                           + Add
                         </button>
@@ -1795,10 +1939,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         <button
                           onClick={() => handleAddItem(item)}
                           disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isDarkMode
-                            ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white"
-                            : "bg-white border-orange-200/90 text-orange-600 hover:bg-[#fff8f5] hover:border-orange-350"
-                            } ${isBilled ? "opacity-45 cursor-not-allowed" : ""}`}
+                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                          style={!isBilled ? {
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
+                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
+                            color: isDarkMode ? "#ffffff" : colors.primary
+                          } : {}}
                         >
                           + Add
                         </button>
@@ -1811,10 +1957,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                               ? isDarkMode
                                 ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
                                 : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : isDarkMode
-                                ? "border-orange-500/30 bg-[#ea580c]/10 text-orange-400 hover:bg-[#ea580c]/20"
-                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                              : "hover:opacity-90"
                               }`}
+                            style={!isBilled ? {
+                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
+                              backgroundColor: isDarkMode ? "transparent" : "#ffffff",
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
                           >
                             <Minus className="h-4 w-4" />
                           </button>
@@ -1826,10 +1975,13 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                               ? isDarkMode
                                 ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
                                 : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : isDarkMode
-                                ? "border-orange-500/30 bg-[#ea580c]/15 text-orange-400 hover:bg-[#ea580c]/25"
-                                : "border-orange-200 bg-[#fff8f5] text-orange-600 hover:bg-[#ffedd5] hover:border-orange-300"
+                              : "hover:opacity-90"
                               }`}
+                            style={!isBilled ? {
+                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
+                              backgroundColor: isDarkMode ? "transparent" : `${colors.primary}10`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
                           >
                             <Plus className="h-4 w-4" />
                           </button>
@@ -1922,10 +2074,22 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         quantity: 1,
                       }));
                     }}
-                    className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl text-base font-bold transition-all active:scale-[0.97] ${isDarkMode
-                      ? "bg-slate-800/80 border border-slate-700 text-slate-100 hover:border-orange-500/50 hover:bg-orange-950/20 hover:text-orange-400"
-                      : "bg-white border border-[#ede8e3] text-[#1c1917] hover:border-orange-300 hover:bg-[#fff8f5] hover:text-orange-700 shadow-sm"
-                      }`}
+                    className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl text-base font-bold transition-all active:scale-[0.97]"
+                    style={{
+                      backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
+                      borderColor: isDarkMode ? "#475569" : "#ede8e3",
+                      color: isDarkMode ? "#cbd5e1" : "#1c1917"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.primary;
+                      e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : `${colors.primary}0d`;
+                      e.currentTarget.style.color = isDarkMode ? "#ffffff" : colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = isDarkMode ? "#475569" : "#ede8e3";
+                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff";
+                      e.currentTarget.style.color = isDarkMode ? "#cbd5e1" : "#1c1917";
+                    }}
                   >
                     <span>{label}</span>
                     <span className="text-right">
