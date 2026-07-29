@@ -21,6 +21,7 @@ import { ZoomIn, ZoomOut, RotateCcw, Check, X } from "lucide-react";
 async function getCroppedBlob(imageSrc, pixelCrop, outputType = "image/jpeg") {
   const image = await new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.addEventListener("load", () => resolve(img));
     img.addEventListener("error", (e) => reject(e));
     img.src = imageSrc;
@@ -30,6 +31,9 @@ async function getCroppedBlob(imageSrc, pixelCrop, outputType = "image/jpeg") {
   canvas.width  = pixelCrop.width;
   canvas.height = pixelCrop.height;
   const ctx = canvas.getContext("2d");
+
+  // Ensure canvas is clear for PNG transparency
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.drawImage(
     image,
@@ -56,6 +60,7 @@ export default function ImageCropperModal({
   onCancel,
   title = "Crop Image",
   outputFileName = "cropped-image.jpg",
+  mimeType,
 }) {
   const [crop, setCrop]           = useState({ x: 0, y: 0 });
   const [zoom, setZoom]           = useState(1);
@@ -70,8 +75,39 @@ export default function ImageCropperModal({
     if (!croppedAreaPixels) return;
     setIsProcessing(true);
     try {
-      const blob = await getCroppedBlob(imageSrc, croppedAreaPixels);
-      const file = new File([blob], outputFileName, { type: "image/jpeg" });
+      let detectedType = mimeType || "";
+
+      if (!detectedType) {
+        if (imageSrc && imageSrc.startsWith("data:")) {
+          const match = imageSrc.match(/data:([^;]+);/);
+          if (match && match[1]) {
+            detectedType = match[1];
+          }
+        }
+
+        if (!detectedType) {
+          const fileString = outputFileName || imageSrc || "";
+          const cleanUrl = fileString.split("?")[0].split("#")[0];
+          const extension = cleanUrl.split(".").pop()?.toLowerCase();
+
+          if (extension === "png") {
+            detectedType = "image/png";
+          } else if (extension === "webp") {
+            detectedType = "image/webp";
+          } else if (extension === "gif") {
+            detectedType = "image/gif";
+          } else {
+            detectedType = "image/jpeg";
+          }
+        }
+      }
+
+      const blob = await getCroppedBlob(imageSrc, croppedAreaPixels, detectedType);
+      const extension = detectedType.split("/")[1] || "jpg";
+      const baseName = outputFileName.replace(/\.[^/.]+$/, "");
+      const finalFileName = `${baseName}.${extension === "jpeg" ? "jpg" : extension}`;
+
+      const file = new File([blob], finalFileName, { type: detectedType });
       onCropDone(file);
     } catch (err) {
       console.error("Crop error:", err);
@@ -102,7 +138,13 @@ export default function ImageCropperModal({
         </div>
 
         {/* Crop area */}
-        <div className="relative h-72 w-full bg-black sm:h-80">
+        <div
+          className="relative h-72 w-full sm:h-80"
+          style={{
+            backgroundImage: "repeating-conic-gradient(#cbd5e1 0% 25%, #f8fafc 0% 50%)",
+            backgroundSize: "16px 16px",
+          }}
+        >
           <Cropper
             image={imageSrc}
             crop={crop}

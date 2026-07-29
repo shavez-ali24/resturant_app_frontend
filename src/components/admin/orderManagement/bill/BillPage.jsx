@@ -1,7 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector, useDispatch } from "react-redux";
-import { useToggleItemReadyMutation } from "../../../../redux/adminRedux/adminAPI";
+import { useSelector } from "react-redux";
+import {
+  useBillOrderMutation,
+  useToggleItemReadyMutation,
+  useLazyGetOrderByIdQuery,
+} from "../../../../redux/adminRedux/adminAPI";
 import {
   Select,
   SelectContent,
@@ -10,13 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X } from "lucide-react";
+import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, ClipboardList, ListChecks, Printer } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass,
   getOrderTypeKey,
   getOrderTypeLabel,
   recalcTotal,
+  formatOrderTableId,
+  isEatHereOrder,
 } from "../commonOrderFile/utils";
 
 const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
@@ -61,9 +67,9 @@ const BillPage = ({
   restaurantDetails,
   onClose,
   menuItems = [],
-  tables = [],
   updateOrder,
-  sseEvent
+  sseEvent,
+  autoPrint = false
 }) => {
   const billRef = useRef();
   const user = useSelector((state) => state.admin.user);
@@ -83,14 +89,18 @@ const BillPage = ({
   });
   const [itemChecks, setItemChecks] = useState({});
   const [toggleItemReady] = useToggleItemReadyMutation();
+  const [billOrder, { isLoading: isBilling }] = useBillOrderMutation();
+  const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
   // ✅ FIX: Ref to block SSE overwrite during post-save restore window
   const restoringRef = useRef(false);
 
-  const activeOrder = isEditMode && localOrderData ? localOrderData : order;
+  const activeOrder = localOrderData || order;
+  const isPreviewOnly = Boolean(order?.previewMode === "new-items-only");
+  const isAlreadyBilled = String(activeOrder?.status || "").toLowerCase() === "completed";
 
   // ✅ FIX: Use activeOrder.status so checkboxes don't disappear after edit
-  const showItemChecks = ["pending", "preparing", "ready"].includes(
+  const showItemChecks = !isPreviewOnly && ["pending", "preparing", "ready"].includes(
     String(activeOrder?.status || "").toLowerCase()
   );
 
@@ -256,28 +266,34 @@ const BillPage = ({
     // Skip SSE overwrite during edit mode
     if (isEditMode) return;
 
-    const updatedOrder = sseEvent.data;
-    const updatedOrderId = updatedOrder._id || updatedOrder.id || updatedOrder.orderId;
+    const incomingData = sseEvent.data;
+    const actualOrder = incomingData?.order || incomingData;
+    const updatedOrderId = actualOrder?._id || actualOrder?.id || actualOrder?.orderId;
 
     if (String(updatedOrderId) === String(orderStorageKey)) {
-      if (updatedOrder.items && showItemChecks) {
-        const sseChecks = {};
-        updatedOrder.items.forEach(item => {
-          if (item._id) {
-            sseChecks[item._id] = !!item.isReady;
-          }
-        });
-
-        setItemChecks(prev => {
-          const merged = { ...prev };
-          Object.keys(sseChecks).forEach(key => {
-            merged[key] = sseChecks[key];
+      fetchOrderById(orderStorageKey).unwrap().then((fetchedOrder) => {
+        if (fetchedOrder && fetchedOrder.items && showItemChecks) {
+          const sseChecks = {};
+          fetchedOrder.items.forEach(item => {
+            const itemId = item._id || item.id;
+            if (itemId) {
+              sseChecks[itemId] = !!item.isReady;
+            }
           });
-          return merged;
-        });
-      }
+
+          setItemChecks(prev => {
+            const merged = { ...prev };
+            Object.keys(sseChecks).forEach(key => {
+              merged[key] = sseChecks[key];
+            });
+            return merged;
+          });
+        }
+      }).catch((err) => {
+        console.error("Failed to fetch order in BillPage SSE:", err);
+      });
     }
-  }, [sseEvent, orderStorageKey, showItemChecks, isEditMode]);
+  }, [sseEvent, orderStorageKey, showItemChecks, isEditMode, fetchOrderById]);
 
   const toggleItemCheck = async (itemKey) => {
     const currentValue = itemChecks[itemKey] || false;
@@ -370,7 +386,9 @@ const BillPage = ({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const restaurantDeliveryCharge = parseAmount(restaurantDetails?.deliveryCharges);
+  const restaurantObj = restaurantDetails?.restaurant || restaurantDetails;
+
+  const restaurantDeliveryCharge = parseAmount(restaurantObj?.deliveryCharges);
   const hasOrderDeliveryCharge =
     activeOrder?.deliveryCharges !== undefined &&
     activeOrder?.deliveryCharges !== null &&
@@ -386,6 +404,12 @@ const BillPage = ({
       ? resolvedDeliveryCharge
       : 0;
 
+  // 🔧 FIX: Room charge from order document (source of truth)
+  // Backend billOrder saves roomCharge to order.stay.roomCharge
+  // Only show when stay.enabled === true (room order)
+  const isStayEnabled = activeOrder?.stay?.enabled === true;
+  const roomCharge = isStayEnabled ? parseAmount(activeOrder?.stay?.roomCharge || 0) : 0;
+
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
   const backendSubtotal = parseAmount(activeOrder?.subtotal);
   const hasBackendSubtotal =
@@ -397,7 +421,7 @@ const BillPage = ({
 
   const gstRate = parseAmount(
     activeOrder?.gstRate ??
-    restaurantDetails?.gstRate ??
+    restaurantObj?.gstRate ??
     order?.gstRate ??
     0
   );
@@ -409,7 +433,8 @@ const BillPage = ({
     ? computedGstAmount
     : (backendGstAmount || computedGstAmount);
 
-  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges;
+  // 🔧 FIX: Include roomCharge in grand total
+  const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges + roomCharge;
   const backendGrandTotal = parseAmount(activeOrder?.totalAmount || 0);
   let displayGrandTotal = computedGrandTotal;
 
@@ -425,22 +450,22 @@ const BillPage = ({
   }
 
   const restaurantName =
-    restaurantDetails?.restaurantName ||
-    restaurantDetails?.name ||
+    restaurantObj?.restaurantName ||
+    restaurantObj?.name ||
     "Restaurant Name";
-  const restaurantAddress = restaurantDetails?.address || "Restaurant Address";
-  const restaurantPhone = restaurantDetails?.phoneNumber || "N/A";
+  const restaurantAddress = restaurantObj?.address || "Restaurant Address";
+  const restaurantPhone = restaurantObj?.phoneNumber || restaurantObj?.phone || "N/A";
   const rawGstin =
-    restaurantDetails?.gstNumber ??
-    restaurantDetails?.gstin ??
-    restaurantDetails?.gstIN ??
+    restaurantObj?.gstNumber ??
+    restaurantObj?.gstin ??
+    restaurantObj?.gstIN ??
     "";
   const normalizedGstin = String(rawGstin || "").trim();
   const restaurantGstin =
-    normalizedGstin && restaurantDetails?.gstEnabled !== false
+    normalizedGstin && restaurantObj?.gstEnabled !== false
       ? normalizedGstin
       : null;
-  const displayAddress = isEditMode ? address : order?.address;
+  const displayAddress = isEditMode ? address : activeOrder?.address;
   const forceLightBill = true;
   const billThemeIsDark = isDarkMode && !forceLightBill;
   const billSurfaceClass = billThemeIsDark
@@ -469,15 +494,15 @@ const BillPage = ({
 
   const getFinalQR = () => {
     const rawQR =
-      (typeof restaurantDetails?.qrCode === "string" ||
-      typeof restaurantDetails?.qrCode === "number")
-        ? String(restaurantDetails?.qrCode)
+      (typeof restaurantObj?.qrCode === "string" ||
+      typeof restaurantObj?.qrCode === "number")
+        ? String(restaurantObj?.qrCode)
         : (
-            restaurantDetails?.qrCode?.url ||
-            restaurantDetails?.qrCode?.secure_url ||
-            restaurantDetails?.qrCode?.secureUrl ||
-            restaurantDetails?.qrCode?.path ||
-            restaurantDetails?.qrCode?.base64 ||
+            restaurantObj?.qrCode?.url ||
+            restaurantObj?.qrCode?.secure_url ||
+            restaurantObj?.qrCode?.secureUrl ||
+            restaurantObj?.qrCode?.path ||
+            restaurantObj?.qrCode?.base64 ||
             ""
           );
     const cleanedQR = String(rawQR || "").replace(/\s/g, "");
@@ -648,6 +673,36 @@ const BillPage = ({
     setIsSubmitting(true);
     setError("");
 
+    // Helper to map selectedTableId to unitId from restaurantDetails sections
+    const findUnitId = (tableIdVal, restDetails) => {
+      if (!tableIdVal || !restDetails || !Array.isArray(restDetails.sections)) {
+        return null;
+      }
+      const [sectionKey, tableNum] = tableIdVal.split(":");
+      if (!sectionKey || !tableNum) return null;
+
+      const section = restDetails.sections.find(
+        (s) => s.name.toLowerCase() === sectionKey.toLowerCase()
+      );
+      if (section && Array.isArray(section.units)) {
+        const unit = section.units.find(
+          (u) =>
+            String(u.name).toLowerCase() === String(tableNum).toLowerCase() ||
+            String(u.name).toLowerCase() === `t${tableNum}`.toLowerCase() ||
+            String(u.name).toLowerCase() === `table ${tableNum}`.toLowerCase() ||
+            String(u.name).toLowerCase() === `room ${tableNum}`.toLowerCase() ||
+            String(u._id) === String(tableNum)
+        );
+        if (unit) return unit._id;
+
+        const idx = parseInt(tableNum, 10) - 1;
+        if (idx >= 0 && idx < section.units.length) {
+          return section.units[idx]._id;
+        }
+      }
+      return null;
+    };
+
     try {
       const initialStatus = initialOrderSnapshot?.status;
       const currentStatus = localOrderData.status;
@@ -655,38 +710,77 @@ const BillPage = ({
       const currentItemCount = localOrderData.items.length;
       const isAddingNewItems = currentItemCount > initialItemCount;
 
-      // ✅ FIX 1: Capture ready items by STABLE KEY before save
-      // Backend gives new _id after edit — so we match by menuItemId+variant+customizations
-      const readyStableKeys = new Set();
-      (order?.items || []).forEach(item => {
-        if (item.isReady === true && item._id) {
-          readyStableKeys.add(buildItemCheckBase(item));
+      const originalItems = order?.items || [];
+      const currentItems = localOrderData?.items || [];
+
+      const existingByKey = new Map();
+      originalItems.forEach((item) => {
+        existingByKey.set(buildItemCheckBase(item), item);
+      });
+
+      const currentByKey = new Map();
+      currentItems.forEach((item) => {
+        currentByKey.set(buildItemCheckBase(item), item);
+      });
+
+      const removeItemIds = [];
+      const updateQuantities = [];
+      const newItems = [];
+
+      existingByKey.forEach((existingItem, key) => {
+        const currentItem = currentByKey.get(key);
+        if (!currentItem) {
+          removeItemIds.push(existingItem._id);
+        } else if (Number(currentItem.quantity) !== Number(existingItem.quantity)) {
+          updateQuantities.push({
+            itemId: existingItem._id,
+            quantity: Number(currentItem.quantity),
+          });
         }
       });
 
-      // ✅ FIX 2: Send isReady in payload for existing items
-      // This preserves isReady on backend even if backend resets it
+      currentByKey.forEach((currentItem, key) => {
+        if (!existingByKey.has(key)) {
+          newItems.push({
+            menuItemId: currentItem.menuItemId,
+            quantity: Number(currentItem.quantity),
+            variant: currentItem.variantName || null,
+            customizations: currentItem.customizations || "",
+          });
+        }
+      });
+
       const payload = {
         orderType: localOrderData.orderType,
-         replaceItems: true,
-        items: localOrderData.items.map(item => {
-          const payloadItem = {
-            menuItemId: item.menuItemId,
-            quantity: item.quantity,
-            variant: item.variantName || null,
-            customizations: item.customizations || "",
-          };
-
-          if (item._id) {
-            payloadItem._id = item._id;
-            // ✅ KEY FIX: Send isReady so backend preserves it
-            // Previously this was MISSING — causing undefined/false on backend
-            payloadItem.isReady = item.isReady === true ? true : false;
-          }
-
-          return payloadItem;
-        })
       };
+
+      if (selectedOrderTypeKey === "delivery") {
+        payload.address = address.trim();
+        payload.deliveryCharges =
+          parseAmount(localOrderData?.deliveryCharges) ||
+          parseAmount(restaurantDetails?.deliveryCharges) ||
+          0;
+        payload.source = { section: null, number: null, type: "NONE", unitId: null };
+      } else if (selectedOrderTypeKey === "take_away") {
+        payload.source = { section: null, number: null, type: "NONE", unitId: null };
+        payload.address = null;
+      } else if (selectedOrderTypeKey === "eat_here") {
+        if (order?.orderType !== "Eat Here") {
+          const [secKey, numVal] = selectedTableId ? selectedTableId.split(":") : ["", ""];
+          const resolvedUnitId = findUnitId(selectedTableId, restaurantDetails);
+          payload.source = {
+            section: secKey || null,
+            number: numVal ? parseInt(numVal, 10) : null,
+            unitId: resolvedUnitId || null,
+            type: secKey === "rooms" ? "ROOM" : "TABLE"
+          };
+          payload.address = null;
+        }
+      }
+
+      if (removeItemIds.length) payload.removeItemIds = removeItemIds;
+      if (updateQuantities.length) payload.updateQuantities = updateQuantities;
+      if (newItems.length) payload.items = newItems;
 
       let statusChanged = false;
       if (initialStatus === "ready" && isAddingNewItems) {
@@ -697,83 +791,13 @@ const BillPage = ({
         statusChanged = true;
       }
 
-      if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        const [section, numStr] = selectedTableId.split(":");
-        const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
-        payload.source = { section, number, type };
-      }
-
-      if (selectedOrderTypeKey === "delivery" && address.trim()) {
-        payload.address = address.trim();
-        payload.deliveryCharges =
-          parseAmount(localOrderData?.deliveryCharges) ||
-          parseAmount(restaurantDetails?.deliveryCharges) ||
-          0;
-      }
-
-      if (selectedOrderTypeKey === "take_away") {
-        payload.source = { section: null, number: null, type: "NONE" };
-        payload.address = null;
-      }
-
-      const saveResult = await updateOrder({
+      await updateOrder({
         orderId: localOrderData._id,
         updatedData: payload,
       }).unwrap();
 
       if (statusChanged && payload.status) {
         broadcastOrderStatus(localOrderData._id, payload.status);
-      }
-
-      // ✅ FIX 3: Restore isReady for previously-ready items
-      // Match by stable key because backend assigns new _id after edit
-      if (readyStableKeys.size > 0) {
-        // Try all possible response formats from updateOrder API
-        const savedItems =
-          saveResult?.order?.items ||
-          saveResult?.items ||
-          saveResult?.data?.items ||
-          saveResult?.data?.order?.items ||
-          [];
-
-        const itemsToRestore = savedItems.filter(
-          newItem => newItem._id && readyStableKeys.has(buildItemCheckBase(newItem))
-        );
-
-        if (itemsToRestore.length > 0) {
-          // ✅ FIX 4: Block SSE + itemChecks useEffect during restore window
-          restoringRef.current = true;
-
-          // Optimistically set restored items as checked in UI immediately
-          setItemChecks(prev => {
-            const next = { ...prev };
-            itemsToRestore.forEach(item => {
-              next[item._id] = true;
-            });
-            return next;
-          });
-
-          try {
-            await Promise.all(
-              itemsToRestore.map(item =>
-                toggleItemReady({
-                  orderId: localOrderData._id,
-                  itemId: item._id
-                }).unwrap().then(() => {
-                  broadcastItemReady(localOrderData._id, item._id, true);
-                })
-              )
-            );
-          } catch (err) {
-            console.warn("Failed to restore some item ready states:", err);
-          } finally {
-            // Release restore lock after 600ms so SSE can resume
-            setTimeout(() => {
-              restoringRef.current = false;
-            }, 600);
-          }
-        }
       }
 
       setIsEditMode(false);
@@ -887,6 +911,151 @@ const BillPage = ({
     };
   };
 
+  const handleBillOrder = async () => {
+    const orderId = activeOrder?._id || activeOrder?.id || activeOrder?.orderId;
+    if (!orderId || isBilling || isAlreadyBilled || isPreviewOnly) return;
+
+    setError("");
+    try {
+      const response = await billOrder(orderId).unwrap();
+      const billedData = response?.order || response;
+      setLocalOrderData((prev) => ({
+        ...(prev || activeOrder),
+        ...billedData,
+        _id: activeOrder?._id || billedData?._id || billedData?.orderId,
+        items: activeOrder?.items || prev?.items || [],
+        customerName: activeOrder?.customerName || prev?.customerName,
+        customerPhone: activeOrder?.customerPhone || prev?.customerPhone,
+        orderType: activeOrder?.orderType || prev?.orderType,
+        source: billedData?.source || activeOrder?.source || prev?.source,
+        status: billedData?.status || "completed",
+        totalAmount: billedData?.totalAmount ?? activeOrder?.totalAmount ?? prev?.totalAmount,
+        completedAt: billedData?.completedAt || new Date().toISOString(),
+      }));
+      broadcastOrderStatus(orderId, "completed");
+    } catch (err) {
+      setError(err?.data?.message || err?.message || "Failed to bill order");
+    }
+  };
+
+  // Auto-print support for the layout card printer icon (one-click bill print)
+  useEffect(() => {
+    if (!autoPrint) return;
+    const t = setTimeout(() => {
+      if (billRef.current) {
+        handlePrint();
+        onClose?.();
+      }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [autoPrint, onClose]);
+
+  const handleKOTPrint = () => {
+    const kotRestName =
+      restaurantDetails?.restaurantName ||
+      restaurantDetails?.name ||
+      "Restaurant";
+    const kotOrderId = activeOrder?.orderId || activeOrder?._id?.slice(-4) || "N/A";
+    const kotItems = activeOrder?.items || [];
+
+    // Build type info with location
+    const orderType = activeOrder?.orderType || "";
+    const section = activeOrder?.source?.section;
+    const number = activeOrder?.source?.number;
+    let typeInfo = orderType || "N/A";
+    if (section && number != null) {
+      const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+      const secLabel = labels[section] || (section.charAt(0).toUpperCase() + section.slice(1));
+      const unit = activeOrder?.source?.type === "ROOM" ? "" : "Table";
+      const loc = unit ? `${secLabel} ${unit} ${number}` : `${secLabel} ${number}`;
+      typeInfo = `${orderType} · ${loc}`;
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="padding:24px;font-family:monospace;font-size:14px;max-width:400px;margin:0 auto;color:#000">
+        <div style="text-align:center;margin-bottom:16px">
+          <h2 style="margin:0;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000">${kotRestName}</h2>
+          <hr style="width:75%;margin:8px auto;border:none;border-top:1px solid #000" />
+          <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#000">Kitchen Order Ticket</p>
+        </div>
+
+        <div style="margin-bottom:12px;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:8px 0;font-size:12px;color:#000">
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Order ID</span><span>${kotOrderId}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Name</span><span>${activeOrder?.customerName || "Guest"}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Type</span><span>${typeInfo}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Time</span><span>${activeOrder?.createdAt ? new Date(activeOrder.createdAt).toLocaleString("en-IN", { hour12: true }) : "N/A"}</span></div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#000">
+          <thead>
+            <tr style="border-bottom:1px solid #000">
+              <th style="padding:4px 0;text-align:left;font-weight:600;color:#000">Item</th>
+              <th style="padding:4px 0;text-align:right;font-weight:600;color:#000">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${kotItems.map(item => {
+              const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+              return `
+                <tr style="border-bottom:1px dotted #000">
+                  <td style="padding:4px 0;color:#000">
+                    ${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}
+                    ${cust}
+                  </td>
+                  <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+
+      </div>
+    `;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+
+    document.body.appendChild(printFrame);
+    const doc = printFrame.contentWindow.document;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: #fff; color: #000; font-family: monospace; padding: 20px; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${container.innerHTML}</body>
+      </html>
+    `);
+    doc.close();
+
+    printFrame.onload = () => {
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+      }, 300);
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    };
+  };
+
+  const getItemName = (item) => {
+    return item?.name || item?.menuItem?.name || "Item";
+  };
+
   const getOrderTypeIcon = (type) => {
     switch (getOrderTypeKey(type)) {
       case "eat_here":
@@ -901,7 +1070,6 @@ const BillPage = ({
   };
   const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
 
-  const availableTables = Array.isArray(tables) ? tables : [];
   const MotionDiv = motion.div;
 
   return (
@@ -934,8 +1102,17 @@ const BillPage = ({
         >
           <div className="flex items-center gap-2">
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-              Order Details & Bill
+              {isPreviewOnly ? "New Items Bill Preview" : "Order Details & Bill"}
             </h3>
+            {isPreviewOnly && (
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                isDarkMode
+                  ? "border-sky-500/40 bg-sky-500/20 text-sky-200"
+                  : "border-sky-200 bg-sky-100 text-sky-700"
+              }`}>
+                {order?.previewLabel || "New Items Only"}
+              </span>
+            )}
             {isStaff && !isEditMode && (
               <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
                 isDarkMode
@@ -947,7 +1124,7 @@ const BillPage = ({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {isStaff && !isEditMode && (
+            {isStaff && !isEditMode && !isPreviewOnly && (
               <button
                 onClick={() => setIsEditMode(true)}
                 className={`relative rounded-lg p-2 transition-colors ${
@@ -1030,13 +1207,6 @@ const BillPage = ({
             {/* Restaurant Header */}
             <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
               <div className="flex flex-col items-center text-center">
-                {qrSrc ? (
-                  <img
-                    src={qrSrc}
-                    alt="QR Code"
-                    className={`mb-2 h-12 w-12 rounded-md border ${billBorderClass} object-contain`}
-                  />
-                ) : null}
                 <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
                 <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
                 <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
@@ -1045,36 +1215,54 @@ const BillPage = ({
                 )}
               </div>
             </div>
-
+ 
+            {/* Order Creator (screen only, hidden on print) */}
+            {(() => {
+              const role = (activeOrder?.createdByRole || "user").toLowerCase();
+              const label = role === "admin" ? "Admin" : role === "staff" ? "Staff" : "User";
+              const badgeClass =
+                role === "admin"
+                  ? "border-orange-200 bg-orange-100 text-orange-700"
+                  : role === "staff"
+                  ? "border-blue-200 bg-blue-100 text-blue-700"
+                  : "border-green-200 bg-green-100 text-green-700";
+              return (
+                <div className="no-print mb-3 flex items-center gap-2 text-sm">
+                  <span className={`${billTextClass} font-medium`}>Order Created By:</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${badgeClass}`}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })()}
+ 
             {/* Customer & Order Info */}
             <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
               <p>
-                <strong>Customer:</strong> {order?.customerName || "Guest"}
+                <strong>Customer:</strong> {activeOrder?.customerName || "Guest"}
               </p>
               <p>
-                <strong>Phone:</strong> {order?.customerPhone || "N/A"}
+                <strong>Phone:</strong> {activeOrder?.customerPhone || "N/A"}
               </p>
-              {(order?.source?.section || order?.tableId) && (
+              {(activeOrder?.source?.section || activeOrder?.source?.sectionName || activeOrder?.tableId) && (
                 <p>
                   <strong>
-                    {order?.source?.type === "ROOM" ? "Room:" : "Table:"}
+                    {activeOrder?.source?.type === "ROOM" ? "Room:" : "Table:"}
                   </strong>{" "}
-                  {order?.source?.section
+                  {(activeOrder?.source?.section || activeOrder?.source?.sectionName)
                     ? (() => {
-                        const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-                        const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
-                        const unit = order.source.type === "ROOM" ? "" : "Table";
-                        return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
+                        const label = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
+                        return label || "—";
                       })()
-                    : order.tableId
+                    : activeOrder.tableId
                   }
                 </p>
               )}
               <p>
                 <strong>Time:</strong>{" "}
-                {new Date(order?.createdAt).toLocaleTimeString([], {
-                  hour12: true
-                })}
+                {activeOrder?.createdAt
+                  ? new Date(activeOrder.createdAt).toLocaleTimeString([], { hour12: true })
+                  : "N/A"}
               </p>
               <p>
                 <strong>Type:</strong> {activeOrder?.orderType || "N/A"}
@@ -1109,28 +1297,40 @@ const BillPage = ({
                     </SelectTrigger>
                     <SelectContent className={`rounded-xl border p-1 shadow-xl ${billSelectContentClass}`}>
                       <SelectGroup>
-                        <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
-                          <div className="flex items-center gap-2">
-                            <Utensils size={16} /> Eat Here
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Take Away" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}>
-                          <div className="flex items-center gap-2">
-                            <Home size={16} /> Take Away
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Delivery" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}>
-                          <div className="flex items-center gap-2">
-                            <Truck size={16} /> Delivery
-                          </div>
-                        </SelectItem>
+                        {order?.orderType === "Room Stay" ? (
+                          <SelectItem value="Room Stay" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
+                            <div className="flex items-center gap-2">
+                              <Utensils size={16} /> Room Stay
+                            </div>
+                          </SelectItem>
+                        ) : (
+                          <SelectItem value="Eat Here" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Eat Here")}`}>
+                            <div className="flex items-center gap-2">
+                              <Utensils size={16} /> Eat Here
+                            </div>
+                          </SelectItem>
+                        )}
+                        {order?.orderType !== "Room Stay" && (
+                          <>
+                            <SelectItem value="Take Away" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Take Away")}`}>
+                              <div className="flex items-center gap-2">
+                                <Home size={16} /> Take Away
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Delivery" className={`cursor-pointer rounded-lg py-2 text-sm font-medium ${getOrderTypeItemClass("Delivery")}`}>
+                              <div className="flex items-center gap-2">
+                                <Truck size={16} /> Delivery
+                              </div>
+                            </SelectItem>
+                          </>
+                        )}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Table / Room Selection - Eat Here */}
-                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && (() => {
+                 {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && order?.orderType !== "Eat Here" && order?.orderType !== "Room Stay" && (() => {
                   const sec = restaurantDetails?.sections || {};
                   const indoorCount  = sec.indoor?.tables  || restaurantDetails?.tableNumbers || 0;
                   const outdoorCount = sec.outdoor?.tables || 0;
@@ -1256,7 +1456,7 @@ const BillPage = ({
                 </tr>
               </thead>
               <tbody>
-                {(localOrderData?.items || order?.items || [])?.map((item, i) => {
+                {(activeOrder?.items || [])?.map((item, i) => {
                   const itemPrice = parseAmount(
                     item.discountedPrice ??
                     item.price ??
@@ -1273,7 +1473,7 @@ const BillPage = ({
                     <tr key={i} className={`border-b ${billBorderClass}`}>
                       <td className="py-1.5 px-2">
                         <div>
-                          {item.name}
+                          {getItemName(item)}
                           {itemVariant && (
                             <div className={`text-xs ${billTextClass}`}>({itemVariant})</div>
                           )}
@@ -1341,7 +1541,7 @@ const BillPage = ({
                             checked={isChecked}
                             onChange={() => toggleItemCheck(itemKey)}
                             className={`h-4 w-4 cursor-pointer rounded border transition-colors ${billCheckboxClass}`}
-                            aria-label={`Mark ${item.name} as sent`}
+                            aria-label={`Mark ${getItemName(item)} as sent`}
                           />
                         </td>
                       )}
@@ -1410,6 +1610,14 @@ const BillPage = ({
                 </div>
               )}
 
+              {/* 🔧 FIX: Show room charge only when stay.enabled === true (room order) */}
+              {isStayEnabled && roomCharge > 0 && (
+                <div className="flex justify-between">
+                  <span>Room Charges</span>
+                  <span>₹{roomCharge.toFixed(2)}</span>
+                </div>
+              )}
+
               {activeOrderTypeKey === "delivery" && (
                 <div className="flex justify-between">
                   <span>Delivery Charges</span>
@@ -1421,6 +1629,20 @@ const BillPage = ({
                 <span>Grand Total</span>
                 <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
+
+              {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
+                <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass} ${billTextClass}`}>
+                  <span>Settled Amount</span>
+                  <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
+                </div>
+              )}
+
+              {!isEditMode && activeOrder?.paymentMethod && (
+                <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                  <span>Payment Method</span>
+                  <span className="uppercase">{activeOrder.paymentMethod}</span>
+                </div>
+              )}
             </div>
 
             <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
@@ -1429,46 +1651,82 @@ const BillPage = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={`flex justify-end gap-3 border-t p-4 ${
+        {/* Footer - Responsive buttons */}
+        <div className={`flex flex-wrap items-center justify-end gap-2.5 border-t p-4 sm:p-5 ${
           isDarkMode
             ? "border-slate-700 bg-slate-800/40"
-            : "border-[#ede8e3] bg-[#f7f3ef]"
+            : "border-[#ede8e3] bg-[#fbfaf8]"
         }`}>
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 ${
                 isDarkMode
                   ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                  : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                  : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
               }`}
             >
               Cancel
             </button>
           )}
 
+          {!isAlreadyBilled && (
+            <button
+              onClick={handleKOTPrint}
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
+                isDarkMode
+                  ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
+                  : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-350"
+              }`}
+            >
+              KOT
+            </button>
+          )}
+ 
+          {!isPreviewOnly && !isAlreadyBilled && (
+            <button
+              onClick={handleBillOrder}
+              disabled={isBilling}
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 shadow-sm ${
+                isBilling
+                  ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-60"
+                  : isDarkMode
+                    ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-950/40 active:scale-[0.97]"
+                    : "border-emerald-200 bg-[#f0fdf4] text-emerald-700 hover:bg-[#dcfce7] hover:border-emerald-300 active:scale-[0.97]"
+              }`}
+            >
+              {isBilling ? "Billing..." : "Bill Order"}
+            </button>
+          )}
+
+          {!isPreviewOnly && (
+            <button
+              onClick={handlePrint}
+              className={`flex h-11 items-center gap-1.5 rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
+                isDarkMode
+                  ? "border-sky-500/30 bg-sky-950/20 text-sky-400 hover:bg-sky-950/40"
+                  : "border-sky-200 bg-[#f0f9ff] text-sky-700 hover:bg-[#e0f2fe] hover:border-sky-300"
+              }`}
+            >
+              <Printer size={15} strokeWidth={2.5} />
+              Print Bill
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
+            className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 sm:ml-auto ${
               isDarkMode
                 ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
             }`}
           >
             Close
           </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
-          >
-            Print Bill
-          </button>
-        </div>
-      </MotionDiv>
+         </div>
+       </MotionDiv>
     </MotionDiv>
   );
 };
 
-export default BillPage;
+export default React.memo(BillPage);

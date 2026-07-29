@@ -13,6 +13,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 
 const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const Home = lazy(() => import("./pages/Home"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Admin = lazy(() => import("./pages/Admin"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
 const Menu = lazy(() => import("./components/admin/Menu/Menu.jsx"));
@@ -35,6 +36,7 @@ const SuperAdminProfile = lazy(() => import("./components/superAdmin/Pages/Super
 const Sales = lazy(() => import("./components/admin/observability/sales/Sales"));
 const StaffManagement = lazy(() => import("./components/admin/Staff/StaffManagement"));
 const AdminOrderPanel = lazy(() => import("./components/admin/OrderPanel/AdminOrderPanel"));
+const TableManagement = lazy(() => import("./components/admin/tableManagement/TableManagement"));
 
 const RouteFallback = () => {
   const location = useLocation();
@@ -127,11 +129,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
             <Suspense fallback={<RouteFallback />}>
               <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<Home />} />
-              <Route path="filter" element={<Filter />} />
-            </Route>
+              {/* Public Routes */}
+              <Route path="/" element={<MainLayout />}>
+                <Route index element={<Home />} />
+                <Route path="filter" element={<Filter />} />
+                <Route path="track" element={<TrackOrder />} />
+              </Route>
 
             {/* Admin Login (Public) */}
             <Route path="login" element={<LoginPage />} />
@@ -187,6 +190,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                   </AdminOnlyRoute>
                 } 
               />
+              <Route path="tables" element={<AdminOnlyRoute><TableManagement /></AdminOnlyRoute>} />
               <Route path="comingsoon" element={<ComingSoon />} />
             </Route>
             <Route path="kds" element={<PrivateRoute><KitchenDisplaySystem /></PrivateRoute>} />

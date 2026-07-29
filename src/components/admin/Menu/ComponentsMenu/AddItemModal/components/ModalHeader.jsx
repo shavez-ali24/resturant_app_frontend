@@ -1,10 +1,15 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import { Pizza, X } from "lucide-react";
 
 const ModalHeader = ({ onClose }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
   return (
     <div className="mb-5 flex items-center gap-3 border-b border-[#ede8e3] pb-4 dark:border-slate-700">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-orange-500">
+      <div
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+        style={{ backgroundColor: colors.primary }}
+      >
         <Pizza size={18} className="text-white" />
       </div>
       <div>

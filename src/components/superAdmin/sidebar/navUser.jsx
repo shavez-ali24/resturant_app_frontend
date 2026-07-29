@@ -35,7 +35,7 @@ export function NavUser({ user }) {
     // Check if we're in super admin section
     const isSuperAdmin = location.pathname.includes('/super-admin');
     
-    localStorage.removeItem("token");
+    localStorage.removeItem("sa_token");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userAvatar");

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass as getOrderTypeSelectItemClass,
@@ -271,8 +272,9 @@ const EditOrderModal = ({
         setInitialAddress(editingOrder.address);
       }
 
-      if (editingOrder.source?.section && editingOrder.source?.number) {
-        const val = `${editingOrder.source.section}:${editingOrder.source.number}`;
+      // 🔧 FIX: Backend Order model uses source.sectionName & source.unitName, not section/number
+      if (editingOrder.source?.sectionName && editingOrder.source?.unitName) {
+        const val = `${editingOrder.source.sectionName}:${editingOrder.source.unitName}`;
         setSelectedTableId(val);
         setInitialTableId(val);
       } else if (editingOrder.tableId) {
@@ -637,11 +639,24 @@ const EditOrderModal = ({
       }
 
       // ─── SOURCE (TABLE) ───────────────────────────────
+      // 🔧 FIX: Backend updateOrder expects source.unitId (MongoDB _id), not {section, number, type}
+      // Resolve unitId from restaurantData using sectionName:unitName
       if (selectedOrderTypeKey === "eat_here" && selectedTableId) {
-        const [section, numStr] = selectedTableId.split(":");
-        const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
-        payload.source = { section, number, type };
+        const [sectionName, unitName] = selectedTableId.split(":");
+        let resolvedUnitId = null;
+        const restaurant = restaurantData?.restaurant || restaurantData;
+        if (restaurant?.sections) {
+          for (const section of restaurant.sections) {
+            if (section.name === sectionName) {
+              const unit = section.units?.find(u => u.name === unitName);
+              if (unit) {
+                resolvedUnitId = unit._id;
+                break;
+              }
+            }
+          }
+        }
+        payload.source = { unitId: resolvedUnitId };
       }
 
       // ─── ADDRESS ──────────────────────────────────────
@@ -674,7 +689,7 @@ const EditOrderModal = ({
   // =============================
   // UI
   // =============================
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const isUpdateDisabled = isSubmitting || localOrderData.items.length === 0 || !isDirty;
   const itemsSubtotal = recalcTotal(localOrderData?.items || []);
@@ -692,25 +707,31 @@ const EditOrderModal = ({
     }
   };
 
-  // ── Theme tokens ──────────────────────────────────────────────────────────
-  const modalBg          = isDarkMode ? "bg-[#1e293b] border-slate-700/60"   : "bg-white border-[#ede8e3]";
-  const headerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const textPri          = isDarkMode ? "text-slate-100"  : "text-[#1c1917]";
-  const textMut          = isDarkMode ? "text-slate-500"  : "text-[#a8a29e]";
-  const labelCls         = `block text-xs font-semibold uppercase tracking-wider mb-1.5 ${textMut}`;
-  const inputCls         = `w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
+  // ── Theme tokens from Redux ──────────────────────────────────────────────────
+  const colors = useSelector((state) => state.admin.theme.colors);
+  
+  const bg               = isDarkMode ? (colors.dark?.cardBg || "#1e293b") : "#ffffff";
+  const border           = isDarkMode ? (colors.dark?.border || "border-slate-700/60") : (colors.border || "border-[#ede8e3]");
+  const textPri          = isDarkMode ? (colors.dark?.textPrimary || "text-slate-100") : (colors.textPrimary || "text-[#1c1917]");
+  const textSec          = isDarkMode ? (colors.dark?.textSecondary || "text-slate-400") : (colors.textSecondary || "text-[#57524e]");
+  const textMut          = isDarkMode ? "#64748b" : (colors.textMuted || "#a8a29e");
+  
+  const labelCls         = `block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`;
+  const inputCls         = `w-full rounded-xl border px-3 py-2.5 text-sm font-semibold outline-none transition-all ${
     isDarkMode
-      ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:border-orange-500"
-      : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] focus:border-orange-400"
+      ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+      : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
   }`;
-  const itemCardBg       = isDarkMode ? "bg-slate-800/60 border-slate-700/60" : "bg-white border-[#ede8e3]";
-  const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const totalBg          = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : "bg-[#fff7ed] border-orange-100";
-  const footerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60"   : "bg-[#f7f3ef] border-[#ede8e3]";
-  const dropdownCls      = `z-[10050] rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
+  
+  const itemCardBg       = isDarkMode ? "bg-slate-800/40 border-slate-700/60" : "bg-white border-[#ede8e3]";
+  const itemsContainerBg = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-[#fcfaf7] border-[#ede8e3]";
+  const totalBg          = isDarkMode ? "bg-slate-800/40 border-slate-700/40" : colors.primaryLight;
+  const footerBg         = isDarkMode ? "bg-[#0f172a] border-slate-700/60" : "bg-[#fcfaf7] border-[#ede8e3]";
+  const dropdownCls      = `z-[10050] rounded-xl border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"}`;
+  
   const variantPillCls   = isDarkMode
-    ? "bg-slate-700 text-slate-300 border border-slate-600"
-    : "bg-[#f7f3ef] text-[#78716c] border border-[#e7e1db]";
+    ? "bg-slate-700 text-slate-300 border border-slate-600 rounded-lg px-2 py-0.5 text-xs font-semibold"
+    : "bg-[#f7f3ef] text-[#78716c] border border-[#e7e1db] rounded-lg px-2 py-0.5 text-xs font-semibold";
 
   return (
     <div
@@ -719,18 +740,27 @@ const EditOrderModal = ({
       className="fixed inset-0 bg-black/45 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-2 sm:p-4 z-[9999]"
     >
       <div
-        className={`w-full max-w-[calc(100vw-1rem)] sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl border shadow-xl flex flex-col ${modalBg}`}
+        className="w-full max-w-[calc(100vw-1rem)] sm:max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl border shadow-2xl flex flex-col transition-all duration-200"
+        style={{
+          backgroundColor: bg,
+          borderColor: border,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className={`flex shrink-0 items-center justify-between border-b px-5 py-4 ${headerBg}`}>
-          <h3 className={`text-base font-bold ${textPri}`}>Edit Order</h3>
+        <div
+          className="flex shrink-0 items-center justify-between border-b px-5 py-4"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : "#ffffff",
+            borderBottomColor: border,
+          }}
+        >
+          <h3 className="text-base font-black tracking-tight" style={{ color: textPri }}>Edit Order</h3>
           <button
             type="button"
             onClick={() => setEditingOrder(null)}
-            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-              isDarkMode ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100" : "text-[#a8a29e] hover:bg-[#ede8e3] hover:text-[#1c1917]"
-            }`}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:scale-[0.9] hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+            style={{ color: textMut, backgroundColor: isDarkMode ? "rgba(51,65,85,0.3)" : "#f5f5f4" }}
           >
             <span className="text-lg leading-none">×</span>
           </button>
@@ -770,12 +800,21 @@ const EditOrderModal = ({
             const rooftopCount = sec.rooftop?.tables || 0;
             const roomsCount   = sec.rooms?.rooms    || 0;
 
+            const isRoomOrder = editingOrder?.source?.type === "ROOM";
+
             const sectionDefs = [
               { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
               { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
               { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
               { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
-            ].filter(s => s.count > 0);
+            ].filter(s => {
+              if (s.count <= 0) return false;
+              if (isRoomOrder) {
+                return s.key === "rooms";
+              } else {
+                return s.key !== "rooms";
+              }
+            });
 
             const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
             const onlyOne = sectionDefs.length === 1;
@@ -968,26 +1007,27 @@ const EditOrderModal = ({
                                     </SelectItem>
                                   );
                                 })}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          // EXISTING item — sirf text pill, dropdown nahi
-                          item.variantName && (
-                            <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${variantPillCls}`}>
-                              {formatVariantLabel(item.variantName)}
-                            </span>
-                          )
-                        )
-                      )}
-
-                      {/* ── Qty + Remove ── */}
+                              </SelectGr                      {/* ── Qty + Remove ── */}
                       <div className="mt-2.5 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <button type="button" onClick={() => handleQuantityChange(idx, Math.max(1, quantity - 1))}
-                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
-                              isDarkMode ? "border-slate-600 bg-slate-700 text-orange-300 hover:bg-slate-600" : "border-[#ede8e3] bg-white text-orange-500 hover:bg-orange-50"
-                            }`}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(idx, Math.max(1, quantity - 1))}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border transition-all duration-150 active:scale-[0.9]"
+                            style={{
+                              backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+                              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                              color: isDarkMode ? colors.primary : colors.primaryText,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+                              e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+                            }}
+                          >
                             <Minus size={12} />
                           </button>
                           <input type="number" min="1" value={item.quantity}
@@ -996,20 +1036,51 @@ const EditOrderModal = ({
                               isDarkMode ? "border-slate-600 bg-slate-700 text-slate-100" : "border-[#ede8e3] bg-white text-[#1c1917]"
                             }`}
                           />
-                          <button type="button" onClick={() => handleQuantityChange(idx, quantity + 1)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
-                              isDarkMode ? "border-slate-600 bg-slate-700 text-orange-300 hover:bg-slate-600" : "border-[#ede8e3] bg-white text-orange-500 hover:bg-orange-50"
-                            }`}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(idx, quantity + 1)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border transition-all duration-150 active:scale-[0.9]"
+                            style={{
+                              backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+                              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                              color: isDarkMode ? colors.primary : colors.primaryText,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+                              e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+                            }}
+                          >
                             <Plus size={12} />
                           </button>
                         </div>
-                        <button onClick={() => handleRemoveItem(idx)}
+                        <button
+                          onClick={() => handleRemoveItem(idx)}
                           disabled={localOrderData.items.length <= 1}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                            localOrderData.items.length <= 1
-                              ? `cursor-not-allowed ${isDarkMode ? "bg-slate-700 text-slate-500" : "bg-[#f7f3ef] text-[#a8a29e]"}`
-                              : "bg-red-50 text-red-600 hover:bg-red-100"
-                          }`}>
+                          className="rounded-lg px-2.5 py-1 text-xs font-bold transition-all duration-150"
+                          style={{
+                            backgroundColor: localOrderData.items.length <= 1
+                              ? "transparent"
+                              : "rgba(239, 68, 68, 0.08)",
+                            color: localOrderData.items.length <= 1
+                              ? textMut
+                              : "#ef4444",
+                            cursor: localOrderData.items.length <= 1 ? "not-allowed" : "pointer"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (localOrderData.items.length > 1) {
+                              e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.15)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (localOrderData.items.length > 1) {
+                              e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.08)";
+                            }
+                          }}
+                        >
                           Remove
                         </button>
                       </div>
@@ -1024,7 +1095,7 @@ const EditOrderModal = ({
           <div>
             <Select value={addItemValue} onValueChange={handleAddItem}>
               <SelectTrigger className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-200 ${
-                isDarkMode ? "border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500" : "border-[#ede8e3] bg-white text-[#78716c] hover:border-[#d6cfc8]"
+                isDarkMode ? "border-slate-600 bg-slate-800 text-slate-350 hover:border-slate-500" : "border-[#ede8e3] bg-white text-[#78716c] hover:border-[#d6cfc8]"
               }`}>
                 <SelectValue placeholder="+ Add New Item" />
               </SelectTrigger>
@@ -1037,7 +1108,7 @@ const EditOrderModal = ({
                         className={`cursor-pointer rounded-md text-xs ${isDarkMode ? "text-slate-200 data-[highlighted]:bg-slate-700" : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef]"}`}>
                         <div className="flex items-center justify-between gap-3 w-full py-0.5">
                           <span className="truncate">{menu.name}</span>
-                          <span className="shrink-0 text-orange-500 font-semibold">
+                          <span className="shrink-0 font-semibold" style={{ color: colors.primary }}>
                             {meta.isVariant ? "Variants" : (
                               <>
                                 {meta.originalPrice > meta.finalPrice && (
@@ -1057,34 +1128,62 @@ const EditOrderModal = ({
           </div>
 
           {/* Items Total */}
-          <div className={`rounded-xl border px-4 py-3 ${totalBg}`}>
+          <div className="rounded-xl border px-4 py-3 shadow-sm" style={{ backgroundColor: totalBg, borderColor: isDarkMode ? border : `${colors.primary}25` }}>
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${textPri}`}>Items Total</span>
-              <span className="text-lg font-bold text-orange-500">₹{itemsSubtotal}</span>
+              <span className="text-sm font-black" style={{ color: textPri }}>Items Total</span>
+              <span className="text-lg font-black" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>₹{itemsSubtotal}</span>
             </div>
           </div>
         </div>
 
         {/* ── Footer ── */}
-        <div className={`flex shrink-0 items-center justify-end gap-2.5 border-t px-5 py-3 ${footerBg}`}>
+        <div
+          className="flex shrink-0 items-center justify-end gap-2.5 border-t px-5 py-3.5"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : footerBg,
+            borderTopColor: border,
+          }}
+        >
           <button
             onClick={() => setEditingOrder(null)}
-            className={`h-9 rounded-lg border px-4 text-sm font-semibold transition-colors ${
-              isDarkMode
-                ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
-            }`}
+            className="h-9 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 active:scale-[0.97]"
+            style={{
+              backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.primary;
+              e.currentTarget.style.color = colors.primaryText;
+              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+              e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
+              e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+            }}
           >
             Cancel
           </button>
           <button
             onClick={handleUpdateOrder}
             disabled={isUpdateDisabled}
-            className={`h-9 rounded-lg px-4 text-sm font-semibold transition-colors ${
-              isUpdateDisabled
-                ? `cursor-not-allowed ${isDarkMode ? "bg-slate-700 text-slate-500" : "bg-[#f0ebe5] text-[#a8a29e]"}`
-                : "bg-orange-500 text-white hover:bg-orange-600"
-            }`}
+            className="h-9 rounded-xl px-5 text-sm font-extrabold transition-all duration-150 active:scale-[0.97] text-white shadow-sm"
+            style={{
+              backgroundColor: isUpdateDisabled
+                ? isDarkMode ? "rgba(51, 65, 85, 0.4)" : "#f0ebe5"
+                : colors.primary,
+              color: isUpdateDisabled
+                ? textMut
+                : "#ffffff",
+              cursor: isUpdateDisabled ? "not-allowed" : "pointer"
+            }}
+            onMouseEnter={(e) => {
+              if (!isUpdateDisabled) e.currentTarget.style.backgroundColor = colors.primaryHover;
+            }}
+            onMouseLeave={(e) => {
+              if (!isUpdateDisabled) e.currentTarget.style.backgroundColor = colors.primary;
+            }}
           >
             {isSubmitting ? "Updating..." : "Update Order"}
           </button>

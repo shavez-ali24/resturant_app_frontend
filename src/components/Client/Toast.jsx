@@ -1,3 +1,5 @@
+// ─── IMPORTS ───────────────────────────────────────────
+// Toast — Context-based toast notification system with auto-dismiss
 import React, {
   createContext,
   useCallback,
@@ -17,7 +19,8 @@ export function useToast() {
   return ctx;
 }
 
-/** Provider */
+// ─── PROVIDER ─────────────────────────────────────────
+// Wraps children with toast context; renders animated toast list
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
@@ -45,7 +48,7 @@ export function ToastProvider({ children }) {
       <ToastContext.Provider value={value}>
         {children}
         {/* Toast viewport */}
-      <div className="fixed bottom-3 left-1/2 z-[110] flex w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 flex-col gap-2.5 sm:bottom-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-none sm:translate-x-0">
+      <div className="fixed bottom-3 left-1/2 z-[500] flex w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 flex-col gap-2.5 sm:bottom-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-none sm:translate-x-0">
         <AnimatePresence initial={false}>
           {toasts.map((t) => (
             <ToastItem key={t.id} toast={t} onClose={() => remove(t.id)} />
@@ -56,7 +59,7 @@ export function ToastProvider({ children }) {
   );
 }
 
-function ToastItem({ toast, onClose }) {
+const ToastItem = React.memo(function ToastItem({ toast, onClose }) {
   // extra safety: remove if somehow lingers too long
   useEffect(() => {
     const max = setTimeout(onClose, toast.duration + 2000);
@@ -69,7 +72,8 @@ function ToastItem({ toast, onClose }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.97 }}
       transition={{ type: "spring", stiffness: 290, damping: 24 }}
-      className="w-full rounded-2xl border border-orange-100/90 bg-gradient-to-b from-white to-orange-50/40 p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.12)] sm:w-[320px] sm:p-4"
+      role="alert"
+      className="w-full rounded-2xl border border-orange-100/90 bg-gradient-to-b from-white to-orange-50/40 p-3.5 shadow-lg sm:w-[320px] sm:p-4"
     >
       {toast.title && <div className="font-semibold mb-1">{toast.title}</div>}
       {toast.description && (
@@ -86,4 +90,4 @@ function ToastItem({ toast, onClose }) {
       </div>
     </motion.div>
   );
-}
+});

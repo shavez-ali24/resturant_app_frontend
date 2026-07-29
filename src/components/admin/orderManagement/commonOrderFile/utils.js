@@ -48,7 +48,8 @@ const getOrderIdFromValue = (orderOrId) => {
     return String(orderOrId);
   }
 
-  return String(orderOrId?._id || orderOrId?.id || orderOrId?.orderId || "");
+  const actualOrder = orderOrId?.order || orderOrId;
+  return String(actualOrder?._id || actualOrder?.id || actualOrder?.orderId || "");
 };
 
 const findPreparingHistoryTimestamp = (historyEntries) => {
@@ -76,8 +77,10 @@ const findPreparingHistoryTimestamp = (historyEntries) => {
   return null;
 };
 
-export const getOrderIdValue = (order) =>
-  String(order?._id || order?.id || order?.orderId || "");
+export const getOrderIdValue = (order) => {
+  const actualOrder = order?.order || order;
+  return String(actualOrder?._id || actualOrder?.id || actualOrder?.orderId || "");
+};
 
 export const getOrderIdShortValue = (order, visibleChars = 4) => {
   const fullId = getOrderIdFromValue(order).toUpperCase();
@@ -256,6 +259,8 @@ export const getStatusBadge = (status) => {
       return "bg-teal-100 text-teal-800 ring-teal-300 hover:bg-teal-200 data-[state=open]:bg-teal-200 dark:bg-teal-200 dark:text-teal-900 dark:ring-teal-400";
     case "ready":
       return "bg-blue-100 text-blue-800 ring-blue-300 hover:bg-blue-200 data-[state=open]:bg-blue-200 dark:bg-blue-200 dark:text-blue-900 dark:ring-blue-400";
+    case "billed":
+      return "bg-blue-100 text-blue-800 ring-blue-300 hover:bg-blue-200 data-[state=open]:bg-blue-200 dark:bg-blue-200 dark:text-blue-900 dark:ring-blue-400";
     case "completed":
       return "bg-emerald-100 text-emerald-800 ring-emerald-300 hover:bg-emerald-200 data-[state=open]:bg-emerald-200 dark:bg-emerald-200 dark:text-emerald-900 dark:ring-emerald-400";
     case "cancelled":
@@ -272,6 +277,8 @@ export const getStatusRowClass = (status) => {
     case "preparing":
       return "bg-transparent dark:bg-transparent";
     case "ready":
+      return "bg-blue-50 dark:bg-transparent";
+    case "billed":
       return "bg-blue-50 dark:bg-transparent";
     case "completed":
       return "bg-transparent dark:bg-transparent";
@@ -421,12 +428,37 @@ export const getOrderTypeItemClass = (value) => {
 };
 
 export const formatOrderTableId = (tableId, source) => {
+  const getShortSection = (sec) => {
+    if (!sec) return "";
+    const s = String(sec).trim().toLowerCase();
+    if (s === "indoor") return "IND";
+    if (s === "outdoor") return "OUT";
+    if (s === "rooftop") return "ROOF";
+    if (s === "rooms" || s === "room") return "RM";
+    if (s === "table" || s === "tables" || s === "tbl") return "";
+    return sec;
+  };
+
   // ✅ New source object: { section: "indoor", number: 3, type: "TABLE" }
-  if (source && source.section && source.number) {
-    const SHORT = { indoor: "IND", outdoor: "OUT", rooftop: "ROOF", rooms: "RM" };
-    const short = SHORT[String(source.section).toLowerCase()] || String(source.section).toUpperCase();
-    const unit  = source.type === "ROOM" ? "" : "TBL";
-    return unit ? `${short} ${unit} ${source.number}` : `${short} ${source.number}`;
+  if (source && source.section && source.number != null) {
+    const shortSec = getShortSection(source.section);
+    if (String(source.type).toUpperCase() === "ROOM") {
+      return `RM ${source.number}`;
+    } else {
+      const prefix = shortSec ? `${shortSec} ` : "";
+      return `${prefix}TBL ${source.number}`;
+    }
+  }
+
+  // ✅ QR / client order source: { sectionName, unitName, type }
+  if (source && source.sectionName && source.unitName) {
+    const shortSec = getShortSection(source.sectionName);
+    if (String(source.type).toUpperCase() === "ROOM") {
+      return `RM ${source.unitName}`;
+    } else {
+      const prefix = shortSec ? `${shortSec} ` : "";
+      return `${prefix}TBL ${source.unitName}`;
+    }
   }
 
   if (!tableId) return "";
@@ -434,7 +466,7 @@ export const formatOrderTableId = (tableId, source) => {
   if (typeof tableId === "object") {
     if (tableId.name) return String(tableId.name).trim();
     if (tableId.tableNumber !== undefined && tableId.tableNumber !== null) {
-      return `T${tableId.tableNumber}`;
+      return `TBL ${tableId.tableNumber}`;
     }
     if (tableId._id) return String(tableId._id).trim();
     return "";
@@ -443,10 +475,26 @@ export const formatOrderTableId = (tableId, source) => {
   const raw = String(tableId).trim();
   if (!raw) return "";
 
+  // Remove redundant "Table TBL X" pattern
+  if (/^table\s+tbl\s+(\d+)$/i.test(raw)) {
+    const match = raw.match(/^table\s+tbl\s+(\d+)$/i);
+    return `TBL ${match[1]}`;
+  }
+
   const tableMatch = raw.match(/^table[-_\s]?(\d+)$/i);
-  if (tableMatch?.[1]) return `T${tableMatch[1]}`;
+  if (tableMatch?.[1]) return `TBL ${tableMatch[1]}`;
 
-  if (/^t\d+$/i.test(raw)) return raw.toUpperCase();
+  if (/^t\d+$/i.test(raw)) return `TBL ${raw.slice(1)}`;
 
-  return raw;
+  let replaced = raw
+    .replace(/\bindoor\b/i, "IND")
+    .replace(/\boutdoor\b/i, "OUT")
+    .replace(/\brooftop\b/i, "ROOF")
+    .replace(/\brooms?\b/i, "RM")
+    .replace(/\btables?\b/i, "TBL");
+
+  // If replaced becomes "TBL TBL X", clean it to "TBL X"
+  replaced = replaced.replace(/\bTBL\s+TBL\b/i, "TBL");
+
+  return replaced;
 };

@@ -1,5 +1,5 @@
-// src/components/analytics/TopSellingAnalytics.jsx
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   Select,
   SelectContent,
@@ -88,7 +88,8 @@ const formatFullDate = (dateString) => {
 
 const renderDistributionLabel = (
   { cx, cy, midAngle, outerRadius, percent, name },
-  minPercent = 0.05
+  minPercent = 0.05,
+  labelColor = "#fb923c"
 ) => {
   if (percent < minPercent) return null;
 
@@ -103,7 +104,7 @@ const renderDistributionLabel = (
     <text
       x={x}
       y={y}
-      fill="#fb923c"
+      fill={labelColor}
       textAnchor={textAnchor}
       dominantBaseline="central"
       fontSize={11}
@@ -137,6 +138,7 @@ const analyticsTabsTriggerClass =
   "rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-white hover:text-slate-900 data-[state=active]:!bg-orange-500 data-[state=active]:!text-white data-[state=active]:shadow-[0_8px_16px_rgba(15,23,42,0.28)] dark:bg-transparent dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:data-[state=active]:!bg-orange-500 dark:data-[state=active]:!text-white dark:data-[state=active]:ring-1 dark:data-[state=active]:ring-orange-300/60 dark:data-[state=active]:shadow-[0_10px_20px_-12px_rgba(249,115,22,0.55)] [&_svg]:text-current";
 
 export default function TopSellingAnalytics() {
+  const colors = useSelector((state) => state.admin.theme.colors);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -337,15 +339,11 @@ export default function TopSellingAnalytics() {
   };
 
   const secondaryButtonClass =
-    "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-500 bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-60";
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 px-4 text-sm font-bold`;
   const primaryButtonClass =
-    "inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50";
+    `inline-flex h-10 items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 px-4 text-sm font-semibold`;
   const selectTriggerClass =
-    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 focus:ring-orange-100 sm:w-[190px] ${
-      isDarkMode
-        ? "border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500"
-        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8]"
-    }`;
+    `h-10 w-full rounded-xl border px-3 text-sm font-semibold transition-all outline-none focus:ring-2 sm:w-[190px]`;
   const selectContentClass =
     `z-[10050] rounded-xl border p-1 shadow-xl ${
       isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"
@@ -357,11 +355,41 @@ export default function TopSellingAnalytics() {
         : "text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] data-[highlighted]:text-[#1c1917]"
     }`;
   const inputClass =
-    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2 focus:ring-orange-100 ${
-      isDarkMode
-        ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 hover:border-slate-500 focus:border-orange-500"
-        : "border-[#ede8e3] bg-white text-[#1c1917] hover:border-[#d6cfc8] focus:border-orange-400"
-    }`;
+    `h-10 w-full rounded-xl border px-3 text-sm transition-all outline-none focus:ring-2`;
+
+  const primaryBtnStyle = {
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    borderColor: "transparent",
+  }
+  const secondaryBtnStyle = {
+    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+    backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+    color: isDarkMode ? colors.primary : colors.primaryText,
+  }
+  const selectTriggerStyle = {
+    borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+    backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  }
+  const inputStyle = {
+    borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+    backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  }
+
+  const themeColorsList = useMemo(() => {
+    return [
+      colors.primary,
+      `${colors.primary}dd`,
+      `${colors.primary}bb`,
+      `${colors.primary}99`,
+      `${colors.primary}77`,
+      `${colors.primary}55`,
+      `${colors.primary}33`,
+      '#f59e0b', '#d97706', '#b45309',
+    ]
+  }, [colors.primary]);
 
   // Memoized data transformations
   const productsData = useMemo(() => {
@@ -525,6 +553,14 @@ export default function TopSellingAnalytics() {
     border: `1px solid ${isDarkMode ? "#334155" : "#ede8e3"}`,
     borderRadius: "12px",
     color: isDarkMode ? "#f1f5f9" : "#1c1917",
+    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+  };
+  const tooltipItemStyle = {
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+  };
+  const tooltipLabelStyle = {
+    color: isDarkMode ? "#f1f5f9" : "#1c1917",
+    fontWeight: 600,
   };
   const tableHeaderBg = isDarkMode ? "bg-slate-800" : "bg-[#f7f3ef]";
   const tableRowHover = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-[#faf7f4]";
@@ -547,8 +583,8 @@ export default function TopSellingAnalytics() {
             <div data-tour="sales-date-filter" className="flex flex-col sm:flex-row gap-3">
               {/* Time Range */}
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-                <SelectTrigger className={selectTriggerClass}>
-                  <Calendar className="w-4 h-4 mr-2 shrink-0 text-orange-500" />
+                <SelectTrigger className={selectTriggerClass} style={selectTriggerStyle}>
+                  <Calendar className="w-4 h-4 mr-2 shrink-0" style={{ color: colors.primary }} />
                   <SelectValue placeholder="Select Range" />
                 </SelectTrigger>
                 <SelectContent className={selectContentClass}>
@@ -566,13 +602,19 @@ export default function TopSellingAnalytics() {
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className={`inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-all sm:w-auto ${
                     showDatePicker || isCustomRange
-                      ? "border-orange-400 bg-orange-500 text-white"
+                      ? ""
                       : isDarkMode
                         ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
                         : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef] hover:border-[#d6cfc8]"
                   }`}
+                  style={(showDatePicker || isCustomRange) ? {
+                    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                    backgroundColor: isDarkMode ? `${colors.primary}30` : colors.primaryLight,
+                    color: isDarkMode ? colors.primary : colors.primaryText,
+                    fontWeight: "bold",
+                  } : {}}
                 >
-                  <CalendarDays className="w-4 h-4 shrink-0 text-orange-500" />
+                  <CalendarDays className="w-4 h-4 shrink-0" style={{ color: colors.primary }} />
                   <span>Custom Range</span>
                   {isCustomRange && <span className="ml-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">✓</span>}
                   <ChevronDown className={`w-4 h-4 shrink-0 text-current transition-transform ${showDatePicker ? "rotate-180" : ""}`} />
@@ -587,18 +629,49 @@ export default function TopSellingAnalytics() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <label className={`text-sm font-medium ${textSecondary}`}>From Date</label>
-                          <input type="date" className={inputClass} value={fromDate} onChange={e => setFromDate(e.target.value)} max={toDate} />
+                          <input
+                            type="date"
+                            className={inputClass}
+                            style={inputStyle}
+                            value={fromDate}
+                            onChange={e => setFromDate(e.target.value)}
+                            max={toDate}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                            }}
+                          />
                         </div>
                         <div className="space-y-2">
                           <label className={`text-sm font-medium ${textSecondary}`}>To Date</label>
-                          <input type="date" className={inputClass} value={toDate} onChange={e => setToDate(e.target.value)} min={fromDate} />
+                          <input
+                            type="date"
+                            className={inputClass}
+                            style={inputStyle}
+                            value={toDate}
+                            onChange={e => setToDate(e.target.value)}
+                            min={fromDate}
+                            onFocus={(e) => {
+                              e.currentTarget.style.borderColor = colors.primary;
+                            }}
+                            onBlur={(e) => {
+                              e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+                            }}
+                          />
                         </div>
                       </div>
                       {isCustomRange && (
-                        <div className={`p-3 rounded-lg border ${isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-50 border-orange-200"}`}>
+                        <div className={`p-3 rounded-lg border`}
+                             style={{
+                               backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight,
+                               borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}25`,
+                             }}
+                        >
                           <div className="flex items-center justify-between">
-                            <span className={`text-sm font-medium ${isDarkMode ? "text-orange-400" : "text-orange-700"}`}>Custom Range Active</span>
-                            <button onClick={handleClearCustomRange} className={`text-xs underline ${isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-600 hover:text-orange-800"}`}>Clear</button>
+                            <span className="text-sm font-medium" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>Custom Range Active</span>
+                            <button onClick={handleClearCustomRange} className="text-xs underline" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>Clear</button>
                           </div>
                           <p className={`text-xs mt-1 ${textSecondary}`}>{formatFullDate(fromDate)} to {formatFullDate(toDate)}</p>
                         </div>
@@ -608,7 +681,7 @@ export default function TopSellingAnalytics() {
                           onClick={() => { setShowDatePicker(false); if (!isCustomRange) handleResetDate(); }}
                           className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors ${isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
                         >Cancel</button>
-                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass}>Apply</button>
+                        <button onClick={handleCustomApply} disabled={!fromDate || !toDate} className={primaryButtonClass} style={primaryBtnStyle}>Apply</button>
                       </div>
                     </div>
                   </div>
@@ -621,6 +694,13 @@ export default function TopSellingAnalytics() {
                 onClick={handleRefresh}
                 disabled={isRefreshing || isRefreshQueued}
                 className={secondaryButtonClass}
+                style={secondaryBtnStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                }}
               >
                 <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                 <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
@@ -647,8 +727,14 @@ export default function TopSellingAnalytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className={`rounded-2xl border p-4 ${card}`}>
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-orange-100">
-              <CalendarDays className="w-5 h-5 text-orange-600" />
+            <div className="p-3 rounded-xl border"
+                 style={{
+                   backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                   borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                   color: isDarkMode ? colors.primary : colors.primaryText,
+                 }}
+            >
+              <CalendarDays className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium mb-1 ${textSecondary}`}>
@@ -657,8 +743,8 @@ export default function TopSellingAnalytics() {
               <p className={`text-2xl font-bold ${textPrimary}`}>
                 {activeTab === "products" ? (productsData?.totalDays || 0) : (categoriesData?.totalDays || 0)} Days
               </p>
-              <div className="mt-2 flex items-center text-xs text-orange-600">
-                <Clock className="w-3 h-3 mr-1 text-orange-600" />
+              <div className="mt-2 flex items-center text-xs font-semibold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
+                <Clock className="w-3 h-3 mr-1" style={{ color: colors.primary }} />
                 <span className="truncate">
                   {activeTab === "products"
                     ? `${productsData?.from || "N/A"} to ${productsData?.to || "N/A"}`
@@ -671,14 +757,20 @@ export default function TopSellingAnalytics() {
 
         <div className={`rounded-2xl border p-4 ${card}`}>
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-orange-100">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
+            <div className="p-3 rounded-xl border"
+                 style={{
+                   backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                   borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                   color: isDarkMode ? colors.primary : colors.primaryText,
+                 }}
+            >
+              <TrendingUp className="w-5 h-5 text-current" />
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium mb-1 ${textSecondary}`}>Selected Time Range</p>
               <p className={`text-2xl font-bold ${textPrimary}`}>{getTimeRangeLabel()}</p>
-              <div className="mt-2 flex items-center text-xs text-orange-600">
-                <Calendar className="w-3 h-3 mr-1 text-orange-600" />
+              <div className="mt-2 flex items-center text-xs font-semibold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
+                <Calendar className="w-3 h-3 mr-1" style={{ color: colors.primary }} />
                 <span>
                   {activeTab === "products"
                     ? `${getProductsChartData.length} data points`
@@ -709,11 +801,17 @@ export default function TopSellingAnalytics() {
                   onClick={() => setActiveTab(tab)}
                   className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                     activeTab === tab
-                      ? "bg-orange-500 text-white shadow-sm"
+                      ? "shadow-sm"
                       : isDarkMode
-                        ? "bg-transparent text-slate-400 hover:text-slate-100"
-                        : "bg-transparent text-[#78716c] hover:text-[#1c1917]"
+                        ? "text-slate-400 hover:text-slate-100"
+                        : "text-[#78716c] hover:text-[#1c1917]"
                   }`}
+                  style={activeTab === tab ? {
+                    backgroundColor: isDarkMode ? `${colors.primary}25` : colors.primaryLight,
+                    borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                    color: isDarkMode ? colors.primary : colors.primaryText,
+                    borderWidth: "1px",
+                  } : {}}
                 >
                   {tab === "products"
                     ? <><Package className="w-4 h-4 shrink-0" /><span>Products</span></>
@@ -733,21 +831,32 @@ export default function TopSellingAnalytics() {
                   {/* Bar Chart */}
                   <div className={`rounded-xl border p-4 ${card}`}>
                     <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
-                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                      <BarChart3 className="w-4 h-4" style={{ color: colors.primary }} />
                       Daily Top Product Sales
                     </h4>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={getProductsChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: 50 }}>
+                        <BarChart data={getProductsChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: getProductsChartData.length > 5 ? 50 : 25 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} strokeOpacity={0.6} vertical={false} />
-                          <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <XAxis
+                            dataKey="date"
+                            angle={getProductsChartData.length > 5 ? -45 : 0}
+                            textAnchor={getProductsChartData.length > 5 ? "end" : "middle"}
+                            height={getProductsChartData.length > 5 ? 60 : 35}
+                            fontSize={11}
+                            tick={{ fill: chartTick }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
                           <YAxis tickFormatter={(v) => v.toLocaleString()} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
                           <Tooltip
                             contentStyle={tooltipStyle}
+                            itemStyle={tooltipItemStyle}
+                            labelStyle={tooltipLabelStyle}
                             formatter={(value) => [value.toLocaleString(), "Qty"]}
                             labelFormatter={(label, payload) => payload?.[0] ? `Product: ${payload[0].payload.product}` : label}
                           />
-                          <Bar dataKey="quantity" fill="#f97316" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="quantity" fill={colors.primary} radius={[6, 6, 0, 0]} maxBarSize={48} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -756,16 +865,16 @@ export default function TopSellingAnalytics() {
                   {/* Pie Chart */}
                   <div className={`rounded-xl border p-4 ${card}`}>
                     <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
-                      <PieChartIcon className="w-4 h-4 text-orange-600" />
+                      <PieChartIcon className="w-4 h-4" style={{ color: colors.primary }} />
                       Top Products Distribution
                     </h4>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 18, right: 40, left: 40, bottom: 18 }}>
-                          <Pie data={getAggregatedProducts} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.06)} outerRadius={72} dataKey="revenue">
-                            {getAggregatedProducts.map((_, i) => <Cell key={i} fill={ORANGE_COLORS[i % ORANGE_COLORS.length]} />)}
+                          <Pie data={getAggregatedProducts} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.06, isDarkMode ? "#fbbf24" : colors.primaryText)} outerRadius={72} dataKey="revenue">
+                            {getAggregatedProducts.map((_, i) => <Cell key={i} fill={themeColorsList[i % themeColorsList.length]} />)}
                           </Pie>
-                          <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
+                          <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -791,27 +900,42 @@ export default function TopSellingAnalytics() {
                         {getSortedProductsTableData.map((item, i) => (
                           <tr key={i} className={`transition-colors ${tableRowHover}`}>
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${
-                                i === 0 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
-                                i === 1 ? "bg-slate-100 text-slate-700 border-slate-300" :
-                                i === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
-                                "bg-orange-50 text-orange-700 border-orange-200"
-                              }`}>#{i + 1}</span>
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border"
+                                    style={
+                                      i === 0 ? { backgroundColor: "#fef9c3", color: "#854d0e", borderColor: "#fde047" } :
+                                      i === 1 ? { backgroundColor: "#f1f5f9", color: "#334155", borderColor: "#cbd5e1" } :
+                                      i === 2 ? {
+                                        backgroundColor: isDarkMode ? `${colors.primary}25` : colors.primaryLight,
+                                        color: isDarkMode ? colors.primary : colors.primaryText,
+                                        borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                                      } : {
+                                        backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "rgb(250, 247, 244)",
+                                        color: isDarkMode ? "rgb(148, 163, 184)" : "rgb(120, 113, 108)",
+                                        borderColor: isDarkMode ? "rgb(51, 65, 85)" : "rgb(237, 232, 227)"
+                                      }
+                                    }
+                              >#{i + 1}</span>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors.primary }}></div>
                                 <span className={`font-medium ${textPrimary}`}>{item.date}</span>
                               </div>
                             </td>
                             <td className={`py-3 px-4 font-medium ${textPrimary}`}>{item.product}</td>
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border"
+                                    style={{
+                                      backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                                      color: isDarkMode ? colors.primary : colors.primaryText,
+                                    }}
+                              >
                                 {item.quantity.toLocaleString()}
                               </span>
                             </td>
                             <td className="py-3 px-4">
-                              <span className="font-bold text-orange-500">{formatCurrency(item.revenue)}</span>
+                              <span className="font-bold" style={{ color: colors.primary }}>{formatCurrency(item.revenue)}</span>
                             </td>
                           </tr>
                         ))}
@@ -822,12 +946,27 @@ export default function TopSellingAnalytics() {
               </div>
             ) : (
               <div className={`h-64 flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-                  <Package className="h-6 w-6 text-orange-600" />
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
+                     style={{
+                       backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                     }}
+                >
+                  <Package className="h-6 w-6" style={{ color: colors.primary }} />
                 </div>
                 <p className={`font-bold text-lg mb-2 ${textPrimary}`}>No Product Data Found</p>
                 <p className={`text-center mb-4 text-sm ${textSecondary}`}>No completed orders found for the selected time period.</p>
-                <button onClick={handleRefresh} disabled={isRefreshing} className={secondaryButtonClass}>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={secondaryButtonClass}
+                  style={secondaryBtnStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                  }}
+                >
                   <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                   {isRefreshing ? "Refreshing..." : "Refresh Data"}
                 </button>
@@ -843,21 +982,32 @@ export default function TopSellingAnalytics() {
                   {/* Bar Chart */}
                   <div className={`rounded-xl border p-4 ${card}`}>
                     <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
-                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                      <BarChart3 className="w-4 h-4" style={{ color: colors.primary }} />
                       Daily Top Category Performance
                     </h4>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={getCategoriesChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: 50 }}>
+                        <BarChart data={getCategoriesChartData.slice(0, 20)} margin={{ top: 10, right: 20, left: 0, bottom: getCategoriesChartData.length > 5 ? 50 : 25 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} strokeOpacity={0.6} vertical={false} />
-                          <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
+                          <XAxis
+                            dataKey="date"
+                            angle={getCategoriesChartData.length > 5 ? -45 : 0}
+                            textAnchor={getCategoriesChartData.length > 5 ? "end" : "middle"}
+                            height={getCategoriesChartData.length > 5 ? 60 : 35}
+                            fontSize={11}
+                            tick={{ fill: chartTick }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
                           <YAxis tickFormatter={formatNumber} fontSize={11} tick={{ fill: chartTick }} axisLine={false} tickLine={false} />
                           <Tooltip
                             contentStyle={tooltipStyle}
+                            itemStyle={tooltipItemStyle}
+                            labelStyle={tooltipLabelStyle}
                             formatter={(v) => [formatNumber(v), "Qty"]}
                             labelFormatter={(label, payload) => payload?.[0] ? `Category: ${payload[0].payload.category}` : label}
                           />
-                          <Bar dataKey="quantity" fill="#f97316" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="quantity" fill={colors.primary} radius={[6, 6, 0, 0]} maxBarSize={48} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -866,16 +1016,16 @@ export default function TopSellingAnalytics() {
                   {/* Pie Chart */}
                   <div className={`rounded-xl border p-4 ${card}`}>
                     <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
-                      <PieChartIcon className="w-4 h-4 text-orange-600" />
+                      <PieChartIcon className="w-4 h-4" style={{ color: colors.primary }} />
                       Top Categories Distribution
                     </h4>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={getAggregatedCategories} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.05)} outerRadius={80} dataKey="revenue">
-                            {getAggregatedCategories.map((_, i) => <Cell key={i} fill={ORANGE_COLORS[i % ORANGE_COLORS.length]} />)}
+                          <Pie data={getAggregatedCategories} cx="50%" cy="50%" labelLine={false} label={(props) => renderDistributionLabel(props, 0.05, isDarkMode ? "#fbbf24" : colors.primaryText)} outerRadius={80} dataKey="revenue">
+                            {getAggregatedCategories.map((_, i) => <Cell key={i} fill={themeColorsList[i % themeColorsList.length]} />)}
                           </Pie>
-                          <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
+                          <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(v) => [formatCurrency(v), "Revenue"]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -901,27 +1051,42 @@ export default function TopSellingAnalytics() {
                         {getSortedCategoriesTableData.map((item, i) => (
                           <tr key={i} className={`transition-colors ${tableRowHover}`}>
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border ${
-                                i === 0 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
-                                i === 1 ? "bg-slate-100 text-slate-700 border-slate-300" :
-                                i === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
-                                "bg-orange-50 text-orange-700 border-orange-200"
-                              }`}>#{i + 1}</span>
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold border"
+                                    style={
+                                      i === 0 ? { backgroundColor: "#fef9c3", color: "#854d0e", borderColor: "#fde047" } :
+                                      i === 1 ? { backgroundColor: "#f1f5f9", color: "#334155", borderColor: "#cbd5e1" } :
+                                      i === 2 ? {
+                                        backgroundColor: isDarkMode ? `${colors.primary}25` : colors.primaryLight,
+                                        color: isDarkMode ? colors.primary : colors.primaryText,
+                                        borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                                      } : {
+                                        backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "rgb(250, 247, 244)",
+                                        color: isDarkMode ? "rgb(148, 163, 184)" : "rgb(120, 113, 108)",
+                                        borderColor: isDarkMode ? "rgb(51, 65, 85)" : "rgb(237, 232, 227)"
+                                      }
+                                    }
+                              >#{i + 1}</span>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full shrink-0"></div>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors.primary }}></div>
                                 <span className={`font-medium ${textPrimary}`}>{item.date}</span>
                               </div>
                             </td>
                             <td className={`py-3 px-4 font-medium ${textPrimary}`}>{item.category}</td>
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-700 border-orange-200"}`}>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border"
+                                    style={{
+                                      backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                                      color: isDarkMode ? colors.primary : colors.primaryText,
+                                    }}
+                              >
                                 {item.quantity.toLocaleString()}
                               </span>
                             </td>
                             <td className="py-3 px-4">
-                              <span className="font-bold text-orange-500">{formatCurrency(item.revenue)}</span>
+                              <span className="font-bold" style={{ color: colors.primary }}>{formatCurrency(item.revenue)}</span>
                             </td>
                           </tr>
                         ))}
@@ -932,12 +1097,27 @@ export default function TopSellingAnalytics() {
               </div>
             ) : (
               <div className={`h-64 flex flex-col items-center justify-center rounded-xl border p-6 ${isDarkMode ? "border-slate-700 bg-slate-800/40" : "border-[#ede8e3] bg-[#f7f3ef]"}`}>
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-                  <Tag className="h-6 w-6 text-orange-600" />
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
+                     style={{
+                       backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                     }}
+                >
+                  <Tag className="h-6 w-6" style={{ color: colors.primary }} />
                 </div>
                 <p className={`font-bold text-lg mb-2 ${textPrimary}`}>No Category Data Found</p>
                 <p className={`text-center mb-4 text-sm ${textSecondary}`}>No completed orders found for the selected time period.</p>
-                <button onClick={handleRefresh} disabled={isRefreshing} className={secondaryButtonClass}>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={secondaryButtonClass}
+                  style={secondaryBtnStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                  }}
+                >
                   <RefreshCw className={`w-4 h-4 shrink-0 text-current ${isRefreshing ? "animate-spin" : ""}`} />
                   {isRefreshing ? "Refreshing..." : "Refresh Data"}
                 </button>

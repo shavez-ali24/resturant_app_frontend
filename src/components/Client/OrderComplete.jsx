@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function OrderComplete({
+const OrderComplete = memo(function OrderComplete({
   amount,
   buttonText,
   onClick,
@@ -21,4 +22,6 @@ export default function OrderComplete({
       </Button>
     </div>
   );
-}
+});
+
+export default OrderComplete;

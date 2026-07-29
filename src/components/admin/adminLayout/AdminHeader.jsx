@@ -16,7 +16,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { setRestaurantDetails } from "@/redux/adminRedux/billSlice";
 import { 
-  useGetRestaurantProfileQuery, 
+  useGetRestaurantQuery, 
   useGetMenuQuery,
   useUpdateOrderMutation
 } from "@/redux/adminRedux/adminAPI";
@@ -30,12 +30,14 @@ export default function AdminHeader({
   const dispatch = useDispatch();
   const isBillOpen = useSelector((state) => state.bill?.open);
   
+  const colors = useSelector((state) => state.admin.theme.colors);
+  
   // Fetch restaurant profile (includes tables)
   const { 
     data: restaurantData,
     error: restaurantError, 
     isLoading: restaurantLoading 
-  } = useGetRestaurantProfileQuery();
+  } = useGetRestaurantQuery();
   // console.log("Restaurant Data:", restaurantData);
   
   // Fetch menu items
@@ -91,7 +93,7 @@ export default function AdminHeader({
       <SidebarProvider className="flex flex-col h-full">
         <Suspense
           fallback={
-            <div className="h-16 w-full border-b border-orange-200 bg-white/80" />
+            <div className="h-16 w-full border-b bg-white/80" style={{ borderBottomColor: colors.primaryMid }} />
           }
         >
           <SiteHeader
@@ -103,7 +105,7 @@ export default function AdminHeader({
         <div className="flex flex-1 overflow-hidden">
           <Suspense
             fallback={
-              <div className="hidden h-full w-64 border-r border-orange-100 bg-orange-50/40 lg:block" />
+              <div className="hidden h-full w-64 border-r lg:block" style={{ borderRightColor: colors.primaryMid, backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : colors.primaryLight }} />
             }
           >
             <AppSidebar isDarkMode={isDarkMode} />

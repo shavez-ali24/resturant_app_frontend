@@ -3,7 +3,8 @@ import React, { useState, Suspense, lazy } from "react";
 import OrderRow from "./OrderRow";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
-import { Utensils, House, Truck } from "lucide-react";
+import { Utensils, House, Truck, Bell } from "lucide-react";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 const CustomizationsModal = lazy(() => import("./CustomizationsModal"));
 const PendingOrderMobileNote = lazy(() => import("./PendingOrderMobileNote"));
 const PendingOrderMobileControls = lazy(() => import("./PendingOrderMobileControls"));
@@ -50,12 +51,15 @@ const OrdersTable = ({
   setEditingOrder,
   setShowConfirmDelete,
   setOrderForBillModal,
+  setPayModalOrder,
+  setMoveModalOrder,
   updateOrder,
   tableType,
   onCustomizationsClick,
   latestOrderId,
   isDarkMode = false,
   containerVariant = "card",
+  newlyAddedItemsOrderIds,
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizationOrder, setSelectedCustomizationOrder] = useState(null);
@@ -96,10 +100,28 @@ const OrdersTable = ({
     setSeenBillOrderId(id);
   };
 
+  const { setNewlyAddedItemsOrderIds } = useNotification() || {};
+
+  const handleBillClick = async (order) => {
+    // Clear NEW ORDER badge when bill is viewed
+    const oid = getOrderId(order);
+    if (oid && setNewlyAddedItemsOrderIds) {
+      setNewlyAddedItemsOrderIds((prev) => {
+        const key = String(oid);
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+    markLatestSeen(order);
+    dispatch(showBill(order));
+  };
+
   const containerClassName =
     containerVariant === "plain"
       ? "h-full overflow-hidden rounded-xl bg-transparent"
-      : "h-full overflow-hidden rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-[#1e293b]";
+      : "h-full overflow-hidden rounded-xl border border-slate-100 bg-white dark:border-slate-700 dark:bg-[#1e293b]";
 
   return (
     <div className={containerClassName}>
@@ -121,83 +143,89 @@ const OrdersTable = ({
       {/* Desktop / Tablet */}
       <div className="hidden md:flex md:h-full md:flex-col">
         <div className="overflow-auto flex-1">
-        <table className="min-w-full">
-          <thead className={`sticky top-0 z-10 ${isDarkMode ? "bg-slate-800" : "bg-orange-50"}`}>
-            <tr className={`border-b ${isDarkMode ? "border-slate-700" : "border-orange-100"}`}>
-              {tableType === "pending" ? (
-                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order ID</th>
-              ) : (
-                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Date</th>
-              )}
-              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Placed At</th>
-              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Customer</th>
-              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Phone</th>
-              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Type</th>
-              <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Order Details</th>
-              {tableType === "pending" && (
-                <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Note</th>
-              )}
-              {tableType === "pending" && (
-                <>
-                  <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Status</th>
-                  <th className={`px-4 py-2.5 text-center align-middle text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-orange-700"}`}>Manage</th>
-                </>
-              )}
-            </tr>
-          </thead>
+          <table className="min-w-full">
+            <thead 
+              className="sticky top-0 z-10 backdrop-blur-sm"
+              style={{ backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.9)" : "rgba(248, 243, 239, 0.9)" }}
+            >
+              <tr className={`border-b ${isDarkMode ? "border-slate-800" : "border-slate-100"}`}>
+                {tableType === "pending" ? (
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Order ID</th>
+                ) : (
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Date</th>
+                )}
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Placed At</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Customer</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Phone</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Type</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Order Details</th>
+                {tableType === "pending" && (
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Note</th>
+                )}
+                {tableType === "pending" && (
+                  <>
+                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Status</th>
+                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Manage</th>
+                  </>
+                )}
+              </tr>
+            </thead>
 
-          <tbody className={`divide-y ${isDarkMode ? "divide-slate-700/50" : "divide-[#f0ebe5]"}`}>
-            {loading ? (
-              skeletonRows.map((_, rowIndex) => (
-                <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
-                  {Array.from({ length: columnCount }).map((__, colIndex) => (
-                    <td key={`skeleton-cell-${rowIndex}-${colIndex}`} className="px-4 py-3">
-                      <div className={`h-4 w-full rounded ${isDarkMode ? "bg-slate-700/60" : "bg-[#f0ebe5]"}`} />
-                    </td>
-                  ))}
+            <tbody className={`divide-y ${isDarkMode ? "divide-slate-700/50" : "divide-slate-100"}`}>
+              {loading ? (
+                skeletonRows.map((_, rowIndex) => (
+                  <tr key={`skeleton-row-${rowIndex}`} className="animate-pulse">
+                    {Array.from({ length: columnCount }).map((__, colIndex) => (
+                      <td key={`skeleton-cell-${rowIndex}-${colIndex}`} className="px-4 py-3">
+                        <div className={`h-4 w-full rounded ${isDarkMode ? "bg-slate-700/60" : "bg-slate-100"}`} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : error ? (
+                <tr>
+                  <td colSpan={columnCount} className="py-10 text-center text-sm text-red-500">
+                    {error}
+                  </td>
                 </tr>
-              ))
-            ) : error ? (
-              <tr>
-                <td colSpan={columnCount} className="py-10 text-center text-sm text-red-500">
-                  {error}
-                </td>
-              </tr>
-            ) : orders.length === 0 ? (
-              <tr>
-                <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
-                  No orders yet
-                </td>
-              </tr>
-            ) : (
-              orders.map((order, index) => (
-                <OrderRow
-                  key={getOrderId(order) || order?.createdAt || index}
-                  order={{
-                    ...order,
-                    formattedDate: formatDate(order.createdAt),
-                    formattedTime: formatTime(order.createdAt),
-                  }}
-                  index={index}
-                  setEditingOrder={setEditingOrder}
-                  setShowConfirmDelete={setShowConfirmDelete}
-                  setOrderForBillModal={setOrderForBillModal}
-                  updateOrder={updateOrder}
-                  tableType={tableType}
-                  isDarkMode={isDarkMode}
-                  onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
-                  showBillAttention={isLatestUnseen(order)}
-                  onBillOpen={() => markLatestSeen(order)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+                    No orders yet
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order, index) => (
+                  <OrderRow
+                    key={getOrderId(order) || order?.createdAt || index}
+                    order={{
+                      ...order,
+                      formattedDate: formatDate(order.createdAt),
+                      formattedTime: formatTime(order.createdAt),
+                      hasNewClientItems: newlyAddedItemsOrderIds?.has(String(getOrderId(order))),
+                    }}
+                    index={index}
+                    setEditingOrder={setEditingOrder}
+                    setShowConfirmDelete={setShowConfirmDelete}
+                    setOrderForBillModal={setOrderForBillModal}
+                    setPayModalOrder={setPayModalOrder}
+                    setMoveModalOrder={setMoveModalOrder}
+                    updateOrder={updateOrder}
+                    tableType={tableType}
+                    isDarkMode={isDarkMode}
+                    onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
+                    showBillAttention={isLatestUnseen(order)}
+                    onBillOpen={() => markLatestSeen(order)}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-       {/* Mobile View — scrollable */}
-       <div className="block md:hidden h-full overflow-y-auto p-3">
+      {/* Mobile View — scrollable */}
+      <div className="block md:hidden h-full overflow-y-auto p-3">
         {loading ? (
           <div className="space-y-3">
             {mobileSkeletons.map((_, idx) => (
@@ -227,21 +255,29 @@ const OrdersTable = ({
                 order.source
               );
               const handlePendingCustomizationsClick = onCustomizationsClick || handleCustomizationsClick;
+              const orderId = getOrderId(order);
+              const hasNewClientItems = newlyAddedItemsOrderIds?.has(String(orderId));
 
               return (
                 <div
                   key={getOrderId(order) || order?.createdAt}
-                  className={`w-full rounded-xl border p-3 space-y-2.5 ${
-                    isDarkMode
-                      ? "border-slate-700/60 bg-slate-800/60"
-                      : "border-[#ede8e3] bg-white"
-                  }`}
+                  className={`w-full rounded-xl border p-3 space-y-2.5 ${isDarkMode
+                    ? "border-slate-700/60 bg-slate-800/60"
+                    : "border-[#ede8e3] bg-white"
+                    }`}
                 >
                   {/* Row 1: ID + Time */}
                   <div className="flex items-center justify-between">
-                    <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
-                      {getOrderIdShort(order)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
+                        {getOrderIdShort(order)}
+                      </span>
+                      {hasNewClientItems && (
+                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white animate-pulse shadow-sm border border-white">
+                          <Bell size={10} className="animate-bounce" />
+                        </span>
+                      )}
+                    </div>
                     <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
                       {tableType === "pending"
                         ? formatTime(order.createdAt)
@@ -264,8 +300,7 @@ const OrdersTable = ({
                   {/* Row 3: Type badge */}
                   <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
                     {getOrderTypeIcon(order.orderType)}
-                    <span>{orderTypeLabel}</span>
-                    {isEatHereOrder(order.orderType) && tableLabel && <span>: {tableLabel}</span>}
+                    <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
                   </div>
 
                   {/* Row 4: Note + View Bill */}
@@ -276,19 +311,18 @@ const OrdersTable = ({
                       </Suspense>
                     )}
                     <button
-                      onClick={() => { markLatestSeen(order); dispatch(showBill(order)); }}
-                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                        isLatestUnseen(order) ? "bill-border-animate" : ""
-                      } ${isDarkMode
-                        ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
-                        : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
-                      } ${tableType !== "pending" ? "col-span-2" : ""}`}
+                      onClick={() => handleBillClick(order)}
+                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${isLatestUnseen(order) ? "bill-border-animate" : ""
+                        } ${isDarkMode
+                          ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
+                          : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"
+                        } ${tableType !== "pending" ? "col-span-2" : ""}`}
                     >
                       View Items & Bill
                     </button>
                   </div>
 
-                  {/* Row 5: Status + Edit/Delete */}
+                  {/* Row 5: Status + Pay/Move/Edit/Delete */}
                   {tableType === "pending" && (
                     <Suspense fallback={null}>
                       <PendingOrderMobileControls
@@ -296,6 +330,8 @@ const OrdersTable = ({
                         updateOrder={updateOrder}
                         setEditingOrder={setEditingOrder}
                         setShowConfirmDelete={setShowConfirmDelete}
+                        setPayModalOrder={setPayModalOrder}
+                        setMoveModalOrder={setMoveModalOrder}
                         isDarkMode={isDarkMode}
                       />
                     </Suspense>

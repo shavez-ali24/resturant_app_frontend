@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Clock, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun } from "lucide-react";
+import { X, Clock, Search, UtensilsCrossed, ArrowRight, Rocket, Moon, Sun, Truck, House, Utensils } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { FiShoppingCart } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -11,9 +11,10 @@ import {
   clearCart,
 } from "../../redux/clientRedux/clientSlice";
 import {
-  useGetRestaurantQuery,
+  useGetPublicRestaurantQuery,
   useCreateOrderMutation,
   useGetOrdersByFingerprintQuery,
+  useGetQrInfoQuery,
 } from "../../redux/clientRedux/clientAPI";
 import { Toaster } from "@/components/ui/toaster";
 import OrderComplete from "@/components/Client/OrderComplete";
@@ -21,6 +22,7 @@ import OrderFormModal from "./OrderFormModal";
 import fingerprintService from "@/service/fingerprintService";
 import config from "@/config";
 import { useBackButtonClose } from "@/hooks/useBackButtonClose";
+import { getFriendlyErrorMessage } from "@/utils/errorHelpers";
 
 const NAME_VALID_PATTERN = /^[A-Za-z\s]+$/;
 const PHONE_VALID_PATTERN = /^\d{10}$/;
@@ -51,7 +53,7 @@ export default function Header({
   isRestaurantOpen = true,
   onSidebarToggle,
   isDarkMode = false,
-  onToggleDarkMode = () => {},
+  onToggleDarkMode = () => { },
 }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function Header({
   }, []));
   const [orderStatusBanner, setOrderStatusBanner] = useState(null);
 
-  const { data: restaurantData } = useGetRestaurantQuery();
+  const { data: restaurantData } = useGetPublicRestaurantQuery();
 
   const [createOrder, { isLoading: isOrderLoading }] = useCreateOrderMutation();
 
@@ -95,17 +97,22 @@ export default function Header({
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [sseRetryKey, setSseRetryKey] = useState(0);
 
+  // Read unitId from QR scan URL
+  const qrUnitId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("unitId") : null;
+
+  // Fetch QR code info if unitId is scanned
+  const { data: qrInfo, isLoading: isQrLoading } = useGetQrInfoQuery(qrUnitId, {
+    skip: !qrUnitId,
+  });
+
   // Auto-select table when only one section exists and Eat Here is chosen
   useEffect(() => {
     if (orderType !== "Eat Here" || tableId) return;
-    const sections = restaurantData?.restaurant?.sections || {};
-    const defs = [
-      { key: "indoor",  count: sections.indoor?.tables  || restaurantData?.restaurant?.tableNumbers || 0 },
-      { key: "outdoor", count: sections.outdoor?.tables || 0 },
-      { key: "rooftop", count: sections.rooftop?.tables || 0 },
-      { key: "rooms",   count: sections.rooms?.rooms    || 0 },
-    ].filter(s => s.count > 0);
-    if (defs.length === 1) setTableId(`${defs[0].key}:1`);
+    const sections = Array.isArray(restaurantData?.restaurant?.sections) ? restaurantData.restaurant.sections : [];
+    const allUnits = sections.flatMap(s => Array.isArray(s.units) ? s.units.filter(u => u.isActive !== false) : []);
+    if (allUnits.length === 1) {
+      setTableId(`${sections[0].name}:${allUnits[0].name}`);
+    }
   }, [orderType, restaurantData, tableId]);
 
   const dispatch = useDispatch();
@@ -132,9 +139,9 @@ export default function Header({
   const visibleCartItems = cartEntries.slice(0, MAX_CART_PREVIEW_IMAGES);
 
   const [fingerPrint, setFingerPrint] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  // 🔧 FIX: Backend only returns 2 orders via .limit(2), no pagination support
+  // removed currentPage/hasMore pagination state
   const [allOrders, setAllOrders] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
 
   const isPreparingBanner = orderStatusBanner?.status === "preparing";
 
@@ -153,7 +160,7 @@ export default function Header({
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw-vibration.js", { scope: "/" })
-        .catch(() => {}); // silent fail — not critical
+        .catch(() => { }); // silent fail — not critical
     }
   }, []);
 
@@ -437,7 +444,7 @@ export default function Header({
     isLoading: ordersLoading,
     refetch,
   } = useGetOrdersByFingerprintQuery(
-    { fingerPrint, page: currentPage },
+    { fingerPrint }, // 🔧 FIX: removed page param — backend doesn't support pagination
     {
       skip: !fingerPrint,
       refetchOnMountOrArgChange: false,
@@ -446,7 +453,7 @@ export default function Header({
     }
   );
 
-  // Merge fetched orders into local state
+  // 🔧 FIX: Simplified — backend returns all orders directly, no pagination needed
   useEffect(() => {
     if (!ordersData) return;
 
@@ -472,20 +479,8 @@ export default function Header({
           )
       );
 
-    if (currentPage === 1) {
-      setAllOrders(dedup(orders));
-    } else {
-      setAllOrders((prev) => {
-        const existingIds = new Set(prev.map((o) => o._id || o.id || o.orderId));
-        const newOrders = orders.filter(
-          (order) => !existingIds.has(order._id || order.id || order.orderId)
-        );
-        return [...prev, ...newOrders];
-      });
-    }
-
-    setHasMore(orders.length > 0 && ordersData?.hasMore !== false);
-  }, [ordersData, currentPage]);
+    setAllOrders(dedup(orders));
+  }, [ordersData]);
 
   // SSE — real-time order status updates
   useEffect(() => {
@@ -537,12 +532,12 @@ export default function Header({
         // ONLY trigger notification if actual status has changed
         const previousStatus = orderStatusTracker.current.get(orderId);
         const newStatus = String(updatedOrder.status || "").toLowerCase();
-        
+
         if (previousStatus !== newStatus) {
           orderStatusTracker.current.set(orderId, newStatus);
           if (payload.type === "ORDER_UPDATED") showOrderStatusBanner(updatedOrder);
         }
-        
+
         refetch();
       }
     };
@@ -580,12 +575,10 @@ export default function Header({
     }
   }, [showModal, allOrders]);
 
-  // Reset pagination when fingerprint changes
+  // 🔧 FIX: Removed setCurrentPage/setHasMore (pagination removed — backend .limit(2) only)
   useEffect(() => {
     if (fingerPrint) {
-      setCurrentPage(1);
       setAllOrders([]);
-      setHasMore(true);
     }
   }, [fingerPrint]);
 
@@ -634,7 +627,7 @@ export default function Header({
         }
       } else if ("Notification" in window && Notification.permission === "default") {
         // Request permission silently — will be used next time
-        Notification.requestPermission().catch(() => {});
+        Notification.requestPermission().catch(() => { });
       }
     } catch (e) {
       // Notification not supported
@@ -692,9 +685,8 @@ export default function Header({
           opacity: 0,
         },
         {
-          transform: `translate(-50%, -50%) translate(${dx * 0.28}px, ${
-            dy * 0.34 - 46
-          }px) scale(1.05) rotate(6deg)`,
+          transform: `translate(-50%, -50%) translate(${dx * 0.28}px, ${dy * 0.34 - 46
+            }px) scale(1.05) rotate(6deg)`,
           opacity: 1,
           offset: 0.5,
         },
@@ -786,12 +778,15 @@ export default function Header({
   };
 
   const isFormValid = () => {
+    const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+    if (isRoomQR) return true;
+
     const trimmedName = customerName.trim();
     if (!trimmedName || !NAME_VALID_PATTERN.test(trimmedName)) return false;
     if (!PHONE_VALID_PATTERN.test(customerPhone)) return false;
     switch (normalizedOrderType) {
       case "Eat Here":
-        return !!tableId;
+        return !!tableId || !!qrUnitId;
       case "Take Away":
         return true;
       case "Delivery":
@@ -803,11 +798,13 @@ export default function Header({
 
   const handleOrderSubmit = async () => {
     try {
-      const finalOrderType = normalizedOrderType;
-      const trimmedName = customerName.trim();
-      const formattedName = capitalizeFirstLetter(
+      const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+      const finalOrderType = isRoomQR ? "Eat Here" : normalizedOrderType;
+      const trimmedName = isRoomQR ? "Room Guest" : customerName.trim();
+      const formattedName = isRoomQR ? "Room Guest" : capitalizeFirstLetter(
         trimmedName.replace(/\s+/g, " ")
       );
+      const customerPhoneVal = isRoomQR ? "0000000000" : customerPhone;
       const trimmedAddress = address.trim();
 
       if (!isRestaurantOpen) {
@@ -822,9 +819,9 @@ export default function Header({
         if (!trimmedName) errorMessage = "Please enter your name.";
         else if (!NAME_VALID_PATTERN.test(trimmedName))
           errorMessage = "Name can contain only letters and spaces.";
-        else if (!PHONE_VALID_PATTERN.test(customerPhone))
+        else if (!PHONE_VALID_PATTERN.test(customerPhoneVal))
           errorMessage = "Please enter a valid 10-digit phone number.";
-        else if (finalOrderType === "Eat Here" && !tableId)
+        else if (finalOrderType === "Eat Here" && !tableId && !qrUnitId)
           errorMessage = "Please select a table.";
         else if (finalOrderType === "Delivery" && !trimmedAddress)
           errorMessage = "Please enter delivery address.";
@@ -832,11 +829,34 @@ export default function Header({
         return;
       }
 
-      const orderItems = Object.values(cartItems).map((cartItem) => {
+      const mergeDuplicateOrderItems = (itemsList) => {
+        const mergedMap = new Map();
+        for (const item of itemsList) {
+          const key = `${item.menuItemId}_${item.variant || "default"}`;
+          if (mergedMap.has(key)) {
+            const existing = mergedMap.get(key);
+            existing.quantity += item.quantity;
+            const currentCust = String(item.customizations || "").trim();
+            const existingCust = String(existing.customizations || "").trim();
+            if (currentCust && existingCust) {
+              if (existingCust.toLowerCase() !== currentCust.toLowerCase()) {
+                existing.customizations = `${existingCust}, ${currentCust}`;
+              }
+            } else if (currentCust) {
+              existing.customizations = currentCust;
+            }
+          } else {
+            mergedMap.set(key, { ...item });
+          }
+        }
+        return Array.from(mergedMap.values());
+      };
+
+      const rawOrderItems = Object.values(cartItems).map((cartItem) => {
         const variantData =
           cartItem.variantKey &&
-          cartItem.variantRates &&
-          cartItem.variantRates[cartItem.variantKey]
+            cartItem.variantRates &&
+            cartItem.variantRates[cartItem.variantKey]
             ? cartItem.variantRates[cartItem.variantKey]
             : null;
 
@@ -847,17 +867,17 @@ export default function Header({
         const price =
           Number(
             cartItem.originalPrice ??
-              (isComboItem
-                ? cartItem.comboPrice
-                : variantBasePrice || cartItem.price) ??
-              0
+            (isComboItem
+              ? cartItem.comboPrice
+              : variantBasePrice || cartItem.price) ??
+            0
           ) || 0;
 
         const discountedPrice =
           Number(
             cartItem.price ??
-              (isComboItem ? cartItem.comboPrice : variantBasePrice) ??
-              0
+            (isComboItem ? cartItem.comboPrice : variantBasePrice) ??
+            0
           ) || 0;
 
         const orderItem = {
@@ -878,21 +898,26 @@ export default function Header({
         return orderItem;
       });
 
+      const orderItems = mergeDuplicateOrderItems(rawOrderItems);
+
       const fp = await fingerprintService.getFingerprint();
 
       const orderData = {
         fingerPrint: fp,
         customerName: formattedName,
-        customerPhone,
+        customerPhone: customerPhoneVal,
         items: orderItems,
-        orderType: finalOrderType,
+        orderType: isRoomQR ? "Room Stay" : finalOrderType,
       };
 
-      if (finalOrderType === "Eat Here" && tableId) {
-        // tableId format: "indoor:3" → source: { section: "indoor", number: 3, type: "TABLE" }
+      if (finalOrderType === "Eat Here" && qrUnitId) {
+        // QR scanned: pass the unitId from URL directly
+        orderData.source = { unitId: qrUnitId };
+      } else if (finalOrderType === "Eat Here" && tableId) {
+        // Manual table selection: pass section, number from tableId
         const [section, numStr] = tableId.split(":");
         const number = parseInt(numStr, 10) || 1;
-        const type = section === "rooms" ? "ROOM" : "TABLE";
+        const type = section.toLowerCase().includes("room") ? "ROOM" : "TABLE";
         orderData.source = { section, number, type };
       }
       if (finalOrderType === "Delivery" && trimmedAddress)
@@ -901,30 +926,12 @@ export default function Header({
       await createOrder(orderData).unwrap();
 
       showSuccessMessage();
-
-      setCurrentPage(1);
-      setAllOrders([]);
-      setHasMore(true);
-
-      if (fp) setTimeout(() => refetch(), 500);
-
-      setShowModal(false);
-      setIsCartOpen(false);
-      onSidebarToggle?.(false);
-      setOrderType("");
-      setAddress("");
-      setUseCurrentLocation(false);
-      setCustomerName("");
-      setCustomerPhone("");
-      setTableId("");
-
-      setTimeout(() => dispatch(clearCart()), 300);
+      resetForm();
+      dispatch(clearCart());
     } catch (error) {
       console.error("Order error:", error);
-      let errorMessage =
-        error.data?.message || "Failed to place order. Please try again.";
-      if (error.data?.error) errorMessage += ` - ${error.data.error}`;
-      showErrorMessage(errorMessage);
+      const friendlyMessage = getFriendlyErrorMessage(error, "Failed to place your order. Please check your network and try again.");
+      showErrorMessage(friendlyMessage);
     }
   };
 
@@ -939,7 +946,7 @@ export default function Header({
   };
 
   const safeOnSearch =
-    typeof onSearch === "function" ? onSearch : () => {};
+    typeof onSearch === "function" ? onSearch : () => { };
 
   return (
     <>
@@ -968,18 +975,16 @@ export default function Header({
                       isCartBarBump ? { scale: [1, 1.05, 1] } : { scale: 1 }
                     }
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className={`relative overflow-hidden rounded-3xl border ${
-                      isDarkMode
-                        ? "border-orange-300 bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 shadow-[0_-12px_34px_rgba(249,115,22,0.42)]"
-                        : "border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
-                    }`}
+                    className={`relative overflow-hidden rounded-3xl border ${isDarkMode
+                      ? "border-orange-300 bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 shadow-[0_-12px_34px_rgba(249,115,22,0.42)]"
+                      : "border-slate-700 bg-slate-900 shadow-[0_-12px_36px_rgba(2,6,23,0.5)]"
+                      }`}
                   >
                     <div
-                      className={`pointer-events-none absolute inset-0 ${
-                        isDarkMode
-                          ? "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.22),transparent_48%)]"
-                          : "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]"
-                      }`}
+                      className={`pointer-events-none absolute inset-0 ${isDarkMode
+                        ? "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.22),transparent_48%)]"
+                        : "bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.08),transparent_46%)]"
+                        }`}
                     />
                     <div className="relative flex items-center justify-between gap-3 p-2.5">
                       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
@@ -1009,11 +1014,10 @@ export default function Header({
                               {cartCount}
                             </span>
                             <span
-                              className={`ml-1 hidden text-sm font-semibold min-[360px]:inline ${
-                                isDarkMode
-                                  ? "text-orange-100"
-                                  : "text-slate-200"
-                              }`}
+                              className={`ml-1 hidden text-sm font-semibold min-[360px]:inline ${isDarkMode
+                                ? "text-orange-100"
+                                : "text-slate-200"
+                                }`}
                             >
                               item{cartCount > 1 ? "s" : ""}
                             </span>
@@ -1026,17 +1030,15 @@ export default function Header({
                           setIsAccordionOpen(true);
                           onSidebarToggle?.(true);
                         }}
-                        className={`group inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-white transition-all duration-200 active:scale-95 ${
-                          isDarkMode
-                            ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-[0_8px_18px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700"
-                            : "bg-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.45)] hover:bg-slate-600"
-                        }`}
+                        className={`group inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold text-white transition-all duration-200 active:scale-95 ${isDarkMode
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-[0_8px_18px_rgba(249,115,22,0.45)] hover:from-orange-600 hover:to-orange-700"
+                          : "bg-slate-700 shadow-[0_5px_14px_rgba(15,23,42,0.45)] hover:bg-slate-600"
+                          }`}
                       >
                         <span>View Cart</span>
                         <span
-                          className={`grid h-6 w-6 place-items-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 ${
-                            isDarkMode ? "bg-orange-400" : "bg-slate-500"
-                          }`}
+                          className={`grid h-6 w-6 place-items-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5 ${isDarkMode ? "bg-orange-400" : "bg-slate-500"
+                            }`}
                         >
                           <ArrowRight className="h-4 w-4 text-white" />
                         </span>
@@ -1051,11 +1053,10 @@ export default function Header({
             <AnimatePresence>
               {isAccordionOpen && (
                 <motion.div
-                  className={`fixed inset-0 z-[100] flex flex-col ${
-                    isDarkMode
-                      ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
-                      : "bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
-                  }`}
+                  className={`fixed inset-0 z-[100] flex flex-col ${isDarkMode
+                    ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
+                    : "bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
+                    }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }}
@@ -1063,16 +1064,14 @@ export default function Header({
                 >
                   {/* Header */}
                   <div
-                    className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 ${
-                      isDarkMode
-                        ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"
-                        : "border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9]"
-                    }`}
+                    className={`sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3 ${isDarkMode
+                      ? "border-slate-700 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"
+                      : "border-orange-100 bg-gradient-to-r from-[#fffdf9] via-[#fff6ec] to-[#fffdf9]"
+                      }`}
                   >
                     <h2
-                      className={`text-xl font-semibold sm:text-[1.65rem] ${
-                        isDarkMode ? "text-slate-100" : "text-slate-900"
-                      }`}
+                      className={`text-xl font-semibold sm:text-[1.65rem] ${isDarkMode ? "text-slate-100" : "text-slate-900"
+                        }`}
                     >
                       Your Order ({cartCount})
                     </h2>
@@ -1081,18 +1080,17 @@ export default function Header({
                         setIsAccordionOpen(false);
                         onSidebarToggle?.(false);
                       }}
-                      className={`p-1 transition-colors ${
-                        isDarkMode
-                          ? "text-slate-300 hover:text-slate-100"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
+                      className={`p-1 transition-colors ${isDarkMode
+                        ? "text-slate-300 hover:text-slate-100"
+                        : "text-slate-600 hover:text-slate-900"
+                        }`}
                       aria-label="Close"
                     >
                       <X className="w-6 h-6" />
                     </button>
                   </div>
 
-                 
+
 
                   {/* Items list */}
                   <div className="flex-1 overflow-y-auto px-3 py-3 pb-28">
@@ -1140,26 +1138,26 @@ export default function Header({
                                     </span>
                                   ) : item.isCombo ? (
                                     <span className="inline-flex shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                                      Combo
+                                      Only Combo
                                     </span>
                                   ) : null}
                                 </div>
                                 <div className="mt-1.5 flex items-center gap-1 text-sm text-slate-600">
                                   <button
-                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-bold text-orange-700 shadow-sm transition-colors hover:bg-orange-100 sm:h-7 sm:w-7"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 sm:h-7 sm:w-7"
                                     onClick={() => dispatch(removeFromCart(id))}
                                   >
                                     −
                                   </button>
-                                  <span className="w-5 text-center text-base font-semibold text-slate-800 sm:w-6">
+                                   <span className={`w-5 text-center text-base font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-800"} sm:w-6`}>
                                     {Number.isInteger(item.quantity)
                                       ? item.quantity
                                       : item.quantity
-                                          .toFixed(2)
-                                          .replace(".00", "")
-                                          .replace(".25", "¼")
-                                          .replace(".50", "½")
-                                          .replace(".75", "¾")}
+                                        .toFixed(2)
+                                        .replace(".00", "")
+                                        .replace(".25", "¼")
+                                        .replace(".50", "½")
+                                        .replace(".75", "¾")}
                                   </span>
                                   <button
                                     className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 sm:h-7 sm:w-7"
@@ -1172,7 +1170,7 @@ export default function Header({
                                             item.name,
                                             item.variantLabel,
                                             item.isCombo ||
-                                              item.pricingType === "combo",
+                                            item.pricingType === "combo",
                                             item
                                           ),
                                         })
@@ -1182,7 +1180,7 @@ export default function Header({
                                     +
                                   </button>
 
-                                  <span className="ml-auto flex w-[112px] shrink-0 flex-col items-end overflow-hidden rounded-lg border border-orange-200/80 bg-orange-50 px-2 py-1 text-right font-medium text-slate-600 sm:w-[124px]">
+                                  <span className={`ml-auto flex w-[112px] shrink-0 flex-col items-end overflow-hidden rounded-lg border px-2 py-1 text-right font-medium sm:w-[124px] ${isDarkMode ? "border-primary/20 bg-primary/5 text-slate-300" : "border-primary/30 bg-primary/10 text-slate-600"}`}>
                                     {itemPrice > 0 ? (
                                       <>
                                         <span className="flex w-full items-center justify-end gap-0.5 whitespace-nowrap text-[10px] leading-none">
@@ -1211,7 +1209,7 @@ export default function Header({
                                     ) : item.isCombo ? (
                                       <>
                                         <span className="text-[10px] leading-tight">
-                                          Combo: ₹
+                                          Only Combo: ₹
                                           {(item.comboPrice || 0).toFixed(2)} ×{" "}
                                           {item.quantity}
                                         </span>
@@ -1238,62 +1236,61 @@ export default function Header({
                     )}
                   </div>
 
-                   {/* Price Breakdown */}
-                   <div className={`px-4 py-3 border-t ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-orange-100 bg-orange-50/50"}`}>
-                     {/* Subtotal */}
-                     <div className="flex justify-between items-center text-sm">
-                       <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Subtotal</span>
-                       <span className="font-medium">₹{calculatedDetails.subtotal.toFixed(2)}</span>
-                     </div>
-                     
-                     {/* GST */}
-                     {calculatedDetails.gstAmount > 0 && (
-                       <div className="flex justify-between items-center text-sm mt-1.5">
-                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
-                           GST ({restaurantData?.restaurant?.gstRate || 5}%)
-                         </span>
-                         <span className="font-medium">+ ₹{calculatedDetails.gstAmount.toFixed(2)}</span>
-                       </div>
-                     )}
+                  {/* Price Breakdown */}
+                  <div className={`px-4 py-3 border-t ${isDarkMode ? "border-slate-700 bg-slate-900/90" : "border-primary/20 bg-primary/5"}`}>
+                    {/* Subtotal */}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Subtotal</span>
+                      <span className="font-medium">₹{calculatedDetails.subtotal.toFixed(2)}</span>
+                    </div>
 
-                     {/* Delivery Charges */}
-                     {calculatedDetails.deliveryCharges > 0 && (
-                       <div className="flex justify-between items-center text-sm mt-1.5">
-                         <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Delivery Charges</span>
-                         <span className="font-medium">+ ₹{calculatedDetails.deliveryCharges.toFixed(2)}</span>
-                       </div>
-                     )}
+                    {/* GST */}
+                    {calculatedDetails.gstAmount > 0 && (
+                      <div className="flex justify-between items-center text-sm mt-1.5">
+                        <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
+                          GST ({restaurantData?.restaurant?.gstRate || 5}%)
+                        </span>
+                        <span className="font-medium">+ ₹{calculatedDetails.gstAmount.toFixed(2)}</span>
+                      </div>
+                    )}
 
-                     {/* Total Amount */}
-                     <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-dashed font-bold text-lg">
-                       <span>Total Amount</span>
-                       <span className="text-primary">₹{calculatedDetails.totalAmount.toFixed(2)}</span>
-                     </div>
-                   </div>
+                    {/* Delivery Charges */}
+                    {calculatedDetails.deliveryCharges > 0 && (
+                      <div className="flex justify-between items-center text-sm mt-1.5">
+                        <span className={isDarkMode ? "text-slate-400" : "text-gray-600"}>Delivery Charges</span>
+                        <span className="font-medium">+ ₹{calculatedDetails.deliveryCharges.toFixed(2)}</span>
+                      </div>
+                    )}
 
-                   {/* Footer CTA */}
-                   <div
-                     className={`sticky bottom-0 border-t px-4 pt-4 pb-6 ${
-                       isDarkMode
-                         ? "border-slate-700 bg-slate-900/95"
-                         : "border-slate-200 bg-white"
-                     }`}
-                     style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-                   >
+                    {/* Total Amount */}
+                    <div className="flex justify-between items-center mt-2.5 pt-2.5 border-t border-dashed font-bold text-lg">
+                      <span>Total Amount</span>
+                      <span className="text-primary">₹{calculatedDetails.totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer CTA */}
+                  <div
+                    className={`sticky bottom-0 border-t px-4 pt-4 pb-6 ${isDarkMode
+                      ? "border-slate-700 bg-slate-900/95"
+                      : "border-slate-200 bg-white"
+                      }`}
+                    style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+                  >
                     {!isRestaurantOpen ? (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="w-full rounded-xl border border-orange-200/80 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 px-4 py-3 shadow-[0_8px_18px_rgba(249,115,22,0.12)]"
+                        className={`w-full rounded-xl border px-4 py-3 shadow-[0_8px_18px_rgba(239,159,39,0.12)] ${isDarkMode ? "border-primary/20 bg-primary/5" : "border-primary/30 bg-primary/10"}`}
                       >
-                        <div className="flex items-center justify-center gap-2.5 text-orange-700">
+                        <div className="flex items-center justify-center gap-2.5 text-primary">
                           <Clock className="h-5 w-5" />
                           <p className="text-base font-black uppercase tracking-[0.07em] text-red-600">
                             Restaurant Closed
                           </p>
                         </div>
-                        <p className="mt-1 text-center text-sm font-medium text-orange-600">
+                        <p className="mt-1 text-center text-sm font-medium text-primary">
                           We'll be back soon
                         </p>
                       </motion.div>
@@ -1311,11 +1308,10 @@ export default function Header({
                           setIsAccordionOpen(false);
                           onSidebarToggle?.(false);
                         }}
-                        className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${
-                          cartCount === 0
-                            ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
-                            : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
-                        }`}
+                        className={`w-full py-2.5 text-base font-semibold transition-all duration-300 ${cartCount === 0
+                          ? "cursor-not-allowed rounded-xl bg-gray-300 text-gray-500"
+                          : "rounded-xl bg-primary text-white shadow-md hover:bg-primary/90 hover:shadow-lg"
+                          }`}
                       />
                     )}
                   </div>
@@ -1327,11 +1323,10 @@ export default function Header({
 
         {/* Main Header */}
         <header
-          className={`relative flex items-center justify-between px-3 py-2.5 sm:p-3 ${
-            isDarkMode
-              ? "bg-gradient-to-r from-slate-900 via-slate-800/70 to-slate-900"
-              : "bg-gradient-to-r from-orange-50 via-orange-50/60 to-orange-50/40"
-          }`}
+          className={`relative flex items-center justify-between px-3 py-2.5 sm:p-3 ${isDarkMode
+            ? "bg-slate-900"
+            : "bg-transparent"
+            }`}
           ref={searchRef}
         >
           <Link to="/" className="flex items-center space-x-2">
@@ -1339,18 +1334,14 @@ export default function Header({
             <span
               style={{
                 fontSize:
-                  (siteName?.length || 0) <= 8  ? "22px" :
-                  (siteName?.length || 0) <= 12 ? "20px" :
-                  (siteName?.length || 0) <= 16 ? "18px" :
-                  (siteName?.length || 0) <= 20 ? "16px" :
-                  (siteName?.length || 0) <= 25 ? "14px" :
-                                                  "12px",
+                  (siteName?.length || 0) <= 8 ? "22px" :
+                    (siteName?.length || 0) <= 12 ? "20px" :
+                      (siteName?.length || 0) <= 16 ? "18px" :
+                        (siteName?.length || 0) <= 20 ? "16px" :
+                          (siteName?.length || 0) <= 25 ? "14px" :
+                            "12px",
               }}
-              className={`font-fredoka font-semibold tracking-wide ${
-                isDarkMode
-                  ? "text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]"
-                  : "text-orange-600 drop-shadow-[0_0_8px_rgba(234,88,12,0.4)]"
-              }`}
+              className={`font-fredoka font-semibold tracking-tight text-primary drop-shadow-[0_2px_10px_rgba(239,159,39,0.35)]`}
             >
               {siteName}
             </span>
@@ -1360,11 +1351,10 @@ export default function Header({
             {/* Dark mode toggle */}
             <button
               onClick={onToggleDarkMode}
-              className={`client-theme-toggle relative rounded-full p-1.5 transition-colors sm:p-2 ${
-                isDarkMode
-                  ? "border border-slate-600 bg-slate-800 text-amber-300 hover:bg-slate-700"
-                  : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+              className={`client-theme-toggle relative rounded-full p-1.5 transition-colors sm:p-2 ${isDarkMode
+                ? "bg-transparent text-amber-300 hover:bg-slate-800"
+                : "bg-transparent text-primary hover:bg-primary/10"
+                }`}
               aria-label="Toggle dark mode"
               title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
@@ -1378,13 +1368,12 @@ export default function Header({
             {/* Search */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${
-                isSearchOpen
-                  ? "bg-primary text-white shadow-md"
-                  : isDarkMode
-                  ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
-                  : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+              className={`relative rounded-full p-1.5 transition-colors sm:p-2 ${isSearchOpen
+                ? "bg-primary text-white shadow-md"
+                : isDarkMode
+                  ? "bg-transparent text-primary hover:bg-slate-800"
+                  : "bg-transparent text-primary hover:bg-primary/10"
+                }`}
             >
               <Search className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
@@ -1396,22 +1385,20 @@ export default function Header({
                 onSidebarToggle?.(true);
               }}
               ref={ordersButtonRef}
-              className={`relative rounded-full p-1.5 transition-all sm:p-2 ${
-                isOrdersIconHighlighted
-                  ? "ring-2 ring-orange-400/70 shadow-[0_0_0_6px_rgba(251,146,60,0.18)]"
-                  : isDarkMode
-                  ? "bg-slate-800 text-orange-300 hover:bg-slate-700"
-                  : "bg-orange-50 text-primary hover:bg-orange-100"
-              }`}
+              className={`relative rounded-full p-1.5 transition-all sm:p-2 ${isOrdersIconHighlighted
+                ? "ring-2 ring-primary/70 shadow-[0_0_0_6px_rgba(239,159,39,0.18)]"
+                : isDarkMode
+                  ? "bg-transparent text-primary hover:bg-slate-800"
+                  : "bg-transparent text-primary hover:bg-primary/10"
+                }`}
             >
               {isPreparingBanner && (
                 <span className="pointer-events-none absolute inset-0 rounded-full">
                   <span
-                    className={`absolute inset-0 rounded-full border-2 ${
-                      isDarkMode
-                        ? "border-emerald-400/70"
-                        : "border-emerald-500/70"
-                    } animate-ping`}
+                    className={`absolute inset-0 rounded-full border-2 ${isDarkMode
+                      ? "border-emerald-400/70"
+                      : "border-emerald-500/70"
+                      } animate-ping`}
                   />
                 </span>
               )}
@@ -1428,11 +1415,10 @@ export default function Header({
           <AnimatePresence>
             {isSearchOpen && (
               <motion.div
-                className={`absolute left-0 right-0 top-full z-50 shadow-lg ${
-                  isDarkMode
-                    ? "bg-slate-900 border-t border-slate-700"
-                    : "bg-white"
-                }`}
+                className={`absolute left-0 right-0 top-full z-50 shadow-lg ${isDarkMode
+                  ? "bg-slate-900 border-t border-slate-700"
+                  : "bg-white"
+                  }`}
                 initial={{ opacity: 0, y: -6, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.99 }}
@@ -1450,11 +1436,10 @@ export default function Header({
                         placeholder="Search for food items..."
                         value={search || ""}
                         onChange={(e) => safeOnSearch(e.target.value)}
-                        className={`w-full rounded-full border pl-10 pr-4 py-2.5 text-sm shadow-sm outline-none transition-all duration-200 ${
-                          isDarkMode
-                            ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:border-orange-400 focus:bg-slate-800 focus:shadow-md"
-                            : "border-orange-100 bg-white text-gray-800 placeholder-gray-400 focus:border-primary focus:bg-white focus:shadow-md"
-                        }`}
+                        className={`w-full rounded-full border pl-10 pr-4 py-2.5 text-sm shadow-sm outline-none transition-all duration-200 ${isDarkMode
+                          ? "border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:border-orange-400 focus:bg-slate-800 focus:shadow-md"
+                          : "border-orange-100 bg-white text-gray-800 placeholder-gray-400 focus:border-primary focus:bg-white focus:shadow-md"
+                          }`}
                         autoFocus
                       />
                     </div>
@@ -1483,19 +1468,17 @@ export default function Header({
                 animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 36, y: -2, scale: 0.98 }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className={`fixed left-3 right-3 top-2 z-[70] rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:left-auto sm:right-4 sm:top-3 sm:w-[360px] ${
-                  isDarkMode
-                    ? "border-emerald-500/30 bg-slate-900/95 text-emerald-100 shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
-                    : "border-emerald-200 bg-white text-emerald-900"
-                }`}
+                className={`fixed left-3 right-3 top-2 z-[70] rounded-2xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:left-auto sm:right-4 sm:top-3 sm:w-[360px] ${isDarkMode
+                  ? "border-emerald-500/30 bg-slate-900/95 text-emerald-100 shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                  : "border-emerald-200 bg-white text-emerald-900"
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      isDarkMode
-                        ? "bg-emerald-500/20 text-emerald-200"
-                        : "bg-emerald-100 text-emerald-700"
-                    }`}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full ${isDarkMode
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "bg-emerald-100 text-emerald-700"
+                      }`}
                   >
                     <Clock className="h-4 w-4" />
                   </div>
@@ -1506,11 +1489,10 @@ export default function Header({
                   </div>
                   <button
                     onClick={() => setOrderStatusBanner(null)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
-                      isDarkMode
-                        ? "text-emerald-100/80 hover:bg-emerald-500/20"
-                        : "text-emerald-700 hover:bg-emerald-100"
-                    }`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${isDarkMode
+                      ? "text-emerald-100/80 hover:bg-emerald-500/20"
+                      : "text-emerald-700 hover:bg-emerald-100"
+                      }`}
                     aria-label="Close notification"
                   >
                     <X className="h-4 w-4" />
@@ -1542,236 +1524,179 @@ export default function Header({
         <AnimatePresence>
           {isCartOpen && (
             <motion.div
-              className={`fixed top-0 right-0 z-50 flex h-full w-[87%] max-w-sm flex-col border-l shadow-2xl ${
-                isDarkMode
-                  ? "border-slate-700 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]"
-                  : "border-orange-100 bg-gradient-to-b from-[#fffaf4] via-[#fffdf8] to-[#fff3e6]"
-              }`}
+              className={`fixed top-0 right-0 z-50 flex h-full w-[87%] max-w-sm flex-col border-l shadow-2xl ${isDarkMode
+                ? "border-slate-800 bg-[#0f172a]"
+                : "border-gray-100 bg-[#ffffff]"
+                }`}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <div
-                className={`flex items-center justify-between border-b p-4 ${
-                  isDarkMode ? "border-slate-700" : "border-orange-100"
-                }`}
-              >
-                <h2
-                  className={`text-lg font-semibold sm:text-xl ${
-                    isDarkMode ? "text-slate-100" : "text-gray-800"
-                  }`}
-                >
-                  Your Orders
+              <div className="flex items-center justify-between p-5 pb-3 bg-white dark:bg-[#0f172a]">
+                <h2 className={`text-lg font-bold sm:text-xl ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
+                  Your orders
                 </h2>
                 <button
                   onClick={() => {
                     setIsCartOpen(false);
                     onSidebarToggle?.(false);
                   }}
-                  className={`p-1 transition-colors ${
-                    isDarkMode
-                      ? "text-slate-300 hover:text-slate-100"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 transition-colors hover:bg-gray-200 dark:hover:bg-slate-700 shrink-0"
                 >
-                  <X
-                    className={`w-5 h-5 ${
-                      isDarkMode ? "text-slate-300" : "text-gray-600"
-                    }`}
-                  />
+                  <X className="w-4 h-4 text-gray-500 dark:text-slate-400" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto">
                 <div className="space-y-4 p-4">
-                  {ordersLoading && currentPage === 1 ? null : allOrders.length ===
-                    0 ? (
+                  {ordersLoading ? null : allOrders.length === 0 ? (
                     <div className="text-center py-8">
-                      <FiShoppingCart
-                        className={`w-12 h-12 mx-auto mb-3 ${
-                          isDarkMode ? "text-slate-500" : "text-gray-300"
-                        }`}
-                      />
-                      <p
-                        className={
-                          isDarkMode ? "text-slate-300" : "text-gray-500"
-                        }
-                      >
+                      <FiShoppingCart className={`w-12 h-12 mx-auto mb-3 ${isDarkMode ? "text-slate-500" : "text-gray-300"}`} />
+                      <p className={isDarkMode ? "text-slate-300" : "text-gray-500"}>
                         No orders yet
                       </p>
                     </div>
                   ) : (
                     <>
                       {allOrders.map((order) => {
-                        const orderTypeNormalized = String(
-                          order.orderType || ""
-                        )
-                          .trim()
-                          .toLowerCase();
-                        const orderTypeLabel =
-                          normalizeOrderType(order.orderType) ||
-                          order.orderType ||
-                          "Unknown Type";
+                        const orderTypeNormalized = String(order.orderType || "").trim().toLowerCase();
+                        const orderTypeLabel = normalizeOrderType(order.orderType) || order.orderType || "Unknown Type";
+                        const isDelivery = orderTypeNormalized === "delivery";
+                        const isTakeAway = orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway";
+
+                        let typeIcon = null;
+                        let typeDetailText = "";
+                        if (isDelivery) {
+                          typeIcon = <Truck className="w-3.5 h-3.5 text-gray-400" />;
+                          typeDetailText = `Delivery${order.address ? ` · ${order.address}` : ""}`;
+                        } else if (isTakeAway) {
+                          typeIcon = <House className="w-3.5 h-3.5 text-gray-400" />;
+                          typeDetailText = "Take away";
+                        } else {
+                          typeIcon = <Utensils className="w-3.5 h-3.5 text-gray-400" />;
+                          const tableVal = order.tableId || order.table || order.tableNumber ||
+                            order?.table?.name || order?.table?.tableNumber || order?.table?.number || "";
+                          let tableLabel = "";
+                          if (tableVal) {
+                            tableLabel = typeof tableVal === "object" ? (tableVal.name || tableVal.tableNumber || tableVal.number) : tableVal;
+                          }
+                          typeDetailText = `Eat here${tableLabel ? ` · Table ${tableLabel}` : ""}`;
+                        }
+
+                        let s = String(order.status || "pending").toLowerCase();
+                        let isBilledState = false;
+                        if (s === "completed" && !order.paymentMethod) {
+                          s = "billed";
+                          isBilledState = true;
+                        }
+                        const customerPhone = order?.customerPhone || order?.phone || order?.customer?.phone || order?.guest?.phone || "";
 
                         return (
                           <div
                             key={order._id || order.id || order.orderId}
-                            className={`overflow-hidden rounded-2xl border shadow-sm ${
-                              isDarkMode
-                                ? "border-slate-700 bg-slate-900"
-                                : "border-orange-100 bg-white"
-                            }`}
+                            className={`rounded-2xl border p-4 space-y-3 ${isDarkMode
+                              ? "border-slate-800 bg-slate-900/50"
+                              : "border-[#ede8e3]/60 bg-[#fcfaf7]"
+                              }`}
                           >
-                            {/* Meta rows */}
-                            <div className="px-4 pt-4 pb-3 space-y-2.5">
-                              {/* ID + Name + Phone */}
-                              <div className={`grid grid-cols-[68px_1fr] gap-x-3 gap-y-2`}>
-                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Order ID</span>
-                                <span className={`text-sm font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>
-                                  {String(order._id || order.id || order.orderId || "").slice(-4).toUpperCase()}
-                                </span>
-                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Name</span>
-                                <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{order.customerName || "Guest"}</span>
-                                <span className={`text-[11px] font-semibold uppercase tracking-wide self-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>Phone</span>
-                                <span className={`text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>{order.customerPhone || "—"}</span>
-                              </div>
-
-                              {/* Badges */}
-                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                {/* Order type badge */}
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  isDarkMode
-                                    ? orderTypeNormalized === "delivery" ? "bg-orange-500/15 text-orange-300"
-                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-500/15 text-blue-300"
-                                      : "bg-green-500/15 text-green-300"
-                                    : orderTypeNormalized === "delivery" ? "bg-orange-50 text-orange-700"
-                                      : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-50 text-blue-700"
-                                      : "bg-green-50 text-green-700"
-                                }`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${
-                                    orderTypeNormalized === "delivery" ? "bg-orange-400"
-                                    : orderTypeNormalized === "take away" || orderTypeNormalized === "takeaway" ? "bg-blue-400"
-                                    : "bg-green-400"
-                                  }`} />
-                                  {orderTypeLabel}
-                                </span>
-
-                                {/* Status badge */}
-                                {order.status && (() => {
-                                  const s = String(order.status).toLowerCase();
-                                  const colorDark = s === "pending" ? "bg-amber-500/15 text-amber-300" : s === "preparing" ? "bg-teal-500/15 text-teal-300" : s === "ready" ? "bg-blue-500/15 text-blue-300" : s === "completed" ? "bg-green-500/15 text-green-300" : s === "cancelled" ? "bg-red-500/15 text-red-300" : "bg-slate-700 text-slate-300";
-                                  const colorLight = s === "pending" ? "bg-amber-50 text-amber-700" : s === "preparing" ? "bg-teal-50 text-teal-700" : s === "ready" ? "bg-blue-50 text-blue-700" : s === "completed" ? "bg-green-50 text-green-700" : s === "cancelled" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600";
-                                  const dot = s === "pending" ? "bg-amber-400" : s === "preparing" ? "bg-teal-400" : s === "ready" ? "bg-blue-400" : s === "completed" ? "bg-green-400" : s === "cancelled" ? "bg-red-400" : "bg-gray-400";
-                                  return (
-                                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${isDarkMode ? colorDark : colorLight}`}>
-                                      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-                                      {order.status}
-                                    </span>
-                                  );
-                                })()}
-
-                                {/* Table / Room badge */}
-                                {(order.source?.section || order.tableId) && (
-                                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
-                                    {order.source?.section
-                                      ? (() => {
-                                          const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-                                          const sec = labels[order.source.section] || (order.source.section.charAt(0).toUpperCase() + order.source.section.slice(1));
-                                          const unit = order.source.type === "ROOM" ? "" : "Table";
-                                          return unit ? `${sec} ${unit} ${order.source.number}` : `${sec} ${order.source.number}`;
-                                        })()
-                                      : `Table ${order.tableId}`
-                                    }
-                                  </span>
+                            {/* Header & Info */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-0.5 text-xs sm:text-sm">
+                                <p>
+                                  <span className={isDarkMode ? "text-slate-400 font-medium" : "text-slate-500 font-medium"}>Order ID : </span>
+                                  <span className={`font-bold ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>{String(order._id || order.id || order.orderId || "").slice(-4).toUpperCase()}</span>
+                                </p>
+                                <p>
+                                  <span className={isDarkMode ? "text-slate-400 font-medium" : "text-slate-500 font-medium"}>Name : </span>
+                                  <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>{order.customerName || "Guest"}</span>
+                                </p>
+                                {customerPhone && (
+                                  <p>
+                                    <span className={isDarkMode ? "text-slate-400 font-medium" : "text-slate-500 font-medium"}>Phone : </span>
+                                    <span className={`font-semibold ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>{customerPhone}</span>
+                                  </p>
                                 )}
                               </div>
-
-                              {/* Address */}
-                              {order.address && (
-                                <p className={`text-xs leading-relaxed ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                                  📍 {order.address}
-                                </p>
-                              )}
+                              {/* Status Badge */}
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize shrink-0 ${
+                                s === "pending"
+                                  ? "bg-[#fef08a] text-[#78350f] dark:bg-yellow-950/40 dark:text-yellow-300"
+                                  : s === "preparing"
+                                    ? "bg-[#ccfbf1] text-[#0f766e] dark:bg-teal-950/40 dark:text-teal-300"
+                                    : s === "ready" || s === "billed"
+                                      ? "bg-[#dbeafe] text-[#1d4ed8] dark:bg-blue-950/40 dark:text-blue-300"
+                                      : s === "completed"
+                                        ? "bg-[#dcfce7] text-[#15803d] dark:bg-green-950/40 dark:text-green-300"
+                                        : "bg-[#fee2e2] text-[#b91c1c] dark:bg-red-950/40 dark:text-red-300"
+                              }`}>
+                                {isBilledState ? "billed" : order.status}
+                              </span>
                             </div>
 
-                            {/* Divider */}
-                            <div className={`h-px ${isDarkMode ? "bg-slate-700/80" : "bg-orange-50"}`} />
+                            {/* Row 2: Order Type and details text */}
+                            <div className={`flex items-center gap-1.5 text-xs ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
+                              {typeIcon}
+                              <span>{typeDetailText}</span>
+                            </div>
 
-                            {/* Items */}
-                            <div>
-                              {order.items.map((item, index) => {
-                                const isCompleted = item.status === "completed" || item.isReady === true || item.done === true;
-                                return (
-                                  <div
-                                    key={index}
-                                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${
-                                      index !== 0 ? isDarkMode ? "border-t border-slate-700/50" : "border-t border-orange-50" : ""
-                                    } ${isCompleted ? isDarkMode ? "bg-green-900/10" : "bg-green-50/50" : ""}`}
-                                  >
-                                    <div className="flex min-w-0 items-center gap-2">
-                                      {isCompleted && <span className="shrink-0 text-green-500 text-xs">✔</span>}
-                                      <span className={`truncate ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
-                                        {item.name}
-                                        {item.variant && <span className={`ml-1 text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>({item.variant})</span>}
-                                        <span className={`ml-1 ${isDarkMode ? "text-slate-400" : "text-slate-400"}`}>× {item.quantity}</span>
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      {item.discountedPrice && item.price && Number(item.discountedPrice) < Number(item.price) && (
-                                        <span className={`text-xs line-through ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-                                          ₹{Number(item.price).toFixed(2)}
+                            {/* Row 3: Inner white box containing items list */}
+                            <div className={`rounded-xl p-3 space-y-2.5 bg-white dark:bg-slate-900 border ${isDarkMode ? "border-slate-800" : "border-gray-100"}`}>
+                              <div className="space-y-2">
+                                {order.items.map((item, index) => {
+                                  const isCompleted = item.status === "completed" || item.isReady === true || item.done === true;
+                                  return (
+                                    <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        {isCompleted && <span className="shrink-0 text-green-500 font-bold">✔</span>}
+                                        <span className={`font-semibold truncate ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>
+                                          {item.name}
+                                          {item.variant && <span className="ml-1 text-xs opacity-60">({item.variant})</span>}
                                         </span>
-                                      )}
-                                      <span className={`font-semibold ${isCompleted ? "text-green-500" : isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                                        <span className={`text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                                          ×{item.quantity}
+                                        </span>
+                                      </div>
+                                      <span className={`font-bold ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}>
                                         ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}
                                       </span>
                                     </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* GST / Delivery / Divider */}
+                              {(order.gstAmount !== undefined || (isDelivery && typeof order.deliveryCharges === "number")) && (
+                                <>
+                                  <div className="border-t border-dashed border-gray-100 dark:border-slate-800 my-2" />
+                                  <div className="space-y-1 text-xs text-gray-400 dark:text-slate-500">
+                                    {order.gstAmount !== undefined && (
+                                      <div className="flex items-center justify-between">
+                                        <span>GST{order.gstRate ? ` (${order.gstRate}%)` : ""}</span>
+                                        <span>₹{Number(order.gstAmount).toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    {isDelivery && typeof order.deliveryCharges === "number" && (
+                                      <div className="flex items-center justify-between">
+                                        <span>Delivery</span>
+                                        <span>₹{Number(order.deliveryCharges).toFixed(2)}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* Divider */}
-                            <div className={`h-px ${isDarkMode ? "bg-slate-700/80" : "bg-orange-50"}`} />
-
-                            {/* Totals */}
-                            <div className="px-4 py-3 space-y-1.5">
-                              {order.gstAmount !== undefined && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>GST{order.gstRate ? ` (${order.gstRate}%)` : ""}</span>
-                                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>₹{Number(order.gstAmount).toFixed(2)}</span>
-                                </div>
+                                </>
                               )}
-                              {orderTypeNormalized === "delivery" && typeof order.deliveryCharges === "number" && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>Delivery</span>
-                                  <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>₹{Number(order.deliveryCharges).toFixed(2)}</span>
-                                </div>
-                              )}
+
+                              <div className="border-t border-dashed border-gray-100 dark:border-slate-800 my-2" />
+
+                              {/* Total row */}
                               <div className="flex items-center justify-between pt-1">
-                                <span className={`text-sm font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>Total</span>
-                                <span className="text-base font-bold text-orange-500">₹{order.totalAmount?.toFixed(2) || "0.00"}</span>
+                                <span className={`text-xs sm:text-sm font-bold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>Total</span>
+                                <span className="text-sm sm:text-base font-extrabold text-primary">₹{order.totalAmount?.toFixed(2) || "0.00"}</span>
                               </div>
                             </div>
                           </div>
                         );
                       })}
-
-                      {/* Load More */}
-                      {hasMore && allOrders.length >= 3 && (
-                        <button
-                          onClick={() => setCurrentPage((p) => p + 1)}
-                          disabled={ordersLoading}
-                          className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                            isDarkMode
-                              ? "bg-slate-800 text-orange-400 hover:bg-slate-700 disabled:opacity-50"
-                              : "bg-orange-50 text-orange-600 hover:bg-orange-100 disabled:opacity-50"
-                          }`}
-                        >
-                          {ordersLoading ? "Loading..." : "Load More"}
-                        </button>
-                      )}
                     </>
                   )}
                 </div>
@@ -1782,6 +1707,7 @@ export default function Header({
 
         {/* Order Form Modal */}
         <OrderFormModal
+          qrInfo={qrInfo}
           showModal={showModal}
           setShowModal={setShowModal}
           customerName={customerName}

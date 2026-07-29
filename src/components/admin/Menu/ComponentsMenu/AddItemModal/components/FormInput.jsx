@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { AlertCircle } from "lucide-react";
 
 const FormInput = ({
@@ -6,12 +7,15 @@ const FormInput = ({
   type = "text", placeholder, required = false, icon, ...props
 }) => {
   const hasError = !!error;
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+  const [focused, setFocused] = useState(false);
 
   return (
     <div>
       {label && (
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-500">
-          {label} {required && <span className="text-orange-500">*</span>}
+          {label} {required && <span style={{ color: colors.primary }}>*</span>}
         </label>
       )}
       <div className="relative">
@@ -20,13 +24,19 @@ const FormInput = ({
           name={name}
           value={value}
           onChange={onChange}
-          className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-500/20 ${
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
             icon ? "pl-9" : ""
           } ${
             hasError
               ? "border-red-400 bg-red-50 focus:border-red-400 dark:bg-red-900/20 dark:border-red-500"
-              : "border-[#ede8e3] bg-white text-[#1c1917] placeholder-[#a8a29e] hover:border-[#d6cfc8] focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:border-slate-600 dark:focus:border-orange-500"
+              : "bg-white text-[#1c1917] placeholder-[#a8a29e] dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
           }`}
+          style={!hasError ? {
+            borderColor: focused ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+            boxShadow: focused ? `0 0 0 2px ${colors.primary}20` : "none",
+          } : {}}
           placeholder={placeholder}
           {...props}
         />

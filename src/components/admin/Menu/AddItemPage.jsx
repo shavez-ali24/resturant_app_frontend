@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Pizza } from "lucide-react";
 import { defaultAddFormState } from "./Lib/constants";
@@ -17,6 +18,7 @@ import ComboPriceSection   from "./ComponentsMenu/AddItemModal/components/ComboP
 import CategoryTypeSelectors from "./ComponentsMenu/AddItemModal/components/CategoryTypeSelectors";
 import ImageUpload         from "./ComponentsMenu/AddItemModal/components/ImageUpload";
 import AvailabilityToggle  from "./ComponentsMenu/AddItemModal/components/AvailabilityToggle";
+import VisibilityToggle    from "./ComponentsMenu/AddItemModal/components/VisibilityToggle";
 import SubmitButton        from "./ComponentsMenu/AddItemModal/components/SubmitButton";
 import DescriptionField    from "./ComponentsMenu/AddItemModal/components/DescriptionField";
 
@@ -29,9 +31,12 @@ import {
 
 import {
   useGetMenuQuery,
-  useGetRestaurantProfileQuery,
+  useGetRestaurantQuery,
   useCreateMenuItemMutation,
-  useUpdateRestaurantProfileMutation,
+  useUpdateRestaurantMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 import { useNotify } from "../common/NotificationModal";
 
@@ -84,11 +89,12 @@ const appendCategoriesToFormData = (fd, categories, mode) => {
 
 const sanitizeDiscount = (d) => {
   if (!d) return { type: "flat", value: 0, active: false };
-  const val = parseInt((d.value || "0").toString().trim(), 10);
+  const isActive = d.active === true || d.active === "true";
+  const val = isActive ? parseInt((d.value || "0").toString().trim(), 10) : 0;
   return {
     type:   d.type === "flat" || d.type === "percentage" ? d.type : "flat",
     value:  isNaN(val) ? 0 : val,
-    active: d.active === true || d.active === "true",
+    active: isActive,
   };
 };
 
@@ -115,8 +121,11 @@ export default function AddItemPage() {
   }, []);
 
   const [createMenuItem]          = useCreateMenuItemMutation();
-  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
-  const { data: restaurantData }  = useGetRestaurantProfileQuery();
+  const [updateRestaurantProfile] = useUpdateRestaurantMutation();
+  const [createCategory]          = useCreateCategoriesMutation();
+  const [updateCategory]          = useUpdateCategoryMutation();
+  const [deleteCategory]          = useDeleteCategoryMutation();
+  const { data: restaurantData }  = useGetRestaurantQuery();
   const { data: apiResponse = {}, isLoading: isLoadingMenuItems } = useGetMenuQuery();
 
   const [restaurantCategories, setRestaurantCategories] = useState([]);
@@ -200,6 +209,7 @@ export default function AddItemPage() {
       fd.append("type",        addFormData.type        || "veg");
       fd.append("category",    addFormData.category    || "");
       fd.append("available",   addFormData.available ? "true" : "false");
+      fd.append("visibility",  addFormData.visibility  || "PUBLIC");
 
       if (addFormData.pricingType === "single") {
         fd.append("price", (addFormData.price ?? "0").toString());
@@ -247,23 +257,20 @@ export default function AddItemPage() {
       setIsAddingItem(false);
     }
   };
-
   // ── Category handlers ──────────────────────────────────────────────────────
   const handleAddRestaurantCategory = useCallback(async (rawName) => {
     const name = normalizeCategoryLabel(rawName);
     if (!name) return { ok: false, message: "Please enter a valid category name." };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (dup) return { ok: true, category: dup, duplicate: true };
-    const cats = sortUniqueCategories([...restaurantCategories, name]);
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await createCategory({ name }).unwrap();
       notify(`Category "${name}" added.`, "success");
       return { ok: true, category: name };
-    } catch { return { ok: false, message: "Unable to add category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to add category." };
+    }
+  }, [restaurantCategories, createCategory, notify]);
 
   const handleRenameRestaurantCategory = useCallback(async (oldName, rawNew) => {
     const newName = normalizeCategoryLabel(rawNew);
@@ -274,57 +281,73 @@ export default function AddItemPage() {
       return { ok: true, category: current, unchanged: true };
     const dup = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(newName));
     if (dup) return { ok: false, message: `"${newName}" already exists.` };
-    const cats = sortUniqueCategories(restaurantCategories.map(c => c === current ? newName : c));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+    
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(oldName)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await updateCategory({ categoryId: categoryObj._id, newName }).unwrap();
       notify(`Category renamed to "${newName}".`, "success");
       return { ok: true, oldCategory: current, category: newName };
-    } catch { return { ok: false, message: "Unable to rename category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to rename category." };
+    }
+  }, [restaurantCategories, restaurantData, updateCategory, notify]);
 
   const handleDeleteRestaurantCategory = useCallback(async (name) => {
     const target = restaurantCategories.find(c => normalizeCategoryKey(c) === normalizeCategoryKey(name));
     if (!target) return { ok: false, message: "Category not found." };
-    const cats = sortUniqueCategories(restaurantCategories.filter(c => c !== target));
-    const fd = new FormData();
-    appendCategoriesToFormData(fd, cats, categoryMode);
+
+    const categoryObj = restaurantData?.restaurant?.categories?.find(
+      c => normalizeCategoryKey(c.name || c.label) === normalizeCategoryKey(name)
+    );
+    if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+
     try {
-      await updateRestaurantProfile(fd).unwrap();
-      setRestaurantCategories(cats);
+      await deleteCategory(categoryObj._id).unwrap();
       notify(`Category "${target}" deleted.`, "success");
       return { ok: true, deletedCategory: target };
-    } catch { return { ok: false, message: "Unable to delete category." }; }
-  }, [restaurantCategories, categoryMode, updateRestaurantProfile, notify]);
+    } catch (err) {
+      return { ok: false, message: err?.data?.message || "Unable to delete category." };
+    }
+  }, [restaurantCategories, restaurantData, deleteCategory, notify]);
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const bg = isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]";
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const pageBg = isDarkMode ? (colors.dark?.pageBg || "#0f172a") : (colors.pageBg || "#fbfaf8");
+  const textPri = isDarkMode ? (colors.dark?.textPrimary || "#f1f5f9") : (colors.textPrimary || "#1c1917");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#a8a29e");
 
   return (
-    <div className={`flex h-full flex-col ${bg} px-4 py-4 sm:px-6 sm:py-5`}>
+    <div className="flex h-full flex-col px-4 py-4 sm:px-6 sm:py-5" style={{ backgroundColor: pageBg }}>
 
       {/* ── Header row ── */}
       <div className="relative mb-6 flex items-center shrink-0 sm:mb-8">
         <button
           type="button"
           onClick={() => navigate("/admin/menu")}
-          className={`flex items-center gap-1 text-xs font-semibold transition-colors sm:gap-1.5 sm:text-sm ${
-            isDarkMode ? "text-orange-400 hover:text-orange-300" : "text-orange-500 hover:text-orange-600"
-          }`}
+          className="flex items-center gap-1 text-xs font-extrabold transition-all duration-150 active:scale-[0.98] sm:gap-1.5 sm:text-sm"
+          style={{ color: colors.primary }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.primaryHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.primary;
+          }}
         >
           <ArrowLeft size={14} className="sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Back to Menu</span>
           <span className="sm:hidden">Back</span>
         </button>
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3">
-          <Pizza size={20} className="text-orange-500 shrink-0 sm:w-7 sm:h-7" />
+          <Pizza size={20} className="shrink-0 sm:w-7 sm:h-7" style={{ color: colors.primary }} />
           <div>
-            <p className={`text-sm font-bold leading-tight sm:text-xl ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+            <p className="text-sm font-black leading-tight sm:text-xl" style={{ color: textPri }}>
               Add New Item
             </p>
-            <p className={`text-[11px] sm:text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
+            <p className="text-[11px] sm:text-sm font-semibold" style={{ color: textMut }}>
               Fill in the details below.
             </p>
           </div>
@@ -354,7 +377,10 @@ export default function AddItemPage() {
                   value={addFormData.description} onChange={handleChange}
                   error={formErrors.description}
                 />
-                <AvailabilityToggle available={addFormData.available} handleChange={handleChange} />
+                 <div className="flex flex-wrap gap-4">
+                  <AvailabilityToggle available={addFormData.available} handleChange={handleChange} />
+                  <VisibilityToggle visibility={addFormData.visibility} handleChange={handleChange} />
+                </div>
               </div>
 
               {/* Col 2 */}

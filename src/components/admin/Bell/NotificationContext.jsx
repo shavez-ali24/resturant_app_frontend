@@ -14,16 +14,20 @@ import config from "@/config";
 const NotificationContext = createContext();
 export const useNotification = () => useContext(NotificationContext);
 
-const MAX_NOTIFICATIONS = 3;
+const MAX_NOTIFICATIONS = 2; // Better UX - limit concurrent toasts on screen
 
 const NotificationToasts = lazy(() => import("./NotificationToasts"));
 
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
+import { getFriendlyAdminMessage } from "@/utils/errorHelpers";
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
+  const [newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds] = useState(() => new Set());
+  // Map<orderId, Set<itemKey>> — tracks which specific items are new per order
+  const [newItemsByOrderId, setNewItemsByOrderId] = useState(() => new Map());
   const sseManagerRef = useRef(null);
   const lastEventSignatureRef = useRef(null);
 
@@ -33,19 +37,24 @@ export const NotificationProvider = ({ children }) => {
 
   const notify = useCallback((message, type = "success") => {
     const id = Date.now();
+    const friendlyMessage = getFriendlyAdminMessage(message, type);
 
     setNotifications((prev) => {
-      const updated = [...prev, { id, message, type }];
-      return updated.slice(-MAX_NOTIFICATIONS); // Keep last 3 notifications
+      // De-duplicate: ignore exact same consecutive message within toast stack
+      if (prev.length > 0 && prev[prev.length - 1].message === friendlyMessage) {
+        return prev;
+      }
+      const updated = [...prev, { id, message: friendlyMessage, type }];
+      return updated.slice(-MAX_NOTIFICATIONS);
     });
 
-    // Auto remove after 3 seconds
-    setTimeout(() => removeNotification(id), 3000);
+    // Auto remove after 4.5 seconds to give users sufficient time to read
+    setTimeout(() => removeNotification(id), 4500);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token || !config?.BASE_URL) return undefined;
 
     const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
@@ -69,10 +78,11 @@ export const NotificationProvider = ({ children }) => {
         if (!payload || payload.type === "CONNECTED") return;
 
         // Only deduplicate identical events: same order + same status + same timestamp
+        const actualOrder = payload?.data?.order || payload?.data;
         const eventSignature = [
-          payload?.data?._id || payload?.data?.id || payload?.data?.orderId || "",
-          payload?.data?.status || "",
-          payload?.data?.updatedAt || Date.now(),
+          actualOrder?._id || actualOrder?.id || actualOrder?.orderId || actualOrder?.unitId || "",
+          actualOrder?.status || actualOrder?.action || "",
+          actualOrder?.updatedAt || Date.now(),
         ].join(":");
 
         if (eventSignature && lastEventSignatureRef.current === eventSignature) {
@@ -98,7 +108,15 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ notify, sseEvent, sseConnected }}>
+    <NotificationContext.Provider value={{
+      notify,
+      sseEvent,
+      sseConnected,
+      newlyAddedItemsOrderIds,
+      setNewlyAddedItemsOrderIds,
+      newItemsByOrderId,
+      setNewItemsByOrderId,
+    }}>
       {children}
 
       {notifications.length > 0 && (

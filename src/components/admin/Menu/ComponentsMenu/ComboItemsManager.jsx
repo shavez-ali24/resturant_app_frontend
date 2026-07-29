@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Plus, Trash2, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
 import {
@@ -11,8 +12,11 @@ const ComboItemsManager = ({
   errors = {}, foodType = "mixed", isLoadingMenu = false,
   discount = null, comboPrice = null,
 }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
   const [availableMenuItems, setAvailableMenuItems] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [focusKey, setFocusKey] = useState("");
   const MotionDiv = motion.div;
 
   // ── Logic (unchanged) ────────────────────────────────────────────────────
@@ -85,10 +89,6 @@ const ComboItemsManager = ({
   const getAvailableCount = () => availableMenuItems.filter(i => !isItemAlreadyAdded(i._id || i.id)).length;
 
   // ── Shared classes ────────────────────────────────────────────────────────
-  const triggerCls = (hasErr) =>
-    `h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-orange-100 ${
-      hasErr ? "border-red-400 bg-red-50" : "border-[#ede8e3] bg-white hover:border-[#d6cfc8] focus:border-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600"
-    }`;
   const dropdownCls = "rounded-lg border border-[#ede8e3] bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900";
   const itemCls = "cursor-pointer rounded-md text-sm text-[#1c1917] data-[highlighted]:bg-[#f7f3ef] dark:text-slate-200 dark:data-[highlighted]:bg-slate-700";
   const labelCls = "mb-1 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400";
@@ -98,7 +98,7 @@ const ComboItemsManager = ({
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <label className={labelCls}>Combo Items <span className="text-orange-500">*</span></label>
+          <label className={labelCls}>Combo Items <span style={{ color: colors.primary }}>*</span></label>
           <p className="text-xs text-[#a8a29e] dark:text-slate-500">
             {isLoadingMenu ? "Loading menu items..." : "Select items to include in this combo"}
           </p>
@@ -111,7 +111,22 @@ const ComboItemsManager = ({
             type="button"
             onClick={addComboItem}
             disabled={isLoadingMenu || getAvailableCount() === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-orange-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-extrabold transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            style={!(isLoadingMenu || getAvailableCount() === 0) ? {
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            } : {}}
+            onMouseEnter={(e) => {
+              if (!(isLoadingMenu || getAvailableCount() === 0)) {
+                e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!(isLoadingMenu || getAvailableCount() === 0)) {
+                e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+              }
+            }}
           >
             <Plus size={14} />
             {isLoadingMenu ? "Loading..." : "Add Item"}
@@ -121,8 +136,11 @@ const ComboItemsManager = ({
 
       {/* Empty states */}
       {isLoadingMenu && (
-        <div className="rounded-lg border border-dashed border-[#ede8e3] py-8 text-center">
-          <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+        <div className="rounded-lg border border-dashed border-[#ede8e3] py-8 text-center dark:border-slate-700">
+          <div
+            className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: colors.primary, borderTopColor: "transparent" }}
+          />
           <p className="text-xs text-[#a8a29e] dark:text-slate-500">Loading menu items...</p>
         </div>
       )}
@@ -160,7 +178,7 @@ const ComboItemsManager = ({
 
             return (
               <MotionDiv
-                key={index}
+                key={`combo-${item.menuItemId || index}-${index}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-lg border border-[#ede8e3] bg-white dark:border-slate-700 dark:bg-slate-800"
@@ -171,7 +189,14 @@ const ComboItemsManager = ({
                   onClick={() => setExpandedIndex(isExpanded ? null : index)}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
+                    <span
+                      className="flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-extrabold"
+                      style={{
+                        backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                        borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                        color: isDarkMode ? colors.primary : colors.primaryText,
+                      }}
+                    >
                       {index + 1}
                     </span>
                     <div>
@@ -191,7 +216,7 @@ const ComboItemsManager = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-orange-500">₹{itemTotal}</span>
+                    <span className="text-sm font-semibold" style={{ color: colors.primary }}>₹{itemTotal}</span>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); removeComboItem(index); }}
@@ -218,7 +243,17 @@ const ComboItemsManager = ({
                           value={item.menuItemId || "none"}
                           onValueChange={(v) => v !== "none" && handleComboItemChange(index, "menuItemId", v)}
                         >
-                          <SelectTrigger className={triggerCls(!item.menuItemId)}>
+                          <SelectTrigger
+                            onFocus={() => setFocusKey(`item-${index}`)}
+                            onBlur={() => setFocusKey("")}
+                            className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
+                              !item.menuItemId ? "border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-500" : "bg-white dark:bg-slate-800 dark:text-slate-100"
+                            }`}
+                            style={item.menuItemId ? {
+                              borderColor: focusKey === `item-${index}` ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                              boxShadow: focusKey === `item-${index}` ? `0 0 0 2px ${colors.primary}20` : "none",
+                            } : {}}
+                          >
                             <SelectValue placeholder="Select an item" />
                           </SelectTrigger>
                           <SelectContent className={`max-h-52 overflow-y-auto ${dropdownCls}`}>
@@ -250,7 +285,17 @@ const ComboItemsManager = ({
                             value={item.variant || "none"}
                             onValueChange={(v) => v !== "none" && handleComboItemChange(index, "variant", v)}
                           >
-                            <SelectTrigger className={triggerCls(!item.variant)}>
+                            <SelectTrigger
+                              onFocus={() => setFocusKey(`variant-${index}`)}
+                              onBlur={() => setFocusKey("")}
+                              className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
+                                !item.variant ? "border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-500" : "bg-white dark:bg-slate-800 dark:text-slate-100"
+                              }`}
+                              style={item.variant ? {
+                                borderColor: focusKey === `variant-${index}` ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                                boxShadow: focusKey === `variant-${index}` ? `0 0 0 2px ${colors.primary}20` : "none",
+                              } : {}}
+                            >
                               <SelectValue placeholder="Select variant" />
                             </SelectTrigger>
                             <SelectContent className={dropdownCls}>
@@ -288,8 +333,13 @@ const ComboItemsManager = ({
                             type="number"
                             value={item.quantity || 1}
                             onChange={(e) => handleComboItemChange(index, "quantity", e.target.value)}
+                            onFocus={() => setFocusKey(`quantity-${index}`)}
+                            onBlur={() => setFocusKey("")}
                             min="1"
-                            className="h-9 w-full border-y border-[#ede8e3] bg-white text-center dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 text-sm font-semibold text-[#1c1917] outline-none focus:border-orange-400"
+                            className="h-9 w-full border-y border-[#ede8e3] bg-white text-center dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 text-sm font-semibold text-[#1c1917] outline-none"
+                            style={{
+                              borderColor: focusKey === `quantity-${index}` ? colors.primary : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                            }}
                           />
                           <button
                             type="button"
@@ -301,7 +351,7 @@ const ComboItemsManager = ({
                             </svg>
                           </button>
                         </div>
-                        <p className="mt-1 text-right text-xs text-orange-500 font-medium">
+                        <p className="mt-1 text-right text-xs font-semibold" style={{ color: colors.primary }}>
                           {item.quantity || 1} item{(item.quantity || 1) !== 1 ? "s" : ""}
                         </p>
                       </div>
@@ -318,7 +368,7 @@ const ComboItemsManager = ({
                             </p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <p className="text-base font-bold text-orange-500">₹{itemTotal}</p>
+                            <p className="text-base font-bold" style={{ color: colors.primary }}>₹{itemTotal}</p>
                             <p className="text-xs text-[#a8a29e] dark:text-slate-500">
                               {item.quantity || 1} × ₹{menuItem.pricingType === "single" ? menuItem.price : getVariantPrice(item.menuItemId, item.variant)}
                             </p>

@@ -13,23 +13,17 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [formData, setFormData] = useState({
-    name: "", email: "", domain: "", restaurantName: "", password: "", subscriptionDate: "", role: ""
+    name: "", email: "", domain: "", restaurantName: "", password: ""
   })
 
   useEffect(() => {
     if (admin) {
-      // Format date for input field (YYYY-MM-DD)
-      const subscriptionDate = admin.subscriptionDate ? 
-        new Date(admin.subscriptionDate).toISOString().split('T')[0] : "";
-      
       setFormData({
-        name: admin.name || "", 
-        email: admin.email || "", 
+        name: admin.name || "",
+        email: admin.email || "",
         domain: admin.domain || "",
-        restaurantName: admin.restaurantName || "", 
+        restaurantName: admin.restaurantName || "",
         password: "",
-        subscriptionDate: subscriptionDate,
-        role: admin.role || ""
       })
       setMessage({ type: '', text: '' })
     }
@@ -48,19 +42,15 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
     }
 
     try {
-      const payload = { 
-        name: formData.name, 
-        email: formData.email, 
-        domain: formData.domain, 
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        domain: formData.domain,
         restaurantName: formData.restaurantName,
-        role: formData.role
       }
       
       // Add password if provided
       if (formData.password) payload.password = formData.password
-      
-      // Add subscription date if provided
-      if (formData.subscriptionDate) payload.subscriptionDate = formData.subscriptionDate
 
       // <-- This call now matches the API above
       await updateUser({ userId: admin._id, ...payload }).unwrap();
@@ -68,7 +58,7 @@ export default function UpdateAdminModal({ open, admin, onClose }) {
       showMessage('Admin updated successfully!')
       setTimeout(() => {
         onClose()
-        setFormData({ name: "", email: "", domain: "", restaurantName: "", password: "", subscriptionDate: "" })
+        setFormData({ name: "", email: "", domain: "", restaurantName: "", password: "" })
       }, 1000)
 
     } catch (error) {

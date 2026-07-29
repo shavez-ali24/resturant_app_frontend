@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Clock } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import {
-  useGetRestaurantQuery,
+  useGetPublicRestaurantQuery,
   useGetMenuQuery,
 } from "../redux/clientRedux/clientAPI";
 import Header from "@/components/Client/Header";
@@ -12,6 +12,18 @@ import Category from "@/components/Client/Category";
 import FoodListing from "@/components/Client/FoodListing";
 import loader from "@/assets/loader.gif";
 import Filter from "@/components/Client/Filter";
+import { getFriendlyErrorMessage } from "@/utils/errorHelpers";
+
+// ── Utility: normalize category string (moved outside component to avoid recreation) ──
+const normalizeCategoryValue = (value) =>
+  String(value || "")
+    .replace(/-+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+// ── Static config ──
+const LOADER_MIN_DURATION = 2000;
 
 export default function Home() {
   const outletContext = useOutletContext() || {};
@@ -27,7 +39,7 @@ export default function Home() {
     data: restaurantData,
     isLoading: restaurantLoading,
     error: restaurantError,
-  } = useGetRestaurantQuery();
+  } = useGetPublicRestaurantQuery();
 
   const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
@@ -35,13 +47,6 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
-
-  const normalizeCategoryValue = (value) =>
-    String(value || "")
-      .replace(/-+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
 
   // Combine both loading states
   const loading = menuLoading || restaurantLoading;
@@ -54,7 +59,7 @@ export default function Home() {
     } else {
       timer = setTimeout(() => {
         setShowLoader(false);
-      }, 2000);
+      }, LOADER_MIN_DURATION);
     }
     return () => clearTimeout(timer);
   }, [loading]);
@@ -113,23 +118,63 @@ export default function Home() {
     return imageMap;
   }, [menu, normalizeCategoryValue]);
 
+  const clientVisibleCategories = useMemo(() => {
+    const list = orderedCategories.length ? orderedCategories : menu;
+    const activeMenuCategories = new Set(
+      menu.map((item) => normalizeCategoryValue(item?.category))
+    );
+    return list.filter((cat) => {
+      const label = typeof cat === "object" && cat !== null ? cat.name || cat.category : cat;
+      return activeMenuCategories.has(normalizeCategoryValue(label));
+    });
+  }, [orderedCategories, menu]);
+
+  const hasCombo = useMemo(() => {
+    return Array.isArray(menu) && menu.some((item) => item?.pricingType === "combo");
+  }, [menu]);
+
+  const showVegNonVegFilters = useMemo(() => {
+    if (!Array.isArray(menu)) return false;
+    const hasVeg = menu.some((item) => item?.type === "veg");
+    const hasNonVeg = menu.some((item) => item?.type === "non-veg");
+    return hasVeg && hasNonVeg;
+  }, [menu]);
+
   if (showLoader)
     return (
-      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode ? "bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#020617]" : "bg-gradient-to-b from-[#fffdf9] via-[#fff8ef] to-[#fff2e6]"}`}>
-        <div className={`pointer-events-none absolute inset-0 ${isDarkMode ? "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.22),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.14),transparent_42%)]" : "bg-[radial-gradient(circle_at_18%_22%,rgba(249,115,22,0.12),transparent_44%),radial-gradient(circle_at_82%_76%,rgba(251,146,60,0.1),transparent_42%)]"}`} />
+      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${
+        isDarkMode 
+          ? "bg-gradient-to-b from-[#0f172a] to-[#020617]" 
+          : "bg-gradient-to-b from-[#fffdf7] to-[#fef2d8]"
+      }`}>
         <img
           src={loader}
           alt="Loading..."
-          className="relative h-60 w-auto drop-shadow-[0_14px_30px_rgba(249,115,22,0.22)]"
+          className="relative h-60 w-auto"
         />
       </div>
     );
 
   if (error) {
+    const friendlyMsg = getFriendlyErrorMessage(error, "We couldn't load the menu right now. Please check your internet connection.");
     return (
-      <p>
-        Error: {error?.data?.message || error?.message || "An error occurred"}
-      </p>
+      <div className={`flex min-h-[60vh] flex-col items-center justify-center p-6 text-center ${isDarkMode ? "text-slate-200" : "text-gray-800"}`}>
+        <div className={`max-w-md rounded-2xl border p-8 shadow-lg ${isDarkMode ? "border-slate-800 bg-slate-900/50" : "border-orange-100 bg-white"}`}>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-950/30 text-orange-500">
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-lg font-bold">Unable to Load Menu</h2>
+          <p className={`text-sm mb-6 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{friendlyMsg}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-2.5 text-sm font-semibold text-white transition-all shadow-md"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -200,7 +245,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className={`shrink-0 z-20 border-b shadow-[0_8px_20px_rgba(249,115,22,0.1)] ${isDarkMode ? "border-slate-700/70 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-800/80" : "border-orange-200/60 bg-gradient-to-b from-orange-50/95 via-orange-50/80 to-orange-50/45"}`}>
+      <div className={`shrink-0 z-20 border-b shadow-[0_8px_20px_rgba(239,159,39,0.1)] ${isDarkMode ? "border-slate-700/70 bg-slate-900" : "border-orange-200/50 bg-[#fffcf9]"}`}>
         <Header
           logo={restaurant?.logo?.url || restaurantData?.restaurant?.logo?.url}
           siteName={
@@ -217,20 +262,27 @@ export default function Home() {
 
         <Category
           title="Choose Your Favourite Food"
-          categories={orderedCategories.length ? orderedCategories : menu}
+          categories={clientVisibleCategories}
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
           categoryImages={categoryImages}
           hasActiveFilter={filters.veg || filters.nonVeg || filters.mixed || filters.combo}
+          hideAllButton={false}
         />
-        <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
+        <Filter
+          filters={filters}
+          onChange={handleFilterChange}
+          isDarkMode={isDarkMode}
+          hasCombo={hasCombo}
+          showVegNonVegFilters={showVegNonVegFilters}
+        />
       </div>
 
-      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-white"}`}>
+      <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-[#fffcf9]"}`}>
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
-              {filters.combo ? "No combo items available" :
+              {filters.combo ? "No only combo items available" :
                filters.veg ? "No veg items available" :
                filters.nonVeg ? "No non-veg items available" : 
                filters.mixed ? "No mixed items available" :

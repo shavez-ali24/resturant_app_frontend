@@ -25,6 +25,7 @@ export const defaultAddFormState = {
   category: "",
   type: "",
   available: true,
+  visibility: "PUBLIC",
   discount: { type: "flat", value: "", active: false },
 };
 

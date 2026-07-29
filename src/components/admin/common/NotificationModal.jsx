@@ -11,8 +11,10 @@ import React, {
 const NotificationContext = createContext();
 export const useNotification = () => useContext(NotificationContext);
 
-const MAX_NOTIFICATIONS = 3;
+const MAX_NOTIFICATIONS = 2; // Better UX - limit concurrent toasts on screen
 const NotificationToasts = lazy(() => import("./NotificationToasts"));
+
+import { getFriendlyAdminMessage } from "@/utils/errorHelpers";
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
@@ -23,14 +25,19 @@ export const NotificationProvider = ({ children }) => {
 
   const notify = useCallback((message, type = "success") => {
     const id = Date.now();
+    const friendlyMessage = getFriendlyAdminMessage(message, type);
 
     setNotifications((prev) => {
-      const updated = [...prev, { id, message, type }];
-      return updated.slice(-MAX_NOTIFICATIONS); // Keep last 3 notifications
+      // De-duplicate: ignore exact same consecutive message within toast stack
+      if (prev.length > 0 && prev[prev.length - 1].message === friendlyMessage) {
+        return prev;
+      }
+      const updated = [...prev, { id, message: friendlyMessage, type }];
+      return updated.slice(-MAX_NOTIFICATIONS);
     });
 
-    // Auto remove after 3 seconds
-    setTimeout(() => removeNotification(id), 3000);
+    // Auto remove after 4.5 seconds to give users sufficient time to read
+    setTimeout(() => removeNotification(id), 4500);
   }, []);
 
   return (

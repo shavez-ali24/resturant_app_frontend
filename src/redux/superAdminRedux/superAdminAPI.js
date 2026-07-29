@@ -1,22 +1,40 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "@/config";
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${config.BASE_URL}/api`,
+  prepareHeaders: (headers) => {
+    const token = localStorage.getItem("sa_token");
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
+    headers.set("Content-Type", "application/json");
+    return headers;
+  },
+});
+
+const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
+  const result = await baseQuery(args, api, extraOptions);
+  const status = result.error?.status || result.error?.originalStatus;
+
+  if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+    localStorage.removeItem("sa_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    window.location.replace("/super-login");
+  }
+
+  return result;
+};
+
 export const superAdminApi = createApi({
   reducerPath: "superAdminApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: `${config.BASE_URL}/api`,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        headers.set("authorization", `Bearer ${token}`);
-      }
-      headers.set("Content-Type", "application/json");
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithAuthRedirect,
   tagTypes: ["Admins"],
   endpoints: (builder) => ({
-    register: builder.mutation({
+    login: builder.mutation({
       query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
@@ -26,7 +44,7 @@ export const superAdminApi = createApi({
         if (response.user.role !== "superadmin") {
           throw new Error("Access denied. Superadmin privileges required.");
         }
-        localStorage.setItem("token", response.token);
+        localStorage.setItem("sa_token", response.token);
         localStorage.setItem("user", JSON.stringify(response.user));
         localStorage.setItem("userRole", response.user.role);
         localStorage.setItem("userName", response.user.name);
@@ -123,7 +141,7 @@ export const superAdminApi = createApi({
 });
 
 export const {
-  useRegisterMutation,
+  useLoginMutation,
   useRegisterUserMutation,
   useGetAdminsQuery,
   useUpdateUserMutation,

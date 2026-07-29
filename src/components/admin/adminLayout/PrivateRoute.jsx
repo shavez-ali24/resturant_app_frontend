@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("admin_token");
   const navigate = useNavigate();
 
   useEffect(() => {
     // Listen for localStorage changes (other tabs clearing token)
     const handleStorage = (e) => {
-      if (e.key === "token" && !e.newValue) {
+      if (e.key === "admin_token" && !e.newValue) {
         navigate("/login", { replace: true });
       }
     };
@@ -16,7 +16,7 @@ const PrivateRoute = ({ children }) => {
     // Also poll every 30s — catches cases where storage event doesn't fire
     // (e.g. same-tab localStorage.clear())
     const interval = setInterval(() => {
-      if (!localStorage.getItem("token")) {
+      if (!localStorage.getItem("admin_token")) {
         navigate("/login", { replace: true });
       }
     }, 30000);

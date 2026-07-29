@@ -1,10 +1,9 @@
+// ─── COPYRIGHT FOOTER ──────────────────────────────────
+// Fixed bottom bar with safe-area-inset for iOS notch
 export default function Copywright() {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-20 border-t border-orange-100/80 bg-white px-2 py-1 text-center text-[11px] text-gray-600"
-      style={{
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)",
-      }}
+      className="safe-bottom fixed bottom-0 left-0 right-0 z-20 border-t border-orange-100/80 bg-white px-2 py-1 text-center text-[11px] text-gray-600"
     >
       <p>
         © {new Date().getFullYear()}{" "}

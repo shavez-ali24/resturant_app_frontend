@@ -15,7 +15,7 @@ export default function SuperAdminLayout() {
   useEffect(() => {
     const checkSuperAdminAuth = () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('sa_token');
         const userData = localStorage.getItem('user');
 
         if (!token || !userData) {
@@ -25,7 +25,7 @@ export default function SuperAdminLayout() {
 
         const user = JSON.parse(userData);
         if (user.role !== 'superadmin') {
-          localStorage.removeItem('token');
+          localStorage.removeItem('sa_token');
           localStorage.removeItem('user');
           navigate('/super-login');
           return;
@@ -34,7 +34,7 @@ export default function SuperAdminLayout() {
         setAuthChecked(true);
       } catch (error) {
         console.error('Auth check error:', error);
-        localStorage.removeItem('token');
+        localStorage.removeItem('sa_token');
         localStorage.removeItem('user');
         navigate('/super-login');
       } finally {

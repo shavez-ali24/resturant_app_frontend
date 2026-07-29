@@ -9,7 +9,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token) {
       navigate("/login", { replace: true });
     }
@@ -51,11 +51,10 @@ export default function AdminLayout() {
 
   return (
     <div
-      className={`mx-auto min-h-screen font-mostrate font-semibold ${
-        isDarkMode
+      className={`mx-auto min-h-screen font-mostrate font-semibold ${isDarkMode
           ? "admin-dark dark bg-[linear-gradient(180deg,#0f172a_0%,#111827_48%,#020617_100%)] text-slate-100"
           : "bg-[linear-gradient(180deg,#fffaf5_0%,#fffdfb_48%,#ffffff_100%)] text-slate-900"
-      }`}
+        }`}
     >
       <NotificationProvider>
         <AdminHeader

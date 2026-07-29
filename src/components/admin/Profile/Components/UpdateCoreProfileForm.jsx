@@ -35,42 +35,6 @@ const UpdateCoreProfileForm = ({ formData, handleChange }) => (
                 onChange={handleChange}
                 placeholder="e.g. 00000000000"
             />
-            <FormField
-                label="Indoor Tables"
-                name="sections.indoor.tables"
-                type="number"
-                min="0"
-                value={formData.sections?.indoor?.tables ?? ""}
-                onChange={handleChange}
-                placeholder="e.g. 10"
-            />
-            <FormField
-                label="Outdoor Tables"
-                name="sections.outdoor.tables"
-                type="number"
-                min="0"
-                value={formData.sections?.outdoor?.tables ?? ""}
-                onChange={handleChange}
-                placeholder="e.g. 5"
-            />
-            <FormField
-                label="Rooftop Tables"
-                name="sections.rooftop.tables"
-                type="number"
-                min="0"
-                value={formData.sections?.rooftop?.tables ?? ""}
-                onChange={handleChange}
-                placeholder="e.g. 0"
-            />
-            <FormField
-                label="Rooms"
-                name="sections.rooms.rooms"
-                type="number"
-                min="0"
-                value={formData.sections?.rooms?.rooms ?? ""}
-                onChange={handleChange}
-                placeholder="e.g. 0"
-            />
         </div>
     </FormCard>
 );

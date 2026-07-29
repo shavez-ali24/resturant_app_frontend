@@ -19,13 +19,14 @@ export const handleEditFormChange = (e, formData, setFormData, errors, setErrors
   // SINGLE DISCOUNT
   if (name.startsWith("discount.")) {
     const field = name.split(".")[1];
-    // console.log("🔥 Edit Item - Discount field change:", { field, value, checked });
     setFormData(prev => {
       const newDiscount = {
         ...prev.discount,
         [field]: field === "active" ? checked : field === "type" ? value : value.replace(/[^0-9]/g, "")
       };
-      // console.log("🔥 Edit Item - New discount state:", newDiscount);
+      if (field === "active" && !checked) {
+        newDiscount.value = "";
+      }
       return {
         ...prev,
         discount: newDiscount
@@ -37,19 +38,25 @@ export const handleEditFormChange = (e, formData, setFormData, errors, setErrors
   // VARIANT DISCOUNT
   if (name.includes(".discount.")) {
     const [variant, , field] = name.split(".");
-    setFormData(prev => ({
-      ...prev,
-      variantRates: {
-        ...prev.variantRates,
-        [variant]: {
-          ...prev.variantRates[variant],
-          discount: {
-            ...prev.variantRates[variant]?.discount,
-            [field]: field === "active" ? checked : field === "type" ? value : value.replace(/[^0-9]/g, "")
+    setFormData(prev => {
+      const newDiscount = {
+        ...prev.variantRates[variant]?.discount,
+        [field]: field === "active" ? checked : field === "type" ? value : value.replace(/[^0-9]/g, "")
+      };
+      if (field === "active" && !checked) {
+        newDiscount.value = "";
+      }
+      return {
+        ...prev,
+        variantRates: {
+          ...prev.variantRates,
+          [variant]: {
+            ...prev.variantRates[variant],
+            discount: newDiscount
           }
         }
-      }
-    }));
+      };
+    });
     return;
   }
 

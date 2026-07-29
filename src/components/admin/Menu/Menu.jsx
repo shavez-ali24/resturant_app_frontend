@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import { AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  SquarePen,
+  Trash,
   Search,
   CheckCircle,
   XCircle,
@@ -28,10 +31,13 @@ import {
   useDeleteMenuItemMutation,
   useUpdateMenuItemMutation,
   useCreateMenuItemMutation,
-  useGetRestaurantProfileQuery,
-  useUpdateRestaurantProfileMutation,
+  useGetRestaurantQuery,
+  useUpdateRestaurantMutation,
   useReorderMenuItemsMutation,
   useReorderCategoriesMutation,
+  useCreateCategoriesMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
 const extractTextCandidate = (value, priorityKeys = []) => {
@@ -365,6 +371,60 @@ const AvailabilityBadge = ({ available }) => (
   </span>
 );
 
+const VisibilityBadge = ({ visibility }) => {
+  const isPublic = visibility === "PUBLIC" || !visibility;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        isPublic
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+          : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+      }`}
+    >
+      {isPublic ? "Client Visible" : "Admin Only"}
+    </span>
+  );
+};
+
+const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
+  let label = "Client Visible";
+  let trackClass = "bg-green-600 dark:bg-emerald-400";
+  let knobTranslate = "translate-x-3";
+  let borderClass = "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200";
+
+  if (state === "ADMIN") {
+    label = "Client Hidden";
+    trackClass = "bg-red-600 dark:bg-rose-500";
+    knobTranslate = "translate-x-0";
+    borderClass = "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-250";
+  } else if (state === "MIXED") {
+    label = "Both Visible";
+    trackClass = "bg-amber-500 dark:bg-amber-400";
+    knobTranslate = "translate-x-1.5"; // Centered yellow knob!
+    borderClass = "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={`inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold transition ${
+        disabled
+          ? "cursor-not-allowed opacity-60"
+          : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      } ${borderClass}`}
+    >
+      <span className={`relative h-4 w-7 rounded-full transition-colors ${trackClass}`}>
+        <span
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${knobTranslate}`}
+        />
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+};
+
 const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   const isMixed = status === "mixed";
   const isIn = status === "in";
@@ -425,31 +485,54 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   );
 };
 
-const TabButton = ({ active, onClick, children }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`relative px-3 pb-2 text-sm font-semibold transition ${
-      active
-        ? "text-orange-600"
-        : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
-    }`}
-  >
-    {children}
-    <span
-      className={`absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition ${
-        active ? "bg-orange-500" : "bg-transparent"
+const TabButton = ({ active, onClick, children }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
+        active
+          ? ""
+          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
       }`}
-    />
-  </button>
-);
+      style={{
+        color: active ? colors.primary : undefined
+      }}
+    >
+      {children}
+      <span
+        className="absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition-all duration-150"
+        style={{
+          backgroundColor: active ? colors.primary : "transparent"
+        }}
+      />
+    </button>
+  );
+};
 
 const Menu = () => {
   const { data: items = [], isLoading, refetch } = useGetMenuQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
-  const { data: restaurantData } = useGetRestaurantProfileQuery();
-  const isDarkMode = localStorage.getItem("admin-theme") === "dark";
+  const { data: restaurantData } = useGetRestaurantQuery();
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof document === "undefined") return false;
+    const root = document.documentElement;
+    return root.classList.contains("admin-dark") || root.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () =>
+      setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
@@ -462,8 +545,11 @@ const Menu = () => {
   const [updateMenuItem] = useUpdateMenuItemMutation();
   const [deleteMenuItem] = useDeleteMenuItemMutation();
   const [reorderMenuItems] = useReorderMenuItemsMutation();
-  const [updateRestaurantProfile] = useUpdateRestaurantProfileMutation();
+  const [updateRestaurantProfile] = useUpdateRestaurantMutation();
   const [reorderCategories] = useReorderCategoriesMutation();
+  const [createCategory] = useCreateCategoriesMutation();
+  const [updateCategory] = useUpdateCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
   const [restaurantCategories, setRestaurantCategories] = useState([]);
   const [menuOrder, setMenuOrder] = useState([]);
   const [draggingId, setDraggingId] = useState(null);
@@ -494,6 +580,7 @@ const Menu = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
+  const [togglingCategory, setTogglingCategory] = useState("");
 
   // Refetch on every navigation to this page
   useEffect(() => {
@@ -531,8 +618,8 @@ const Menu = () => {
     const status = errorObj?.status || errorObj?.originalStatus;
     const rawMessage = getRawErrorText(errorObj).toLowerCase();
 
-    if (status === 401) return "Your session has expired. Please login again.";
-    if (status === 403) return "You do not have permission for this action.";
+    if (status === 401) return "Your session has expired. Please log in again";
+    if (status === 403) return "You don't have permission to perform this action";
     if (status === 404) return "Menu item not found. Please refresh and try again.";
     if (status === 409) return "This menu item already exists.";
     if (status === 413) return "Image size is too large. Please upload a smaller image.";
@@ -729,6 +816,54 @@ const Menu = () => {
     [normalizeCategoryLabel]
   );
 
+  const getCategoryVisibilityState = useCallback((catName) => {
+    const itemsInCategory = items.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (itemsInCategory.length === 0) return "PUBLIC";
+    const hasPublic = itemsInCategory.some((item) => item.visibility !== "ADMIN");
+    const hasAdmin = itemsInCategory.some((item) => item.visibility === "ADMIN");
+
+    if (hasPublic && hasAdmin) return "MIXED";
+    if (hasAdmin) return "ADMIN";
+    return "PUBLIC";
+  }, [items, normalizeCategoryKey]);
+
+  const handleToggleCategoryVisibility = useCallback(async (catName) => {
+    const itemsInCategory = items.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (itemsInCategory.length === 0) {
+      notify(`No menu items found in "${catName}" category to toggle visibility`, "info");
+      return;
+    }
+
+    const state = getCategoryVisibilityState(catName);
+    const nextVisibility = state === "PUBLIC" ? "ADMIN" : "PUBLIC";
+
+    setTogglingCategory(catName);
+
+    try {
+      await Promise.all(
+        itemsInCategory.map((item) =>
+          updateMenuItem({
+            itemId: item._id,
+            updatedData: { visibility: nextVisibility },
+          }).unwrap()
+        )
+      );
+      notify(
+        `All items in "${catName}" are now ${nextVisibility === "ADMIN" ? "hidden" : "visible"}`,
+        "success"
+      );
+    } catch (err) {
+      console.error("Failed to toggle category visibility:", err);
+      notify("Failed to update category visibility", "error");
+    } finally {
+      setTogglingCategory("");
+    }
+  }, [items, normalizeCategoryKey, getCategoryVisibilityState, updateMenuItem, notify]);
+
   const persistRestaurantCategories = useCallback(
     async (updatedCategories, successMessage) => {
       const normalizedCategories = sortUniqueCategories(updatedCategories);
@@ -772,18 +907,21 @@ const Menu = () => {
         return { ok: true, category: duplicate, duplicate: true };
       }
 
-      const updateResult = await persistRestaurantCategories(
-        [...restaurantCategories, categoryName],
-        `Category "${categoryName}" added.`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      return { ok: true, category: categoryName };
+      try {
+        await createCategory({ name: categoryName }).unwrap();
+        notify(`Category "${categoryName}" added.`, "success");
+        return { ok: true, category: categoryName };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to add category.";
+        notify(message, "error");
+        return { ok: false, message };
+      }
     },
     [
+      createCategory,
       normalizeCategoryKey,
       normalizeCategoryLabel,
-      persistRestaurantCategories,
+      notify,
       restaurantCategories,
     ]
   );
@@ -825,23 +963,30 @@ const Menu = () => {
         };
       }
 
-      const updatedCategories = restaurantCategories.map((category) =>
-        category === currentCategory ? updatedCategory : category
+      const categoryObj = restaurantData?.restaurant?.categories?.find(
+        (c) =>
+          normalizeCategoryKey(c.name || c.label) ===
+          normalizeCategoryKey(currentCategoryName)
       );
+      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
 
-      const updateResult = await persistRestaurantCategories(
-        updatedCategories,
-        `Category "${currentCategory}" renamed to "${updatedCategory}".`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      return { ok: true, oldCategory: currentCategory, category: updatedCategory };
+      try {
+        await updateCategory({ categoryId: categoryObj._id, newName: updatedCategory }).unwrap();
+        notify(`Category renamed to "${updatedCategory}".`, "success");
+        return { ok: true, oldCategory: currentCategory, category: updatedCategory };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to rename category.";
+        notify(message, "error");
+        return { ok: false, message };
+      }
     },
     [
       normalizeCategoryKey,
       normalizeCategoryLabel,
-      persistRestaurantCategories,
+      notify,
       restaurantCategories,
+      restaurantData,
+      updateCategory,
     ]
   );
 
@@ -861,52 +1006,32 @@ const Menu = () => {
         return { ok: false, message: "Only admins can delete categories." };
       }
 
-      const targetKey = normalizeCategoryKey(targetCategory);
-      const itemsToDelete = normalizedItems.filter(
-        (item) => normalizeCategoryKey(item?.category) === targetKey
+      const categoryObj = restaurantData?.restaurant?.categories?.find(
+        (c) =>
+          normalizeCategoryKey(c.name || c.label) ===
+          normalizeCategoryKey(categoryNameToDelete)
       );
+      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
 
-      let deletedItemsCount = 0;
-      if (itemsToDelete.length) {
-        try {
-          await Promise.all(
-            itemsToDelete.map((item) => deleteMenuItem(item._id).unwrap())
-          );
-          deletedItemsCount = itemsToDelete.length;
-        } catch (error) {
-          const message = getFriendlyMenuError(error, "delete");
-          notify(message, "error");
-          return { ok: false, message };
-        }
-      }
-
-      const updatedCategories = restaurantCategories.filter(
-        (category) => category !== targetCategory
-      );
-
-      const updateResult = await persistRestaurantCategories(
-        updatedCategories,
-        deletedItemsCount
-          ? `Category "${targetCategory}" deleted with ${deletedItemsCount} items.`
-          : `Category "${targetCategory}" deleted.`
-      );
-
-      if (!updateResult.ok) return updateResult;
-      if (deletedItemsCount > 0) {
+      try {
+        await deleteCategory(categoryObj._id).unwrap();
+        notify(`Category "${targetCategory}" deleted.`, "success");
         refetch();
+        return { ok: true, deletedCategory: targetCategory };
+      } catch (err) {
+        const message = err?.data?.message || err?.message || "Unable to delete category.";
+        notify(message, "error");
+        return { ok: false, message };
       }
-      return { ok: true, deletedCategory: targetCategory };
     },
     [
-      deleteMenuItem,
-      getFriendlyMenuError,
+      deleteCategory,
       isAdmin,
       normalizeCategoryKey,
-      normalizedItems,
       notify,
-      persistRestaurantCategories,
       refetch,
       restaurantCategories,
+      restaurantData,
     ]
   );
 
@@ -1340,16 +1465,16 @@ const prepareFormData = (formData, file) => {
     
     if (!discount) return { type: "flat", value: 0, active: false };
     
+    // Check active - handle both boolean and string representations
+    const isActive = discount.active === true || discount.active === "true";
+    
     // Parse the value as integer
     const rawValue = discount.value;
     let val = 0;
-    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+    if (isActive && rawValue !== undefined && rawValue !== null && rawValue !== "") {
       val = parseInt(rawValue.toString().trim(), 10);
       if (isNaN(val)) val = 0;
     }
-    
-    // Check active - handle both boolean and string representations
-    const isActive = discount.active === true || discount.active === "true";
     
     const result = {
       type: discount.type || "flat",
@@ -1566,7 +1691,16 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-xs text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-xs text-[#1c1917] outline-none transition focus:ring-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  style={{
+                    borderColor: isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3";
+                  }}
                 />
               </div>
               <button
@@ -1581,11 +1715,18 @@ const prepareFormData = (formData, file) => {
                 data-tour="menu-filters-btn"
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-none sm:px-4 ${
-                  isFilterOpen
-                    ? "border-orange-600 bg-orange-600 text-white hover:bg-orange-700"
-                    : "border-orange-500 bg-orange-500 text-white hover:bg-orange-600"
-                }`}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-bold transition-all sm:px-4 active:scale-[0.98]"
+                style={{
+                  borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                  backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                  color: isDarkMode ? colors.primary : colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                }}
               >
                 <SlidersHorizontal size={14} />
                 <span className="hidden sm:inline">Filters</span>
@@ -1601,7 +1742,16 @@ const prepareFormData = (formData, file) => {
                   value={filters.search}
                   onChange={handleSearchChange}
                   placeholder="Search items or categories..."
-                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-sm text-[#1c1917] outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-orange-400 dark:focus:ring-orange-500/30"
+                  className="h-10 w-full rounded-lg border border-[#ede8e3] bg-white px-4 pl-10 text-sm text-[#1c1917] outline-none transition focus:ring-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  style={{
+                    borderColor: isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primary;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3";
+                  }}
                 />
               </div>
             </div>
@@ -1669,21 +1819,30 @@ const prepareFormData = (formData, file) => {
                     <div
                       key={category}
                       data-category-chip={category}
-                      className={`group relative w-full max-w-none overflow-hidden rounded-lg border px-2 py-1.5 transition ${
-                        isActive
-                          ? "border-orange-400 bg-orange-50"
-                          : "border-[#ede8e3] bg-white hover:border-orange-300 hover:bg-[#f7f3ef]"
-                      } dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-slate-600`}
+                      className="group relative w-full max-w-none overflow-hidden rounded-lg border px-2 py-1.5 transition-all duration-150"
+                      style={{
+                        borderColor: isActive
+                          ? colors.primary
+                          : isDarkMode ? "rgb(51, 65, 85)" : "#ede8e3",
+                        backgroundColor: isActive
+                          ? isDarkMode ? "rgba(30, 41, 59, 0.4)" : colors.primaryLight
+                          : isDarkMode ? "rgba(30, 41, 59, 0.2)" : "#ffffff",
+                      }}
                     >
-                      <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700" />
-                      <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-orange-100/60 blur-2xl dark:bg-orange-500/20" />
+                      <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `linear-gradient(to bottom, ${colors.primary}, ${colors.primaryHover || colors.primary})` }} />
+                      <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full blur-2xl" style={{ backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}33` }} />
 
                       <div className="flex items-center gap-2 pl-2.5 pr-2 sm:justify-between">
                         <button
                           type="button"
                           data-tour="menu-drag-category"
                           onPointerDown={(event) => handleCategoryPointerDown(event, category)}
-                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-1.5 py-1 text-[#78716c] transition hover:bg-[#ede8e3] active:cursor-grabbing dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 sm:order-2 sm:ml-auto"
+                          className="order-1 inline-flex shrink-0 touch-none select-none items-center gap-1 rounded-md border px-1.5 py-1 transition-all duration-150 active:cursor-grabbing sm:order-2 sm:ml-auto"
+                          style={{
+                            borderColor: isDarkMode ? "rgb(71, 85, 105)" : `${colors.primary}33`,
+                            backgroundColor: isDarkMode ? "rgb(51, 65, 85)" : colors.primaryLight,
+                            color: isDarkMode ? colors.primary : colors.primaryText,
+                          }}
                           aria-label={`Drag ${category} to reorder`}
                           title="Hold and drag to reorder"
                         >
@@ -1719,7 +1878,8 @@ const prepareFormData = (formData, file) => {
                     type="button"
                     data-tour="menu-manage-btn"
                     onClick={() => setIsCategoryManagerOpen((prev) => !prev)}
-                    className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300"
+                    className="text-xs font-semibold hover:underline"
+                    style={{ color: colors.primary }}
                   >
                     {isCategoryManagerOpen ? "Close" : "Manage"}
                   </button>
@@ -1741,15 +1901,23 @@ const prepareFormData = (formData, file) => {
                           key={categoryKey}
                           type="button"
                           onClick={() => setSelectedCategory(category.label)}
-                          className={`group flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden border-l-4 px-4 py-2.5 text-left text-sm font-semibold transition ${
+                          className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
                             isActive
-                              ? "border-orange-500 bg-[#fff7ed] text-orange-600"
-                              : "border-transparent text-[#44403c] hover:bg-[#f7f3ef] dark:text-slate-200 dark:hover:bg-slate-800/60"
+                              ? ""
+                              : isDarkMode
+                                ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
+                                : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
                           }`}
+                          style={isActive ? {
+                            backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                            borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                            color: isDarkMode ? "#ffffff" : colors.primary,
+                            borderLeft: `4px solid ${colors.primary}`,
+                            paddingLeft: "12px"
+                          } : {}}
                         >
-                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">{category.label}</span>
-                          <span className="shrink-0 rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            {category.items.length}
+                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">
+                            {category.label}
                           </span>
                         </button>
                       );
@@ -1766,20 +1934,38 @@ const prepareFormData = (formData, file) => {
 
               <div className="flex min-h-0 flex-col rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <p className="text-base font-semibold text-[#1c1917] dark:text-slate-100">
                       {selectedCategory || "All items"}
                       <span className="ml-2 text-sm font-medium text-[#a8a29e] dark:text-slate-400">
                         ({menuEditorItems.length})
                       </span>
                     </p>
+                    {selectedCategory && (
+                      <CategoryVisibilityToggle
+                        state={getCategoryVisibilityState(selectedCategory)}
+                        onToggle={() => handleToggleCategoryVisibility(selectedCategory)}
+                        disabled={togglingCategory === selectedCategory}
+                      />
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => navigate("/admin/menu/add")}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500 bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 hover:border-orange-600"
+                        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-extrabold transition-all shadow-sm active:scale-[0.97]"
+                        style={{
+                          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+                          backgroundColor: isDarkMode ? `${colors.primary}20` : colors.primaryLight,
+                          color: isDarkMode ? colors.primary : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}30` : `${colors.primary}22`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}20` : colors.primaryLight;
+                        }}
                         data-tour="menu-add-item-btn"
                       >
                         <CirclePlus size={14} />
@@ -1890,6 +2076,7 @@ const prepareFormData = (formData, file) => {
                             <div className="flex w-full flex-col items-start gap-1 sm:w-auto sm:items-end">
                               <div className="flex flex-wrap items-center gap-2">
                                 <AvailabilityBadge available={isAvailable} />
+                                <VisibilityBadge visibility={item?.visibility} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
                                 <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#a8a29e] dark:text-slate-400">
@@ -1937,10 +2124,10 @@ const prepareFormData = (formData, file) => {
                                 <button
                                   type="button"
                                   onClick={() => navigate(`/admin/menu/edit/${item._id}`)}
-                                  className="rounded-lg p-1.5 text-[#78716c] transition-colors hover:bg-[#f7f3ef] hover:text-[#1c1917] dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                  className="rounded-lg p-2 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                                   aria-label="Edit menu item"
                                 >
-                                  <Edit size={15} />
+                                  <SquarePen size={15} />
                                 </button>
                                 <button
                                   type="button"
@@ -1950,10 +2137,10 @@ const prepareFormData = (formData, file) => {
                                       name: item.name,
                                     })
                                   }
-                                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-slate-700"
+                                  className="rounded-lg p-2 text-rose-500 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/20"
                                   aria-label="Delete menu item"
                                 >
-                                  <Trash2 size={15} />
+                                  <Trash size={15} />
                                 </button>
                               </div>
                             )}

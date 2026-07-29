@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 
 export const FormField = ({
   label,
@@ -11,6 +12,9 @@ export const FormField = ({
   required = false,
   error = "",
 }) => {
+  const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+
   // Scroll block function for number inputs
   const handleWheel = (e) => {
     if (type === "number") {
@@ -22,8 +26,20 @@ export const FormField = ({
   const inputClassName = `h-9 w-full rounded-lg border bg-white px-3 text-sm text-[#1c1917] transition-all outline-none placeholder:text-[#a8a29e] dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 ${
     hasError
       ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:border-red-500/70 dark:focus:border-red-400"
-      : "border-[#ede8e3] hover:border-[#d6cfc8] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:border-slate-600 dark:hover:border-slate-500 dark:focus:border-orange-500 dark:focus:ring-orange-500/20"
+      : "border-[#ede8e3] hover:border-[#d6cfc8] dark:border-slate-600 dark:hover:border-slate-500"
   }`;
+
+  const inputBaseStyle = {
+      borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
+  };
+  const handleInputFocus = (e) => {
+      e.currentTarget.style.borderColor = colors.primary;
+      e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primary}20`;
+  };
+  const handleInputBlur = (e) => {
+      e.currentTarget.style.borderColor = isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3";
+      e.currentTarget.style.boxShadow = "none";
+  };
 
   return (
     <div>
@@ -40,6 +56,9 @@ export const FormField = ({
         placeholder={placeholder || label}
         onWheel={handleWheel}
         className={inputClassName}
+        style={inputBaseStyle}
+        onFocus={handleInputFocus}
+        onBlur={handleInputBlur}
         aria-invalid={hasError}
       />
       {hasError && (

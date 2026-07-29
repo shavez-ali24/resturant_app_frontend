@@ -56,6 +56,7 @@ const MenuItemCard = ({
     variantRates: item.variantRates || {},
     type: item.type || "veg",
     available: item.available !== undefined ? item.available : true,
+    visibility: item.visibility || "PUBLIC",
     pricingType: item.pricingType || "single",
     image: item.image || {},
     discount: item.discount || null,
@@ -309,18 +310,28 @@ const MenuItemCard = ({
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
             {safeItem.available ? (
-              <div className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px]">
+              <div className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-green-950/20 dark:text-green-400">
                 <CheckCircle size={13} />
                 Available
               </div>
             ) : (
-              <div className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px]">
+              <div className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-red-950/20 dark:text-red-400">
                 <XCircle size={13} />
                 Unavailable
               </div>
             )}
 
-            <div className="inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px]">
+            {safeItem.visibility === "ADMIN" ? (
+              <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-amber-950/30 dark:text-amber-400">
+                Admin Only
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-blue-950/30 dark:text-blue-400">
+                Public
+              </div>
+            )}
+
+            <div className="inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-orange-950/20 dark:text-orange-300">
               {isSinglePricing ? "Single" : isVariantPricing ? "Variant" : "Combo"}
             </div>
           </div>
@@ -385,7 +396,7 @@ const MenuItemCard = ({
           <div className="mt-auto flex justify-end pt-0.5">
             <button
               onClick={onView}
-              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl !bg-orange-500 px-4 text-sm font-semibold !text-white shadow-sm transition-colors hover:!bg-orange-600 dark:border dark:border-orange-300/40 dark:!bg-orange-500 dark:!text-white dark:hover:!bg-orange-400 sm:h-7 sm:w-auto sm:px-3 sm:text-xs lg:h-6 lg:px-2.5 lg:text-[10px] lg:rounded-lg"
+              className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-xl border text-sm font-extrabold shadow-sm transition-all sm:h-7 sm:w-auto sm:px-3 sm:text-xs lg:h-6 lg:px-2.5 lg:text-[10px] lg:rounded-lg border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-350 dark:border-slate-700 dark:bg-slate-800 dark:text-orange-400 dark:hover:bg-slate-700"
             >
               View Details
             </button>

@@ -105,8 +105,8 @@ const pickCategoryTextFromObject = (rawCategory = {}) => {
 const resolveCategoryValue = (rawCategory, restaurantCategories = []) => {
   const categories = Array.isArray(restaurantCategories)
     ? restaurantCategories
-        .map((category) => String(category || "").trim())
-        .filter(Boolean)
+      .map((category) => String(category || "").trim())
+      .filter(Boolean)
     : [];
 
   const categoryFromObject =
@@ -184,10 +184,10 @@ const EditItemModal = ({
     // Normalize single discount: preserve 0 as valid value
     const incomingDiscount = item.discount || { ...defaultDiscount };
     const normalizedDiscount = {
-        type: incomingDiscount.type || "flat",
-        value: incomingDiscount.value !== undefined && incomingDiscount.value !== null ? String(incomingDiscount.value) : "",
-        active: !!incomingDiscount.active,
-      };
+      type: incomingDiscount.type || "flat",
+      value: incomingDiscount.value !== undefined && incomingDiscount.value !== null ? String(incomingDiscount.value) : "",
+      active: !!incomingDiscount.active,
+    };
 
     // Normalize variant rates discounts - preserve 0 as valid value
     const incomingVariantRates = item.variantRates || {};
@@ -200,7 +200,7 @@ const EditItemModal = ({
     Object.entries(normalizedVariantRates).forEach(([key]) => {
       const src = incomingVariantRates?.[key] || {};
       const srcDiscount = src.discount || { ...defaultDiscount };
-      
+
       normalizedVariantRates[key] = {
         price: src.price || "",
         discount: {
