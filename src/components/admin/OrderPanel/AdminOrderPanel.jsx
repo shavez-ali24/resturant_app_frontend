@@ -360,7 +360,7 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v != null);
+  const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0);
 
   const getVariantDisplay = (key, v) => {
     const vBasePrice = Number(v.price) || 0;
@@ -464,7 +464,7 @@ function VariantSelect({ item, value, onChange, isDarkMode }) {
 // Big tappable buttons — instant selection, no dropdown
 function VariantPills({ item, value, onChange, isDarkMode }) {
   const colors = useSelector((state) => state.admin.theme.colors);
-  const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v != null);
+  const variantEntries = Object.entries(item.variantRates || {}).filter(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0);
 
   const getVariantDisplay = (key, v) => {
     const vBasePrice = Number(v.price) || 0;
@@ -1922,7 +1922,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     )}
 
                     <div className="mt-auto pt-1">
-                      {item.pricingType === "variant" && Object.keys(item.variantRates || {}).length > 0 ? (
+                      {item.pricingType === "variant" && Object.entries(item.variantRates || {}).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
                         <button
                           onClick={() => setVariantPickerItem(item)}
                           disabled={!isRestaurantOpen || isBilled}
@@ -2036,7 +2036,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
             </p>
 
             <div className="flex flex-col gap-3">
-              {Object.entries(variantPickerItem.variantRates || {}).filter(([, v]) => v != null).map(([key, v]) => {
+              {Object.entries(variantPickerItem.variantRates || {}).filter(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0).map(([key, v]) => {
                 const vBasePrice = Number(v.price) || 0;
                 const vDiscount = v.discount;
                 let vFinal = vBasePrice;

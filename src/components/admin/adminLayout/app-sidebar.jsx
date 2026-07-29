@@ -147,36 +147,6 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     }
   }, [isMobile, setOpen, setOpenMobile]);
 
-  const handleSidebarMouseEnter = React.useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (isMobile || window.innerWidth < 1024) return;
-    hoverOpenRef.current = true;
-    if (hoverCloseTimerRef.current) {
-      clearTimeout(hoverCloseTimerRef.current);
-      hoverCloseTimerRef.current = null;
-    }
-    if (!openRef.current) {
-      hoverActivatedRef.current = true;
-      setOpen(true);
-    }
-  }, [isMobile, setOpen]);
-
-  const handleSidebarMouseLeave = React.useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (isMobile || window.innerWidth < 1024) return;
-    hoverOpenRef.current = false;
-    if (!hoverActivatedRef.current || !openRef.current) return;
-    if (!hoverCloseTimerRef.current) {
-      hoverCloseTimerRef.current = setTimeout(() => {
-        hoverCloseTimerRef.current = null;
-        if (!hoverActivatedRef.current) return;
-        if (!openRef.current) return;
-        hoverActivatedRef.current = false;
-        setOpen(false);
-      }, 3000);
-    }
-  }, [isMobile, setOpen]);
-
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const prevPath = previousPathRef.current;
@@ -192,126 +162,11 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
     }
   }, [location.pathname, isMobile, setOpen, setOpenMobile]);
 
-  React.useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-
-  React.useEffect(() => {
-    if (!sidebarRootRef.current) return;
-    sidebarFixedRef.current = sidebarRootRef.current.querySelector('[data-sidebar="sidebar"]');
-  }, []);
-
-  React.useEffect(() => {
-    if (autoCollapseTimerRef.current) {
-      clearTimeout(autoCollapseTimerRef.current);
-      autoCollapseTimerRef.current = null;
-    }
-
-    if (typeof window === "undefined") return undefined;
-    if (isMobile || window.innerWidth < 1024) return undefined;
-
-    autoCollapseTimerRef.current = setTimeout(() => {
-      if (isMobile || window.innerWidth < 1024) return;
-      if (!openRef.current) return;
-      hoverActivatedRef.current = false;
-      setOpen(false);
-    }, 20000);
-
-    return () => {
-      if (autoCollapseTimerRef.current) {
-        clearTimeout(autoCollapseTimerRef.current);
-        autoCollapseTimerRef.current = null;
-      }
-    };
-  }, [location.pathname, isMobile, setOpen]);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const hoverOpenDelay = 140;
-    const hoverCloseDelay = 3000;
-    const openZone = 56;
-    const closeBuffer = 24;
-
-    const clearOpenTimer = () => {
-      if (hoverOpenTimerRef.current) {
-        clearTimeout(hoverOpenTimerRef.current);
-        hoverOpenTimerRef.current = null;
-      }
-    };
-
-    const clearCloseTimer = () => {
-      if (hoverCloseTimerRef.current) {
-        clearTimeout(hoverCloseTimerRef.current);
-        hoverCloseTimerRef.current = null;
-      }
-    };
-
-    const handlePointerMove = (event) => {
-      if (isMobile || window.innerWidth < 1024) return;
-
-      const pointerX = event.clientX;
-      const isOpen = openRef.current;
-
-      if (!isOpen) {
-        clearCloseTimer();
-        if (pointerX <= openZone) {
-          if (!hoverOpenTimerRef.current) {
-            hoverOpenTimerRef.current = setTimeout(() => {
-              hoverOpenTimerRef.current = null;
-              if (openRef.current) return;
-              hoverActivatedRef.current = true;
-              setOpen(true);
-            }, hoverOpenDelay);
-          }
-        } else {
-          clearOpenTimer();
-        }
-        return;
-      }
-
-      if (!hoverActivatedRef.current) {
-        clearOpenTimer();
-        clearCloseTimer();
-        return;
-      }
-
-      if (!sidebarFixedRef.current && sidebarRootRef.current) {
-        sidebarFixedRef.current = sidebarRootRef.current.querySelector('[data-sidebar="sidebar"]');
-      }
-      const sidebarWidth =
-        sidebarFixedRef.current?.getBoundingClientRect().width || 256;
-      if (pointerX > sidebarWidth + closeBuffer) {
-        if (!hoverCloseTimerRef.current) {
-          hoverCloseTimerRef.current = setTimeout(() => {
-            hoverCloseTimerRef.current = null;
-            if (!hoverActivatedRef.current) return;
-            if (!openRef.current) return;
-            hoverActivatedRef.current = false;
-            setOpen(false);
-          }, hoverCloseDelay);
-        }
-      } else {
-        clearCloseTimer();
-      }
-    };
-
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      clearOpenTimer();
-      clearCloseTimer();
-    };
-  }, [isMobile, setOpen]);
-
   return (
     <Sidebar
       ref={sidebarRootRef}
       className={`overflow-y-auto !h-[calc(100svh-var(--header-height))] ${sidebarShellClass}`}
       collapsible="icon"
-      onMouseEnter={handleSidebarMouseEnter}
-      onMouseLeave={handleSidebarMouseLeave}
       {...props}
     >
       {/* Header */}

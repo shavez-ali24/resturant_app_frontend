@@ -59,14 +59,16 @@ export default function OrderFormModal({
     } catch { return null; }
   });
 
+  const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
+  const effectiveOrderType = isRoomQR ? "Eat Here" : orderType;
+
   // Auto-select orderType for room QR stays to bypass type selection
   useEffect(() => {
-    const isRoomQR = qrInfo?.unitType === "ROOM" && !qrInfo?.requiresCustomerInfo;
     if (isRoomQR && orderType !== "Eat Here") {
       setOrderType("Eat Here");
       setSelectedOrderType("Eat Here");
     }
-  }, [qrInfo, orderType, setOrderType]);
+  }, [isRoomQR, orderType, setOrderType]);
 
   // Auto-select section when only one section exists and Eat Here is chosen
   useEffect(() => {
@@ -217,7 +219,7 @@ export default function OrderFormModal({
         <div className="sticky top-0 px-5 py-4 bg-white dark:bg-slate-900 z-10 rounded-t-[32px]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {!orderType ? (
+              {!effectiveOrderType ? (
                 <button
                   onClick={() => setShowModal(false)}
                   className="flex items-center gap-3 text-left transition-colors"
@@ -232,8 +234,12 @@ export default function OrderFormModal({
               ) : (
                 <button
                   onClick={() => {
-                    setOrderType("");
-                    setSelectedOrderType("");
+                    if (isRoomQR) {
+                      setShowModal(false);
+                    } else {
+                      setOrderType("");
+                      setSelectedOrderType("");
+                    }
                   }}
                   className="flex items-center gap-3 text-left transition-colors"
                 >
@@ -241,7 +247,7 @@ export default function OrderFormModal({
                     <ArrowLeft className="w-4 h-4" />
                   </div>
                   <span className={`text-base font-bold ${isDarkMode ? "text-slate-100" : "text-gray-900"}`}>
-                    Back to order types
+                    {isRoomQR ? "Back" : "Back to order types"}
                   </span>
                 </button>
               )}
@@ -250,7 +256,7 @@ export default function OrderFormModal({
         </div>
 
         <div className="p-5 pt-1">
-          {!orderType ? (
+          {!effectiveOrderType ? (
             <div className="space-y-4">
               <h3 className={`text-xl font-black ${isDarkMode ? "text-slate-100" : "text-gray-900"} mb-4`}>
                 Choose order type
@@ -379,7 +385,7 @@ export default function OrderFormModal({
               {/* Conditional Fields Based on Order Type */}
               <div className="space-y-5">
                 {/* QR Scanned: unitId present — hide table selection, auto-assign */}
-                {orderType === "Eat Here" && scannedUnitId ? (
+                {effectiveOrderType === "Eat Here" && scannedUnitId && !isRoomQR ? (
                   <div className="animate-fade-in space-y-3">
                     <div className={`flex items-start gap-3 rounded-xl border p-4 ${isDarkMode ? "border-orange-500/10 bg-orange-500/5 text-orange-200" : "border-orange-100 bg-[#fbf9f6] text-gray-700"}`}>
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 shrink-0">
@@ -388,12 +394,16 @@ export default function OrderFormModal({
                         </svg>
                       </div>
                       <div>
-                        <p className={`font-extrabold text-sm ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>Table assigned via QR</p>
-                        <p className={`text-xs mt-1 font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>You're automatically assigned to this table.</p>
+                        <p className={`font-extrabold text-sm ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
+                          Table assigned via QR
+                        </p>
+                        <p className={`text-xs mt-1 font-medium ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
+                          You're automatically assigned to this table.
+                        </p>
                       </div>
                     </div>
                   </div>
-                ) : orderType === "Eat Here" ? (
+                ) : effectiveOrderType === "Eat Here" && !isRoomQR ? (
                   <div className="animate-fade-in space-y-3">
                     {(() => {
                       const sections = Array.isArray(restaurantData?.restaurant?.sections) ? restaurantData.restaurant.sections : [];

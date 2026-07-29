@@ -8,6 +8,7 @@ export default function Category({
   activeCategory,
   categoryImages = {},
   hasActiveFilter = false,
+  hideAllButton = false,
 }) {
   const normalizeCategoryValue = (value) =>
     String(value || "")
@@ -67,17 +68,19 @@ export default function Category({
             {title}
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={() => onCategoryClick?.(null)}
-          className={`h-7 flex-shrink-0 rounded-xl px-3 text-xs font-semibold transition-all ${
-            activeCategory === null && !hasActiveFilter
-              ? "client-add-button text-white"
-              : "client-add-button-outline"
-          }`}
-        >
-          All
-        </button>
+        {!hideAllButton && (
+          <button
+            type="button"
+            onClick={() => onCategoryClick?.(null)}
+            className={`h-7 flex-shrink-0 rounded-xl px-3 text-xs font-semibold transition-all ${
+              activeCategory === null && !hasActiveFilter
+                ? "client-add-button text-white"
+                : "client-add-button-outline"
+            }`}
+          >
+            All
+          </button>
+        )}
       </div>
 
       {/* Categories scroller */}

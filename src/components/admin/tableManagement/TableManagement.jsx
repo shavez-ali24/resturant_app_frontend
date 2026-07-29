@@ -11,7 +11,7 @@ import {
   useDeleteUnitMutation,
   useUpdateSectionsMutation,
 } from "@/redux/adminRedux/adminAPI";
-import { Download, Loader2, Power, PowerOff, QrCode, Table2, BedDouble, Plus, Minus, Trash, ArrowLeft, SquarePen } from "lucide-react";
+import { Download, Loader2, Eye, EyeOff, QrCode, Table2, BedDouble, Plus, Minus, Trash, ArrowLeft, SquarePen } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -522,19 +522,20 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
   const unitId = unit?._id || unit?.unitId;
   const isRoom = unit?.type === "ROOM";
   const isActive = unit?.isActive !== false;
-  const canToggleRoom = isRoom && unit?.status === "AVAILABLE" && Boolean(unitId);
+  const canToggleUnit = unit?.status === "AVAILABLE" && Boolean(unitId);
 
   const handleDownload = () => {
     const filename = `${unit.type}_${unit.name}_qr.png`;
     downloadQR(unit.qrCode?.url, filename);
   };
 
-  const handleToggleRoomActive = async (e) => {
+  const handleToggleUnitActive = async (e) => {
     e.stopPropagation();
 
-    if (!canToggleRoom || isToggleLoading) return;
+    if (!canToggleUnit || isToggleLoading) return;
 
     const nextIsActive = !isActive;
+    const unitLabel = isRoom ? "Room" : "Table";
 
     try {
       const response = await toggleUnitActive({
@@ -543,12 +544,12 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
       }).unwrap();
 
       notify(
-        response?.message || `Room ${nextIsActive ? "activated" : "deactivated"} successfully`,
+        response?.message || `${unitLabel} ${nextIsActive ? "activated" : "deactivated"} successfully`,
         "success"
       );
     } catch (err) {
       notify(
-        err?.data?.message || `Failed to ${nextIsActive ? "activate" : "deactivate"} room`,
+        err?.data?.message || `Failed to ${nextIsActive ? "activate" : "deactivate"} ${unitLabel.toLowerCase()}`,
         "error"
       );
     }
@@ -612,22 +613,20 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
       style={{
         background: statusStyle.bg,
         border: statusStyle.border,
-        opacity: isRoom && !isActive ? 0.75 : 1,
+        opacity: !isActive ? 0.75 : 1,
         minHeight: "140px",
       }}
     >
       {/* Top Row: status on left, small QR icon on right */}
       <div className="flex items-center justify-between gap-1 mb-1">
         <div className="flex items-center gap-1">
-          {isRoom && (
-            <span
-              className="text-[9px] font-extrabold tracking-wider"
-              style={{ color: isActive ? "rgb(16, 185, 129)" : "rgb(156, 163, 175)" }}
-            >
-              {isActive ? "ACTIVE" : "INACTIVE"}
-            </span>
-          )}
-          {isRoom && <span className="text-[#ede8e3] dark:text-slate-600">|</span>}
+          <span
+            className="text-[9px] font-extrabold tracking-wider"
+            style={{ color: isActive ? "rgb(16, 185, 129)" : "rgb(239, 68, 68)" }}
+          >
+            {isActive ? "ACTIVE" : "INACTIVE"}
+          </span>
+          <span className="text-[#ede8e3] dark:text-slate-600">|</span>
           <span
             className="text-[9.5px] font-extrabold uppercase tracking-wider"
             style={{ color: statusStyle.statusText }}
@@ -674,32 +673,30 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
             </button>
           )}
 
-          {isRoom && (
-            <button
-              type="button"
-              onClick={handleToggleRoomActive}
-              disabled={!canToggleRoom || isToggleLoading}
-              className="flex-1 inline-flex items-center justify-center rounded-lg border py-1 text-[10px] font-bold transition-all active:scale-[0.97] shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={canToggleRoom && !isToggleLoading ? {
-                borderColor: isActive ? "rgba(239, 68, 68, 0.4)" : "rgba(16, 185, 129, 0.4)",
-                backgroundColor: isActive ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                color: isActive ? "rgb(239, 68, 68)" : "rgb(16, 185, 129)",
-              } : {
-                borderColor: isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3",
-                backgroundColor: isDarkMode ? "rgb(30, 41, 59)" : "#ffffff",
-                color: isDarkMode ? "#94a3b8" : "#78716c",
-              }}
-              title={isActive ? "Deactivate Room" : "Activate Room"}
-            >
-              {isToggleLoading ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : isActive ? (
-                <PowerOff size={12} />
-              ) : (
-                <Power size={12} />
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleToggleUnitActive}
+            disabled={!canToggleUnit || isToggleLoading}
+            className="inline-flex items-center justify-center rounded-lg p-1.5 border transition-all active:scale-[0.97] shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={canToggleUnit && !isToggleLoading ? {
+              borderColor: isActive ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)",
+              backgroundColor: isActive ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              color: isActive ? "rgb(16, 185, 129)" : "rgb(239, 68, 68)",
+            } : {
+              borderColor: isActive ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+              backgroundColor: isActive ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)",
+              color: isActive ? "rgb(16, 185, 129)" : "rgb(239, 68, 68)",
+            }}
+            title={isActive ? `Deactivate ${isRoom ? "Room" : "Table"}` : `Activate ${isRoom ? "Room" : "Table"}`}
+          >
+            {isToggleLoading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : isActive ? (
+              <Eye size={14} />
+            ) : (
+              <EyeOff size={14} />
+            )}
+          </button>
 
           {isRoom && (
             <button
@@ -730,9 +727,9 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
           </button>
         </div>
 
-        {isRoom && !canToggleRoom && (
+        {!canToggleUnit && (
           <p className="text-center text-[8px] font-bold text-[#a8a29e] dark:text-slate-500 leading-tight">
-            Can toggle room only when Available
+            Can toggle {isRoom ? "room" : "table"} only when Available
           </p>
         )}
       </div>

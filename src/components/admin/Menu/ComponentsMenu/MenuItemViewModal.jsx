@@ -149,7 +149,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       {item.available ? "AVAILABLE" : "UNAVAILABLE"}
                     </span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold text-white ${item.visibility === "ADMIN" ? "bg-amber-500" : "bg-blue-500"}`}>
-                      {item.visibility === "ADMIN" ? "ADMIN ONLY" : "PUBLIC"}
+                      {item.visibility === "ADMIN" ? "ADMIN ONLY" : "CLIENT VISIBLE"}
                     </span>
                   </div>
                 </div>

@@ -24,13 +24,14 @@ export const handleAddFormChange = (e, addFormData, setAddFormData, formErrors, 
   // Handle discount fields
   if (name.startsWith("discount.")) {
     const discountField = name.split(".")[1];
-    // console.log("🔥 Add Item - Discount field change:", { discountField, value, checked });
     setAddFormData((prev) => {
       const newDiscount = {
         ...prev.discount,
         [discountField]: discountField === "type" ? value : (discountField === "value" ? value.replace(/[^0-9]/g, "") : (discountField === "active" ? checked : value)),
       };
-      // console.log("🔥 Add Item - New discount state:", newDiscount);
+      if (discountField === "active" && !checked) {
+        newDiscount.value = "";
+      }
       return {
         ...prev,
         discount: newDiscount
@@ -45,23 +46,25 @@ export const handleAddFormChange = (e, addFormData, setAddFormData, formErrors, 
     const variant = parts[0];
     const field = parts[2];
     
-    // console.log(" Add Item - Variant Discount field change:", { variant, field, value, checked });
-    
-    setAddFormData(prev => ({
-      ...prev,
-      variantRates: {
-        ...prev.variantRates,
-        [variant]: {
-          ...prev.variantRates[variant],
-          discount: {
-            ...prev.variantRates[variant]?.discount,
-            [field]: field === "active" ? checked : (field === "type" ? value : (field === "value" ? value.replace(/[^0-9]/g, "") : value))
+    setAddFormData(prev => {
+      const newDiscount = {
+        ...prev.variantRates[variant]?.discount,
+        [field]: field === "active" ? checked : (field === "type" ? value : (field === "value" ? value.replace(/[^0-9]/g, "") : value))
+      };
+      if (field === "active" && !checked) {
+        newDiscount.value = "";
+      }
+      return {
+        ...prev,
+        variantRates: {
+          ...prev.variantRates,
+          [variant]: {
+            ...prev.variantRates[variant],
+            discount: newDiscount
           }
         }
-      }
-    }));
-    
-    // console.log(" Add Item - New variant discount state:", prev.variantRates[variant]?.discount);
+      };
+    });
     return;
   }
 

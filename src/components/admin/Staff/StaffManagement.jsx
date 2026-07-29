@@ -17,6 +17,7 @@ import {
   X,
   SquarePen,
   Trash,
+  Trash2,
   ArrowLeft,
 } from "lucide-react";
 import Heading from "../common/Heading";

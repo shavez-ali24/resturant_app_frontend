@@ -129,6 +129,17 @@ export default function Home() {
     });
   }, [orderedCategories, menu]);
 
+  const hasCombo = useMemo(() => {
+    return Array.isArray(menu) && menu.some((item) => item?.pricingType === "combo");
+  }, [menu]);
+
+  const showVegNonVegFilters = useMemo(() => {
+    if (!Array.isArray(menu)) return false;
+    const hasVeg = menu.some((item) => item?.type === "veg");
+    const hasNonVeg = menu.some((item) => item?.type === "non-veg");
+    return hasVeg && hasNonVeg;
+  }, [menu]);
+
   if (showLoader)
     return (
       <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${
@@ -256,8 +267,15 @@ export default function Home() {
           activeCategory={activeCategory}
           categoryImages={categoryImages}
           hasActiveFilter={filters.veg || filters.nonVeg || filters.mixed || filters.combo}
+          hideAllButton={false}
         />
-        <Filter filters={filters} onChange={handleFilterChange} isDarkMode={isDarkMode} />
+        <Filter
+          filters={filters}
+          onChange={handleFilterChange}
+          isDarkMode={isDarkMode}
+          hasCombo={hasCombo}
+          showVegNonVegFilters={showVegNonVegFilters}
+        />
       </div>
 
       <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-[#fffcf9]"}`}>

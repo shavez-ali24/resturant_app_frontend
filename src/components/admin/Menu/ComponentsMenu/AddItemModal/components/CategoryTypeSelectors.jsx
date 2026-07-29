@@ -9,6 +9,8 @@ import {
   Plus,
   Trash,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  useGetMenuQuery,
+  useUpdateMenuItemMutation,
+} from "@/redux/adminRedux/adminAPI";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
 const ADD_CATEGORY_VALUE = "__add_category__";
 
@@ -140,6 +147,66 @@ const CategoryTypeSelectors = ({
 }) => {
   const colors = useSelector((state) => state.admin.theme.colors);
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+  
+  const { data: menuItemsData } = useGetMenuQuery();
+  const [updateMenuItem] = useUpdateMenuItemMutation();
+  const [togglingCategory, setTogglingCategory] = useState("");
+  const notificationContext = useNotification();
+  const notify = notificationContext?.notify || (() => {});
+
+  const menuItems = useMemo(() => {
+    return Array.isArray(menuItemsData)
+      ? menuItemsData
+      : menuItemsData?.menu || menuItemsData?.data?.menu || [];
+  }, [menuItemsData]);
+
+  // Get visibility status for each category option
+  const getCategoryVisibility = (catName) => {
+    const items = menuItems.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (items.length === 0) return true; // Default to visible if empty
+    return items.every((item) => item.visibility !== "ADMIN");
+  };
+
+  const handleToggleCategoryVisibility = async (event, catName) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const items = menuItems.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (items.length === 0) {
+      notify(`No menu items found in "${catName}" category to toggle visibility`, "info");
+      return;
+    }
+
+    const isCurrentlyVisible = getCategoryVisibility(catName);
+    const nextVisibility = isCurrentlyVisible ? "ADMIN" : "PUBLIC";
+
+    setTogglingCategory(catName);
+
+    try {
+      await Promise.all(
+        items.map((item) =>
+          updateMenuItem({
+            itemId: item._id,
+            updatedData: { visibility: nextVisibility },
+          }).unwrap()
+        )
+      );
+      notify(
+        `All items in "${catName}" are now ${isCurrentlyVisible ? "hidden" : "visible"}`,
+        "success"
+      );
+    } catch (err) {
+      console.error("Failed to toggle category visibility:", err);
+      notify("Failed to update category visibility", "error");
+    } finally {
+      setTogglingCategory("");
+    }
+  };
+
   const [categoryFocused, setCategoryFocused] = useState(false);
   const [typeFocused, setTypeFocused] = useState(false);
   const [addFocused, setAddFocused] = useState(false);

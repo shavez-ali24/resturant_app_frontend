@@ -86,6 +86,7 @@ const TableCard = React.memo(function TableCard({
 }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [elapsedMinutes, setElapsedMinutes] = React.useState(null);
 
   const {
     tableNumber,
@@ -95,6 +96,26 @@ const TableCard = React.memo(function TableCard({
     roomCategory,
     occupiedSince,
   } = table;
+
+  React.useEffect(() => {
+    if (!occupiedSince) {
+      setElapsedMinutes(null);
+      return;
+    }
+
+    const calculateElapsed = () => {
+      const diffMs = Date.now() - new Date(occupiedSince).getTime();
+      return Math.max(0, Math.floor(diffMs / 60000));
+    };
+
+    setElapsedMinutes(calculateElapsed());
+
+    const interval = setInterval(() => {
+      setElapsedMinutes(calculateElapsed());
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [occupiedSince]);
 
   const isRoom = unitType === "ROOM";
   const isAvailable = rawStatus === "AVAILABLE" || status === "blank";
@@ -137,11 +158,6 @@ const TableCard = React.memo(function TableCard({
   };
   const handlePrint = (e) => { e.stopPropagation(); onPrint?.(table); };
   const handleMove = (e) => { e.stopPropagation(); onMove?.(table); };
-
-  // Calculate elapsed time from occupiedSince (prompt priority)
-  const elapsed = occupiedSince
-    ? Math.floor((Date.now() - new Date(occupiedSince).getTime()) / 60000)
-    : null;
 
   const formatAmount = (val) => {
     const n = Number(val);
@@ -213,7 +229,7 @@ const TableCard = React.memo(function TableCard({
       {/* Top status / time */}
       {!hasNewClientItems && (
         <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: cardStyle.labelColor, textTransform: "uppercase", letterSpacing: "0.6px" }}>
-          {isAvailable ? "AVAILABLE" : isBilled ? "BILLED" : "OCCUPIED"}
+          {isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${elapsedMinutes != null ? ` • ${elapsedMinutes}m` : ""}`}
         </div>
       )}
 

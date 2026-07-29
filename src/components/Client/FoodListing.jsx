@@ -170,9 +170,9 @@ export default function FoodListing({
         if (item?.pricingType === "variant") {
           const variantRates = item?.variantRates || {};
           const validVariants = Object.entries(variantRates)
-            .filter(([key, price]) => price != null && price !== undefined)
+            .filter(([key, price]) => price && price.price !== "" && price.price != null && Number(price.price) > 0)
             .map(([key]) => key);
-          if (validVariants.length > 0 && !next[item._id]) {
+          if (validVariants.length > 0 && (!next[item._id] || !validVariants.includes(next[item._id]))) {
             next[item._id] = validVariants[0];
             changed = true;
           }
@@ -389,7 +389,7 @@ export default function FoodListing({
                     const hasDiscount = hasActiveDiscount(item, selectedVariant);
                     const originalPrice = basePrice;
                     const comboItemsCount = getComboItemsCount(item);
-                    const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice)) && isRestaurantOpen;
+                    const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice && variantPrice.price !== "" && variantPrice.price != null && Number(variantPrice.price) > 0)) && isRestaurantOpen;
                     const isUnavailable = !item.available || !isRestaurantOpen;
 
                     // Food type color coding
@@ -519,7 +519,7 @@ export default function FoodListing({
 
                           {/* Variant Selection or Price Display */}
                           <div className="flex flex-col items-start">
-                            {item.pricingType === "variant" && Object.keys(variantRates).length > 0 ? (
+                            {item.pricingType === "variant" && Object.entries(variantRates).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
                               <div className="relative z-10 w-full">
                                 <button
                                   type="button"
@@ -554,7 +554,7 @@ export default function FoodListing({
                                       {Object.entries(variantRates)
                                         .filter(
                                           ([key, price]) =>
-                                            price != null && price !== undefined
+                                            price && price.price !== "" && price.price != null && Number(price.price) > 0
                                         )
                                         .map(([key, price]) => {
                                           const isActive =
@@ -768,7 +768,7 @@ export default function FoodListing({
                   const discountedPrice = calculateDiscountedPrice(item, selectedVariant);
                   const hasDiscount = hasActiveDiscount(item, selectedVariant);
                   const originalPrice = basePrice;
-                  const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice)) && isRestaurantOpen;
+                  const canAdd = (item.pricingType !== "variant" || (selectedVariant && variantPrice && variantPrice.price !== "" && variantPrice.price != null && Number(variantPrice.price) > 0)) && isRestaurantOpen;
                   const isUnavailable = !item.available || !isRestaurantOpen;
 
                   return (
@@ -901,7 +901,7 @@ export default function FoodListing({
 
                         {/* Variant Selection or Price Display */}
                         <div className="flex flex-col items-start">
-                          {item.pricingType === "variant" && Object.keys(variantRates).length > 0 ? (
+                          {item.pricingType === "variant" && Object.entries(variantRates).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
                             <div className="relative z-10 w-full">
                               <button
                                 type="button"
@@ -936,7 +936,7 @@ export default function FoodListing({
                                     {Object.entries(variantRates)
                                       .filter(
                                         ([key, price]) =>
-                                          price != null && price !== undefined
+                                          price && price.price !== "" && price.price != null && Number(price.price) > 0
                                       )
                                       .map(([key, price]) => {
                                         const isActive =
@@ -1277,7 +1277,7 @@ export default function FoodListing({
                           const variantRates = item.variantRates || {};
 
                           return Object.entries(variantRates)
-                            .filter(([, variant]) => variant?.price != null)
+                            .filter(([, variant]) => variant && variant.price !== "" && variant.price != null && Number(variant.price) > 0)
                             .map(([key, variant]) => {
                               const hasVariantDiscount =
                                 hasActiveDiscount(item, key) &&

@@ -1658,7 +1658,7 @@ const Orders = () => {
         {orderForBillModal && (
           <ItemsModal
             order={orderForBillModal}
-            restaurantDetails={restaurantData}
+            restaurantDetails={restaurantData?.restaurant || restaurantData}
             autoPrint={billModalAutoPrint}
             onClose={() => {
               setOrderForBillModal(null);

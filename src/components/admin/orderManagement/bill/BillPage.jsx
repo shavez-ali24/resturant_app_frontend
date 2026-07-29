@@ -386,7 +386,9 @@ const BillPage = ({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const restaurantDeliveryCharge = parseAmount(restaurantDetails?.deliveryCharges);
+  const restaurantObj = restaurantDetails?.restaurant || restaurantDetails;
+
+  const restaurantDeliveryCharge = parseAmount(restaurantObj?.deliveryCharges);
   const hasOrderDeliveryCharge =
     activeOrder?.deliveryCharges !== undefined &&
     activeOrder?.deliveryCharges !== null &&
@@ -419,7 +421,7 @@ const BillPage = ({
 
   const gstRate = parseAmount(
     activeOrder?.gstRate ??
-    restaurantDetails?.gstRate ??
+    restaurantObj?.gstRate ??
     order?.gstRate ??
     0
   );
@@ -448,19 +450,19 @@ const BillPage = ({
   }
 
   const restaurantName =
-    restaurantDetails?.restaurantName ||
-    restaurantDetails?.name ||
+    restaurantObj?.restaurantName ||
+    restaurantObj?.name ||
     "Restaurant Name";
-  const restaurantAddress = restaurantDetails?.address || "Restaurant Address";
-  const restaurantPhone = restaurantDetails?.phoneNumber || "N/A";
+  const restaurantAddress = restaurantObj?.address || "Restaurant Address";
+  const restaurantPhone = restaurantObj?.phoneNumber || restaurantObj?.phone || "N/A";
   const rawGstin =
-    restaurantDetails?.gstNumber ??
-    restaurantDetails?.gstin ??
-    restaurantDetails?.gstIN ??
+    restaurantObj?.gstNumber ??
+    restaurantObj?.gstin ??
+    restaurantObj?.gstIN ??
     "";
   const normalizedGstin = String(rawGstin || "").trim();
   const restaurantGstin =
-    normalizedGstin && restaurantDetails?.gstEnabled !== false
+    normalizedGstin && restaurantObj?.gstEnabled !== false
       ? normalizedGstin
       : null;
   const displayAddress = isEditMode ? address : activeOrder?.address;
@@ -492,15 +494,15 @@ const BillPage = ({
 
   const getFinalQR = () => {
     const rawQR =
-      (typeof restaurantDetails?.qrCode === "string" ||
-      typeof restaurantDetails?.qrCode === "number")
-        ? String(restaurantDetails?.qrCode)
+      (typeof restaurantObj?.qrCode === "string" ||
+      typeof restaurantObj?.qrCode === "number")
+        ? String(restaurantObj?.qrCode)
         : (
-            restaurantDetails?.qrCode?.url ||
-            restaurantDetails?.qrCode?.secure_url ||
-            restaurantDetails?.qrCode?.secureUrl ||
-            restaurantDetails?.qrCode?.path ||
-            restaurantDetails?.qrCode?.base64 ||
+            restaurantObj?.qrCode?.url ||
+            restaurantObj?.qrCode?.secure_url ||
+            restaurantObj?.qrCode?.secureUrl ||
+            restaurantObj?.qrCode?.path ||
+            restaurantObj?.qrCode?.base64 ||
             ""
           );
     const cleanedQR = String(rawQR || "").replace(/\s/g, "");
@@ -1205,13 +1207,6 @@ const BillPage = ({
             {/* Restaurant Header */}
             <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
               <div className="flex flex-col items-center text-center">
-                {qrSrc ? (
-                  <img
-                    src={qrSrc}
-                    alt="QR Code"
-                    className={`mb-2 h-12 w-12 rounded-md border ${billBorderClass} object-contain`}
-                  />
-                ) : null}
                 <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
                 <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
                 <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>

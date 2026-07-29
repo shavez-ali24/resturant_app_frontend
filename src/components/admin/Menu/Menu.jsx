@@ -371,6 +371,60 @@ const AvailabilityBadge = ({ available }) => (
   </span>
 );
 
+const VisibilityBadge = ({ visibility }) => {
+  const isPublic = visibility === "PUBLIC" || !visibility;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        isPublic
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+          : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+      }`}
+    >
+      {isPublic ? "Client Visible" : "Admin Only"}
+    </span>
+  );
+};
+
+const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
+  let label = "Client Visible";
+  let trackClass = "bg-green-600 dark:bg-emerald-400";
+  let knobTranslate = "translate-x-3";
+  let borderClass = "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200";
+
+  if (state === "ADMIN") {
+    label = "Client Hidden";
+    trackClass = "bg-red-600 dark:bg-rose-500";
+    knobTranslate = "translate-x-0";
+    borderClass = "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-250";
+  } else if (state === "MIXED") {
+    label = "Both Visible";
+    trackClass = "bg-amber-500 dark:bg-amber-400";
+    knobTranslate = "translate-x-1.5"; // Centered yellow knob!
+    borderClass = "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={`inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold transition ${
+        disabled
+          ? "cursor-not-allowed opacity-60"
+          : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      } ${borderClass}`}
+    >
+      <span className={`relative h-4 w-7 rounded-full transition-colors ${trackClass}`}>
+        <span
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${knobTranslate}`}
+        />
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+};
+
 const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   const isMixed = status === "mixed";
   const isIn = status === "in";
@@ -526,6 +580,7 @@ const Menu = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewingItem, setViewingItem] = useState(null);
+  const [togglingCategory, setTogglingCategory] = useState("");
 
   // Refetch on every navigation to this page
   useEffect(() => {
@@ -760,6 +815,54 @@ const Menu = () => {
     (value = "") => normalizeCategoryLabel(value).toLowerCase(),
     [normalizeCategoryLabel]
   );
+
+  const getCategoryVisibilityState = useCallback((catName) => {
+    const itemsInCategory = items.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (itemsInCategory.length === 0) return "PUBLIC";
+    const hasPublic = itemsInCategory.some((item) => item.visibility !== "ADMIN");
+    const hasAdmin = itemsInCategory.some((item) => item.visibility === "ADMIN");
+
+    if (hasPublic && hasAdmin) return "MIXED";
+    if (hasAdmin) return "ADMIN";
+    return "PUBLIC";
+  }, [items, normalizeCategoryKey]);
+
+  const handleToggleCategoryVisibility = useCallback(async (catName) => {
+    const itemsInCategory = items.filter(
+      (item) => normalizeCategoryKey(item.category) === normalizeCategoryKey(catName)
+    );
+    if (itemsInCategory.length === 0) {
+      notify(`No menu items found in "${catName}" category to toggle visibility`, "info");
+      return;
+    }
+
+    const state = getCategoryVisibilityState(catName);
+    const nextVisibility = state === "PUBLIC" ? "ADMIN" : "PUBLIC";
+
+    setTogglingCategory(catName);
+
+    try {
+      await Promise.all(
+        itemsInCategory.map((item) =>
+          updateMenuItem({
+            itemId: item._id,
+            updatedData: { visibility: nextVisibility },
+          }).unwrap()
+        )
+      );
+      notify(
+        `All items in "${catName}" are now ${nextVisibility === "ADMIN" ? "hidden" : "visible"}`,
+        "success"
+      );
+    } catch (err) {
+      console.error("Failed to toggle category visibility:", err);
+      notify("Failed to update category visibility", "error");
+    } finally {
+      setTogglingCategory("");
+    }
+  }, [items, normalizeCategoryKey, getCategoryVisibilityState, updateMenuItem, notify]);
 
   const persistRestaurantCategories = useCallback(
     async (updatedCategories, successMessage) => {
@@ -1362,16 +1465,16 @@ const prepareFormData = (formData, file) => {
     
     if (!discount) return { type: "flat", value: 0, active: false };
     
+    // Check active - handle both boolean and string representations
+    const isActive = discount.active === true || discount.active === "true";
+    
     // Parse the value as integer
     const rawValue = discount.value;
     let val = 0;
-    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+    if (isActive && rawValue !== undefined && rawValue !== null && rawValue !== "") {
       val = parseInt(rawValue.toString().trim(), 10);
       if (isNaN(val)) val = 0;
     }
-    
-    // Check active - handle both boolean and string representations
-    const isActive = discount.active === true || discount.active === "true";
     
     const result = {
       type: discount.type || "flat",
@@ -1831,13 +1934,20 @@ const prepareFormData = (formData, file) => {
 
               <div className="flex min-h-0 flex-col rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <p className="text-base font-semibold text-[#1c1917] dark:text-slate-100">
                       {selectedCategory || "All items"}
                       <span className="ml-2 text-sm font-medium text-[#a8a29e] dark:text-slate-400">
                         ({menuEditorItems.length})
                       </span>
                     </p>
+                    {selectedCategory && (
+                      <CategoryVisibilityToggle
+                        state={getCategoryVisibilityState(selectedCategory)}
+                        onToggle={() => handleToggleCategoryVisibility(selectedCategory)}
+                        disabled={togglingCategory === selectedCategory}
+                      />
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="flex flex-wrap items-center gap-2">
@@ -1966,6 +2076,7 @@ const prepareFormData = (formData, file) => {
                             <div className="flex w-full flex-col items-start gap-1 sm:w-auto sm:items-end">
                               <div className="flex flex-wrap items-center gap-2">
                                 <AvailabilityBadge available={isAvailable} />
+                                <VisibilityBadge visibility={item?.visibility} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
                                 <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#a8a29e] dark:text-slate-400">
