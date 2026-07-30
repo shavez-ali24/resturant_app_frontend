@@ -109,6 +109,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
+    /*
     ...(isAdmin
       ? [
           {
@@ -121,6 +122,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
+    */
     {
       title: "Profile",
       url: "/admin/profile",

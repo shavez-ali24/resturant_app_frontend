@@ -486,7 +486,7 @@ const getItemQuantity = (item) => {
           disabled={status === "ready"}
           className={`w-full py-2.5 rounded border-2 ${colors.border} ${colors.text} text-[12px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors ${status === "ready" ? "opacity-50 cursor-not-allowed bg-blue-50 border-blue-300 text-blue-600" : ""}`}
         >
-          {status === "pending" ? "Start Preparing" : status === "preparing" ? "Mark as Ready" : "Ready for Pickup"}
+          {status === "pending" ? "Start Preparing" : status === "preparing" ? "Mark as Ready" : "Ready"}
         </button>
       </div>
     </div>

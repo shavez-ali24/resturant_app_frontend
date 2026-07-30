@@ -1478,9 +1478,9 @@ const Orders = () => {
               style={{
                 borderBottomColor: viewMode === "table" ? colors.primary : 'transparent'
               }}
-              title="Table View"
+              title="Order List View"
             >
-              Table
+              Order List
             </button>
             <button
               onClick={() => { localStorage.setItem("orderViewMode", "layout"); setViewMode("layout"); }}
@@ -1491,9 +1491,9 @@ const Orders = () => {
               style={{
                 borderBottomColor: viewMode === "layout" ? colors.primary : 'transparent'
               }}
-              title="Layout View"
+              title="Live Tables View"
             >
-              Layout
+              Live Tables
             </button>
           </div>
           {/* ── Create Order Button (right side) ── */}

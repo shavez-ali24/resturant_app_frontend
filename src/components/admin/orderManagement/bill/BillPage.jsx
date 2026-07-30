@@ -1259,6 +1259,12 @@ const BillPage = ({
                 </p>
               )}
               <p>
+                <strong>Date:</strong>{" "}
+                {activeOrder?.createdAt
+                  ? new Date(activeOrder.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
+                  : "N/A"}
+              </p>
+              <p>
                 <strong>Time:</strong>{" "}
                 {activeOrder?.createdAt
                   ? new Date(activeOrder.createdAt).toLocaleTimeString([], { hour12: true })
