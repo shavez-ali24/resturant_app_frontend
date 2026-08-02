@@ -135,7 +135,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1.5">
                       <Tag size={13} className="text-orange-500" />
-                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-orange-300 bg-orange-100 text-orange-700"}`}>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium truncate max-w-[150px] sm:max-w-[250px] inline-block ${isDarkMode ? "border-slate-600 bg-slate-700 text-slate-200" : "border-orange-300 bg-orange-100 text-orange-700"}`}>
                         {item.category || "Uncategorized"}
                       </span>
                     </div>
@@ -149,7 +149,7 @@ const MenuItemViewModal = ({ item, isOpen, onClose, menu = [] }) => {
                       {item.available ? "AVAILABLE" : "UNAVAILABLE"}
                     </span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold text-white ${item.visibility === "ADMIN" ? "bg-amber-500" : "bg-blue-500"}`}>
-                      {item.visibility === "ADMIN" ? "ADMIN ONLY" : "CLIENT VISIBLE"}
+                      {item.visibility === "ADMIN" ? "OFF MENU" : "ON MENU"}
                     </span>
                   </div>
                 </div>

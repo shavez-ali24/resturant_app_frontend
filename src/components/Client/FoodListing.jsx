@@ -484,7 +484,7 @@ export default function FoodListing({
                           {item.pricingType === "combo" && (
                             <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-primary px-2 py-1 text-white shadow-sm">
                               <span className="text-xs font-bold">
-                                Only Combo
+                                Combo
                               </span>
                             </div>
                           )}
@@ -856,7 +856,7 @@ export default function FoodListing({
                         {item.pricingType === "combo" && (
                           <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full border border-white bg-primary px-2 py-1 text-white shadow-sm">
                             <span className="text-xs font-bold">
-                              Only Combo
+                              Combo
                             </span>
                           </div>
                         )}
@@ -1205,7 +1205,7 @@ export default function FoodListing({
                     {descModal.item.pricingType === "combo" && (
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isDarkMode ? "bg-primary/20 text-primary border border-primary/30" : "bg-primary text-white"
                         }`}>
-                        Only Combo ({getComboItemsCount(descModal.item)} items)
+                        Combo ({getComboItemsCount(descModal.item)} items)
                       </span>
                     )}
                   </div>
@@ -1313,7 +1313,7 @@ export default function FoodListing({
                         const discountLabel = getDiscountLabel(item.discount);
 
                         return renderPriceLine(
-                          item.pricingType === "combo" ? "Only Combo" : "Price",
+                          item.pricingType === "combo" ? "Combo" : "Price",
                           originalItemPrice,
                           discountedItemPrice,
                           hasItemDiscount ? discountLabel : "",
@@ -1339,7 +1339,7 @@ export default function FoodListing({
                     <div className={`rounded-2xl p-4 border ${isDarkMode ? "bg-slate-900/80 border-slate-700" : "bg-primary/10 border-primary/20"
                       }`}>
                       <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-primary" : "text-primary"}`}>
-                        Only Combo Includes ({descModal.item.comboItems.length} items)
+                        Combo Includes ({descModal.item.comboItems.length} items)
                       </h4>
                       <div className="space-y-2">
                         {descModal.item.comboItems.map((comboItem, index) => (

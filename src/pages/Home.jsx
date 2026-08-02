@@ -282,7 +282,7 @@ export default function Home() {
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
-              {filters.combo ? "No only combo items available" :
+              {filters.combo ? "No combo items available" :
                filters.veg ? "No veg items available" :
                filters.nonVeg ? "No non-veg items available" : 
                filters.mixed ? "No mixed items available" :

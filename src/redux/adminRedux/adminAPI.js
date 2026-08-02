@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "../../config";
+import { logout } from "./adminSlice";
 
 const addAdminModifiedOrderId = (id) => {
   if (!id) return;
@@ -110,12 +111,7 @@ const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
   const result = await baseQuery(args, api, extraOptions);
   const status = result.error?.status || result.error?.originalStatus;
   if (typeof window !== "undefined" && (status === 401 || status === 403)) {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("adminInfo");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("user");
+    api.dispatch(logout());
     window.location.replace("/login");
   }
   return result;

@@ -21,7 +21,10 @@ const NotificationToasts = lazy(() => import("./NotificationToasts"));
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
 import { getFriendlyAdminMessage } from "@/utils/errorHelpers";
 
+import { useSelector } from "react-redux";
+
 export const NotificationProvider = ({ children }) => {
+  const token = useSelector((state) => state.admin?.token) || localStorage.getItem("admin_token");
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
@@ -54,7 +57,6 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const token = localStorage.getItem("admin_token");
     if (!token || !config?.BASE_URL) return undefined;
 
     const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
@@ -105,7 +107,7 @@ export const NotificationProvider = ({ children }) => {
       }
       setSseConnected(false);
     };
-  }, []);
+  }, [token]);
 
   return (
     <NotificationContext.Provider value={{

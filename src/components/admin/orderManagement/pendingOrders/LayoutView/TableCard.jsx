@@ -5,6 +5,14 @@ import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
+const formatElapsed = (minutes) => {
+  if (minutes == null) return "";
+  if (minutes < 60) return ` • ${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return ` • ${h}h${m > 0 ? ` ${m}m` : ""}`;
+};
+
 const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
   const primaryColor = themeColors?.primary || "#EF9F27";
 
@@ -229,7 +237,7 @@ const TableCard = React.memo(function TableCard({
       {/* Top status / time */}
       {!hasNewClientItems && (
         <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: cardStyle.labelColor, textTransform: "uppercase", letterSpacing: "0.6px" }}>
-          {isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${elapsedMinutes != null ? ` • ${elapsedMinutes}m` : ""}`}
+          {isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${formatElapsed(elapsedMinutes)}`}
         </div>
       )}
 

@@ -323,11 +323,11 @@ const MenuItemCard = ({
 
             {safeItem.visibility === "ADMIN" ? (
               <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-amber-950/30 dark:text-amber-400">
-                Admin Only
+                Off Menu
               </div>
             ) : (
               <div className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 sm:px-2 sm:py-0.5 sm:text-[11px] lg:px-2 lg:py-0.5 lg:text-[10px] dark:bg-blue-950/30 dark:text-blue-400">
-                Public
+                On Menu
               </div>
             )}
 

@@ -38,6 +38,19 @@ const StaffManagement = lazy(() => import("./components/admin/Staff/StaffManagem
 const AdminOrderPanel = lazy(() => import("./components/admin/OrderPanel/AdminOrderPanel"));
 const TableManagement = lazy(() => import("./components/admin/tableManagement/TableManagement"));
 
+// Dynamic import failure (Chunk load error) catch karne ke liye
+window.addEventListener("error", (e) => {
+  if (e.message && e.message.includes("Failed to fetch dynamically imported module")) {
+    window.location.reload();
+  }
+}, true);
+
+window.addEventListener("unhandledrejection", (e) => {
+  if (e.reason && e.reason.message && e.reason.message.includes("Failed to fetch dynamically imported module")) {
+    window.location.reload();
+  }
+});
+
 const RouteFallback = () => {
   const location = useLocation();
   const isAdminRoute =

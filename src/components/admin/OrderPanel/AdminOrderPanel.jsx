@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -536,6 +536,7 @@ function OrderSummaryPanel({
   isBilled = false,
   setShowPayModal,
   setBookingOrderId,
+  hasRooms = false,
 }) {
   const { notify, newItemsByOrderId } = useNotification() || {};
   const colors = useSelector((state) => state.admin.theme.colors);
@@ -763,7 +764,6 @@ function OrderSummaryPanel({
                           setOrderType(type);
                           setTableId("");
                         }
-                        notify(`Order type changed to ${type}!`, "success");
                       }}
                       className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
                       style={{
@@ -789,8 +789,8 @@ function OrderSummaryPanel({
             {/* Table / Room selector — only when Eat Here or Room Stay, and showTableSelector is true */}
             {(orderType === "Eat Here" || orderType === "Room Stay") && showTableSelector && (
               <div className="space-y-3">
-                {/* Dine In Type sub-toggle (only when showTableSelector is true) */}
-                {showTableSelector && (
+                {/* Dine In Type sub-toggle (only when showTableSelector is true and hasRooms is true) */}
+                {showTableSelector && hasRooms && (
                   <div>
                     <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                       Unit Type
@@ -808,7 +808,6 @@ function OrderSummaryPanel({
                             setDineInType(key);
                             setOrderType(orderTypeTarget);
                             setTableId(""); // clear table selection when switching types
-                            notify(`Switched to ${label} mode`, "success");
                           }}
                           className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
                           style={{
@@ -846,9 +845,6 @@ function OrderSummaryPanel({
                         setBookingErrors({});
                       } else {
                         setTableId(val);
-                        if (opt) {
-                          notify(`Selected ${dineInType === "ROOM" ? "room" : "table"}: ${opt.label}`, "success");
-                        }
                       }
                     }}
                     options={tableOptions}
@@ -978,7 +974,7 @@ function OrderSummaryPanel({
         {isBilled ? (
           <button
             type="button"
-            onClick={() => setShowPayModal(true)}
+            onClick={() => setShowPayModal(editingOrder)}
             className="w-full h-12 rounded-xl text-sm font-black transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] text-white hover:opacity-90 bg-emerald-600 border border-emerald-600"
           >
             <IndianRupee className="h-4 w-4 shrink-0 text-white" />
@@ -1080,8 +1076,8 @@ function OrderSummaryPanel({
         >
           <div
             className={`w-full max-w-md rounded-2xl shadow-2xl border overflow-hidden p-6 space-y-5 transition-all duration-300 ${isDarkMode
-                ? "bg-slate-900 border-slate-700/60 text-slate-100"
-                : "bg-white border-[#ede8e3] text-gray-800"
+              ? "bg-slate-900 border-slate-700/60 text-slate-100"
+              : "bg-white border-[#ede8e3] text-gray-800"
               }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1094,8 +1090,8 @@ function OrderSummaryPanel({
                 type="button"
                 onClick={() => setBookingRoomOpt(null)}
                 className={`p-1.5 rounded-lg transition-all ${isDarkMode
-                    ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                    : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                  ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
                   }`}
               >
                 <X size={20} />
@@ -1125,8 +1121,8 @@ function OrderSummaryPanel({
                   }}
                   placeholder="Enter guest name"
                   className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
+                    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                    : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1151,8 +1147,8 @@ function OrderSummaryPanel({
                   placeholder="10-digit phone number"
                   maxLength={10}
                   className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
+                    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                    : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1171,8 +1167,8 @@ function OrderSummaryPanel({
                   type="button"
                   onClick={() => setBookingRoomOpt(null)}
                   className={`flex-1 h-10 rounded-xl border text-sm font-semibold transition-all ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
-                      : "bg-white border-gray-200 text-gray-650 hover:bg-gray-55"
+                    ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                    : "bg-white border-gray-200 text-gray-650 hover:bg-gray-55"
                     }`}
                 >
                   Cancel
@@ -1225,6 +1221,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [billOrder] = useBillOrderMutation();
 
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [expandedCategory, setExpandedCategory] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [variantPickerItem, setVariantPickerItem] = useState(null);
   const [orderType, setOrderType] = useState("Eat Here");
@@ -1237,13 +1234,21 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [success, setSuccess] = useState(false);
   const [originalOrderItems, setOriginalOrderItems] = useState([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
-  const [showPayModal, setShowPayModal] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(null);
   const [bookingOrderId, setBookingOrderId] = useState(null);
 
   const isEditing = Boolean(editingOrder?._id);
   const isBilled = editingOrder && editingOrder.status === "completed" && !editingOrder.paymentMethod;
   const isSubmitting = isCreating || isUpdating;
   const restaurant = restaurantData?.restaurant || {};
+
+  const hasRooms = useMemo(() => {
+    const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+    return sections.some((section) => {
+      const units = Array.isArray(section.units) ? section.units : [];
+      return units.some((unit) => unit.type === "ROOM" && unit.isActive !== false);
+    });
+  }, [restaurant.sections]);
 
   const tableOptions = (() => {
     const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
@@ -1641,9 +1646,19 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       if (mode === "print_bill" && finalOrder) {
         try {
-          await billOrder(finalOrder._id).unwrap();
+          const billResponse = await billOrder(finalOrder._id).unwrap();
+          const billedOrder = billResponse?.order || billResponse || finalOrder;
+          setShowPayModal({
+            ...finalOrder,
+            ...billedOrder,
+            status: "completed",
+          });
         } catch (err) {
           console.error("Billing failed", err);
+          setShowPayModal({
+            ...finalOrder,
+            status: "completed",
+          });
         }
       }
 
@@ -1711,6 +1726,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     isBilled,
     setShowPayModal,
     setBookingOrderId,
+    hasRooms,
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -1793,7 +1809,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => {
+                setSelectedCategory(cat);
+                setExpandedCategory(prev => prev === cat ? null : cat);
+              }}
               className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${selectedCategory === cat
                 ? ""
                 : isDarkMode
@@ -1808,7 +1827,9 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                 paddingLeft: "12px"
               } : {}}
             >
-              {cat}
+              <span className={expandedCategory === cat ? "block whitespace-normal break-words" : "block truncate"}>
+                {cat}
+              </span>
             </button>
           ))}
         </div>
@@ -2120,9 +2141,9 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       {showPayModal && (
         <PayModal
-          order={editingOrder}
+          order={showPayModal}
           onClose={() => {
-            setShowPayModal(false);
+            setShowPayModal(null);
             if (onOrderSuccess) {
               onOrderSuccess("pay");
             }

@@ -11,6 +11,7 @@ import {
   X,
   Eye,
   EyeOff,
+  SquarePen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -641,17 +642,30 @@ const CategoryTypeSelectors = ({
                     <div key={cat} className="group relative">
                       <SelectItem
                         value={cat}
-                        className="pr-20 data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200 [&>span:first-child]:hidden"
+                        className="pr-24 data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200 [&>span:first-child]:hidden [&>span:last-child]:truncate [&>span:last-child]:max-w-[120px] sm:[&>span:last-child]:max-w-[200px] [&>span:last-child]:block"
                       >
-                        <span className="block max-w-full truncate">{cat}</span>
+                        {cat}
                       </SelectItem>
                       <div className="absolute inset-y-0 right-1 z-10 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                          onPointerDown={(event) => handleActionIconClick(event, () => {})}
+                          onClick={(event) =>
+                            handleActionIconClick(event, () => handleStartRename(cat))
+                          }
+                          disabled={isSavingCategory || !!activeCategoryAction}
+                          aria-label={`Rename ${cat}`}
+                          title="Rename category"
+                        >
+                          <SquarePen className="h-4 w-4" />
+                        </button>
                         <button
                           type="button"
                           className="rounded-lg p-1.5 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                           onPointerDown={(event) => handleActionIconClick(event, () => {})}
                           onClick={(event) =>
-                              handleActionIconClick(event, () => requestDeleteCategory(cat))
+                            handleActionIconClick(event, () => requestDeleteCategory(cat))
                           }
                           disabled={isSavingCategory || !!activeCategoryAction}
                           aria-label={`Delete ${cat}`}

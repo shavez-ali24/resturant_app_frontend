@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "@/config";
+import { logoutSuperAdmin } from "./superAdminSlice";
 
 const baseQuery = fetchBaseQuery({
   baseUrl: `${config.BASE_URL}/api`,
@@ -18,11 +19,7 @@ const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
   const status = result.error?.status || result.error?.originalStatus;
 
   if (typeof window !== "undefined" && (status === 401 || status === 403)) {
-    localStorage.removeItem("sa_token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
+    api.dispatch(logoutSuperAdmin());
     window.location.replace("/super-login");
   }
 

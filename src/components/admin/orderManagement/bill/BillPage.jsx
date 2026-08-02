@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
+import PayModal from "../pendingOrders/PayModal";
 import {
   useBillOrderMutation,
   useToggleItemReadyMutation,
@@ -82,6 +83,7 @@ const BillPage = ({
   const [address, setAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showPayModal, setShowPayModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -933,6 +935,7 @@ const BillPage = ({
         completedAt: billedData?.completedAt || new Date().toISOString(),
       }));
       broadcastOrderStatus(orderId, "completed");
+      setShowPayModal(true);
     } catch (err) {
       setError(err?.data?.message || err?.message || "Failed to bill order");
     }
@@ -1731,6 +1734,15 @@ const BillPage = ({
           </button>
          </div>
        </MotionDiv>
+       {showPayModal && (
+         <PayModal
+           order={localOrderData || activeOrder}
+           onClose={() => {
+             setShowPayModal(false);
+             onClose();
+           }}
+         />
+       )}
     </MotionDiv>
   );
 };
