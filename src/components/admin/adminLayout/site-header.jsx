@@ -1,6 +1,7 @@
 import { useState, useEffect, Suspense, lazy } from "react";
-import { PanelRightClose, Store, AlertTriangle, CheckCircle, Moon, Sun } from "lucide-react";
+import { PanelRightClose, Store, AlertTriangle, CheckCircle, Moon, Sun, LayoutGrid } from "lucide-react";
 import { useSelector } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -20,6 +21,18 @@ export function SiteHeader({
   const toggleSidebar = useSidebar().toggleSidebar;
   const { notify } = useNotification();
   const colors = useSelector((state) => state.admin.theme.colors);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleGoToLiveTables = () => {
+    localStorage.setItem("orderViewMode", "layout");
+    localStorage.setItem("orderLayoutFilter", "eat_here");
+    if (location.pathname === "/admin/orders") {
+      window.dispatchEvent(new Event("goToLiveTables"));
+    } else {
+      navigate("/admin/orders");
+    }
+  };
 
   const [hoverSidebarToggle, setHoverSidebarToggle] = useState(false);
   const [hoverToggleCard, setHoverToggleCard] = useState(false);
@@ -127,12 +140,12 @@ export function SiteHeader({
           ? "border-slate-700/60 bg-[#0f172a]/95"
           : "border-[#ede8e3] bg-white/95"
         }`}>
-        <div className="flex h-14 w-full flex-wrap items-center justify-between gap-2 px-3 md:px-6">
+        <div className="flex h-14 w-full flex-nowrap items-center justify-between gap-1.5 px-2.5 md:px-6">
           {/* Left Side - Menu Toggle */}
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <button
               onClick={toggleSidebar}
-              className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
+              className="md:hidden relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
               aria-label="Toggle sidebar"
             >
               <PanelRightClose size={20} className="stroke-[1.5]" />
@@ -140,7 +153,7 @@ export function SiteHeader({
 
             <Separator
               orientation="vertical"
-              className={`h-7 ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}
+              className={`h-7 md:hidden ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}
             />
 
             {/* Restaurant Info - only show on md+ */}
@@ -160,24 +173,54 @@ export function SiteHeader({
           </div>
 
           {/* Right Side - Controls */}
-          <div className="mt-0 flex shrink-0 items-center gap-2 md:gap-4">
+          <div className="mt-0 flex shrink-0 items-center gap-1.5 sm:gap-2.5 md:gap-4">
             {/* Status Toggle - styled as a clean indicator dot and text like the image */}
             {isAdmin && (
               <>
                 <button
                   onClick={handleToggleClick}
                   disabled={loading || toggleLoading}
-                  className="flex items-center gap-2 rounded-full px-2 py-1.5 transition-colors focus:outline-none"
+                  className="flex items-center gap-1.5 rounded-full px-2 py-1.5 transition-colors focus:outline-none"
                   title="Toggle Restaurant Status"
                 >
                   <span
                     className={`h-2.5 w-2.5 rounded-full shrink-0 ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}
                   />
-                  <span className={`text-sm font-extrabold transition-colors select-none ${isDarkMode ? "text-slate-200 hover:text-slate-100" : "text-[#57524e] hover:text-[#1c1917]"
+                  <span className={`text-[10px] sm:text-xs md:text-sm font-black transition-colors select-none ${isDarkMode ? "text-slate-200 hover:text-slate-100" : "text-[#57524e] hover:text-[#1c1917]"
                     }`}>
-                    {isOpen === true ? 'Open' : isOpen === false ? 'Closed' : '...'}
+                    {isOpen === true ? 'Restaurant Open' : isOpen === false ? 'Restaurant Closed' : '...'}
                   </span>
                 </button>
+                <Separator
+                  orientation="vertical"
+                  className={`hidden h-7 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}
+                />
+              </>
+            )}
+
+            {/* Live Orders shortcut button - only visible on other pages */}
+            {location.pathname !== "/admin/orders" && (
+              <>
+                <button
+                  onClick={handleGoToLiveTables}
+                  className={`flex h-9 items-center justify-center rounded-full px-2 sm:px-3.5 text-xs font-black transition-all duration-150 active:scale-[0.95] border shadow-sm ${
+                    isDarkMode
+                      ? "border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
+                      : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
+                  }`}
+                  style={{
+                    backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}08`,
+                    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}30`,
+                    color: isDarkMode ? "#fb923c" : colors.primary,
+                  }}
+                  title="Instant Live Orders View"
+                >
+                  <LayoutGrid size={16} className="shrink-0" style={{
+                    color: isDarkMode ? "#fb923c" : colors.primary
+                  }} />
+                  <span className="hidden sm:inline ml-1">Live Orders</span>
+                </button>
+
                 <Separator
                   orientation="vertical"
                   className={`hidden h-7 md:block ${isDarkMode ? "bg-slate-700/30" : "bg-[#ede8e3]"}`}

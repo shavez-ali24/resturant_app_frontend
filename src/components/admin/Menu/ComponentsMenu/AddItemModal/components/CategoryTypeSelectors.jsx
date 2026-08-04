@@ -687,7 +687,7 @@ const CategoryTypeSelectors = ({
         </Select>
 
         {showAddCategoryInput && (
-          <div className="mt-2 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-2.5">
+          <div className="mt-2 rounded-lg border border-[#ede8e3] dark:border-slate-700/60 bg-[#f7f3ef] dark:bg-slate-800/40 p-2.5">
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 value={newCategoryInput}
@@ -731,7 +731,7 @@ const CategoryTypeSelectors = ({
                     setNewCategoryError("");
                   }}
                   disabled={isSavingCategory || !!activeCategoryAction}
-                  className="h-9 rounded-lg border border-[#ede8e3] px-3 text-sm text-[#78716c] hover:bg-[#f7f3ef]"
+                  className="h-9 rounded-lg border border-[#ede8e3] dark:border-slate-700 px-3 text-sm text-[#78716c] dark:text-slate-350 hover:bg-[#f7f3ef] dark:hover:bg-slate-700/40"
                 >
                   Cancel
                 </Button>

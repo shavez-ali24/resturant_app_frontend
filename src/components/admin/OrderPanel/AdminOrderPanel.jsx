@@ -537,11 +537,12 @@ function OrderSummaryPanel({
   setShowPayModal,
   setBookingOrderId,
   hasRooms = false,
+  restaurant = {},
 }) {
   const { notify, newItemsByOrderId } = useNotification() || {};
   const colors = useSelector((state) => state.admin.theme.colors);
-  const [isFormCollapsed, setIsFormCollapsed] = useState(false);
   const isEditing = Boolean(editingOrder?._id);
+  const [isFormCollapsed, setIsFormCollapsed] = useState(isEditing);
   const showTableSelector = !isEditing || (editingOrder?.orderType !== "Eat Here" && editingOrder?.orderType !== "Room Stay");
 
   const [createRoomBooking, { isLoading: isBookingRoom }] = useCreateRoomBookingMutation();
@@ -600,6 +601,16 @@ function OrderSummaryPanel({
             <p className="text-xs font-black uppercase tracking-wider">Billed (Awaiting Payment)</p>
             <p className="text-[11px] font-medium opacity-80 mt-0.5">Order items are locked. Please record final payment below.</p>
           </div>
+        </div>
+      )}
+
+      {/* Scroll Hint if items are scrollable */}
+      {Object.keys(cartItems).length > 3 && (
+        <div className={`px-4 pt-3 pb-1 text-[10px] font-extrabold flex items-center justify-between shrink-0 ${textSecondary}`}>
+          <span className="uppercase tracking-wider">Selected Items ({Object.keys(cartItems).length})</span>
+          <span className="animate-pulse text-orange-500 dark:text-orange-400 flex items-center gap-1">
+            Scroll for more ↓
+          </span>
         </div>
       )}
 
@@ -739,10 +750,10 @@ function OrderSummaryPanel({
 
         {/* Collapsible Content — hidden when collapsed */}
         {!isFormCollapsed && (
-          <div className="px-4 pb-3 space-y-3">
+          <div className="px-4 pb-3 space-y-2">
             {/* Order Type */}
             <div>
-              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                 Order Type
               </label>
               <div className="flex gap-2">
@@ -751,6 +762,18 @@ function OrderSummaryPanel({
                   if (isRoomStay && (type === "Take Away" || type === "Delivery")) {
                     return null;
                   }
+
+                  const orderModes = restaurant?.orderModes || {};
+                  if (type === "Eat Here" && orderModes.eathere === false && orderType !== "Eat Here" && orderType !== "Room Stay") {
+                    return null;
+                  }
+                  if (type === "Take Away" && orderModes.takeaway === false && orderType !== "Take Away") {
+                    return null;
+                  }
+                  if (type === "Delivery" && orderModes.delivery === false && orderType !== "Delivery") {
+                    return null;
+                  }
+
                   const isActive = orderType === type || (type === "Eat Here" && orderType === "Room Stay");
                   return (
                     <button
@@ -788,17 +811,17 @@ function OrderSummaryPanel({
 
             {/* Table / Room selector — only when Eat Here or Room Stay, and showTableSelector is true */}
             {(orderType === "Eat Here" || orderType === "Room Stay") && showTableSelector && (
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Dine In Type sub-toggle (only when showTableSelector is true and hasRooms is true) */}
                 {showTableSelector && hasRooms && (
                   <div>
-                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                    <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                       Unit Type
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       {[
-                        { key: "TABLE", label: "Table (Dine In)", orderTypeTarget: "Eat Here" },
-                        { key: "ROOM", label: "Room (Stay)", orderTypeTarget: "Room Stay" },
+                        { key: "TABLE", label: "Table", orderTypeTarget: "Eat Here" },
+                        { key: "ROOM", label: "Room", orderTypeTarget: "Room Stay" },
                       ].map(({ key, label, orderTypeTarget }) => (
                         <button
                           key={key}
@@ -830,8 +853,8 @@ function OrderSummaryPanel({
                   </div>
                 )}
 
-                <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                <div className={!(showTableSelector && hasRooms) ? "col-span-2" : ""}>
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                     {dineInType === "ROOM" ? "Room Number" : "Table Number"}
                   </label>
                   <StyledSelect
@@ -856,33 +879,36 @@ function OrderSummaryPanel({
               </div>
             )}
 
-            {/* Customer Name */}
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                Customer name
-              </label>
-              <input
-                value={customerName}
-                onChange={handleNameChange}
-                placeholder="Customer name"
-                className={inputStyle}
-                disabled={isBilled}
-              />
-            </div>
+            {/* Customer name & phone in two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Customer Name */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Customer name
+                </label>
+                <input
+                  value={customerName}
+                  onChange={handleNameChange}
+                  placeholder="Customer name"
+                  className={inputStyle}
+                  disabled={isBilled}
+                />
+              </div>
 
-            {/* Phone */}
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                Phone number
-              </label>
-              <input
-                value={customerPhone}
-                onChange={handlePhoneChange}
-                placeholder="10-digit phone"
-                maxLength={10}
-                className={inputStyle}
-                disabled={isBilled}
-              />
+              {/* Phone */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Phone number
+                </label>
+                <input
+                  value={customerPhone}
+                  onChange={handlePhoneChange}
+                  placeholder="10-digit phone"
+                  maxLength={10}
+                  className={inputStyle}
+                  disabled={isBilled}
+                />
+              </div>
             </div>
 
             {/* Delivery Address */}
@@ -895,7 +921,7 @@ function OrderSummaryPanel({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Delivery address"
-                  rows={3}
+                  rows={2}
                   className={`${inputStyle} resize-none`}
                   disabled={isBilled}
                 />
@@ -1242,6 +1268,37 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const isSubmitting = isCreating || isUpdating;
   const restaurant = restaurantData?.restaurant || {};
 
+  // Auto-fallback order type based on enabled orderModes settings
+  useEffect(() => {
+    if (!restaurantData) return;
+    const modes = restaurantData?.restaurant?.orderModes || restaurantData?.orderModes || {};
+    if (orderType === "Eat Here" || orderType === "Room Stay") {
+      if (modes.eathere === false) {
+        if (modes.takeaway !== false) {
+          setOrderType("Take Away");
+        } else if (modes.delivery !== false) {
+          setOrderType("Delivery");
+        }
+      }
+    } else if (orderType === "Take Away") {
+      if (modes.takeaway === false) {
+        if (modes.eathere !== false) {
+          setOrderType("Eat Here");
+        } else if (modes.delivery !== false) {
+          setOrderType("Delivery");
+        }
+      }
+    } else if (orderType === "Delivery") {
+      if (modes.delivery === false) {
+        if (modes.eathere !== false) {
+          setOrderType("Eat Here");
+        } else if (modes.takeaway !== false) {
+          setOrderType("Take Away");
+        }
+      }
+    }
+  }, [restaurantData, orderType]);
+
   const hasRooms = useMemo(() => {
     const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
     return sections.some((section) => {
@@ -1398,7 +1455,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     return acc;
   }, {});
 
-  const categories = restaurantCategories.map((c) => String(c.name).trim());
+  const categories = restaurantCategories
+    .map((c) => String(c.name).trim())
+    .filter((catName) => {
+      const catKey = catName.toLowerCase();
+      return groupedMenu[catKey] && groupedMenu[catKey].length > 0;
+    });
 
   useEffect(() => {
     if (categories.length && !selectedCategory) {
@@ -1672,8 +1734,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       setOrderType("Take Away");
       setOriginalOrderItems([]);
 
+      const finalBilledOrder = (mode === "print_bill" && typeof billedOrder !== "undefined") ? billedOrder : finalOrder;
+
       if (onOrderSuccess) {
-        onOrderSuccess(mode);
+        onOrderSuccess(mode, finalBilledOrder);
       }
     } catch (err) {
       const backendMsg = err?.data?.message || err?.message || "";
@@ -1727,6 +1791,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     setShowPayModal,
     setBookingOrderId,
     hasRooms,
+    restaurant,
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -1876,7 +1941,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                 return (
                   <div
                     key={item._id}
-                    className={`relative flex flex-col justify-between min-h-[135px] rounded-2xl border p-3 transition-all duration-200 ${isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
+                    className={`relative flex flex-col justify-between min-h-[135px] rounded-2xl border p-3 transition-all duration-200 overflow-hidden ${isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
                       } ${quantity > 0
                         ? "shadow-sm"
                         : isDarkMode
@@ -1888,126 +1953,137 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       backgroundColor: isDarkMode ? "#1e293b" : "#ffffff"
                     } : {}}
                   >
-                    <div className="flex items-start gap-1.5 mb-1.5">
-                      <VegDot type={item.type} />
-                      <h3 className={`text-xs font-semibold leading-tight line-clamp-2 flex-1 min-w-0 break-words ${textPrimary}`}>
-                        {item.name}
-                      </h3>
-                    </div>
-
-                    {item.pricingType === "combo" && (
-                      <span
-                        className="self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1"
-                        style={{
-                          backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}10`,
-                          color: isDarkMode ? "#ffffff" : colors.primary
-                        }}
-                      >
-                        Combo
-                      </span>
+                    {item.image?.url && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center z-0 transition-all duration-300"
+                        style={{ backgroundImage: `url(${item.image.url})` }}
+                      />
                     )}
 
-                    <div className="flex flex-wrap items-center gap-1 mb-1.5">
-                      {item.pricingType === "variant" ? (
-                        <span
-                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                          style={{
-                            backgroundColor: isDarkMode ? "rgba(71, 85, 105, 0.4)" : `${colors.primary}10`,
-                            color: isDarkMode ? "#cbd5e1" : colors.primary
-                          }}
-                        >
-                          Variant
-                        </span>
-                      ) : hasDiscount ? (
-                        <>
-                          <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-400/70" : "text-slate-400"}`}>
-                            ₹{basePrice.toFixed(2)}
-                          </span>
-                          <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{discountedPrice.toFixed(2)}</span>
-                          <span className={`text-[9px] px-1 py-0.5 rounded-full font-semibold ${isDarkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"
-                            }`}>
-                            OFF
-                          </span>
-                        </>
-                      ) : (
-                        <span className={`text-xs font-semibold ${isDarkMode ? "text-slate-200" : "text-stone-500"}`}>₹{basePrice.toFixed(2)}</span>
-                      )}
-                    </div>
+                    <div className="relative z-20 flex flex-col justify-between h-full flex-1">
+                      <div className={item.image?.url ? "bg-white dark:bg-slate-950 p-1.5 rounded-xl border border-white/20 dark:border-slate-800/30" : ""}>
+                        <div className="flex items-start gap-1.5 mb-1">
+                          <VegDot type={item.type} />
+                          <h3 className={`text-xs font-semibold leading-tight line-clamp-2 flex-1 min-w-0 break-words ${textPrimary}`}>
+                            {item.name}
+                          </h3>
+                        </div>
 
-                    {isUnavailable && (
-                      <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center">
-                        <span className="text-[10px] font-semibold text-white bg-black/50 px-2 py-1 rounded-full">
-                          Unavailable
-                        </span>
+                        {item.pricingType === "combo" && (
+                          <span
+                            className="self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1 inline-block"
+                            style={{
+                              backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}10`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            }}
+                          >
+                            Combo
+                          </span>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-1">
+                          {item.pricingType === "variant" ? (
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                              style={{
+                                backgroundColor: isDarkMode ? "rgba(71, 85, 105, 0.4)" : `${colors.primary}10`,
+                                color: isDarkMode ? "#cbd5e1" : colors.primary
+                              }}
+                            >
+                              Variant
+                            </span>
+                          ) : hasDiscount ? (
+                            <>
+                              <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-400/70" : "text-slate-400"}`}>
+                                ₹{basePrice.toFixed(2)}
+                              </span>
+                              <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{discountedPrice.toFixed(2)}</span>
+                              <span className={`text-[9px] px-1 py-0.5 rounded-full font-semibold ${isDarkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"
+                                }`}>
+                                {item.discountValue}% OFF
+                              </span>
+                            </>
+                          ) : (
+                            <span className={`text-xs font-semibold ${isDarkMode ? "text-slate-200" : "text-stone-500"}`}>₹{basePrice.toFixed(2)}</span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    <div className="mt-auto pt-1">
-                      {item.pricingType === "variant" && Object.entries(item.variantRates || {}).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
-                        <button
-                          onClick={() => setVariantPickerItem(item)}
-                          disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
-                          style={!isBilled ? {
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
-                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
-                            color: isDarkMode ? "#ffffff" : colors.primary
-                          } : {}}
-                        >
-                          + Add
-                        </button>
-                      ) : quantity === 0 ? (
-                        <button
-                          onClick={() => handleAddItem(item)}
-                          disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
-                          style={!isBilled ? {
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
-                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
-                            color: isDarkMode ? "#ffffff" : colors.primary
-                          } : {}}
-                        >
-                          + Add
-                        </button>
-                      ) : (
-                        <div className="flex items-center justify-between gap-1.5">
-                          <button
-                            disabled={isBilled}
-                            onClick={() => dispatch(removeFromCart(cartKey))}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
-                              ? isDarkMode
-                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
-                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : "hover:opacity-90"
-                              }`}
-                            style={!isBilled ? {
-                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
-                              backgroundColor: isDarkMode ? "transparent" : "#ffffff",
-                              color: isDarkMode ? "#ffffff" : colors.primary
-                            } : {}}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <span className={`text-sm font-extrabold px-1 ${isDarkMode ? 'text-slate-100' : 'text-[#1c1917]'}`}>{quantity}</span>
-                          <button
-                            disabled={!isRestaurantOpen || isBilled}
-                            onClick={() => handleAddItem(item)}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
-                              ? isDarkMode
-                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
-                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : "hover:opacity-90"
-                              }`}
-                            style={!isBilled ? {
-                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
-                              backgroundColor: isDarkMode ? "transparent" : `${colors.primary}10`,
-                              color: isDarkMode ? "#ffffff" : colors.primary
-                            } : {}}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
+                      {isUnavailable && (
+                        <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center z-30">
+                          <span className="text-[10px] font-semibold text-white bg-black/50 px-2 py-1 rounded-full">
+                            Unavailable
+                          </span>
                         </div>
                       )}
+
+                      <div className="mt-auto pt-1">
+                        {item.pricingType === "variant" && Object.entries(item.variantRates || {}).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
+                          <button
+                            onClick={() => setVariantPickerItem(item)}
+                            disabled={!isRestaurantOpen || isBilled}
+                            className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                            style={!isBilled ? {
+                              backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                              borderColor: isDarkMode ? "#475569" : `${colors.primary}60`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
+                          >
+                            + Add
+                          </button>
+                        ) : quantity === 0 ? (
+                          <button
+                            onClick={() => handleAddItem(item)}
+                            disabled={!isRestaurantOpen || isBilled}
+                            className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                            style={!isBilled ? {
+                              backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                              borderColor: isDarkMode ? "#475569" : `${colors.primary}60`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
+                          >
+                            + Add
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-between gap-1.5">
+                            <button
+                              disabled={isBilled}
+                              onClick={() => dispatch(removeFromCart(cartKey))}
+                              className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                                ? isDarkMode
+                                  ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                                : "hover:opacity-90"
+                                }`}
+                              style={!isBilled ? {
+                                borderColor: isDarkMode ? "#475569" : `${colors.primary}40`,
+                                backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                                color: isDarkMode ? "#ffffff" : colors.primary
+                              } : {}}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className={`text-sm font-extrabold px-1 ${isDarkMode ? 'text-slate-100' : 'text-[#1c1917]'}`}>{quantity}</span>
+                            <button
+                              disabled={!isRestaurantOpen || isBilled}
+                              onClick={() => handleAddItem(item)}
+                              className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
+                                ? isDarkMode
+                                  ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                                : "hover:opacity-90"
+                                }`}
+                              style={!isBilled ? {
+                                borderColor: isDarkMode ? "#475569" : `${colors.primary}40`,
+                                backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                                color: isDarkMode ? "#ffffff" : colors.primary
+                              } : {}}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

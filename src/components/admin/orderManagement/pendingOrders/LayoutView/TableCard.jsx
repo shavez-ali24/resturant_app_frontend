@@ -13,6 +13,14 @@ const formatElapsed = (minutes) => {
   return ` • ${h}h${m > 0 ? ` ${m}m` : ""}`;
 };
 
+const getElapsedString = (minutes) => {
+  if (minutes == null) return "";
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h${m > 0 ? ` ${m}m` : ""}`;
+};
+
 const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
   const primaryColor = themeColors?.primary || "#EF9F27";
 
@@ -217,11 +225,11 @@ const TableCard = React.memo(function TableCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 3,
+            gap: 4,
             fontSize: "8px",
             fontWeight: 900,
             textTransform: "uppercase",
-            letterSpacing: "0.2px",
+            letterSpacing: "0.4px",
             padding: "3px 0",
             borderRadius: "4px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -230,6 +238,7 @@ const TableCard = React.memo(function TableCard({
           }}
         >
           <Bell size={9} className="animate-bounce" />
+          <span>New Order</span>
         </div>
       )}
       {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}
@@ -237,12 +246,28 @@ const TableCard = React.memo(function TableCard({
       {/* Top status / time */}
       {!hasNewClientItems && (
         <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: cardStyle.labelColor, textTransform: "uppercase", letterSpacing: "0.6px" }}>
-          {isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${formatElapsed(elapsedMinutes)}`}
+          {table.isVirtual 
+            ? getElapsedString(elapsedMinutes)
+            : (isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${formatElapsed(elapsedMinutes)}`)
+          }
         </div>
       )}
 
       {/* Main number - bold dark, matches mockup */}
-      <div style={{ fontSize: 20, fontWeight: 700, color: cardStyle.numColor, marginTop: 14 }}>
+      <div 
+        style={{ 
+          fontSize: table.isVirtual ? 14 : 20, 
+          fontWeight: 700, 
+          color: cardStyle.numColor, 
+          marginTop: table.isVirtual ? 18 : 14,
+          textAlign: "center",
+          textOverflow: "ellipsis",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          maxWidth: "100%",
+          padding: "0 6px"
+        }}
+      >
         {displayNum}
       </div>
 
@@ -277,7 +302,7 @@ const TableCard = React.memo(function TableCard({
           >
             <Printer size={18} />
           </button>
-          {!isBilled && (
+          {!isBilled && !table.isVirtual && (
             <button
               onClick={handleMove}
               style={ICON_BTN(isDarkMode)}

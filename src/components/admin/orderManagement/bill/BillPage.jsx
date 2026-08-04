@@ -1679,7 +1679,7 @@ const BillPage = ({
             </button>
           )}
 
-          {!isAlreadyBilled && (
+          {(isPreviewOnly || !isAlreadyBilled) && (
             <button
               onClick={handleKOTPrint}
               className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback, Suspense, lazy } from
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../../../features/cartSlice";
 import { useNotification } from "../../Bell/NotificationContext";
-import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move, ClipboardList, Hourglass, Timer, CheckCircle, Filter, Bell } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTour } from "../../../../hooks/useAdminTour";
 import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/pagination";
 import { getCompactPageNumbers } from "@/lib/pagination";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import Heading from "../../common/Heading";
 import {
   clearOrderPreparingStartedAt,
@@ -25,6 +33,9 @@ import {
   getOrderIdValue,
   getOrderItemsList,
   rememberOrderPreparingStartedAt,
+  getOrderTypeKey,
+  getOrderIdShortValue,
+  getOrderCustomerName,
 } from "../commonOrderFile/utils";
 
 const OrdersTable = lazy(() => import("./OrdersTable"));
@@ -35,6 +46,7 @@ const AdminOrderPanel = lazy(() => import("../../OrderPanel/AdminOrderPanel"));
 const LayoutView = lazy(() => import("./LayoutView/LayoutView"));
 const PayModal = lazy(() => import("./PayModal"));
 const MoveTableModal = lazy(() => import("./MoveTableModal"));
+import LegendBar from "./LayoutView/LegendBar";
 
 const ORDER_PANEL_DRAFT_KEY = "adminOrderPanelDraft";
 const ORDER_PANEL_FRESH_CREATE_KEY = "adminOrderPanelFreshCreate";
@@ -88,7 +100,7 @@ const checkAndClearAdminModifiedOrderId = (id) => {
     }
     sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
     return isFound;
-  } catch (_) {}
+  } catch (_) { }
   return false;
 };
 
@@ -160,6 +172,8 @@ const Orders = () => {
 
   // --- Local States ---
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedType, setSelectedType] = useState("all");
+  const [layoutFilter, setLayoutFilter] = useState("eat_here"); // "eat_here" | "take_away" | "delivery"
   const [editingOrder, setEditingOrder] = useState(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
@@ -635,11 +649,38 @@ const Orders = () => {
       return oid != null ? (orderTotalMap.get(String(oid)) ?? null) : null;
     };
 
-    if (sourceSections.length === 0) {
-      return [];
-    }
+    // Helper to map order object to TableCard unit format
+    const mapOrderToUnit = (order, typeLabel) => {
+      const oid = getOrderIdValue(order) || order?._id || order?.id || order?.orderId;
+      const shortId = getOrderIdShortValue(order).toUpperCase();
+      const customerName = getOrderCustomerName(order);
+      const orderStatus = String(order?.status || "").toLowerCase();
 
-    return sourceSections.map((section) => ({
+      let displayStatus = "booked"; // OCCUPIED (orange border styling)
+      let rawStatus = "OCCUPIED";
+      if (orderStatus === "ready" || (orderStatus === "completed" && !order.paymentMethod)) {
+        displayStatus = "billed"; // BILLED (green border styling)
+        rawStatus = "BILLED";
+      }
+
+      return {
+        tableId: `virtual:${oid}`,
+        tableNumber: customerName || "Guest",
+        sectionName: typeLabel,
+        status: displayStatus,
+        unitId: `virtual:${oid}`,
+        unitType: "TABLE",
+        isActive: true,
+        rawStatus: rawStatus,
+        occupiedSince: order.createdAt || null,
+        currentOrderId: oid,
+        orderId: oid,
+        currentAmount: Number(order.totalAmount) || 0,
+        isVirtual: true,
+      };
+    };
+
+    const tableSections = sourceSections.map((section) => ({
       sectionId: section.name,
       sectionName: section.name,
       units: (section.units || [])
@@ -669,7 +710,90 @@ const Orders = () => {
           };
         }),
     })).filter((sec) => sec.units.length > 0);
-  }, [liveUnitsData, combinedOrders]);
+
+    // Build virtual sections for take away and delivery
+    const takeAwayOrders = combinedOrders.filter(
+      (order) => getOrderTypeKey(order?.orderType || order?.type) === "take_away"
+    );
+    const deliveryOrders = combinedOrders.filter(
+      (order) => getOrderTypeKey(order?.orderType || order?.type) === "delivery"
+    );
+
+    const takeAwaySection = takeAwayOrders.length > 0 ? {
+      sectionId: "virtual:take_away",
+      sectionName: "Take Away Orders",
+      units: takeAwayOrders.map(o => mapOrderToUnit(o, "Take Away Orders")),
+    } : null;
+
+    const deliverySection = deliveryOrders.length > 0 ? {
+      sectionId: "virtual:delivery",
+      sectionName: "Delivery Orders",
+      units: deliveryOrders.map(o => mapOrderToUnit(o, "Delivery Orders")),
+    } : null;
+
+    if (layoutFilter === "eat_here") {
+      return tableSections;
+    }
+    if (layoutFilter === "take_away") {
+      return takeAwaySection ? [takeAwaySection] : [];
+    }
+    if (layoutFilter === "delivery") {
+      return deliverySection ? [deliverySection] : [];
+    }
+
+    // "all": show table sections + virtual sections at the bottom
+    const allSections = [...tableSections];
+    if (takeAwaySection) allSections.push(takeAwaySection);
+    if (deliverySection) allSections.push(deliverySection);
+    return allSections;
+  }, [liveUnitsData, combinedOrders, layoutFilter]);
+
+  // Helper to check if a specific order mode has new/unread client orders
+  const hasNewOrdersForMode = useCallback((modeKey) => {
+    if (layoutFilter === modeKey) return false;
+    const newOrderIds = newlyAddedItemsOrderIds || new Set();
+    if (newOrderIds.size === 0) return false;
+
+    return combinedOrders.some((order) => {
+      const oid = String(getOrderIdValue(order));
+      if (!newOrderIds.has(oid)) return false;
+
+      const typeKey = getOrderTypeKey(order?.orderType || order?.type);
+      if (modeKey === "eat_here") {
+        return typeKey === "dine_in" || typeKey === "room_stay";
+      }
+      if (modeKey === "take_away") {
+        return typeKey === "take_away";
+      }
+      if (modeKey === "delivery") {
+        return typeKey === "delivery";
+      }
+      return false;
+    });
+  }, [layoutFilter, newlyAddedItemsOrderIds, combinedOrders]);
+
+  // Handle tab click to change filter and clear notifications for that mode
+  const handleLayoutFilterChange = useCallback((modeKey) => {
+    setLayoutFilter(modeKey);
+    if (setNewlyAddedItemsOrderIds) {
+      setNewlyAddedItemsOrderIds((prev) => {
+        const next = new Set(prev);
+        combinedOrders.forEach((order) => {
+          const typeKey = getOrderTypeKey(order?.orderType || order?.type);
+          const oid = String(getOrderIdValue(order));
+          if (next.has(oid)) {
+            const isMatch = (modeKey === "eat_here" && (typeKey === "dine_in" || typeKey === "room_stay")) ||
+              (modeKey === "take_away" && typeKey === "take_away") ||
+              (modeKey === "delivery" && typeKey === "delivery");
+            if (isMatch) {
+              next.delete(oid);
+            }
+          }
+        });
+        return next;
+      });
+    }
+  }, [combinedOrders, setNewlyAddedItemsOrderIds]);
 
   // ── Pre-fill sessionStorage for AdminOrderPanel ──
   useEffect(() => {
@@ -696,14 +820,46 @@ const Orders = () => {
     } catch (_) { }
   }, [restaurantData]);
 
+  const filteredOrders = useMemo(() => {
+    if (selectedType === "all") return combinedOrders;
+    return combinedOrders.filter(
+      (order) => getOrderTypeKey(order?.orderType || order?.type) === selectedType
+    );
+  }, [combinedOrders, selectedType]);
+
+  const stats = useMemo(() => {
+    let pending = 0;
+    let preparing = 0;
+    let ready = 0;
+
+    filteredOrders.forEach((o) => {
+      const status = String(o?.status || "").toLowerCase();
+      if (status === "pending") pending++;
+      else if (status === "preparing") preparing++;
+      else if (status === "ready") ready++;
+    });
+
+    return {
+      total: filteredOrders.length,
+      pending,
+      preparing,
+      ready,
+    };
+  }, [filteredOrders]);
+
+  const handleTypeChange = (val) => {
+    setSelectedType(val);
+    setCurrentPage(1);
+  };
+
   const totalPages = Math.max(
     1,
-    Math.ceil(combinedOrders.length / itemsPerPage)
+    Math.ceil(filteredOrders.length / itemsPerPage)
   );
   const orders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return combinedOrders.slice(start, start + itemsPerPage);
-  }, [combinedOrders, currentPage, itemsPerPage]);
+    return filteredOrders.slice(start, start + itemsPerPage);
+  }, [filteredOrders, currentPage, itemsPerPage]);
   const loading = pendingLoading || preparingLoading || completedLoading || restaurantLoading;
   const error =
     pendingError || preparingError || completedError || restaurantError
@@ -767,6 +923,25 @@ const Orders = () => {
       );
     } catch (_) { /* ignore storage errors */ }
   }, [searchParams, showCreateOrder, urlOrderId]);
+
+  // Auto-fallback layout filter if the active mode is disabled in settings
+  useEffect(() => {
+    const restaurantObj = restaurantData?.restaurant || restaurantData;
+    if (!restaurantObj) return;
+    const orderModes = restaurantObj.orderModes;
+    if (!orderModes) return;
+
+    if (layoutFilter === "eat_here" && orderModes.eathere === false) {
+      if (orderModes.takeaway !== false) setLayoutFilter("take_away");
+      else if (orderModes.delivery !== false) setLayoutFilter("delivery");
+    } else if (layoutFilter === "take_away" && orderModes.takeaway === false) {
+      if (orderModes.eathere !== false) setLayoutFilter("eat_here");
+      else if (orderModes.delivery !== false) setLayoutFilter("delivery");
+    } else if (layoutFilter === "delivery" && orderModes.delivery === false) {
+      if (orderModes.eathere !== false) setLayoutFilter("eat_here");
+      else if (orderModes.takeaway !== false) setLayoutFilter("take_away");
+    }
+  }, [restaurantData, layoutFilter]);
 
   // ── Re-fetch order from API when URL has orderId but no local data ──
   useEffect(() => {
@@ -1099,6 +1274,18 @@ const Orders = () => {
     dispatch(clearCart());
   }, [dispatch]);
 
+  // Listen to global site header shortcut button click
+  useEffect(() => {
+    const handleGoToLayout = () => {
+      setViewMode("layout");
+      setLayoutFilter("eat_here");
+      closeCreateOrder();
+      closeEditOrder();
+    };
+    window.addEventListener("goToLiveTables", handleGoToLayout);
+    return () => window.removeEventListener("goToLiveTables", handleGoToLayout);
+  }, [closeCreateOrder, closeEditOrder]);
+
   const clearNewItemsFlag = useCallback((orderId) => {
     if (!orderId) return;
     setNewlyAddedItemsOrderIds((prev) => {
@@ -1358,8 +1545,16 @@ const Orders = () => {
               asModal={true}
               isDarkMode={isDarkMode}
               editingOrder={editingOrder}
-              onOrderSuccess={(mode) => {
+              onOrderSuccess={(mode, orderObj) => {
                 closeEditOrder();
+                if (orderObj) {
+                  setSseOrders((prev) => {
+                    const incomingId = getOrderIdValue(orderObj);
+                    if (!incomingId) return prev;
+                    const remaining = prev.filter(o => getOrderIdValue(o) !== incomingId);
+                    return [orderObj, ...remaining];
+                  });
+                }
                 refetchPendingOrders();
                 refetchPreparingOrders();
                 refetchReadyOrders();
@@ -1431,8 +1626,16 @@ const Orders = () => {
                   } catch (_) { }
                   return null;
                 })() : null)}
-                onOrderSuccess={(mode) => {
+                onOrderSuccess={(mode, orderObj) => {
                   closeCreateOrder();
+                  if (orderObj) {
+                    setSseOrders((prev) => {
+                      const incomingId = getOrderIdValue(orderObj);
+                      if (!incomingId) return prev;
+                      const remaining = prev.filter(o => getOrderIdValue(o) !== incomingId);
+                      return [orderObj, ...remaining];
+                    });
+                  }
                   refetchPendingOrders();
                   refetchPreparingOrders();
                   refetchReadyOrders();
@@ -1454,6 +1657,18 @@ const Orders = () => {
       </div>
     );
   }
+
+  const restaurantObj = restaurantData?.restaurant || restaurantData;
+  const orderModes = restaurantObj?.orderModes || {
+    eathere: true,
+    takeaway: true,
+    delivery: true,
+  };
+  const enabledModesCount = [
+    orderModes?.eathere !== false,
+    orderModes?.takeaway !== false,
+    orderModes?.delivery !== false,
+  ].filter(Boolean).length;
 
   return (
     <div className={`flex h-screen flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#fbfaf8]"}`}>
@@ -1510,41 +1725,223 @@ const Orders = () => {
         </div>
       </div>
 
+      {/* ── Stats & Type Filter Row ── */}
+      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-shrink-0">
+        {/* Left Side: Stats Cards Grid */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 flex-1">
+          {/* Card 1: Total Orders */}
+          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+              ? "border-slate-800 bg-[#1e293b]"
+              : "border-slate-100 bg-white"
+            }`}>
+            <div>
+              <p className={`text-2xl font-extrabold tracking-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+                {stats.total}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-400">Total Orders</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-950/20 text-orange-500 shrink-0">
+              <ClipboardList size={20} />
+            </div>
+          </div>
+
+          {/* Card 2: Pending */}
+          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+              ? "border-slate-800 bg-[#1e293b]"
+              : "border-slate-100 bg-white"
+            }`}>
+            <div>
+              <p className="text-2xl font-extrabold tracking-tight text-amber-500">
+                {stats.pending}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-400">Pending</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 shrink-0">
+              <Hourglass size={20} />
+            </div>
+          </div>
+
+          {/* Card 3: Preparing */}
+          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+              ? "border-slate-800 bg-[#1e293b]"
+              : "border-slate-100 bg-white"
+            }`}>
+            <div>
+              <p className="text-2xl font-extrabold tracking-tight text-emerald-500">
+                {stats.preparing}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-400">Preparing</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 shrink-0">
+              <Timer size={20} />
+            </div>
+          </div>
+
+          {/* Card 4: Ready */}
+          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+              ? "border-slate-800 bg-[#1e293b]"
+              : "border-slate-100 bg-white"
+            }`}>
+            <div>
+              <p className="text-2xl font-extrabold tracking-tight text-blue-500">
+                {stats.ready}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-400">Ready</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-500 shrink-0">
+              <CheckCircle size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Type Selector Dropdown */}
+        {enabledModesCount > 1 && (
+          <div className="flex items-center self-stretch sm:self-auto justify-end sm:justify-start">
+            <Select value={selectedType} onValueChange={handleTypeChange}>
+              <SelectTrigger
+                className="h-11 w-full rounded-xl border px-3 text-sm font-extrabold transition-all outline-none sm:w-[160px] focus:ring-0 shadow-sm flex items-center gap-2"
+                style={{
+                  backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight,
+                  borderColor: isDarkMode ? `${colors.primary}45` : `${colors.primary}25`,
+                  color: isDarkMode ? "#fb923c" : colors.primaryText,
+                }}
+              >
+                <Filter size={15} className="shrink-0" />
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent
+                className={`z-[10050] rounded-xl border p-1 shadow-xl ${isDarkMode
+                    ? "border-slate-700 bg-[#1e293b]"
+                    : "border-[#ede8e3] bg-white"
+                  }`}
+              >
+                <SelectItem
+                  value="all"
+                  className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
+                      ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                      : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                    }`}
+                >
+                  All Types
+                </SelectItem>
+                {orderModes?.eathere !== false && (
+                  <SelectItem
+                    value="eat_here"
+                    className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
+                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      }`}
+                  >
+                    Eat Here
+                  </SelectItem>
+                )}
+                {orderModes?.takeaway !== false && (
+                  <SelectItem
+                    value="take_away"
+                    className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
+                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      }`}
+                  >
+                    Take Away
+                  </SelectItem>
+                )}
+                {orderModes?.delivery !== false && (
+                  <SelectItem
+                    value="delivery"
+                    className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
+                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      }`}
+                  >
+                    Delivery
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
       {/* ── Content Area (Table View or Layout View) ── */}
       {viewMode === "layout" ? (
-        <div className="flex-1 min-h-0 overflow-auto">
-          <Suspense
-            fallback={
-              <div className="p-6 space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
-                ))}
+        <div className="flex-1 min-h-0 flex flex-col gap-3">
+          {/* Order Type filter buttons row above Live Tables */}
+          <div className="flex items-center justify-between gap-4 px-1 py-0.5 flex-wrap flex-shrink-0">
+            {/* Left side: Legend indicators bar */}
+            <LegendBar isDarkMode={isDarkMode} />
+
+            {/* Right side: filter buttons (only shown if multiple modes are enabled) */}
+            {enabledModesCount > 1 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { key: "eat_here", label: "Eat Here", enabled: orderModes?.eathere !== false },
+                  { key: "take_away", label: "Take Away", enabled: orderModes?.takeaway !== false },
+                  { key: "delivery", label: "Delivery", enabled: orderModes?.delivery !== false },
+                ].filter(btn => btn.enabled).map((btn) => {
+                  const isActive = layoutFilter === btn.key;
+                  const showBell = hasNewOrdersForMode(btn.key);
+                  return (
+                    <button
+                      key={btn.key}
+                      type="button"
+                      onClick={() => handleLayoutFilterChange(btn.key)}
+                      className={`relative rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 shadow-sm border flex items-center gap-1.5 ${isActive
+                          ? "text-white"
+                          : isDarkMode
+                            ? "border-slate-700 bg-slate-800 text-slate-350 hover:bg-slate-700/60"
+                            : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                        }`}
+                      style={{
+                        backgroundColor: isActive ? colors.primary : undefined,
+                        borderColor: isActive ? colors.primary : undefined,
+                      }}
+                    >
+                      <span>{btn.label}</span>
+                      {showBell && (
+                        <Bell size={12} className="text-red-500 dark:text-red-400 animate-bounce" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            }
-          >
-            <LayoutView
-              sections={layoutSections}
-              isLoading={restaurantLoading}
-              error={
-                restaurantError
-                  ? getFriendlyOrderError(restaurantError, "fetch")
-                  : null
+            )}
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <Suspense
+              fallback={
+                <div className="p-6 space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className={`h-12 w-full rounded-lg animate-pulse ${isDarkMode ? "bg-slate-700/50" : "bg-[#f7f3ef]"}`} />
+                  ))}
+                </div>
               }
-              onRetry={refetchRestaurant}
-              isDarkMode={isDarkMode}
-              onViewOrder={handleViewOrder}
-              onCreateOrder={handleCreateOrderFromLayout}
-              onEditOrder={handleEditOrderFromLayout}
-              onMoveOrder={handleMoveOrderFromLayout}
-              onPayOrder={handlePayOrderFromLayout}
-              onPrintBill={handlePrintBillFromLayout}
-              onBookRoom={handleBookRoomPrompt}
-              onCheckoutRoom={handleCheckoutRoom}
-              onCancelBooking={handleCancelBookingFromLayout}
-              roomActionLoadingId={roomActionLoadingId}
-              newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
-            />
-          </Suspense>
+            >
+              <LayoutView
+                sections={layoutSections}
+                isLoading={restaurantLoading}
+                error={
+                  restaurantError
+                    ? getFriendlyOrderError(restaurantError, "fetch")
+                    : null
+                }
+                onRetry={refetchRestaurant}
+                isDarkMode={isDarkMode}
+                onViewOrder={handleViewOrder}
+                onCreateOrder={handleCreateOrderFromLayout}
+                onEditOrder={handleEditOrderFromLayout}
+                onMoveOrder={handleMoveOrderFromLayout}
+                onPayOrder={handlePayOrderFromLayout}
+                onPrintBill={handlePrintBillFromLayout}
+                onBookRoom={handleBookRoomPrompt}
+                onCheckoutRoom={handleCheckoutRoom}
+                onCancelBooking={handleCancelBookingFromLayout}
+                roomActionLoadingId={roomActionLoadingId}
+                newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
+              />
+            </Suspense>
+          </div>
         </div>
       ) : (
         <div
@@ -1579,10 +1976,10 @@ const Orders = () => {
               isDarkMode={isDarkMode}
               newlyAddedItemsOrderIds={newlyAddedItemsOrderIds}
               latestOrderId={
-                combinedOrders[0]?._id ||
-                combinedOrders[0]?.id ||
-                combinedOrders[0]?.orderId ||
-                combinedOrders[0]?.createdAt
+                filteredOrders[0]?._id ||
+                filteredOrders[0]?.id ||
+                filteredOrders[0]?.orderId ||
+                filteredOrders[0]?.createdAt
               }
             />
           </Suspense>
@@ -1671,11 +2068,20 @@ const Orders = () => {
             asModal={true}
             isDarkMode={isDarkMode}
             editingOrder={editingOrder}
-            onOrderSuccess={(mode) => {
+            onOrderSuccess={(mode, orderObj) => {
               closeEditOrder();
+              if (orderObj) {
+                setSseOrders((prev) => {
+                  const incomingId = getOrderIdValue(orderObj);
+                  if (!incomingId) return prev;
+                  const remaining = prev.filter(o => getOrderIdValue(o) !== incomingId);
+                  return [orderObj, ...remaining];
+                });
+              }
               refetchPendingOrders();
               refetchPreparingOrders();
               refetchReadyOrders();
+              refetchCompletedOrders();
               if (mode === "print_bill") {
                 setViewMode("layout");
                 localStorage.setItem("orderViewMode", "layout");

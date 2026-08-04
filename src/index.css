@@ -411,6 +411,28 @@
   background-color: rgba(15, 23, 42, 0.92) !important;
 }
 
+/* ✅ Fix Toggle Switch Tracks and Knobs in Admin Dark Mode */
+.admin-dark .custom-switch-track-green,
+.dark .custom-switch-track-green,
+span.custom-switch-track-green {
+  background-color: #10b981 !important; /* emerald-500 */
+}
+.admin-dark .custom-switch-track-red,
+.dark .custom-switch-track-red,
+span.custom-switch-track-red {
+  background-color: #f43f5e !important; /* rose-500 */
+}
+.admin-dark .custom-switch-track-amber,
+.dark .custom-switch-track-amber,
+span.custom-switch-track-amber {
+  background-color: #fbbf24 !important; /* amber-400 */
+}
+.admin-dark .custom-switch-knob,
+.dark .custom-switch-knob,
+span.custom-switch-knob {
+  background-color: #ffffff !important;
+}
+
 .admin-dark [class*="bg-orange-50"],
 .admin-dark [class*="bg-orange-100"],
 .admin-dark [class*="bg-orange-200"],

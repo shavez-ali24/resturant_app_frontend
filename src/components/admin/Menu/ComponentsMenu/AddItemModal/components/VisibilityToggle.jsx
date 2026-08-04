@@ -4,10 +4,13 @@ import { useSelector } from "react-redux";
 const VisibilityToggle = ({ visibility, handleChange }) => {
   const isPublic = visibility === "PUBLIC" || !visibility;
   const colors = useSelector((state) => state.admin.theme.colors);
+  const isDarkMode = document.documentElement.classList.contains("dark") || document.documentElement.classList.contains("admin-dark");
 
   const labelText = isPublic ? "On Menu" : "Off Menu";
-  const trackClass = isPublic ? "bg-green-600 dark:bg-emerald-500" : "bg-red-600 dark:bg-rose-500";
   const knobTranslate = isPublic ? "translate-x-3" : "translate-x-0";
+  const trackBg = isPublic 
+    ? (isDarkMode ? "#10b981" : "#16a34a") 
+    : (isDarkMode ? "#f43f5e" : "#dc2626");
 
   return (
     <div className="flex items-center gap-3">
@@ -28,9 +31,13 @@ const VisibilityToggle = ({ visibility, handleChange }) => {
             : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-250"
         }`}
       >
-        <span className={`relative h-4 w-7 rounded-full transition-colors ${trackClass}`}>
+        <span 
+          className="relative h-4 w-7 rounded-full transition-colors"
+          style={{ backgroundColor: trackBg }}
+        >
           <span
-            className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${knobTranslate}`}
+            className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full shadow transition-transform ${knobTranslate}`}
+            style={{ backgroundColor: "#ffffff" }}
           />
         </span>
         <span>{labelText}</span>

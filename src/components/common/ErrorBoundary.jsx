@@ -3,23 +3,57 @@ import React from "react";
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null, info: null };
+    this.state = { error: null, info: null, isReloading: false };
   }
 
   static getDerivedStateFromError(error) {
-    return { error };
+    const isChunkError =
+      error &&
+      (error.name === "ChunkLoadError" ||
+       /failed to fetch dynamically imported module/i.test(error.message || "") ||
+       /loading chunk/i.test(error.message || ""));
+
+    if (isChunkError) {
+      return { error: null, info: null, isReloading: true };
+    }
+    return { error, info: null, isReloading: false };
   }
 
   componentDidCatch(error, info) {
     this.setState({ info });
     console.error("ErrorBoundary caught an error:", error);
+
+    const isChunkError =
+      error &&
+      (error.name === "ChunkLoadError" ||
+       /failed to fetch dynamically imported module/i.test(error.message || "") ||
+       /loading chunk/i.test(error.message || ""));
+
+    if (isChunkError) {
+      console.warn("Dynamic import module fetch failed. Reloading the page to load new bundle version...");
+      window.location.reload();
+      return;
+    }
+
     if (info?.componentStack) {
       console.error(info.componentStack);
     }
   }
 
   render() {
-    const { error, info } = this.state;
+    const { error, info, isReloading } = this.state;
+
+    if (isReloading) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+          <div className="flex items-center gap-3">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
+            <span className="text-sm font-semibold tracking-wide">Updating TapnBite to latest version...</span>
+          </div>
+        </div>
+      );
+    }
+
     if (error) {
       return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">

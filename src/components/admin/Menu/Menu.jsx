@@ -386,22 +386,22 @@ const VisibilityBadge = ({ visibility }) => {
   );
 };
 
-const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
+const CategoryVisibilityToggle = ({ state, onToggle, isDarkMode, disabled = false }) => {
   let label = "On Menu";
-  let trackClass = "bg-green-600 dark:bg-emerald-400";
   let knobTranslate = "translate-x-3";
   let borderClass = "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200";
+  let trackBg = isDarkMode ? "#10b981" : "#16a34a"; // emerald-500 / green-600
 
   if (state === "ADMIN") {
     label = "Off Menu";
-    trackClass = "bg-red-600 dark:bg-rose-500";
     knobTranslate = "translate-x-0";
     borderClass = "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-250";
+    trackBg = isDarkMode ? "#f43f5e" : "#dc2626"; // rose-500 / red-600
   } else if (state === "MIXED") {
     label = "On Menu";
-    trackClass = "bg-amber-500 dark:bg-amber-400";
     knobTranslate = "translate-x-1.5"; // Centered yellow knob!
     borderClass = "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+    trackBg = isDarkMode ? "#fbbf24" : "#f59e0b"; // amber-400 / amber-500
   }
 
   return (
@@ -415,9 +415,13 @@ const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
           : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
       } ${borderClass}`}
     >
-      <span className={`relative h-4 w-7 rounded-full transition-colors ${trackClass}`}>
+      <span 
+        className="relative h-4 w-7 rounded-full transition-colors"
+        style={{ backgroundColor: trackBg }}
+      >
         <span
-          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${knobTranslate}`}
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full shadow transition-transform ${knobTranslate}`}
+          style={{ backgroundColor: "#ffffff" }}
         />
       </span>
       <span>{label}</span>
@@ -425,7 +429,7 @@ const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
   );
 };
 
-const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
+const StockToggle = ({ status = "in", onToggle, isDarkMode, disabled = false }) => {
   const isMixed = status === "mixed";
   const isIn = status === "in";
   const label = isMixed ? "Available" : isIn ? "Available" : "Unavailable";
@@ -437,16 +441,17 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
     : isIn
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
     : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200";
-  const trackClass = isMixed
-    ? "bg-amber-500 dark:bg-amber-400"
-    : isIn
-    ? "bg-green-600 dark:bg-emerald-400"
-    : "bg-red-600 dark:bg-rose-500";
-  const knobTranslate = isMixed
-    ? "translate-x-1.5"
-    : isIn
-    ? "translate-x-3"
-    : "translate-x-0";
+
+  let trackBg = isDarkMode ? "#10b981" : "#16a34a"; // emerald-500 / green-600
+  let knobTranslate = "translate-x-3";
+
+  if (isMixed) {
+    trackBg = isDarkMode ? "#fbbf24" : "#f59e0b"; // amber-400 / amber-500
+    knobTranslate = "translate-x-1.5";
+  } else if (!isIn) {
+    trackBg = isDarkMode ? "#f43f5e" : "#dc2626"; // rose-500 / red-600
+    knobTranslate = "translate-x-0";
+  }
 
   useEffect(() => {
     return () => {
@@ -475,9 +480,13 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
           : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
       } ${pillClass}`}
     >
-      <span className={`relative h-4 w-7 rounded-full ${trackClass}`}>
+      <span 
+        className="relative h-4 w-7 rounded-full"
+        style={{ backgroundColor: trackBg }}
+      >
         <span
-          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition ${knobTranslate}`}
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full shadow transition ${knobTranslate}`}
+          style={{ backgroundColor: "#ffffff" }}
         />
       </span>
       <span>{label}</span>
@@ -485,7 +494,7 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   );
 };
 
-const TabButton = ({ active, onClick, children }) => {
+const TabButton = ({ active, onClick, isDarkMode, children }) => {
   const colors = useSelector((state) => state.admin.theme.colors);
   return (
     <button
@@ -493,20 +502,20 @@ const TabButton = ({ active, onClick, children }) => {
       onClick={onClick}
       className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
         active
-          ? ""
-          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
+          ? "font-bold"
+          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
       }`}
       style={{
-        color: active ? colors.primary : undefined
+        color: active ? (isDarkMode ? "#fb923c" : colors.primary) : undefined
       }}
     >
       {children}
-      <span
-        className="absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition-all duration-150"
-        style={{
-          backgroundColor: active ? colors.primary : "transparent"
-        }}
-      />
+      {active && (
+        <span
+          className="absolute bottom-0 left-0 h-0.5 w-full rounded-full"
+          style={{ backgroundColor: isDarkMode ? "#fb923c" : colors.primary }}
+        />
+      )}
     </button>
   );
 };
@@ -1760,12 +1769,14 @@ const prepareFormData = (formData, file) => {
             <TabButton
               active={activeTab === "editor"}
               onClick={() => setActiveTab("editor")}
+              isDarkMode={isDarkMode}
             >
               Menu editor
             </TabButton>
             <TabButton
               active={activeTab === "inventory"}
               onClick={() => setActiveTab("inventory")}
+              isDarkMode={isDarkMode}
             >
               Manage inventory
             </TabButton>
@@ -1948,6 +1959,7 @@ const prepareFormData = (formData, file) => {
                         state={getCategoryVisibilityState(selectedCategory)}
                         onToggle={() => handleToggleCategoryVisibility(selectedCategory)}
                         disabled={togglingCategory === selectedCategory}
+                        isDarkMode={isDarkMode}
                       />
                     )}
                   </div>
@@ -2218,6 +2230,7 @@ const prepareFormData = (formData, file) => {
                                 )
                               }
                               disabled={!isAdmin || category.items.length === 0}
+                              isDarkMode={isDarkMode}
                             />
                           </div>
 
@@ -2258,6 +2271,7 @@ const prepareFormData = (formData, file) => {
                                           handleToggleItemAvailability(item)
                                         }
                                         disabled={!isAdmin}
+                                        isDarkMode={isDarkMode}
                                       />
                                     </div>
                                   );
