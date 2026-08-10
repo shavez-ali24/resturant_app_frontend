@@ -477,19 +477,19 @@ span.custom-switch-knob {
 .admin-dark [class*="bg-gray-100"],
 .admin-dark [class*="bg-gray-200"],
 .admin-dark [class*="bg-slate-50"],
-.admin-dark [class*="bg-slate-100"] {
+.admin-dark .bg-slate-100 {
   background-color: rgba(30, 41, 59, 0.7) !important;
 }
 
-.admin-dark [class*="bg-green-50"] {
+.admin-dark .bg-green-50 {
   background-color: rgba(21, 128, 61, 0.22) !important;
 }
 
-.admin-dark [class*="bg-blue-50"] {
+.admin-dark .bg-blue-50 {
   background-color: rgba(29, 78, 216, 0.22) !important;
 }
 
-.admin-dark [class*="bg-red-50"] {
+.admin-dark .bg-red-50 {
   background-color: rgba(185, 28, 28, 0.22) !important;
 }
 

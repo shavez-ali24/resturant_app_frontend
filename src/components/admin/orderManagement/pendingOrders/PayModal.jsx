@@ -25,30 +25,57 @@ export default function PayModal({ order, onClose }) {
   const [settlementPercent, setSettlementPercent] = useState("");
   const [settlementAmount, setSettlementAmount] = useState("");
 
+  const [isSplitPayment, setIsSplitPayment] = useState(false);
+  const [splitAmounts, setSplitAmounts] = useState({
+    CASH: "",
+    UPI: "",
+    CARD: "",
+  });
+
   useEffect(() => {
     setCurrentOrder(order);
   }, [order]);
 
   const totalAmount = Number(currentOrder?.totalAmount || 0);
-  const isAlreadyPaid = Boolean(currentOrder?.paymentMethod);
+  const isAlreadyPaid = Boolean(currentOrder?.paymentMethod || (currentOrder?.paymentMethods && currentOrder.paymentMethods.length > 0));
+
+  const getPaymentMethodName = (orderObj) => {
+    if (orderObj?.paymentMethods && orderObj.paymentMethods.length > 0) {
+      return orderObj.paymentMethods.map(p => p.method).join(" + ");
+    }
+    return orderObj?.paymentMethod || "";
+  };
 
   const percentValue =
     settlementPercent === "" ? 0 : Number(settlementPercent);
-  const manualAmountValue =
-    settlementAmount === "" ? totalAmount : Number(settlementAmount);
+  const flatDiscountValue =
+    settlementAmount === "" ? 0 : Number(settlementAmount);
   const settlementValue =
     settlementMode === "percent"
       ? totalAmount - (totalAmount * percentValue) / 100
-      : manualAmountValue;
+      : totalAmount - flatDiscountValue;
+
+  const cashAmountNum = Number(splitAmounts.CASH || 0);
+  const upiAmountNum = Number(splitAmounts.UPI || 0);
+  const cardAmountNum = Number(splitAmounts.CARD || 0);
+  const totalEnteredSplitAmount = Number((cashAmountNum + upiAmountNum + cardAmountNum).toFixed(2));
+  const remainingSplitAmount = Number((settlementValue - totalEnteredSplitAmount).toFixed(2));
 
   const isValid =
-    paymentMethod &&
     Number.isFinite(settlementValue) &&
     settlementValue >= 0 &&
     settlementValue <= totalAmount &&
     (settlementMode !== "percent" ||
       (Number.isFinite(percentValue) && percentValue >= 0 && percentValue <= 100)) &&
-    !isAlreadyPaid;
+    (settlementMode !== "amount" ||
+      (Number.isFinite(flatDiscountValue) && flatDiscountValue >= 0 && flatDiscountValue <= totalAmount)) &&
+    !isAlreadyPaid &&
+    (isSplitPayment
+      ? totalEnteredSplitAmount === Number(settlementValue.toFixed(2)) &&
+        [cashAmountNum, upiAmountNum, cardAmountNum].every(a => a >= 0)
+      : paymentMethod !== null
+    );
+
   const hasSettlementInput =
     settlementMode === "percent" ? settlementPercent !== "" : settlementAmount !== "";
   const settlementInputInvalid =
@@ -56,7 +83,8 @@ export default function PayModal({ order, onClose }) {
     (!Number.isFinite(settlementValue) ||
       settlementValue < 0 ||
       settlementValue > totalAmount ||
-      (settlementMode === "percent" && (percentValue < 0 || percentValue > 100)));
+      (settlementMode === "percent" && (percentValue < 0 || percentValue > 100)) ||
+      (settlementMode === "amount" && (flatDiscountValue < 0 || flatDiscountValue > totalAmount)));
 
   const handleGenerateBill = async () => {
     if (!currentOrder?._id) return;
@@ -75,15 +103,27 @@ export default function PayModal({ order, onClose }) {
 
   const handleConfirm = async (e) => {
     e.preventDefault();
-    if (!isValid || !paymentMethod || !currentOrder?._id) return;
+    if (!isValid || (!isSplitPayment && !paymentMethod) || !currentOrder?._id) return;
 
     try {
-      await payOrder({
+      const payArgs = {
         orderId: currentOrder._id,
-        paymentMethod,
         settlementAmount:
           settlementValue === totalAmount ? undefined : Number(settlementValue.toFixed(2)),
-      }).unwrap();
+        totalAmount,
+      };
+
+      if (isSplitPayment) {
+        const methods = [];
+        if (cashAmountNum > 0) methods.push({ method: "CASH", amount: cashAmountNum });
+        if (upiAmountNum > 0) methods.push({ method: "UPI", amount: upiAmountNum });
+        if (cardAmountNum > 0) methods.push({ method: "CARD", amount: cardAmountNum });
+        payArgs.paymentMethods = methods;
+      } else {
+        payArgs.paymentMethod = paymentMethod;
+      }
+
+      await payOrder(payArgs).unwrap();
       notify("Payment recorded successfully!", "success");
       onClose();
     } catch (err) {
@@ -121,10 +161,10 @@ export default function PayModal({ order, onClose }) {
       `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800 cursor-default"
+        className="w-full max-w-md max-h-[90vh] rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800 cursor-default flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-extrabold text-gray-800 dark:text-slate-100">
             Pay Order
           </h2>
@@ -136,15 +176,31 @@ export default function PayModal({ order, onClose }) {
           </button>
         </div>
 
+        <div className="flex-1 overflow-y-auto pr-1 min-h-0 flex flex-col">
+
         {isAlreadyPaid ? (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center dark:border-green-700 dark:bg-green-900/30">
             <CheckCircle className="mx-auto mb-2 h-10 w-10 text-green-500" />
             <p className="font-bold text-green-700 dark:text-green-300">
               Payment already completed
             </p>
-            <p className="mt-1 text-sm text-green-600 dark:text-green-400">
-              Paid via {currentOrder.paymentMethod}
-            </p>
+            <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+              <span className="font-semibold">Paid via: </span>
+              <span className="uppercase font-bold">{getPaymentMethodName(currentOrder)}</span>
+              {currentOrder?.paymentMethods && currentOrder.paymentMethods.length > 0 && (
+                <div className="mt-3.5 space-y-1.5 border-t border-dashed border-green-300 dark:border-green-800 pt-3 text-xs">
+                  <p className="font-extrabold uppercase text-[10px] tracking-wider text-green-800 dark:text-green-300 text-left mb-1.5 px-1.5">
+                    Payment Breakdown:
+                  </p>
+                  {currentOrder.paymentMethods.map((p, idx) => (
+                    <div key={idx} className="flex justify-between font-bold px-2 py-0.5 rounded bg-green-100/50 dark:bg-green-950/20">
+                      <span className="uppercase text-green-700 dark:text-green-300">{p.method}</span>
+                      <span className="text-green-800 dark:text-green-200">₹{Number(p.amount || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : currentOrder?.status !== "completed" ? (
           <div className="rounded-xl border border-orange-200 bg-[#fff8f5] p-5 text-center dark:border-orange-950/20 dark:bg-orange-950/10">
@@ -168,7 +224,7 @@ export default function PayModal({ order, onClose }) {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleConfirm} className="space-y-5">
+          <form onSubmit={handleConfirm} className="space-y-5" noValidate>
             {/* Total */}
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-slate-600 dark:bg-slate-700/50">
               <div className="flex items-center justify-between">
@@ -184,18 +240,21 @@ export default function PayModal({ order, onClose }) {
 
             {/* Payment Method */}
             <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700 dark:text-slate-200">
+              <label className="mb-2.5 block text-sm font-bold text-gray-700 dark:text-slate-200">
                 Payment Method
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-3">
                 {PAYMENT_METHODS.map(({ key, label }) => {
-                  const isActive = paymentMethod === key;
+                  const isActive = !isSplitPayment && paymentMethod === key;
                   return (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setPaymentMethod(key)}
-                      className="flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-extrabold uppercase tracking-wider transition-all"
+                      onClick={() => {
+                        setIsSplitPayment(false);
+                        setPaymentMethod(key);
+                      }}
+                      className="flex-1 rounded-xl border-2 px-2 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all"
                       style={{
                         backgroundColor: isActive
                           ? colors.primary
@@ -212,7 +271,92 @@ export default function PayModal({ order, onClose }) {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSplitPayment(true);
+                    setPaymentMethod(null);
+                    setSplitAmounts({ CASH: "", UPI: "", CARD: "" });
+                  }}
+                  className="flex-1 rounded-xl border-2 px-2 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all"
+                  style={{
+                    backgroundColor: isSplitPayment
+                      ? colors.primary
+                      : (isDarkMode ? "#334155" : "#ffffff"),
+                    borderColor: isSplitPayment
+                      ? colors.primary
+                      : (isDarkMode ? "#475569" : "#e5e7eb"),
+                    color: isSplitPayment
+                      ? "#ffffff"
+                      : (isDarkMode ? "#94a3b8" : "#6b7280")
+                  }}
+                >
+                  SPLIT
+                </button>
               </div>
+
+              {isSplitPayment && (
+                <div className="space-y-3 rounded-xl border border-dashed border-gray-300 p-4 dark:border-slate-700 bg-gray-50/20 dark:bg-slate-800/10">
+                  <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">
+                    Enter split amounts below:
+                  </p>
+                  {["CASH", "UPI", "CARD"].map((method) => {
+                    const amountStr = splitAmounts[method];
+                    return (
+                      <div key={method} className="flex items-center gap-2">
+                        <span className="w-14 text-xs font-extrabold text-gray-500 dark:text-slate-300">
+                          {method}
+                        </span>
+                        <div className="relative flex-1">
+                          <IndianRupee size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="0.00"
+                            value={amountStr}
+                            onChange={(e) => {
+                              const valStr = e.target.value;
+                              if (valStr === "" || Number(valStr) >= 0) {
+                                setSplitAmounts(prev => ({
+                                  ...prev,
+                                  [method]: valStr
+                                }));
+                              }
+                            }}
+                            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-7 pr-2.5 text-xs font-bold outline-none focus:ring-1 dark:border-slate-700 dark:bg-slate-900 theme-focus"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex items-center justify-between border-t border-dashed border-gray-200 dark:border-slate-700 pt-2.5 mt-1">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                      Total Split:
+                    </span>
+                    <span className="text-xs font-extrabold text-gray-700 dark:text-slate-200">
+                      ₹{totalEnteredSplitAmount.toFixed(2)} / ₹{settlementValue.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="text-center">
+                    {remainingSplitAmount === 0 ? (
+                      <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        ✓ Split matches exact bill!
+                      </p>
+                    ) : remainingSplitAmount > 0 ? (
+                      <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 animate-pulse">
+                        Remaining: ₹{remainingSplitAmount.toFixed(2)}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 animate-pulse">
+                        Exceeds by: ₹{Math.abs(remainingSplitAmount).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Settlement */}
@@ -249,7 +393,7 @@ export default function PayModal({ order, onClose }) {
                 </div>
               </div>
               <p className="mb-2 text-xs text-gray-400 dark:text-slate-400">
-                Use a percentage discount or enter the final settlement amount.
+                Use a percentage discount or enter a flat discount amount.
               </p>
               <div className="relative">
                 {settlementMode === "percent" ? (
@@ -259,10 +403,10 @@ export default function PayModal({ order, onClose }) {
                 )}
                 <input
                   type="number"
-                  step="0.01"
+                  step="any"
                   min="0"
                   max={settlementMode === "percent" ? 100 : totalAmount}
-                  placeholder={settlementMode === "percent" ? "Discount percent" : "Final amount"}
+                  placeholder={settlementMode === "percent" ? "Discount percent" : "Flat discount amount (₹)"}
                   value={settlementMode === "percent" ? settlementPercent : settlementAmount}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -288,7 +432,7 @@ export default function PayModal({ order, onClose }) {
               )}
               {settlementMode === "amount" && settlementAmount && Number(settlementAmount) > totalAmount && (
                 <p className="mt-1 text-xs font-semibold text-red-500">
-                  Settlement cannot exceed total
+                  Discount cannot exceed total amount
                 </p>
               )}
               {settlementValue >= 0 && settlementValue <= totalAmount && settlementValue !== totalAmount && (
@@ -297,6 +441,17 @@ export default function PayModal({ order, onClose }) {
                 </p>
               )}
             </div>
+
+            {/* Error Message */}
+            {!isValid && (
+              <p className="text-center text-xs font-bold text-red-500 animate-pulse bg-red-50 dark:bg-red-950/20 py-2 px-3 rounded-lg border border-red-200 dark:border-red-900/30">
+                {!isSplitPayment && !paymentMethod
+                  ? "⚠ Please select a payment method"
+                  : isSplitPayment && remainingSplitAmount !== 0
+                  ? `⚠ Split total must match bill (₹${settlementValue.toFixed(2)}). Current sum is ₹${totalEnteredSplitAmount.toFixed(2)}`
+                  : "⚠ Invalid payment values"}
+              </p>
+            )}
 
             {/* Confirm button */}
             <button
@@ -315,7 +470,7 @@ export default function PayModal({ order, onClose }) {
               {isLoading && <Loader2 size={18} className="animate-spin" />}
               {isLoading
                 ? "Processing..."
-                : `Confirm ₹${Number.isFinite(settlementValue) ? settlementValue.toFixed(2) : "0.00"} via ${paymentMethod || "..."}`}
+                : `Confirm ₹${Number.isFinite(settlementValue) ? settlementValue.toFixed(2) : "0.00"} via ${isSplitPayment ? "SPLIT" : (paymentMethod || "...")}`}
             </button>
           </form>
         )}
@@ -324,10 +479,11 @@ export default function PayModal({ order, onClose }) {
         <button
           onClick={onClose}
           disabled={isLoading || isBilling}
-          className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700"
+          className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700 shrink-0"
         >
           Cancel
         </button>
+        </div>
       </div>
     </div>
   );

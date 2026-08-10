@@ -582,7 +582,9 @@ const Menu = () => {
   });
 
   const [activeTab, setActiveTab] = useState("editor");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    return sessionStorage.getItem("menuSelectedCategory") || "";
+  });
   const [inventoryOpen, setInventoryOpen] = useState({});
   const [availabilityOverrides, setAvailabilityOverrides] = useState({});
 
@@ -607,6 +609,12 @@ const Menu = () => {
     // Clear state so browser back doesn't re-trigger
     window.history.replaceState({}, "");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedCategory) {
+      sessionStorage.setItem("menuSelectedCategory", selectedCategory);
+    }
+  }, [selectedCategory]);
 
   const notify = useNotify();
 

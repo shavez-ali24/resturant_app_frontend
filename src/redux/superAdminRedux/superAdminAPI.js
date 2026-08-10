@@ -17,8 +17,10 @@ const baseQuery = fetchBaseQuery({
 const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
   const result = await baseQuery(args, api, extraOptions);
   const status = result.error?.status || result.error?.originalStatus;
+  const url = typeof args === "string" ? args : args?.url || "";
+  const isLoginRequest = url.includes("/auth/login");
 
-  if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+  if (typeof window !== "undefined" && !isLoginRequest && (status === 401 || status === 403)) {
     api.dispatch(logoutSuperAdmin());
     window.location.replace("/super-login");
   }

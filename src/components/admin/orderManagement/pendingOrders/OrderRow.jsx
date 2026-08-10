@@ -127,7 +127,14 @@ const OrderRow = ({
 
       {/* Order Type */}
       <td className="px-4 py-3 align-middle text-center">
-        <span className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-extrabold min-w-[130px] ${orderTypeClass}`}>
+        <span 
+          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-extrabold min-w-[130px] ${orderTypeClass}`}
+          style={order.orderType === "Room Stay" ? {
+            backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
+            color: isDarkMode ? '#e2e8f0' : '#57524e',
+            border: isDarkMode ? '1px solid rgba(148, 163, 184, 0.25)' : '1px solid #e7e5e4'
+          } : {}}
+        >
           {getOrderTypeIcon(order.orderType)}
           {isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}
         </span>

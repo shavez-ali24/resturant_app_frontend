@@ -28,7 +28,7 @@ const PendingOrderRowActions = ({
   const isCancelled = order?.status === "cancelled";
   const isEatHere = order?.orderType === "Eat Here";
   const isReady = order?.status === "ready";
-  const alreadyPaid = Boolean(order?.paymentMethod);
+  const alreadyPaid = Boolean(order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0));
 
   const btnBase = `rounded-lg p-1.5 transition-colors`;
   const btnLight = `${btnBase} text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]`;

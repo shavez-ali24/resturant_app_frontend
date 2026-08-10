@@ -31,6 +31,9 @@ export const NotificationProvider = ({ children }) => {
   const [newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds] = useState(() => new Set());
   // Map<orderId, Set<itemKey>> — tracks which specific items are new per order
   const [newItemsByOrderId, setNewItemsByOrderId] = useState(() => new Map());
+  // Map<orderId, Set<itemKey>> — tracks NEW badges for items (cleared on edit panel open/close)
+  const [newBadgeItemsByOrderId, setNewBadgeItemsByOrderId] = useState(() => new Map());
+  const [hasUnreadSidebarNotification, setHasUnreadSidebarNotification] = useState(false);
   const sseManagerRef = useRef(null);
   const lastEventSignatureRef = useRef(null);
 
@@ -118,6 +121,10 @@ export const NotificationProvider = ({ children }) => {
       setNewlyAddedItemsOrderIds,
       newItemsByOrderId,
       setNewItemsByOrderId,
+      newBadgeItemsByOrderId,
+      setNewBadgeItemsByOrderId,
+      hasUnreadSidebarNotification,
+      setHasUnreadSidebarNotification,
     }}>
       {children}
 

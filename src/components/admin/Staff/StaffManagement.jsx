@@ -147,7 +147,7 @@ const StaffManagement = () => {
     const email = sanitizeEmailInput(formData.email || "");
     if (!name || !email) { setFormError("Please fill all required fields"); return; }
     if (!/^[A-Za-z]+(?:\s+[A-Za-z]+)*$/.test(name)) { setFormError("Name can contain only letters and spaces"); return; }
-    if (!/^[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?@gmail\.com$/i.test(email)) { setFormError("Please enter a valid Gmail address"); return; }
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email)) { setFormError("Please enter a valid email address"); return; }
     if (!isEditing && !formData.password) { setFormError("Password is required for new staff"); return; }
     try {
       if (isEditing && selectedStaff) {

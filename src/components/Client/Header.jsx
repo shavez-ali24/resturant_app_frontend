@@ -1601,7 +1601,8 @@ export default function Header({
 
                         let s = String(order.status || "pending").toLowerCase();
                         let isBilledState = false;
-                        if (s === "completed" && !order.paymentMethod) {
+                        const hasPayment = order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0);
+                        if (s === "completed" && !hasPayment) {
                           s = "billed";
                           isBilledState = true;
                         }

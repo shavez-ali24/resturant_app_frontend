@@ -298,7 +298,14 @@ const OrdersTable = ({
                   </div>
 
                   {/* Row 3: Type badge */}
-                  <div className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}>
+                  <div 
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}
+                     style={order.orderType === "Room Stay" ? {
+                       backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
+                       color: isDarkMode ? '#e2e8f0' : '#57524e',
+                       border: isDarkMode ? '1px solid rgba(148, 163, 184, 0.25)' : '1px solid #e7e5e4'
+                     } : {}}
+                  >
                     {getOrderTypeIcon(order.orderType)}
                     <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
                   </div>

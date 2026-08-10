@@ -19,6 +19,23 @@ const groupByCategory = (items) => {
   }, {});
 };
 
+const LazyImage = ({ src, alt, className }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative w-full h-full bg-gray-100 dark:bg-slate-800 overflow-hidden">
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={`${className} transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </div>
+  );
+};
+
 // Calculate discounted price for items
 const calculateDiscountedPrice = (item, variantKey = null) => {
   let basePrice = 0;
@@ -327,38 +344,11 @@ export default function FoodListing({
               `
             }} />
             {/* ✅ Category Header */}
-            <div className="flex items-center gap-2 pt-1">
-              <div className="relative h-2.5 w-2.5">
-                <div
-                  className={`absolute inset-0 rounded-full animate-pulse ${isDarkMode
-                      ? "bg-gradient-to-r from-primary/70 via-primary to-primary shadow-[0_0_10px_rgba(239,159,39,0.9)]"
-                      : "bg-gradient-to-r from-primary/80 via-primary to-primary"
-                    }`}
-                ></div>
-                <div
-                  className={`absolute inset-0 rounded-full animate-ping ${isDarkMode
-                      ? "bg-gradient-to-r from-primary/40 via-primary/70 to-primary opacity-70"
-                      : "bg-gradient-to-r from-primary/60 via-primary/80 to-primary"
-                    }`}
-                ></div>
-                <div
-                  className={`relative h-2.5 w-2.5 rounded-full ${isDarkMode
-                      ? "bg-primary ring-1 ring-primary/80 shadow-[0_0_6px_rgba(239,159,39,0.95)]"
-                      : "bg-primary ring-1 ring-primary/65"
-                    }`}
-                ></div>
-              </div>
-              <h2 className={`text-base font-semibold tracking-wide ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
+            <div className="flex flex-col items-start pt-1 mb-3 w-full min-w-0">
+              <h2 className={`text-base font-extrabold tracking-wide truncate w-full ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}>
                 {category}
               </h2>
-              <div
-                className="relative flex-1 h-px"
-                style={{
-                  background: 'linear-gradient(90deg, transparent 0%, #EF9F27 50%, transparent 100%)',
-                  animation: 'expand 3s ease-in-out infinite',
-                  transformOrigin: 'center'
-                }}
-              />
+              <div className="h-[3.5px] w-14 rounded-full mt-1 bg-gradient-to-r from-primary to-transparent flex-shrink-0" />
             </div>
 
             {/* ✅ Food Cards - Responsive Layout */}
@@ -410,7 +400,7 @@ export default function FoodListing({
                         viewport={{ once: true, amount: 0.06 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         whileHover={{ y: -2 }}
-                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/20 bg-gradient-to-b from-[#fffbf4] to-[#fffcf9]"} shadow-[0_8px_18px_rgba(239,159,39,0.1)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                        className={`relative w-[clamp(132px,40vw,166px)] flex-shrink-0 rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/25 bg-white"} shadow-[0_4px_12px_rgba(0,0,0,0.04)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                           } ${isMenuOpen ? "z-10 overflow-visible" : "overflow-hidden"}`}
                         style={{
                           willChange: "auto"
@@ -424,11 +414,11 @@ export default function FoodListing({
                           }}
                           className={`relative h-28 w-full cursor-pointer overflow-hidden rounded-t-2xl`}
                         >
-                          <img
-                            src={item.image?.url}
-                            alt={item.name}
-                            className="w-full h-full object-cover object-center"
-                          />
+                           <LazyImage
+                             src={item.image?.url}
+                             alt={item.name}
+                             className="w-full h-full object-cover object-center"
+                           />
                           {/* Veg / Non-Veg / Mixed dot badge over image */}
                           <div className="absolute top-2 left-2 rounded-full bg-white p-1 shadow-sm border border-white">
                             {item.type === "veg" ? (
@@ -496,7 +486,7 @@ export default function FoodListing({
                         </div>
 
                         {/* ✅ Fixed Size Details Section */}
-                        <div className={`flex h-28 flex-col gap-1 p-2 ${isDarkMode ? "bg-slate-900" : "bg-gradient-to-b from-[#fffbf4]/40 to-[#fffcf9]"}`}>
+                        <div className={`flex h-28 flex-col gap-1 p-2 ${isDarkMode ? "bg-slate-900" : "bg-white"}`}>
                           {/* Item Name with Pencil Icon */}
                           <h3 className="flex h-10 items-start justify-between text-xs font-semibold leading-tight text-gray-900">
                             <span className="flex-1 line-clamp-1 break-words pr-1">
@@ -779,7 +769,7 @@ export default function FoodListing({
                       viewport={{ once: true, amount: 0.06 }}
                       transition={{ duration: 0.25, ease: "easeOut" }}
                       whileHover={layoutMode === "single" ? { y: 0 } : { y: -2 }}
-                      className={`relative rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/20 bg-gradient-to-b from-[#fffbf4] to-[#fffcf9]"} shadow-[0_8px_18px_rgba(239,159,39,0.1)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
+                      className={`relative rounded-2xl border ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-primary/25 bg-white"} shadow-[0_4px_12px_rgba(0,0,0,0.04)] ${isUnavailable ? "opacity-60 grayscale" : "opacity-100"
                         } ${layoutMode === "single"
                           ? "flex min-h-[128px] w-full self-start"
                           : "w-full"
@@ -796,7 +786,7 @@ export default function FoodListing({
                             : "h-28 w-full rounded-t-2xl"
                           }`}
                       >
-                        <img
+                        <LazyImage
                           src={item.image?.url}
                           alt={item.name}
                           className="w-full h-full object-cover object-center"
@@ -867,9 +857,8 @@ export default function FoodListing({
                         )}
                       </div>
 
-                      {/* ✅ Fixed Size Details Section */}
                       <div
-                        className={`flex flex-col gap-1 ${isDarkMode ? "bg-slate-900" : "bg-[#fffcf9]"} ${layoutMode === "single"
+                        className={`flex flex-col gap-1 ${isDarkMode ? "bg-slate-900" : "bg-white"} ${layoutMode === "single"
                             ? "min-h-[128px] flex-1 justify-start px-3 py-2"
                             : "h-28 p-2"
                           }`}

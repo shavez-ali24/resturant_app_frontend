@@ -503,7 +503,13 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
           borderColor: "transparent",
         }}
       >
-        {isLoading ? "Adding..." : `Add ${type === "TABLE" ? "Tables" : "Rooms"}`}
+        {isLoading 
+          ? "Adding..." 
+          : `Add ${type === "TABLE" 
+              ? (customUnits.length > 1 ? "Tables" : "Table") 
+              : (customUnits.length > 1 ? "Rooms" : "Room")
+            }`
+        }
       </button>
     </form>
   );
@@ -648,6 +654,9 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
           style={{ color: statusStyle.subText }}
         >
           {unit.type}
+          {unit.type === "ROOM" && unit.roomCategory?.name && (
+            <> • {unit.roomCategory.name}</>
+          )}
           {unit.type === "ROOM" && (unit.roomCategory?.pricePerNight > 0 || unit.roomCategory?.priceConfig?.pricePerNight > 0) && (
             <> • ₹{unit.roomCategory?.priceConfig?.pricePerNight ?? unit.roomCategory?.pricePerNight}</>
           )}

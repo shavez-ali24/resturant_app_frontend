@@ -2,6 +2,16 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import PayModal from "../pendingOrders/PayModal";
+import { useNotification } from "../../Bell/NotificationContext";
+
+const getOrderItemCartKey = (orderItem) => {
+  if (!orderItem) return "";
+  const itemId = orderItem.menuItemId || orderItem._id || orderItem.id;
+  const variant = orderItem.variant || orderItem.variantKey || orderItem.variantName;
+  const variantPart = variant ? `${itemId}-${variant}` : `${itemId}`;
+  const customizations = orderItem.customizations ? `:${String(orderItem.customizations).trim()}` : "";
+  return `${variantPart}${customizations}`;
+};
 import {
   useBillOrderMutation,
   useToggleItemReadyMutation,
@@ -100,6 +110,16 @@ const BillPage = ({
   const activeOrder = localOrderData || order;
   const isPreviewOnly = Boolean(order?.previewMode === "new-items-only");
   const isAlreadyBilled = String(activeOrder?.status || "").toLowerCase() === "completed";
+
+  const notificationCtx = useNotification();
+  const newItemsMap = notificationCtx?.newItemsByOrderId;
+  const newlyAddedSet = notificationCtx?.newlyAddedItemsOrderIds;
+  const setNewItemsMap = notificationCtx?.setNewItemsByOrderId;
+  const setNewlyAddedSet = notificationCtx?.setNewlyAddedItemsOrderIds;
+
+  const orderIdVal = activeOrder?._id || activeOrder?.id || activeOrder?.orderId;
+  const newItemsMapForThisOrder = newItemsMap && orderIdVal ? newItemsMap.get(String(orderIdVal)) : null;
+  const hasNewClientItems = newItemsMapForThisOrder && newItemsMapForThisOrder.size > 0;
 
   // ✅ FIX: Use activeOrder.status so checkboxes don't disappear after edit
   const showItemChecks = !isPreviewOnly && ["pending", "preparing", "ready"].includes(
@@ -1055,6 +1075,142 @@ const BillPage = ({
     };
   };
 
+  const handleNewOrderKOTPrint = () => {
+    if (!newItemsMapForThisOrder || newItemsMapForThisOrder.size === 0) return;
+
+    const kotRestName =
+      restaurantDetails?.restaurantName ||
+      restaurantDetails?.name ||
+      "Restaurant";
+    const kotOrderId = activeOrder?.orderId || activeOrder?._id?.slice(-4) || "N/A";
+    
+    // Filter activeOrder.items to find new items and map their quantities
+    const kotItems = [];
+    (activeOrder?.items || []).forEach(item => {
+      const key = getOrderItemCartKey(item);
+      if (newItemsMapForThisOrder.has(key)) {
+        const qtyDiff = newItemsMapForThisOrder.get(key);
+        if (qtyDiff > 0) {
+          kotItems.push({
+            ...item,
+            quantity: qtyDiff
+          });
+        }
+      }
+    });
+
+    if (kotItems.length === 0) return;
+
+    // Build type info with location
+    const orderType = activeOrder?.orderType || "";
+    const section = activeOrder?.source?.section;
+    const number = activeOrder?.source?.number;
+    let typeInfo = orderType || "N/A";
+    if (section && number != null) {
+      const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+      const secLabel = labels[section] || (section.charAt(0).toUpperCase() + section.slice(1));
+      const unit = activeOrder?.source?.type === "ROOM" ? "" : "Table";
+      const loc = unit ? `${secLabel} ${unit} ${number}` : `${secLabel} ${number}`;
+      typeInfo = `${orderType} · ${loc}`;
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="padding:24px;font-family:monospace;font-size:14px;max-width:400px;margin:0 auto;color:#000">
+        <div style="text-align:center;margin-bottom:16px">
+          <h2 style="margin:0;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000">${kotRestName}</h2>
+          <hr style="width:75%;margin:8px auto;border:none;border-top:1px solid #000" />
+          <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#000">New Kitchen Order Ticket</p>
+        </div>
+
+        <div style="margin-bottom:12px;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:8px 0;font-size:12px;color:#000">
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Order ID</span><span>${kotOrderId}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Name</span><span>${activeOrder?.customerName || "Guest"}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Type</span><span>${typeInfo}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Time</span><span>${new Date().toLocaleString("en-IN", { hour12: true })}</span></div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#000">
+          <thead>
+            <tr style="border-bottom:1px solid #000">
+              <th style="padding:4px 0;text-align:left;font-weight:600;color:#000">Item</th>
+              <th style="padding:4px 0;text-align:right;font-weight:600;color:#000">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${kotItems.map(item => {
+              const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+              return `
+                <tr style="border-bottom:1px dotted #000">
+                  <td style="padding:4px 0;color:#000">
+                    ${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}
+                    ${cust}
+                  </td>
+                  <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+
+      </div>
+    `;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+
+    document.body.appendChild(printFrame);
+    const doc = printFrame.contentWindow.document;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: #fff; color: #000; font-family: monospace; padding: 20px; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${container.innerHTML}</body>
+      </html>
+    `);
+    doc.close();
+
+    printFrame.onload = () => {
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+          
+          // Clear notification keys so button goes away!
+          if (setNewItemsMap && orderIdVal) {
+            setNewItemsMap((prev) => {
+              const next = new Map(prev);
+              next.delete(String(orderIdVal));
+              return next;
+            });
+          }
+          if (setNewlyAddedSet && orderIdVal) {
+            setNewlyAddedSet((prev) => {
+              const next = new Set(prev);
+              next.delete(String(orderIdVal));
+              return next;
+            });
+          }
+        }, 1000);
+      }, 500);
+    };
+  };
+
   const getItemName = (item) => {
     return item?.name || item?.menuItem?.name || "Item";
   };
@@ -1298,7 +1454,14 @@ const BillPage = ({
                     value={localOrderData?.orderType}
                     onValueChange={handleOrderTypeChange}
                   >
-                    <SelectTrigger className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}>
+                    <SelectTrigger 
+                      className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}
+                      style={localOrderData?.orderType === "Room Stay" ? {
+                        backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
+                        color: isDarkMode ? '#e2e8f0' : '#57524e',
+                        borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.25)' : '#e7e5e4'
+                      } : {}}
+                    >
                       <div className="flex items-center gap-2 text-sm">
                         {getOrderTypeIcon(localOrderData?.orderType)}
                         <span>{getOrderTypeLabel(localOrderData?.orderType)}</span>
@@ -1640,18 +1803,33 @@ const BillPage = ({
               </div>
 
               {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
-                <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass} ${billTextClass}`}>
-                  <span>Settled Amount</span>
-                  <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
-                </div>
+                <>
+                  {displayGrandTotal - activeOrder.settlementAmount > 0.01 && (
+                    <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                      <span>Discount (Settlement)</span>
+                      <span>-₹{(displayGrandTotal - activeOrder.settlementAmount).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass} ${billTextClass}`}>
+                    <span>Settled Amount</span>
+                    <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
+                  </div>
+                </>
               )}
 
-              {!isEditMode && activeOrder?.paymentMethod && (
+              {!isEditMode && activeOrder?.paymentMethods && activeOrder.paymentMethods.length > 0 ? (
+                activeOrder.paymentMethods.map((p, idx) => (
+                  <div key={idx} className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                    <span className="uppercase">{p.method} Payment</span>
+                    <span>₹{Number(p.amount || 0).toFixed(2)}</span>
+                  </div>
+                ))
+              ) : !isEditMode && activeOrder?.paymentMethod ? (
                 <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
                   <span>Payment Method</span>
                   <span className="uppercase">{activeOrder.paymentMethod}</span>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
@@ -1676,6 +1854,19 @@ const BillPage = ({
               }`}
             >
               Cancel
+            </button>
+          )}
+
+          {hasNewClientItems && (
+            <button
+              onClick={handleNewOrderKOTPrint}
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
+                isDarkMode
+                  ? "border-amber-500 bg-amber-950/40 text-amber-300 hover:bg-amber-950/60"
+                  : "border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100/90"
+              }`}
+            >
+              New Order KOT
             </button>
           )}
 

@@ -773,7 +773,14 @@ const EditOrderModal = ({
           <div>
             <label className={labelCls}>Order Type</label>
             <Select value={localOrderData.orderType} onValueChange={handleOrderTypeChange}>
-              <SelectTrigger className={`h-10 w-full rounded-lg border px-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadgeClass(localOrderData.orderType)}`}>
+              <SelectTrigger 
+                className={`h-10 w-full rounded-lg border px-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-orange-200 ${getOrderTypeBadgeClass(localOrderData.orderType)}`}
+                style={localOrderData.orderType === "Room Stay" ? {
+                  backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
+                  color: isDarkMode ? '#e2e8f0' : '#57524e',
+                  borderColor: isDarkMode ? 'rgba(148, 163, 184, 0.25)' : '#e7e5e4'
+                } : {}}
+              >
                 <div className="flex items-center gap-2">
                   {getOrderTypeIcon(localOrderData.orderType)}
                   <span>{getOrderTypeLabel(localOrderData.orderType)}</span>

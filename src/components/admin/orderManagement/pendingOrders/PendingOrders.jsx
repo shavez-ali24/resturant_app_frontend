@@ -104,9 +104,114 @@ const checkAndClearAdminModifiedOrderId = (id) => {
   return false;
 };
 
+const triggerAutoKOTPrint = (order, itemsToPrint, restaurantData) => {
+  if (!itemsToPrint || itemsToPrint.length === 0) return;
+
+  const restaurant = restaurantData?.restaurant || restaurantData;
+  const kotRestName =
+    restaurant?.restaurantName ||
+    restaurant?.name ||
+    "Restaurant";
+  const kotOrderId = order?.orderId || order?._id?.slice(-4) || "N/A";
+
+  // Build type info with location
+  const orderType = order?.orderType || "";
+  const section = order?.source?.section;
+  const number = order?.source?.number;
+  let typeInfo = orderType || "N/A";
+  if (section && number != null) {
+    const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
+    const secLabel = labels[section] || (section.charAt(0).toUpperCase() + section.slice(1));
+    const unit = order?.source?.type === "ROOM" ? "" : "Table";
+    const loc = unit ? `${secLabel} ${unit} ${number}` : `${secLabel} ${number}`;
+    typeInfo = `${orderType} · ${loc}`;
+  }
+
+  const container = document.createElement("div");
+  container.innerHTML = `
+    <div style="padding:24px;font-family:monospace;font-size:14px;max-width:400px;margin:0 auto;color:#000">
+      <div style="text-align:center;margin-bottom:16px">
+        <h2 style="margin:0;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000">${kotRestName}</h2>
+        <hr style="width:75%;margin:8px auto;border:none;border-top:1px solid #000" />
+        <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#000">Kitchen Order Ticket</p>
+      </div>
+
+      <div style="margin-bottom:12px;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:8px 0;font-size:12px;color:#000">
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Order ID</span><span>${kotOrderId}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Name</span><span>${order?.customerName || "Guest"}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Type</span><span>${typeInfo}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Time</span><span>${new Date().toLocaleString("en-IN", { hour12: true })}</span></div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:12px;color:#000">
+        <thead>
+          <tr style="border-bottom:1px solid #000">
+            <th style="padding:4px 0;text-align:left;font-weight:600;color:#000">Item</th>
+            <th style="padding:4px 0;text-align:right;font-weight:600;color:#000">Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsToPrint.map(item => {
+            const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+            const name = item.name || item.menuItem?.name || "Item";
+            const variantName = item.variant || item.variantName;
+            return `
+              <tr style="border-bottom:1px dotted #000">
+                <td style="padding:4px 0;color:#000">
+                  ${name}${variantName ? ` <span style="color:#000">(${variantName})</span>` : ""}
+                  ${cust}
+                </td>
+                <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const printFrame = document.createElement("iframe");
+  printFrame.style.position = "fixed";
+  printFrame.style.right = "0";
+  printFrame.style.bottom = "0";
+  printFrame.style.width = "0";
+  printFrame.style.height = "0";
+  printFrame.style.border = "0";
+
+  document.body.appendChild(printFrame);
+  const doc = printFrame.contentWindow.document;
+
+  doc.open();
+  doc.write(`
+    <html>
+      <head>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { background: #fff; color: #000; font-family: monospace; padding: 20px; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>${container.innerHTML}</body>
+    </html>
+  `);
+  doc.close();
+
+  printFrame.onload = () => {
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    }, 500);
+  };
+};
+
 const Orders = () => {
   const colors = useSelector((state) => state.admin.theme.colors);
-  const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds, newItemsByOrderId, setNewItemsByOrderId } = useNotification();
+  const { notify, sseEvent, sseConnected, newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds, newItemsByOrderId, setNewItemsByOrderId, newBadgeItemsByOrderId, setNewBadgeItemsByOrderId, setHasUnreadSidebarNotification } = useNotification();
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -123,6 +228,13 @@ const Orders = () => {
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
+
+  React.useEffect(() => {
+    // Clear sidebar indicators when admin views the live orders page
+    if (setHasUnreadSidebarNotification) {
+      setHasUnreadSidebarNotification(false);
+    }
+  }, [setHasUnreadSidebarNotification]);
   const [searchParams, setSearchParams] = useSearchParams();
   const showCreateOrder = searchParams.get("view") === "create";
   const urlOrderId = searchParams.get("orderId");
@@ -312,167 +424,7 @@ const Orders = () => {
     refetchOnReconnect: refetchOnAction,
   });
 
-  useEffect(() => {
-    if (!sseEvent?.type || !sseEvent?.data) return;
-
-    // Refetch live units layout immediately on occupancy status changes
-    if (sseEvent.type === "OCCUPANCY_CHANGED") {
-      refetchLiveUnits?.();
-      return;
-    }
-
-    if (!["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type)) {
-      return;
-    }
-
-    // New or updated orders also update table occupancy states and amounts
-    refetchLiveUnits?.();
-
-    const incoming = sseEvent.data;
-    const incomingId = getOrderIdValue(incoming);
-    if (!incomingId) return;
-
-    fetchOrderById(incomingId).unwrap().then((fetchedOrder) => {
-      if (!fetchedOrder) return;
-
-      const normalizedOrder = normalizeIncomingOrder(fetchedOrder);
-      if (!normalizedOrder) return;
-      const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
-      const eventTimestamp = sseEvent?.ts || Date.now();
-
-      const isAdminAction = checkAndClearAdminModifiedOrderId(incomingId);
-
-      // ─── SHOW BADGE FOR NEW ORDER OR ADDED ITEMS (client only, admin actions are silenced) ───
-      const getOrderTotalItemsQuantity = (order) => {
-        if (!order || !Array.isArray(order.items)) return 0;
-        return order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
-      };
-
-      if (!isAdminAction) {
-        if (sseEvent.type === "NEW_ORDER") {
-          // Any new order (from client) → show badge
-          setNewlyAddedItemsOrderIds((prevSet) => {
-            const next = new Set(prevSet);
-            next.add(String(incomingId));
-            return next;
-          });
-          // Store all item keys in this new order as new
-          if (Array.isArray(normalizedOrder.items)) {
-            const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
-            setNewItemsByOrderId((prevMap) => {
-              const next = new Map(prevMap);
-              next.set(String(incomingId), itemKeys);
-              return next;
-            });
-          }
-        } else {
-          // ORDER_UPDATED — show badge if total quantity increased (client added items)
-          const previousVersion = sseOrders.find(
-            (order) => getOrderIdValue(order) === incomingId
-          ) || [...(pendingOrders || []), ...(preparingOrders || []), ...(readyOrders || []), ...(completedOrders || [])].find(
-            (order) => getOrderIdValue(order) === incomingId
-          );
-
-          if (previousVersion) {
-            const prevQty = getOrderTotalItemsQuantity(previousVersion);
-            const newQty = getOrderTotalItemsQuantity(normalizedOrder);
-            if (newQty > prevQty) {
-              setNewlyAddedItemsOrderIds((prevSet) => {
-                const next = new Set(prevSet);
-                next.add(String(incomingId));
-                return next;
-              });
-
-              // Determine which items are new/increased
-              const prevItemsMap = new Map();
-              if (Array.isArray(previousVersion.items)) {
-                previousVersion.items.forEach((item) => {
-                  const key = getOrderItemCartKey(item);
-                  prevItemsMap.set(key, (prevItemsMap.get(key) || 0) + (Number(item.quantity) || 0));
-                });
-              }
-
-              const newKeys = new Set();
-              if (Array.isArray(normalizedOrder.items)) {
-                normalizedOrder.items.forEach((item) => {
-                  const key = getOrderItemCartKey(item);
-                  const prevQtyForItem = prevItemsMap.get(key) || 0;
-                  const newQtyForItem = Number(item.quantity) || 0;
-                  if (newQtyForItem > prevQtyForItem) {
-                    newKeys.add(key);
-                  }
-                });
-              }
-
-              if (newKeys.size > 0) {
-                setNewItemsByOrderId((prevMap) => {
-                  const next = new Map(prevMap);
-                  const existingKeys = next.get(String(incomingId)) || new Set();
-                  const updatedKeys = new Set([...existingKeys, ...newKeys]);
-                  next.set(String(incomingId), updatedKeys);
-                  return next;
-                });
-              }
-            }
-          } else {
-            // Fallback: if previous version is not found, treat all items in incoming as new
-            if (Array.isArray(normalizedOrder.items)) {
-              const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
-              setNewItemsByOrderId((prevMap) => {
-                const next = new Map(prevMap);
-                next.set(String(incomingId), itemKeys);
-                return next;
-              });
-            }
-          }
-        }
-      }
-
-      if (normalizedStatus === "preparing") {
-        const preparingStartedAtMs =
-          getOrderPreparingStartedAt(normalizedOrder) ||
-          rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
-
-        if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
-          normalizedOrder.preparingStartedAt = new Date(
-            preparingStartedAtMs
-          ).toISOString();
-        }
-      } else if (normalizedStatus) {
-        clearOrderPreparingStartedAt(incomingId);
-      }
-
-      setSseOrders((prev) => {
-        const remainingOrders = prev.filter(
-          (order) => getOrderIdValue(order) !== incomingId
-        );
-
-        if (!["pending", "preparing", "ready", "completed"].includes(normalizedStatus)) {
-          return remainingOrders;
-        }
-
-        const previousVersion = prev.find(
-          (order) => getOrderIdValue(order) === incomingId
-        );
-        return [
-          mergeOrderData(previousVersion, normalizedOrder),
-          ...remainingOrders,
-        ].slice(0, combinedFetchLimit);
-      });
-
-      setCurrentPage(1);
-
-      // ALWAYS refetch queries for real-time update
-      refetchPendingOrders();
-      refetchPreparingOrders();
-      refetchReadyOrders();
-      refetchCompletedOrders();
-      refetchRestaurant();
-    }).catch((err) => {
-      console.error("Failed to fetch order details on SSE event:", err);
-    });
-
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected, refetchLiveUnits, fetchOrderById]);
+  // (SSE useEffect moved below to avoid temporal dead zone)
 
   const getRawErrorText = (errorObj) => {
     if (!errorObj) return "";
@@ -626,7 +578,8 @@ const Orders = () => {
     return Array.from(orderMap.values())
       .filter((order) => {
         const status = String(order?.status || "").toLowerCase();
-        return status !== "completed" || !order?.paymentMethod;
+        const hasPayment = order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0);
+        return status !== "completed" || !hasPayment;
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [pendingOrders, preparingOrders, readyOrders, completedOrders, sseOrders]);
@@ -658,7 +611,8 @@ const Orders = () => {
 
       let displayStatus = "booked"; // OCCUPIED (orange border styling)
       let rawStatus = "OCCUPIED";
-      if (orderStatus === "ready" || (orderStatus === "completed" && !order.paymentMethod)) {
+      const hasPayment = order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0);
+      if (orderStatus === "ready" || (orderStatus === "completed" && !hasPayment)) {
         displayStatus = "billed"; // BILLED (green border styling)
         rawStatus = "BILLED";
       }
@@ -875,7 +829,9 @@ const Orders = () => {
       const updated = combinedOrders.find(
         (o) => o._id === orderForBillModal._id
       );
-      setOrderForBillModal(updated ?? null);
+      if (updated) {
+        setOrderForBillModal(updated);
+      }
     }
   }, [combinedOrders, orderForBillModal]);
 
@@ -901,6 +857,232 @@ const Orders = () => {
       })
     );
   }, [pendingOrders, preparingOrders, readyOrders, completedOrders, sseOrders.length]);
+
+  const lastProcessedEventTsRef = React.useRef(0);
+
+  useEffect(() => {
+    if (!sseEvent?.type || !sseEvent?.data) return;
+    if (sseEvent.ts && sseEvent.ts === lastProcessedEventTsRef.current) return;
+    lastProcessedEventTsRef.current = sseEvent.ts || Date.now();
+
+    // Refetch live units layout immediately on occupancy status changes
+    if (sseEvent.type === "OCCUPANCY_CHANGED") {
+      refetchLiveUnits?.();
+      return;
+    }
+
+    if (!["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type)) {
+      return;
+    }
+
+    // New or updated orders also update table occupancy states and amounts
+    refetchLiveUnits?.();
+
+    const incoming = sseEvent.data;
+    const incomingId = getOrderIdValue(incoming);
+    if (!incomingId) return;
+
+    fetchOrderById(incomingId).unwrap().then((fetchedOrder) => {
+      if (!fetchedOrder) return;
+
+      const normalizedOrder = normalizeIncomingOrder(fetchedOrder);
+      if (!normalizedOrder) return;
+      const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
+      const eventTimestamp = sseEvent?.ts || Date.now();
+
+      const isAdminAction = checkAndClearAdminModifiedOrderId(incomingId);
+
+      // ─── SHOW BADGE FOR NEW ORDER OR ADDED ITEMS (client only, admin actions are silenced) ───
+      const getOrderTotalItemsQuantity = (order) => {
+        if (!order || !Array.isArray(order.items)) return 0;
+        return order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+      };
+
+      if (!isAdminAction) {
+        if (sseEvent.type === "NEW_ORDER") {
+          // Any new order (from client) → show badge
+          setNewlyAddedItemsOrderIds((prevSet) => {
+            const next = new Set(prevSet);
+            next.add(String(incomingId));
+            return next;
+          });
+          if (setHasUnreadSidebarNotification) {
+            setHasUnreadSidebarNotification(true);
+          }
+          if (Array.isArray(normalizedOrder.items)) {
+            const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
+            setNewBadgeItemsByOrderId((prevMap) => {
+              const next = new Map(prevMap);
+              next.set(String(incomingId), itemKeys);
+              return next;
+            });
+          }
+        } else {
+          // ORDER_UPDATED — show badge if items list has been modified by the client
+          const previousVersion = sseOrders.find(
+            (order) => getOrderIdValue(order) === incomingId
+          ) || [...(pendingOrders || []), ...(preparingOrders || []), ...(readyOrders || []), ...(completedOrders || [])].find(
+            (order) => getOrderIdValue(order) === incomingId
+          );
+
+          let itemsChanged = true;
+          if (previousVersion) {
+            const prevItems = Array.isArray(previousVersion.items) ? previousVersion.items : [];
+            const newItems = Array.isArray(normalizedOrder.items) ? normalizedOrder.items : [];
+            if (prevItems.length === newItems.length) {
+              itemsChanged = prevItems.some((item, idx) => {
+                const newItem = newItems[idx];
+                if (!newItem) return true;
+                const prevId = item.menuItemId || item._id || item.id;
+                const newId = newItem.menuItemId || newItem._id || newItem.id;
+                return (
+                  prevId !== newId ||
+                  Number(item.quantity) !== Number(newItem.quantity) ||
+                  item.variant !== newItem.variant ||
+                  item.customizations !== newItem.customizations
+                );
+              });
+            }
+          }
+
+          if (itemsChanged) {
+            setNewlyAddedItemsOrderIds((prevSet) => {
+              const next = new Set(prevSet);
+              next.add(String(incomingId));
+              return next;
+            });
+            if (setHasUnreadSidebarNotification) {
+              setHasUnreadSidebarNotification(true);
+            }
+          }
+
+          if (previousVersion) {
+            const prevQty = getOrderTotalItemsQuantity(previousVersion);
+            const newQty = getOrderTotalItemsQuantity(normalizedOrder);
+            if (newQty > prevQty) {
+
+              // Determine which items are new/increased
+              const prevItemsMap = new Map();
+              if (Array.isArray(previousVersion.items)) {
+                previousVersion.items.forEach((item) => {
+                  const key = getOrderItemCartKey(item);
+                  prevItemsMap.set(key, (prevItemsMap.get(key) || 0) + (Number(item.quantity) || 0));
+                });
+              }
+
+              const newKeys = new Set();
+              if (Array.isArray(normalizedOrder.items)) {
+                normalizedOrder.items.forEach((item) => {
+                  const key = getOrderItemCartKey(item);
+                  const prevQtyForItem = prevItemsMap.get(key) || 0;
+                  const newQtyForItem = Number(item.quantity) || 0;
+                  if (newQtyForItem > prevQtyForItem) {
+                    newKeys.add(key);
+                  }
+                });
+              }
+
+              if (newKeys.size > 0) {
+                setNewBadgeItemsByOrderId((prevMap) => {
+                  const next = new Map(prevMap);
+                  const existingKeys = next.get(String(incomingId)) || new Set();
+                  const updatedKeys = new Set([...existingKeys, ...newKeys]);
+                  next.set(String(incomingId), updatedKeys);
+                  return next;
+                });
+
+                setNewItemsByOrderId((prevMap) => {
+                  const next = new Map(prevMap);
+                  const existingMap = next.get(String(incomingId)) || new Map();
+                  const updatedMap = new Map(existingMap);
+                  
+                  normalizedOrder.items.forEach(item => {
+                    const key = getOrderItemCartKey(item);
+                    if (newKeys.has(key)) {
+                      const prevQtyForItem = prevItemsMap.get(key) || 0;
+                      const newQtyForItem = Number(item.quantity) || 0;
+                      const diff = newQtyForItem - prevQtyForItem;
+                      if (diff > 0) {
+                        updatedMap.set(key, (updatedMap.get(key) || 0) + diff);
+                      }
+                    }
+                  });
+
+                  next.set(String(incomingId), updatedMap);
+                  return next;
+                });
+              }
+            }
+          } else {
+            // Fallback: if previous version is not found, treat all items in incoming as new
+            if (Array.isArray(normalizedOrder.items)) {
+              const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
+              setNewBadgeItemsByOrderId((prevMap) => {
+                const next = new Map(prevMap);
+                next.set(String(incomingId), itemKeys);
+                return next;
+              });
+
+              const itemQtys = new Map();
+              normalizedOrder.items.forEach(item => {
+                const key = getOrderItemCartKey(item);
+                itemQtys.set(key, Number(item.quantity) || 1);
+              });
+              setNewItemsByOrderId((prevMap) => {
+                const next = new Map(prevMap);
+                next.set(String(incomingId), itemQtys);
+                return next;
+              });
+            }
+          }
+        }
+      }
+
+      if (normalizedStatus === "preparing") {
+        const preparingStartedAtMs =
+          getOrderPreparingStartedAt(normalizedOrder) ||
+          rememberOrderPreparingStartedAt(incomingId, eventTimestamp);
+
+        if (preparingStartedAtMs && !normalizedOrder.preparingStartedAt) {
+          normalizedOrder.preparingStartedAt = new Date(
+            preparingStartedAtMs
+          ).toISOString();
+        }
+      } else if (normalizedStatus) {
+        clearOrderPreparingStartedAt(incomingId);
+      }
+
+      setSseOrders((prev) => {
+        const remainingOrders = prev.filter(
+          (order) => getOrderIdValue(order) !== incomingId
+        );
+
+        if (!["pending", "preparing", "ready", "completed"].includes(normalizedStatus)) {
+          return remainingOrders;
+        }
+
+        const previousVersion = prev.find(
+          (order) => getOrderIdValue(order) === incomingId
+        );
+        return [
+          mergeOrderData(previousVersion, normalizedOrder),
+          ...remainingOrders,
+        ].slice(0, combinedFetchLimit);
+      });
+
+      setCurrentPage(1);
+
+      // ALWAYS refetch queries for real-time update
+      refetchPendingOrders();
+      refetchPreparingOrders();
+      refetchReadyOrders();
+      refetchCompletedOrders();
+      refetchRestaurant();
+    }).catch((err) => {
+      console.error("Failed to fetch order details on SSE event:", err);
+    });
+
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected, refetchLiveUnits, fetchOrderById, sseOrders, pendingOrders, preparingOrders, readyOrders, completedOrders, restaurantData]);
 
   useEffect(() => {
     if (!showCreateOrder || urlOrderId) return;
@@ -1315,16 +1497,42 @@ const Orders = () => {
       clearNewItemsFlag(activeId);
     }
   }, [editingOrder, selectedOrderForCustomizations, orderForBillModal, payModalOrder, clearNewItemsFlag]);
+  const clearNewBadgesForOrder = useCallback((orderId) => {
+    if (!orderId) return;
+    setNewBadgeItemsByOrderId((prev) => {
+      const next = new Map(prev);
+      next.delete(String(orderId));
+      return next;
+    });
+  }, [setNewBadgeItemsByOrderId]);
 
-  // Track previous active order being viewed/edited to clear its new items on close/exit
   const prevActiveOrderIdRef = React.useRef(null);
   useEffect(() => {
     const activeId = getOrderIdValue(editingOrder) || getOrderIdValue(urlFetchedOrder);
     if (!activeId && prevActiveOrderIdRef.current) {
-      clearNewItemsForOrder(prevActiveOrderIdRef.current);
+      clearNewBadgesForOrder(prevActiveOrderIdRef.current);
     }
     prevActiveOrderIdRef.current = activeId;
-  }, [editingOrder, urlFetchedOrder, clearNewItemsForOrder]);
+  }, [editingOrder, urlFetchedOrder, clearNewBadgesForOrder]);
+
+  const layoutScrollContainerRef = React.useRef(null);
+  const handleLayoutScroll = useCallback((e) => {
+    sessionStorage.setItem("layoutScrollPosition", e.currentTarget.scrollTop);
+  }, []);
+
+  useEffect(() => {
+    if (!showCreateOrder && layoutScrollContainerRef.current) {
+      const savedScroll = sessionStorage.getItem("layoutScrollPosition");
+      if (savedScroll) {
+        const timer = setTimeout(() => {
+          if (layoutScrollContainerRef.current) {
+            layoutScrollContainerRef.current.scrollTop = parseInt(savedScroll, 10);
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [showCreateOrder]);
 
   // 🔧 FIX: Store orderId in URL so data survives page refresh
   const handleEditOrderFromLayout = useCallback(async (tableInfo) => {
@@ -1626,15 +1834,16 @@ const Orders = () => {
                   } catch (_) { }
                   return null;
                 })() : null)}
-                onOrderSuccess={(mode, orderObj) => {
+                 onOrderSuccess={(mode, orderObj) => {
                   closeCreateOrder();
                   if (orderObj) {
-                    setSseOrders((prev) => {
-                      const incomingId = getOrderIdValue(orderObj);
-                      if (!incomingId) return prev;
-                      const remaining = prev.filter(o => getOrderIdValue(o) !== incomingId);
-                      return [orderObj, ...remaining];
-                    });
+                    const incomingId = getOrderIdValue(orderObj);
+                    if (incomingId) {
+                      setSseOrders((prev) => {
+                        const remaining = prev.filter(o => getOrderIdValue(o) !== incomingId);
+                        return [orderObj, ...remaining];
+                      });
+                    }
                   }
                   refetchPendingOrders();
                   refetchPreparingOrders();
@@ -1726,70 +1935,73 @@ const Orders = () => {
       </div>
 
       {/* ── Stats & Type Filter Row ── */}
-      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-shrink-0">
+      <div className="mb-3 sm:mb-4 flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-center lg:justify-between flex-shrink-0">
         {/* Left Side: Stats Cards Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 flex-1">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3 flex-1">
           {/* Card 1: Total Orders */}
-          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+          <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
               ? "border-slate-800 bg-[#1e293b]"
               : "border-slate-100 bg-white"
             }`}>
-            <div>
-              <p className={`text-2xl font-extrabold tracking-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+            <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
+              <p className={`text-sm sm:text-lg font-extrabold tracking-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
                 {stats.total}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-400">Total Orders</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400">
+                <span className="sm:hidden">Total</span>
+                <span className="hidden sm:inline">Total Orders</span>
+              </p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-950/20 text-orange-500 shrink-0">
-              <ClipboardList size={20} />
+            <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-950/20 text-orange-500 shrink-0">
+              <ClipboardList size={12} />
             </div>
           </div>
 
           {/* Card 2: Pending */}
-          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+          <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
               ? "border-slate-800 bg-[#1e293b]"
               : "border-slate-100 bg-white"
             }`}>
-            <div>
-              <p className="text-2xl font-extrabold tracking-tight text-amber-500">
+            <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
+              <p className="text-sm sm:text-lg font-extrabold tracking-tight text-amber-500">
                 {stats.pending}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-400">Pending</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400">Pending</p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 shrink-0">
-              <Hourglass size={20} />
+            <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/20 text-amber-500 shrink-0">
+              <Hourglass size={12} />
             </div>
           </div>
 
           {/* Card 3: Preparing */}
-          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+          <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
               ? "border-slate-800 bg-[#1e293b]"
               : "border-slate-100 bg-white"
             }`}>
-            <div>
-              <p className="text-2xl font-extrabold tracking-tight text-emerald-500">
+            <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
+              <p className="text-sm sm:text-lg font-extrabold tracking-tight text-emerald-500">
                 {stats.preparing}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-400">Preparing</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400">Preparing</p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 shrink-0">
-              <Timer size={20} />
+            <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 shrink-0">
+              <Timer size={12} />
             </div>
           </div>
 
           {/* Card 4: Ready */}
-          <div className={`flex items-center justify-between rounded-xl border p-3.5 shadow-sm transition-all duration-200 ${isDarkMode
+          <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
               ? "border-slate-800 bg-[#1e293b]"
               : "border-slate-100 bg-white"
             }`}>
-            <div>
-              <p className="text-2xl font-extrabold tracking-tight text-blue-500">
+            <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
+              <p className="text-sm sm:text-lg font-extrabold tracking-tight text-blue-500">
                 {stats.ready}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-400">Ready</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400">Ready</p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-500 shrink-0">
-              <CheckCircle size={20} />
+            <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/20 text-blue-500 shrink-0">
+              <CheckCircle size={12} />
             </div>
           </div>
         </div>
@@ -1867,13 +2079,13 @@ const Orders = () => {
       {viewMode === "layout" ? (
         <div className="flex-1 min-h-0 flex flex-col gap-3">
           {/* Order Type filter buttons row above Live Tables */}
-          <div className="flex items-center justify-between gap-4 px-1 py-0.5 flex-wrap flex-shrink-0">
+          <div className="flex items-center justify-between gap-3 px-1 py-0.5 flex-wrap flex-shrink-0">
             {/* Left side: Legend indicators bar */}
             <LegendBar isDarkMode={isDarkMode} />
 
             {/* Right side: filter buttons (only shown if multiple modes are enabled) */}
             {enabledModesCount > 1 && (
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {[
                   { key: "eat_here", label: "Eat Here", enabled: orderModes?.eathere !== false },
                   { key: "take_away", label: "Take Away", enabled: orderModes?.takeaway !== false },
@@ -1886,7 +2098,7 @@ const Orders = () => {
                       key={btn.key}
                       type="button"
                       onClick={() => handleLayoutFilterChange(btn.key)}
-                      className={`relative rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 shadow-sm border flex items-center gap-1.5 ${isActive
+                      className={`relative rounded-lg sm:rounded-xl px-2.5 py-1 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-bold transition-all duration-200 shadow-sm border flex items-center gap-1 sm:gap-1.5 ${isActive
                           ? "text-white"
                           : isDarkMode
                             ? "border-slate-700 bg-slate-800 text-slate-350 hover:bg-slate-700/60"
@@ -1899,7 +2111,7 @@ const Orders = () => {
                     >
                       <span>{btn.label}</span>
                       {showBell && (
-                        <Bell size={12} className="text-red-500 dark:text-red-400 animate-bounce" />
+                        <Bell size={10} className="sm:h-3 sm:w-3 text-red-500 dark:text-red-400 animate-bounce" />
                       )}
                     </button>
                   );
@@ -1908,7 +2120,7 @@ const Orders = () => {
             )}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div ref={layoutScrollContainerRef} onScroll={handleLayoutScroll} className="flex-1 min-h-0 overflow-y-auto">
             <Suspense
               fallback={
                 <div className="p-6 space-y-3">
