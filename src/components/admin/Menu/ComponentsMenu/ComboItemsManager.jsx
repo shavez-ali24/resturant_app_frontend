@@ -25,11 +25,8 @@ const ComboItemsManager = ({
     const filtered = menuItems.filter(item =>
       item && (item._id || item.id) && !item.deleted && item.pricingType !== "combo" && item.available !== false
     );
-    const typeFiltered = foodType === "mixed"
-      ? filtered
-      : filtered.filter(item => !item.type || item.type === foodType || item.type === "mixed");
-    setAvailableMenuItems(typeFiltered);
-  }, [menuItems, foodType]);
+    setAvailableMenuItems(filtered);
+  }, [menuItems]);
 
   const addComboItem = () => {
     if (isLoadingMenu) return;

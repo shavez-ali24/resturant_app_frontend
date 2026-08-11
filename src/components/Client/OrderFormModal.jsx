@@ -528,7 +528,7 @@ export default function OrderFormModal({
                       <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-slate-400" : "text-gray-400"}`}>
                         DELIVERY ADDRESS *
                       </label>
-                      <button
+                      {/* <button
                         type="button"
                         onClick={handleUseCurrentLocation}
                         disabled={isGettingLocation}
@@ -545,7 +545,7 @@ export default function OrderFormModal({
                             <span>Use current</span>
                           </>
                         )}
-                      </button>
+                      </button> */}
                     </div>
                     <div className="flex gap-2">
                       <input

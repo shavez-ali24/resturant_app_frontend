@@ -213,7 +213,6 @@ export default function LayoutView({
   // ── Main Render ──
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 4 }}>
-      <LegendBar isDarkMode={isDarkMode} />
 
       {sectionsList.map((section) => (
         <SectionBlock

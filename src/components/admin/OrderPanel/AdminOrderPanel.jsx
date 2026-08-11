@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -40,6 +40,17 @@ const capitalizeFirst = (val) =>
 
 const formatVariantLabel = (key) =>
   key ? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "";
+
+const getIndicatorColor = (type) => {
+  const t = String(type || "").toLowerCase();
+  if (t.includes("non")) {
+    return "#dc2626"; // Red for non-veg
+  }
+  if (t.includes("egg")) {
+    return "#eab308"; // Yellow/amber for egg
+  }
+  return "#16a34a"; // Green for veg
+};
 
 const calculateDiscountedPrice = (item, variantKey = null) => {
   if (!item) return 0;
@@ -536,11 +547,13 @@ function OrderSummaryPanel({
   isBilled = false,
   setShowPayModal,
   setBookingOrderId,
+  hasRooms = false,
+  restaurant = {},
 }) {
-  const { notify, newItemsByOrderId } = useNotification() || {};
+  const { notify, newBadgeItemsByOrderId } = useNotification() || {};
   const colors = useSelector((state) => state.admin.theme.colors);
-  const [isFormCollapsed, setIsFormCollapsed] = useState(false);
   const isEditing = Boolean(editingOrder?._id);
+  const [isFormCollapsed, setIsFormCollapsed] = useState(isEditing);
   const showTableSelector = !isEditing || (editingOrder?.orderType !== "Eat Here" && editingOrder?.orderType !== "Room Stay");
 
   const [createRoomBooking, { isLoading: isBookingRoom }] = useCreateRoomBookingMutation();
@@ -602,6 +615,16 @@ function OrderSummaryPanel({
         </div>
       )}
 
+      {/* Scroll Hint if items are scrollable */}
+      {Object.keys(cartItems).length > 3 && (
+        <div className={`px-4 pt-3 pb-1 text-[10px] font-extrabold flex items-center justify-between shrink-0 ${textSecondary}`}>
+          <span className="uppercase tracking-wider">Selected Items ({Object.keys(cartItems).length})</span>
+          <span className="animate-pulse text-orange-500 dark:text-orange-400 flex items-center gap-1">
+            Scroll for more ↓
+          </span>
+        </div>
+      )}
+
       {/* Cart Items */}
       <div className="overflow-y-auto p-3 space-y-2 flex-1">
         {cartCount === 0 ? (
@@ -612,10 +635,10 @@ function OrderSummaryPanel({
         ) : (
           Object.entries(cartItems).map(([id, item]) => {
             if (!item) return null;
-            const itemTotal = (item.price || 0) * (item.quantity || 1);
             const orderId = editingOrder?._id;
-            const newItemsSet = orderId && newItemsByOrderId?.get(String(orderId));
-            const isNewItem = newItemsSet && newItemsSet.has(id);
+            const newBadgeSet = orderId && newBadgeItemsByOrderId?.get(String(orderId));
+            const isNewItem = newBadgeSet && newBadgeSet.has(id);
+            const itemTotal = (item.price || 0) * (item.quantity || 1);
             return (
               <div
                 key={id}
@@ -738,10 +761,10 @@ function OrderSummaryPanel({
 
         {/* Collapsible Content — hidden when collapsed */}
         {!isFormCollapsed && (
-          <div className="px-4 pb-3 space-y-3">
+          <div className="px-4 pb-3 space-y-2">
             {/* Order Type */}
             <div>
-              <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                 Order Type
               </label>
               <div className="flex gap-2">
@@ -750,6 +773,18 @@ function OrderSummaryPanel({
                   if (isRoomStay && (type === "Take Away" || type === "Delivery")) {
                     return null;
                   }
+
+                  const orderModes = restaurant?.orderModes || {};
+                  if (type === "Eat Here" && orderModes.eathere === false && orderType !== "Eat Here" && orderType !== "Room Stay") {
+                    return null;
+                  }
+                  if (type === "Take Away" && orderModes.takeaway === false && orderType !== "Take Away") {
+                    return null;
+                  }
+                  if (type === "Delivery" && orderModes.delivery === false && orderType !== "Delivery") {
+                    return null;
+                  }
+
                   const isActive = orderType === type || (type === "Eat Here" && orderType === "Room Stay");
                   return (
                     <button
@@ -763,7 +798,6 @@ function OrderSummaryPanel({
                           setOrderType(type);
                           setTableId("");
                         }
-                        notify(`Order type changed to ${type}!`, "success");
                       }}
                       className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
                       style={{
@@ -788,17 +822,17 @@ function OrderSummaryPanel({
 
             {/* Table / Room selector — only when Eat Here or Room Stay, and showTableSelector is true */}
             {(orderType === "Eat Here" || orderType === "Room Stay") && showTableSelector && (
-              <div className="space-y-3">
-                {/* Dine In Type sub-toggle (only when showTableSelector is true) */}
-                {showTableSelector && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Dine In Type sub-toggle (only when showTableSelector is true and hasRooms is true) */}
+                {showTableSelector && hasRooms && (
                   <div>
-                    <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                    <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                       Unit Type
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       {[
-                        { key: "TABLE", label: "Table (Dine In)", orderTypeTarget: "Eat Here" },
-                        { key: "ROOM", label: "Room (Stay)", orderTypeTarget: "Room Stay" },
+                        { key: "TABLE", label: "Table", orderTypeTarget: "Eat Here" },
+                        { key: "ROOM", label: "Room", orderTypeTarget: "Room Stay" },
                       ].map(({ key, label, orderTypeTarget }) => (
                         <button
                           key={key}
@@ -808,7 +842,6 @@ function OrderSummaryPanel({
                             setDineInType(key);
                             setOrderType(orderTypeTarget);
                             setTableId(""); // clear table selection when switching types
-                            notify(`Switched to ${label} mode`, "success");
                           }}
                           className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all border ${isBilled ? "opacity-60 cursor-not-allowed" : ""}`}
                           style={{
@@ -831,8 +864,8 @@ function OrderSummaryPanel({
                   </div>
                 )}
 
-                <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                <div className={!(showTableSelector && hasRooms) ? "col-span-2" : ""}>
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
                     {dineInType === "ROOM" ? "Room Number" : "Table Number"}
                   </label>
                   <StyledSelect
@@ -846,9 +879,6 @@ function OrderSummaryPanel({
                         setBookingErrors({});
                       } else {
                         setTableId(val);
-                        if (opt) {
-                          notify(`Selected ${dineInType === "ROOM" ? "room" : "table"}: ${opt.label}`, "success");
-                        }
                       }
                     }}
                     options={tableOptions}
@@ -860,33 +890,36 @@ function OrderSummaryPanel({
               </div>
             )}
 
-            {/* Customer Name */}
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                Customer name
-              </label>
-              <input
-                value={customerName}
-                onChange={handleNameChange}
-                placeholder="Customer name"
-                className={inputStyle}
-                disabled={isBilled}
-              />
-            </div>
+            {/* Customer name & phone in two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Customer Name */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Customer name
+                </label>
+                <input
+                  value={customerName}
+                  onChange={handleNameChange}
+                  placeholder="Customer name"
+                  className={inputStyle}
+                  disabled={isBilled}
+                />
+              </div>
 
-            {/* Phone */}
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
-                Phone number
-              </label>
-              <input
-                value={customerPhone}
-                onChange={handlePhoneChange}
-                placeholder="10-digit phone"
-                maxLength={10}
-                className={inputStyle}
-                disabled={isBilled}
-              />
+              {/* Phone */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? "text-slate-300" : "text-[#1c1917]"}`}>
+                  Phone number
+                </label>
+                <input
+                  value={customerPhone}
+                  onChange={handlePhoneChange}
+                  placeholder="10-digit phone"
+                  maxLength={10}
+                  className={inputStyle}
+                  disabled={isBilled}
+                />
+              </div>
             </div>
 
             {/* Delivery Address */}
@@ -899,7 +932,7 @@ function OrderSummaryPanel({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Delivery address"
-                  rows={3}
+                  rows={2}
                   className={`${inputStyle} resize-none`}
                   disabled={isBilled}
                 />
@@ -978,7 +1011,7 @@ function OrderSummaryPanel({
         {isBilled ? (
           <button
             type="button"
-            onClick={() => setShowPayModal(true)}
+            onClick={() => setShowPayModal(editingOrder)}
             className="w-full h-12 rounded-xl text-sm font-black transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] text-white hover:opacity-90 bg-emerald-600 border border-emerald-600"
           >
             <IndianRupee className="h-4 w-4 shrink-0 text-white" />
@@ -1080,8 +1113,8 @@ function OrderSummaryPanel({
         >
           <div
             className={`w-full max-w-md rounded-2xl shadow-2xl border overflow-hidden p-6 space-y-5 transition-all duration-300 ${isDarkMode
-                ? "bg-slate-900 border-slate-700/60 text-slate-100"
-                : "bg-white border-[#ede8e3] text-gray-800"
+              ? "bg-slate-900 border-slate-700/60 text-slate-100"
+              : "bg-white border-[#ede8e3] text-gray-800"
               }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1094,8 +1127,8 @@ function OrderSummaryPanel({
                 type="button"
                 onClick={() => setBookingRoomOpt(null)}
                 className={`p-1.5 rounded-lg transition-all ${isDarkMode
-                    ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                    : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                  ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
                   }`}
               >
                 <X size={20} />
@@ -1125,8 +1158,8 @@ function OrderSummaryPanel({
                   }}
                   placeholder="Enter guest name"
                   className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
+                    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                    : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1151,8 +1184,8 @@ function OrderSummaryPanel({
                   placeholder="10-digit phone number"
                   maxLength={10}
                   className={`w-full h-10 px-3 rounded-xl border text-sm transition-all outline-none theme-focus ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
-                      : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
+                    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500"
+                    : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
                     }`}
                   required
                 />
@@ -1171,8 +1204,8 @@ function OrderSummaryPanel({
                   type="button"
                   onClick={() => setBookingRoomOpt(null)}
                   className={`flex-1 h-10 rounded-xl border text-sm font-semibold transition-all ${isDarkMode
-                      ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
-                      : "bg-white border-gray-200 text-gray-650 hover:bg-gray-55"
+                    ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                    : "bg-white border-gray-200 text-gray-650 hover:bg-gray-55"
                     }`}
                 >
                   Cancel
@@ -1225,6 +1258,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [billOrder] = useBillOrderMutation();
 
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [expandedCategory, setExpandedCategory] = useState(null);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [variantPickerItem, setVariantPickerItem] = useState(null);
   const [orderType, setOrderType] = useState("Eat Here");
@@ -1237,13 +1271,52 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const [success, setSuccess] = useState(false);
   const [originalOrderItems, setOriginalOrderItems] = useState([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
-  const [showPayModal, setShowPayModal] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(null);
   const [bookingOrderId, setBookingOrderId] = useState(null);
 
   const isEditing = Boolean(editingOrder?._id);
-  const isBilled = editingOrder && editingOrder.status === "completed" && !editingOrder.paymentMethod;
+  const isBilled = editingOrder && editingOrder.status === "completed" && !editingOrder.paymentMethod && (!editingOrder.paymentMethods || editingOrder.paymentMethods.length === 0);
   const isSubmitting = isCreating || isUpdating;
   const restaurant = restaurantData?.restaurant || {};
+
+  // Auto-fallback order type based on enabled orderModes settings
+  useEffect(() => {
+    if (!restaurantData) return;
+    const modes = restaurantData?.restaurant?.orderModes || restaurantData?.orderModes || {};
+    if (orderType === "Eat Here" || orderType === "Room Stay") {
+      if (modes.eathere === false) {
+        if (modes.takeaway !== false) {
+          setOrderType("Take Away");
+        } else if (modes.delivery !== false) {
+          setOrderType("Delivery");
+        }
+      }
+    } else if (orderType === "Take Away") {
+      if (modes.takeaway === false) {
+        if (modes.eathere !== false) {
+          setOrderType("Eat Here");
+        } else if (modes.delivery !== false) {
+          setOrderType("Delivery");
+        }
+      }
+    } else if (orderType === "Delivery") {
+      if (modes.delivery === false) {
+        if (modes.eathere !== false) {
+          setOrderType("Eat Here");
+        } else if (modes.takeaway !== false) {
+          setOrderType("Take Away");
+        }
+      }
+    }
+  }, [restaurantData, orderType]);
+
+  const hasRooms = useMemo(() => {
+    const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
+    return sections.some((section) => {
+      const units = Array.isArray(section.units) ? section.units : [];
+      return units.some((unit) => unit.type === "ROOM" && unit.isActive !== false);
+    });
+  }, [restaurant.sections]);
 
   const tableOptions = (() => {
     const sections = Array.isArray(restaurant.sections) ? restaurant.sections : [];
@@ -1393,7 +1466,12 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     return acc;
   }, {});
 
-  const categories = restaurantCategories.map((c) => String(c.name).trim());
+  const categories = restaurantCategories
+    .map((c) => String(c.name).trim())
+    .filter((catName) => {
+      const catKey = catName.toLowerCase();
+      return groupedMenu[catKey] && groupedMenu[catKey].length > 0;
+    });
 
   useEffect(() => {
     if (categories.length && !selectedCategory) {
@@ -1641,9 +1719,19 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       if (mode === "print_bill" && finalOrder) {
         try {
-          await billOrder(finalOrder._id).unwrap();
+          const billResponse = await billOrder(finalOrder._id).unwrap();
+          const billedOrder = billResponse?.order || billResponse || finalOrder;
+          setShowPayModal({
+            ...finalOrder,
+            ...billedOrder,
+            status: "completed",
+          });
         } catch (err) {
           console.error("Billing failed", err);
+          setShowPayModal({
+            ...finalOrder,
+            status: "completed",
+          });
         }
       }
 
@@ -1657,8 +1745,10 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
       setOrderType("Take Away");
       setOriginalOrderItems([]);
 
-      if (onOrderSuccess) {
-        onOrderSuccess(mode);
+      const finalBilledOrder = (mode === "print_bill" && typeof billedOrder !== "undefined") ? billedOrder : finalOrder;
+
+      if (mode !== "print_bill" && onOrderSuccess) {
+        onOrderSuccess(mode, finalBilledOrder);
       }
     } catch (err) {
       const backendMsg = err?.data?.message || err?.message || "";
@@ -1711,6 +1801,8 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     isBilled,
     setShowPayModal,
     setBookingOrderId,
+    hasRooms,
+    restaurant,
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -1791,25 +1883,32 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${selectedCategory === cat
-                ? ""
-                : isDarkMode
-                  ? "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                  : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
-                }`}
-              style={selectedCategory === cat ? {
-                backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
-                borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
-                color: isDarkMode ? "#ffffff" : colors.primary,
-                borderLeft: `4px solid ${colors.primary}`,
-                paddingLeft: "12px"
-              } : {}}
-            >
-              {cat}
-            </button>
+            <div key={cat} className="flex flex-col">
+              <button
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setExpandedCategory(prev => prev === cat ? null : cat);
+                }}
+                className={`w-full text-left px-4 py-3 text-sm font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${selectedCategory === cat
+                  ? ""
+                  : isDarkMode
+                    ? "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
+                  }`}
+                style={selectedCategory === cat ? {
+                  backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                  borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                  color: isDarkMode ? "#ffffff" : colors.primary,
+                  borderLeft: `4px solid ${colors.primary}`,
+                  paddingLeft: "12px"
+                } : {}}
+              >
+                <span className={expandedCategory === cat ? "block whitespace-normal break-words" : "block truncate"}>
+                  {cat}
+                </span>
+              </button>
+              <div className={`h-px w-full my-1 ${isDarkMode ? "bg-slate-600" : "bg-stone-300"}`} />
+            </div>
           ))}
         </div>
 
@@ -1839,7 +1938,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               {currentItems.map((item) => {
                 const { cartKey, quantity, selectedVariant } = getCartKeyAndQty(item);
                 let basePrice = Number(item.price) || 0;
@@ -1855,7 +1954,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                 return (
                   <div
                     key={item._id}
-                    className={`relative flex flex-col justify-between min-h-[135px] rounded-2xl border p-3 transition-all duration-200 ${isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
+                    className={`relative flex flex-col justify-between min-h-[110px] rounded-lg border p-3 pl-5 transition-all duration-200 overflow-hidden ${isUnavailable ? "opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"
                       } ${quantity > 0
                         ? "shadow-sm"
                         : isDarkMode
@@ -1867,126 +1966,137 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                       backgroundColor: isDarkMode ? "#1e293b" : "#ffffff"
                     } : {}}
                   >
-                    <div className="flex items-start gap-1.5 mb-1.5">
-                      <VegDot type={item.type} />
-                      <h3 className={`text-xs font-semibold leading-tight line-clamp-2 flex-1 min-w-0 break-words ${textPrimary}`}>
-                        {item.name}
-                      </h3>
-                    </div>
+                    {/* Left edge Veg/Non-Veg solid line indicator */}
+                    <div
+                      className="absolute left-0 top-0 bottom-0 z-10"
+                      style={{
+                        backgroundColor: getIndicatorColor(item.type),
+                        width: "4px",
+                        borderRadius: "8px 0 0 8px"
+                      }}
+                    />
 
-                    {item.pricingType === "combo" && (
-                      <span
-                        className="self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1"
-                        style={{
-                          backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}10`,
-                          color: isDarkMode ? "#ffffff" : colors.primary
-                        }}
-                      >
-                        Combo
-                      </span>
-                    )}
+                    <div className="relative z-20 flex flex-col justify-between h-full flex-1">
+                      <div>
+                        <div className="flex items-start gap-1.5 mb-1.5">
+                          <h3 className={`text-sm font-extrabold leading-snug line-clamp-2 flex-1 min-w-0 break-words ${textPrimary}`}>
+                            {item.name}
+                          </h3>
+                        </div>
 
-                    <div className="flex flex-wrap items-center gap-1 mb-1.5">
-                      {item.pricingType === "variant" ? (
-                        <span
-                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                          style={{
-                            backgroundColor: isDarkMode ? "rgba(71, 85, 105, 0.4)" : `${colors.primary}10`,
-                            color: isDarkMode ? "#cbd5e1" : colors.primary
-                          }}
-                        >
-                          Variant
-                        </span>
-                      ) : hasDiscount ? (
-                        <>
-                          <span className={`text-[10px] line-through ${isDarkMode ? "text-slate-400/70" : "text-slate-400"}`}>
-                            ₹{basePrice.toFixed(2)}
+                        {item.pricingType === "combo" && (
+                          <span
+                            className="self-start text-[9px] px-1.5 py-0.5 rounded-md font-semibold mb-1 inline-block"
+                            style={{
+                              backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}10`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            }}
+                          >
+                            Combo
                           </span>
-                          <span className="text-xs font-bold" style={{ color: colors.primary }}>₹{discountedPrice.toFixed(2)}</span>
-                          <span className={`text-[9px] px-1 py-0.5 rounded-full font-semibold ${isDarkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"
-                            }`}>
-                            OFF
-                          </span>
-                        </>
-                      ) : (
-                        <span className={`text-xs font-semibold ${isDarkMode ? "text-slate-200" : "text-stone-500"}`}>₹{basePrice.toFixed(2)}</span>
-                      )}
-                    </div>
+                        )}
 
-                    {isUnavailable && (
-                      <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center">
-                        <span className="text-[10px] font-semibold text-white bg-black/50 px-2 py-1 rounded-full">
-                          Unavailable
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {item.pricingType === "variant" && (
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                              style={{
+                                backgroundColor: isDarkMode ? "rgba(71, 85, 105, 0.4)" : `${colors.primary}10`,
+                                color: isDarkMode ? "#cbd5e1" : colors.primary
+                              }}
+                            >
+                              Variant
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    <div className="mt-auto pt-1">
-                      {item.pricingType === "variant" && Object.entries(item.variantRates || {}).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
-                        <button
-                          onClick={() => setVariantPickerItem(item)}
-                          disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
-                          style={!isBilled ? {
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
-                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
-                            color: isDarkMode ? "#ffffff" : colors.primary
-                          } : {}}
-                        >
-                          + Add
-                        </button>
-                      ) : quantity === 0 ? (
-                        <button
-                          onClick={() => handleAddItem(item)}
-                          disabled={!isRestaurantOpen || isBilled}
-                          className={`w-full py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
-                          style={!isBilled ? {
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
-                            borderColor: isDarkMode ? "rgba(71, 85, 105, 0.5)" : `${colors.primary}60`,
-                            color: isDarkMode ? "#ffffff" : colors.primary
-                          } : {}}
-                        >
-                          + Add
-                        </button>
-                      ) : (
-                        <div className="flex items-center justify-between gap-1.5">
-                          <button
-                            disabled={isBilled}
-                            onClick={() => dispatch(removeFromCart(cartKey))}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
-                              ? isDarkMode
-                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
-                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : "hover:opacity-90"
-                              }`}
-                            style={!isBilled ? {
-                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
-                              backgroundColor: isDarkMode ? "transparent" : "#ffffff",
-                              color: isDarkMode ? "#ffffff" : colors.primary
-                            } : {}}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <span className={`text-sm font-extrabold px-1 ${isDarkMode ? 'text-slate-100' : 'text-[#1c1917]'}`}>{quantity}</span>
-                          <button
-                            disabled={!isRestaurantOpen || isBilled}
-                            onClick={() => handleAddItem(item)}
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${isBilled
-                              ? isDarkMode
-                                ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
-                                : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
-                              : "hover:opacity-90"
-                              }`}
-                            style={!isBilled ? {
-                              borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}40`,
-                              backgroundColor: isDarkMode ? "transparent" : `${colors.primary}10`,
-                              color: isDarkMode ? "#ffffff" : colors.primary
-                            } : {}}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
+                      {isUnavailable && (
+                        <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center z-30">
+                          <span className="text-[10px] font-semibold text-white bg-black/50 px-2 py-1 rounded-full">
+                            Unavailable
+                          </span>
                         </div>
                       )}
+
+                      <div className="mt-auto pt-1">
+                        {item.pricingType === "variant" && Object.entries(item.variantRates || {}).some(([, v]) => v && v.price !== "" && v.price != null && Number(v.price) > 0) ? (
+                          <button
+                            onClick={() => setVariantPickerItem(item)}
+                            disabled={!isRestaurantOpen || isBilled}
+                            className={`w-full py-1.5 rounded-lg text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                            style={!isBilled ? {
+                              backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                              borderColor: isDarkMode ? "#475569" : `${colors.primary}60`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
+                          >
+                            + Add
+                          </button>
+                        ) : quantity === 0 ? (
+                          <button
+                            onClick={() => handleAddItem(item)}
+                            disabled={!isRestaurantOpen || isBilled}
+                            className={`w-full py-1.5 rounded-lg text-xs font-bold border transition-all duration-200 ${isBilled ? "opacity-45 cursor-not-allowed" : "hover:opacity-90"}`}
+                            style={!isBilled ? {
+                              backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                              borderColor: isDarkMode ? "#475569" : `${colors.primary}60`,
+                              color: isDarkMode ? "#ffffff" : colors.primary
+                            } : {}}
+                          >
+                            + Add
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-between gap-1">
+                            <button
+                              disabled={isBilled}
+                              onClick={() => dispatch(removeFromCart(cartKey))}
+                              className={`h-7 w-7 rounded-md border flex items-center justify-center transition-all ${isBilled
+                                ? isDarkMode
+                                  ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                                : "hover:opacity-90"
+                                }`}
+                              style={!isBilled ? {
+                                borderColor: isDarkMode ? "#475569" : `${colors.primary}40`,
+                                backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                                color: isDarkMode ? "#ffffff" : colors.primary
+                              } : {}}
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span 
+                              className={`h-7 min-w-[1.75rem] px-1 rounded-md flex items-center justify-center border text-xs font-extrabold shadow-sm transition-all ${
+                                isDarkMode 
+                                  ? "bg-slate-800 border-slate-700 text-slate-100" 
+                                  : "bg-white/95 backdrop-blur-sm border-[#ede8e3] text-[#1c1917]"
+                              }`}
+                              style={!isBilled ? {
+                                borderColor: isDarkMode ? "#475569" : `${colors.primary}40`,
+                              } : {}}
+                            >
+                              {quantity}
+                            </span>
+                            <button
+                              disabled={!isRestaurantOpen || isBilled}
+                              onClick={() => handleAddItem(item)}
+                              className={`h-7 w-7 rounded-md border flex items-center justify-center transition-all ${isBilled
+                                ? isDarkMode
+                                  ? "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed opacity-55"
+                                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-55"
+                                : "hover:opacity-90"
+                                }`}
+                              style={!isBilled ? {
+                                borderColor: isDarkMode ? "#475569" : `${colors.primary}40`,
+                                backgroundColor: isDarkMode ? "#334155" : "#ffffff",
+                                color: isDarkMode ? "#ffffff" : colors.primary
+                              } : {}}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -2074,7 +2184,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                         quantity: 1,
                       }));
                     }}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl text-base font-bold transition-all active:scale-[0.97]"
+                    className="w-full flex items-center justify-center gap-3 px-5 py-4 rounded-xl text-base font-bold transition-all active:scale-[0.97]"
                     style={{
                       backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#ffffff",
                       borderColor: isDarkMode ? "#475569" : "#ede8e3",
@@ -2092,13 +2202,6 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
                     }}
                   >
                     <span>{label}</span>
-                    <span className="text-right">
-                      ₹{vFinal.toFixed(0)}
-                      {hasDisc && (
-                        <span className={`ml-2 line-through text-sm font-semibold ${isDarkMode ? "text-slate-400/70" : "text-gray-400"
-                          }`}>₹{vBasePrice.toFixed(0)}</span>
-                      )}
-                    </span>
                   </button>
                 );
               })}
@@ -2120,11 +2223,11 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
 
       {showPayModal && (
         <PayModal
-          order={editingOrder}
+          order={showPayModal}
           onClose={() => {
-            setShowPayModal(false);
+            setShowPayModal(null);
             if (onOrderSuccess) {
-              onOrderSuccess("pay");
+              onOrderSuccess("print_bill", showPayModal);
             }
           }}
         />

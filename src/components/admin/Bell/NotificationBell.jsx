@@ -44,7 +44,7 @@ const checkAndClearAdminModifiedOrderId = (id) => {
     }
     sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
     return isFound;
-  } catch (_) {}
+  } catch (_) { }
   return false;
 };
 
@@ -148,7 +148,7 @@ export default function NotificationBell() {
         try {
           notificationSound.currentTime = 0;
           const p = notificationSound.play();
-          if (p?.catch) p.catch(() => {});
+          if (p?.catch) p.catch(() => { });
         } catch { /* ignore */ }
       }
       return;
@@ -163,7 +163,7 @@ export default function NotificationBell() {
         try {
           notificationSound.currentTime = 0;
           const p = notificationSound.play();
-          if (p?.catch) p.catch(() => {});
+          if (p?.catch) p.catch(() => { });
         } catch { /* ignore */ }
       }
     }
@@ -193,7 +193,7 @@ export default function NotificationBell() {
           notificationSound.pause();
           notificationSound.currentTime = 0;
           notificationSound.volume = 1;
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
     window.addEventListener("click", enable, { once: true });

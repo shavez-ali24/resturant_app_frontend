@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import config from "../../config";
+import { logout } from "./adminSlice";
 
 const addAdminModifiedOrderId = (id) => {
   if (!id) return;
@@ -109,13 +110,11 @@ const baseQuery = fetchBaseQuery({
 const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
   const result = await baseQuery(args, api, extraOptions);
   const status = result.error?.status || result.error?.originalStatus;
-  if (typeof window !== "undefined" && (status === 401 || status === 403)) {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("adminInfo");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("user");
+  const url = typeof args === "string" ? args : args?.url || "";
+  const isLoginRequest = url.includes("/auth/login");
+
+  if (typeof window !== "undefined" && !isLoginRequest && (status === 401 || status === 403)) {
+    api.dispatch(logout());
     window.location.replace("/login");
   }
   return result;
@@ -359,7 +358,20 @@ export const adminApi = createApi({
       invalidatesTags: (result, error, orderId) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
     }),
     payOrder: builder.mutation({
-      query: ({ orderId, paymentMethod, settlementAmount }) => ({ url: `/order/${orderId}/pay`, method: "POST", body: { paymentMethod, settlementAmount } }),
+      query: ({ orderId, paymentMethod, paymentMethods, settlementAmount, totalAmount }) => {
+        const finalSettlement = settlementAmount !== undefined ? settlementAmount : totalAmount;
+        const body = { settlementAmount };
+        if (paymentMethods) {
+          body.paymentMethods = paymentMethods;
+        } else {
+          body.paymentMethods = [{ method: paymentMethod, amount: finalSettlement }];
+        }
+        return {
+          url: `/order/${orderId}/pay`,
+          method: "POST",
+          body,
+        };
+      },
       async onQueryStarted({ orderId }, { queryFulfilled }) {
         addAdminModifiedOrderId(orderId);
         try { await queryFulfilled; } catch (_) {}

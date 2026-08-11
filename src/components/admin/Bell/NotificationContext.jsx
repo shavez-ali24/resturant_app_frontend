@@ -21,13 +21,19 @@ const NotificationToasts = lazy(() => import("./NotificationToasts"));
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
 import { getFriendlyAdminMessage } from "@/utils/errorHelpers";
 
+import { useSelector } from "react-redux";
+
 export const NotificationProvider = ({ children }) => {
+  const token = useSelector((state) => state.admin?.token) || localStorage.getItem("admin_token");
   const [notifications, setNotifications] = useState([]);
   const [sseEvent, setSseEvent] = useState(null);
   const [sseConnected, setSseConnected] = useState(false);
   const [newlyAddedItemsOrderIds, setNewlyAddedItemsOrderIds] = useState(() => new Set());
   // Map<orderId, Set<itemKey>> — tracks which specific items are new per order
   const [newItemsByOrderId, setNewItemsByOrderId] = useState(() => new Map());
+  // Map<orderId, Set<itemKey>> — tracks NEW badges for items (cleared on edit panel open/close)
+  const [newBadgeItemsByOrderId, setNewBadgeItemsByOrderId] = useState(() => new Map());
+  const [hasUnreadSidebarNotification, setHasUnreadSidebarNotification] = useState(false);
   const sseManagerRef = useRef(null);
   const lastEventSignatureRef = useRef(null);
 
@@ -54,7 +60,6 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const token = localStorage.getItem("admin_token");
     if (!token || !config?.BASE_URL) return undefined;
 
     const baseUrl = String(config.BASE_URL).replace(/\/$/, "");
@@ -105,7 +110,7 @@ export const NotificationProvider = ({ children }) => {
       }
       setSseConnected(false);
     };
-  }, []);
+  }, [token]);
 
   return (
     <NotificationContext.Provider value={{
@@ -116,6 +121,10 @@ export const NotificationProvider = ({ children }) => {
       setNewlyAddedItemsOrderIds,
       newItemsByOrderId,
       setNewItemsByOrderId,
+      newBadgeItemsByOrderId,
+      setNewBadgeItemsByOrderId,
+      hasUnreadSidebarNotification,
+      setHasUnreadSidebarNotification,
     }}>
       {children}
 

@@ -5,16 +5,30 @@ import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
-const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
-  const primaryColor = themeColors?.primary || "#EF9F27";
+const formatElapsed = (minutes) => {
+  if (minutes == null) return "";
+  if (minutes < 60) return ` • ${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return ` • ${h}h${m > 0 ? ` ${m}m` : ""}`;
+};
 
+const getElapsedString = (minutes) => {
+  if (minutes == null) return "";
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h${m > 0 ? ` ${m}m` : ""}`;
+};
+
+const getCardStyle = (rawStatus, status, isDark, themeColors) => {
   // AVAILABLE / Blank status
   if (rawStatus === "AVAILABLE" || status === "blank") {
     return {
-      bg: isDark ? "rgba(30, 41, 59, 0.2)" : "#ffffff",
-      border: `1.5px solid ${isDark ? "#334155" : "#f1f0ee"}`,
-      labelColor: isDark ? "#64748b" : "#a8a29e",
-      numColor: isDark ? "#ffffff" : "#1c1917"
+      bg: isDark ? "#1e293b" : "#f4f4f5",
+      border: `2px dashed ${isDark ? "#475569" : "#d4d4d8"}`,
+      labelColor: isDark ? "#94a3b8" : "#71717a",
+      numColor: isDark ? "#ffffff" : "#18181b"
     };
   }
 
@@ -27,11 +41,9 @@ const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
     status === "booked"
   ) {
     return {
-      bg: hovered
-        ? (isDark ? `${primaryColor}33` : `${primaryColor}10`)
-        : (isDark ? `${primaryColor}1a` : `${primaryColor}05`),
-      border: `1.5px solid ${primaryColor}`,
-      labelColor: isDark ? primaryColor : (themeColors?.primaryText || primaryColor),
+      bg: isDark ? "#ca8a04" : "#fef08a",
+      border: `1.5px solid ${isDark ? "#854d0e" : "#eab308"}`,
+      labelColor: isDark ? "#ca8a04" : "#eab308",
       numColor: isDark ? "#ffffff" : "#1c1917"
     };
   }
@@ -39,21 +51,19 @@ const getCardStyle = (rawStatus, status, isDark, themeColors, hovered) => {
   // BILLED / paid statuses
   if (rawStatus === "BILLED" || status === "paid" || status === "billed") {
     return {
-      bg: hovered
-        ? "rgba(34, 197, 94, 0.2)"
-        : "rgba(34, 197, 94, 0.05)",
-      border: "1.5px solid rgba(34, 197, 94, 0.5)",
-      labelColor: isDark ? "#4ade80" : "#15803d",
+      bg: isDark ? "#16a34a" : "#bbf7d0",
+      border: `1.5px solid ${isDark ? "#14532d" : "#22c55e"}`,
+      labelColor: isDark ? "#16a34a" : "#22c55e",
       numColor: isDark ? "#ffffff" : "#1c1917"
     };
   }
 
   // Fallback
   return {
-    bg: isDark ? "#1e293b" : "#ffffff",
-    border: `1.5px solid ${isDark ? "#475569" : "#ede8e3"}`,
-    labelColor: isDark ? "#94a3b8" : "#78716c",
-    numColor: isDark ? "#ffffff" : "#1c1917"
+    bg: isDark ? "#1e293b" : "#f4f4f5",
+    border: `1.5px solid ${isDark ? "#334155" : "#e4e4e7"}`,
+    labelColor: isDark ? "#94a3b8" : "#71717a",
+    numColor: isDark ? "#ffffff" : "#18181b"
   };
 };
 
@@ -63,8 +73,8 @@ const ICON_BTN = (isDark) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  border: `1px solid ${isDark ? "#475569" : "#e5e5e5"}`,
-  background: isDark ? "#334155" : "#ffffff",
+  border: `1px solid ${isDark ? "#475569" : "#d4d4d8"}`,
+  background: isDark ? "#334155" : "#f4f4f5",
   cursor: "pointer",
   borderRadius: 8,
   color: isDark ? "#f1f5f9" : "#1c1917",
@@ -85,7 +95,6 @@ const TableCard = React.memo(function TableCard({
   newlyAddedItemsOrderIds,
 }) {
   const colors = useSelector((state) => state.admin.theme.colors);
-  const [isHovered, setIsHovered] = React.useState(false);
   const [elapsedMinutes, setElapsedMinutes] = React.useState(null);
 
   const {
@@ -122,7 +131,7 @@ const TableCard = React.memo(function TableCard({
   const isOccupied = rawStatus === "OCCUPIED" || status === "running" || status === "running_kot" || status === "printed" || status === "booked";
   const isBilled = rawStatus === "BILLED" || status === "paid" || status === "billed";
 
-  const cardStyle = getCardStyle(rawStatus, status, isDarkMode, colors, isHovered);
+  const cardStyle = getCardStyle(rawStatus, status, isDarkMode, colors);
 
   const { newlyAddedItemsOrderIds: ctxOrderIds, setNewlyAddedItemsOrderIds } = useNotification() || {};
 
@@ -177,9 +186,7 @@ const TableCard = React.memo(function TableCard({
   return (
     <div
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`transition-all duration-200 active:scale-95 ${!isAvailable ? "hover:shadow-md hover:-translate-y-0.5" : ""}`}
+      className="transition-all duration-200 active:scale-95"
       style={{
         width: 140,
         height: 112,
@@ -209,11 +216,11 @@ const TableCard = React.memo(function TableCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 3,
+            gap: 4,
             fontSize: "8px",
             fontWeight: 900,
             textTransform: "uppercase",
-            letterSpacing: "0.2px",
+            letterSpacing: "0.4px",
             padding: "3px 0",
             borderRadius: "4px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -222,25 +229,39 @@ const TableCard = React.memo(function TableCard({
           }}
         >
           <Bell size={9} className="animate-bounce" />
+          <span>New Order</span>
         </div>
       )}
       {isLoading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>...</div>}
 
       {/* Top status / time */}
-      {!hasNewClientItems && (
-        <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: cardStyle.labelColor, textTransform: "uppercase", letterSpacing: "0.6px" }}>
-          {isAvailable ? "AVAILABLE" : `${isBilled ? "BILLED" : "OCCUPIED"}${elapsedMinutes != null ? ` • ${elapsedMinutes}m` : ""}`}
+      {!hasNewClientItems && !isAvailable && elapsedMinutes != null && (
+        <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: isDarkMode ? "#ffffff" : "#713f12", textTransform: "uppercase", letterSpacing: "0.6px" }}>
+          {getElapsedString(elapsedMinutes)}
         </div>
       )}
 
       {/* Main number - bold dark, matches mockup */}
-      <div style={{ fontSize: 20, fontWeight: 700, color: cardStyle.numColor, marginTop: 14 }}>
+      <div 
+        style={{ 
+          fontSize: table.isVirtual ? 14 : 20, 
+          fontWeight: 700, 
+          color: cardStyle.numColor, 
+          marginTop: table.isVirtual ? 18 : 14,
+          textAlign: "center",
+          textOverflow: "ellipsis",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          maxWidth: "100%",
+          padding: "0 6px"
+        }}
+      >
         {displayNum}
       </div>
 
       {/* Room category + price or table amount */}
       {!isAvailable && (
-        <div style={{ fontSize: 13, color: cardStyle.labelColor, marginTop: 2, fontWeight: 700, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, color: isDarkMode ? "#ffffff" : "#713f12", marginTop: 2, fontWeight: 700, textAlign: 'center' }}>
           {table.currentAmount != null ? (
             formatAmount(table.currentAmount)
           ) : isRoom && roomCategory ? (
@@ -269,7 +290,7 @@ const TableCard = React.memo(function TableCard({
           >
             <Printer size={18} />
           </button>
-          {!isBilled && (
+          {!isBilled && !table.isVirtual && (
             <button
               onClick={handleMove}
               style={ICON_BTN(isDarkMode)}

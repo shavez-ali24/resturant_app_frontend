@@ -406,7 +406,11 @@ export const getOrderTypeBadgeClass = (value) => {
     return "bg-yellow-100 text-yellow-800 ring-yellow-300 hover:bg-yellow-200 data-[state=open]:bg-yellow-200 dark:bg-yellow-200 dark:text-yellow-900 dark:ring-yellow-400";
   }
 
-  return "bg-slate-100 text-slate-700 ring-slate-300 hover:bg-slate-200 data-[state=open]:bg-slate-200 dark:bg-slate-200 dark:text-slate-900 dark:ring-slate-400";
+  if (key === "room_stay" || key === "roomstay") {
+    return "bg-slate-100 text-slate-700 ring-slate-300 hover:bg-slate-200 data-[state=open]:bg-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700";
+  }
+
+  return "bg-slate-100 text-slate-700 ring-slate-300 hover:bg-slate-200 data-[state=open]:bg-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:ring-slate-700";
 };
 
 export const getOrderTypeItemClass = (value) => {
@@ -421,7 +425,11 @@ export const getOrderTypeItemClass = (value) => {
   }
 
   if (key === "delivery") {
-    return "bg-transparent text-yellow-700 hover:bg-yellow-100 hover:text-yellow-900 data-[highlighted]:bg-yellow-100 data-[highlighted]:text-yellow-900 data-[state=checked]:bg-yellow-200 data-[state=checked]:text-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-500/25 dark:hover:text-yellow-100 dark:data-[highlighted]:bg-yellow-500/30 dark:data-[highlighted]:text-yellow-50 dark:data-[state=checked]:bg-yellow-500/35 dark:data-[state=checked]:text-yellow-50";
+    return "bg-transparent text-yellow-700 hover:bg-yellow-100 hover:text-yellow-900 data-[highlighted]:bg-yellow-100 data-[highlighted]:text-yellow-900 data-[state=checked]:bg-yellow-200 data-[state=checked]:text-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-500/25 dark:hover:text-yellow-100 dark:data-[highlighted]:bg-yellow-500/30 dark:data-[highlighted]:text-yellow-50 dark:data-[state=checked]:bg-yellow-500/35 dark:data-[state=checked]:text-emerald-50";
+  }
+
+  if (key === "room_stay" || key === "roomstay") {
+    return "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-900 data-[state=checked]:bg-slate-200 data-[state=checked]:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-700/80 dark:data-[highlighted]:text-slate-100 dark:data-[state=checked]:bg-slate-700/90 dark:data-[state=checked]:text-slate-100";
   }
 
   return "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-900 data-[state=checked]:bg-slate-200 data-[state=checked]:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700/70 dark:hover:text-slate-100 dark:data-[highlighted]:bg-slate-700/80 dark:data-[highlighted]:text-slate-100 dark:data-[state=checked]:bg-slate-700/90 dark:data-[state=checked]:text-slate-100";

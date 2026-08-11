@@ -143,7 +143,7 @@ export default function Header({
   // removed currentPage/hasMore pagination state
   const [allOrders, setAllOrders] = useState([]);
 
-  const isPreparingBanner = orderStatusBanner?.status === "preparing";
+  const isPreparingBanner = orderStatusBanner && ["preparing", "ready", "completed"].includes(orderStatusBanner.status);
 
   const normalizeOrderType = (value) => {
     const type = String(value || "").trim().toLowerCase();
@@ -635,11 +635,26 @@ export default function Header({
   };
 
   const showOrderStatusBanner = (order) => {
-    const rawStatus = order?.status ? String(order.status).toLowerCase() : "";
-    if (!rawStatus.includes("preparing")) return;
+    const rawStatus = order?.status ? String(order.status).toLowerCase().trim() : "";
+    let message = "";
+    let status = "";
+
+    if (rawStatus.includes("preparing")) {
+      message = "Your order is preparing";
+      status = "preparing";
+    } else if (rawStatus.includes("ready")) {
+      message = "Your order is ready";
+      status = "ready";
+    } else if (rawStatus.includes("completed") || rawStatus.includes("complete")) {
+      message = "Your order is completed";
+      status = "completed";
+    } else {
+      return;
+    }
+
     setOrderStatusBanner({
-      message: "Your order is preparing",
-      status: "preparing",
+      message,
+      status,
       ts: Date.now(),
     });
     triggerPreparingVibration();
@@ -1138,7 +1153,7 @@ export default function Header({
                                     </span>
                                   ) : item.isCombo ? (
                                     <span className="inline-flex shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                                      Only Combo
+                                      Combo
                                     </span>
                                   ) : null}
                                 </div>
@@ -1209,7 +1224,7 @@ export default function Header({
                                     ) : item.isCombo ? (
                                       <>
                                         <span className="text-[10px] leading-tight">
-                                          Only Combo: ₹
+                                          Combo: ₹
                                           {(item.comboPrice || 0).toFixed(2)} ×{" "}
                                           {item.quantity}
                                         </span>
@@ -1586,7 +1601,8 @@ export default function Header({
 
                         let s = String(order.status || "pending").toLowerCase();
                         let isBilledState = false;
-                        if (s === "completed" && !order.paymentMethod) {
+                        const hasPayment = order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0);
+                        if (s === "completed" && !hasPayment) {
                           s = "billed";
                           isBilledState = true;
                         }

@@ -14,7 +14,7 @@ const PendingOrderMobileControls = ({
   const isCompleted = order?.status === "completed";
   const isCancelled = order?.status === "cancelled";
   const isEatHere = order?.orderType === "Eat Here";
-  const alreadyPaid = Boolean(order?.paymentMethod);
+  const alreadyPaid = Boolean(order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0));
 
   const btnSecondary = `flex h-9 w-full items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
     isDarkMode

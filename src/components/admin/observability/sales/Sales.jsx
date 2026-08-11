@@ -158,7 +158,7 @@ export default function TopSellingAnalytics() {
 
   useAdminTour(TOUR_KEYS.sales, getSalesSteps, isDarkMode, 700);
   const [activeTab, setActiveTab] = useState("products");
-  const [timeRange, setTimeRange] = useState("7d");
+  const [timeRange, setTimeRange] = useState("1d");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -296,7 +296,7 @@ export default function TopSellingAnalytics() {
     setIsCustomRange(false);
     setAppliedFromDate("");
     setAppliedToDate("");
-    setTimeRange("7d"); // Reset to default
+    setTimeRange("1d"); // Reset to default
   };
 
   const getRefreshErrorMessage = (err) =>

@@ -22,8 +22,8 @@ import {
 
 export function NavMain({ items, isDarkMode = false }) {
   const location = useLocation();
-  const { newlyAddedItemsOrderIds } = useNotification() || {};
-  const hasNewItems = newlyAddedItemsOrderIds && newlyAddedItemsOrderIds.size > 0;
+  const { hasUnreadSidebarNotification } = useNotification() || {};
+  const hasNewItems = location.pathname !== "/admin/orders" && hasUnreadSidebarNotification;
   const colors = useSelector((state) => state.admin.theme.colors);
 
   return (

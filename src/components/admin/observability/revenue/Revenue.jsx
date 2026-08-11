@@ -113,7 +113,7 @@ export default function RevenueAnalytics() {
 
   useAdminTour(TOUR_KEYS.revenue, getRevenueSteps, isDarkMode, 700)
   // --- State ---
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("1d")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
   const [activeTab, setActiveTab] = useState("chart")
@@ -169,7 +169,7 @@ export default function RevenueAnalytics() {
   const handleResetDate = () => {
     setFromDate("")
     setToDate("")
-    setTimeRange("7d")
+    setTimeRange("1d")
     setShowDatePicker(false)
   }
 

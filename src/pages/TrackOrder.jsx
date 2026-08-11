@@ -207,7 +207,8 @@ export default function TrackOrder() {
           const orderId = order?._id || order?.id || "";
           const shortId = orderId.length > 6 ? orderId.slice(-6) : orderId;
           let status = (order?.status || "pending").toLowerCase();
-          if (status === "completed" && !order?.paymentMethod) {
+          const hasPayment = order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0);
+          if (status === "completed" && !hasPayment) {
             status = "billed";
           }
           const statusColor = statusColors[status] || statusColors.pending;
@@ -307,12 +308,12 @@ export default function TrackOrder() {
               </div>
 
               {/* Payment info */}
-              {order?.paymentMethod && (
+              {hasPayment && (
                 <div className={`mt-2 rounded-lg px-3 py-1.5 text-center text-xs font-bold ${isDarkMode
                   ? "bg-green-900/40 text-green-300"
                   : "bg-green-50 text-green-700"
                   }`}>
-                  Paid via {order.paymentMethod}
+                  Paid via {order.paymentMethods && order.paymentMethods.length > 0 ? order.paymentMethods.map(p => p.method).join(" + ") : order.paymentMethod}
                 </div>
               )}
 

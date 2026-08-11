@@ -367,7 +367,7 @@ const AvailabilityBadge = ({ available }) => (
     }`}
   >
     {available ? <CheckCircle size={12} /> : <XCircle size={12} />}
-    {available ? "In stock" : "Out of stock"}
+    {available ? "Available" : "Unavailable"}
   </span>
 );
 
@@ -381,27 +381,27 @@ const VisibilityBadge = ({ visibility }) => {
           : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
       }`}
     >
-      {isPublic ? "Client Visible" : "Admin Only"}
+      {isPublic ? "On Menu" : "Off Menu"}
     </span>
   );
 };
 
-const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
-  let label = "Client Visible";
-  let trackClass = "bg-green-600 dark:bg-emerald-400";
+const CategoryVisibilityToggle = ({ state, onToggle, isDarkMode, disabled = false }) => {
+  let label = "On Menu";
   let knobTranslate = "translate-x-3";
   let borderClass = "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200";
+  let trackBg = isDarkMode ? "#10b981" : "#16a34a"; // emerald-500 / green-600
 
   if (state === "ADMIN") {
-    label = "Client Hidden";
-    trackClass = "bg-red-600 dark:bg-rose-500";
+    label = "Off Menu";
     knobTranslate = "translate-x-0";
     borderClass = "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-250";
+    trackBg = isDarkMode ? "#f43f5e" : "#dc2626"; // rose-500 / red-600
   } else if (state === "MIXED") {
-    label = "Both Visible";
-    trackClass = "bg-amber-500 dark:bg-amber-400";
+    label = "On Menu";
     knobTranslate = "translate-x-1.5"; // Centered yellow knob!
     borderClass = "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+    trackBg = isDarkMode ? "#fbbf24" : "#f59e0b"; // amber-400 / amber-500
   }
 
   return (
@@ -415,9 +415,13 @@ const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
           : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
       } ${borderClass}`}
     >
-      <span className={`relative h-4 w-7 rounded-full transition-colors ${trackClass}`}>
+      <span 
+        className="relative h-4 w-7 rounded-full transition-colors"
+        style={{ backgroundColor: trackBg }}
+      >
         <span
-          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${knobTranslate}`}
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full shadow transition-transform ${knobTranslate}`}
+          style={{ backgroundColor: "#ffffff" }}
         />
       </span>
       <span>{label}</span>
@@ -425,10 +429,10 @@ const CategoryVisibilityToggle = ({ state, onToggle, disabled = false }) => {
   );
 };
 
-const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
+const StockToggle = ({ status = "in", onToggle, isDarkMode, disabled = false }) => {
   const isMixed = status === "mixed";
   const isIn = status === "in";
-  const label = isMixed ? "Mixed" : isIn ? "In stock" : "Out of stock";
+  const label = isMixed ? "Available" : isIn ? "Available" : "Unavailable";
   const [cooldown, setCooldown] = useState(false);
   const cooldownRef = useRef(null);
 
@@ -437,16 +441,17 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
     : isIn
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
     : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200";
-  const trackClass = isMixed
-    ? "bg-amber-500 dark:bg-amber-400"
-    : isIn
-    ? "bg-green-600 dark:bg-emerald-400"
-    : "bg-red-600 dark:bg-rose-500";
-  const knobTranslate = isMixed
-    ? "translate-x-1.5"
-    : isIn
-    ? "translate-x-3"
-    : "translate-x-0";
+
+  let trackBg = isDarkMode ? "#10b981" : "#16a34a"; // emerald-500 / green-600
+  let knobTranslate = "translate-x-3";
+
+  if (isMixed) {
+    trackBg = isDarkMode ? "#fbbf24" : "#f59e0b"; // amber-400 / amber-500
+    knobTranslate = "translate-x-1.5";
+  } else if (!isIn) {
+    trackBg = isDarkMode ? "#f43f5e" : "#dc2626"; // rose-500 / red-600
+    knobTranslate = "translate-x-0";
+  }
 
   useEffect(() => {
     return () => {
@@ -475,9 +480,13 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
           : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
       } ${pillClass}`}
     >
-      <span className={`relative h-4 w-7 rounded-full ${trackClass}`}>
+      <span 
+        className="relative h-4 w-7 rounded-full"
+        style={{ backgroundColor: trackBg }}
+      >
         <span
-          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition ${knobTranslate}`}
+          className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full shadow transition ${knobTranslate}`}
+          style={{ backgroundColor: "#ffffff" }}
         />
       </span>
       <span>{label}</span>
@@ -485,7 +494,7 @@ const StockToggle = ({ status = "in", onToggle, disabled = false }) => {
   );
 };
 
-const TabButton = ({ active, onClick, children }) => {
+const TabButton = ({ active, onClick, isDarkMode, children }) => {
   const colors = useSelector((state) => state.admin.theme.colors);
   return (
     <button
@@ -493,20 +502,20 @@ const TabButton = ({ active, onClick, children }) => {
       onClick={onClick}
       className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
         active
-          ? ""
-          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-300 dark:hover:text-slate-100"
+          ? "font-bold"
+          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
       }`}
       style={{
-        color: active ? colors.primary : undefined
+        color: active ? (isDarkMode ? "#fb923c" : colors.primary) : undefined
       }}
     >
       {children}
-      <span
-        className="absolute left-0 right-0 -bottom-[1px] h-0.5 rounded-full transition-all duration-150"
-        style={{
-          backgroundColor: active ? colors.primary : "transparent"
-        }}
-      />
+      {active && (
+        <span
+          className="absolute bottom-0 left-0 h-0.5 w-full rounded-full"
+          style={{ backgroundColor: isDarkMode ? "#fb923c" : colors.primary }}
+        />
+      )}
     </button>
   );
 };
@@ -573,7 +582,9 @@ const Menu = () => {
   });
 
   const [activeTab, setActiveTab] = useState("editor");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    return sessionStorage.getItem("menuSelectedCategory") || "";
+  });
   const [inventoryOpen, setInventoryOpen] = useState({});
   const [availabilityOverrides, setAvailabilityOverrides] = useState({});
 
@@ -598,6 +609,12 @@ const Menu = () => {
     // Clear state so browser back doesn't re-trigger
     window.history.replaceState({}, "");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedCategory) {
+      sessionStorage.setItem("menuSelectedCategory", selectedCategory);
+    }
+  }, [selectedCategory]);
 
   const notify = useNotify();
 
@@ -1597,7 +1614,7 @@ const prepareFormData = (formData, file) => {
         }).unwrap();
         notify(
           `"${item?.name || "Item"}" marked ${
-            nextValue ? "in stock" : "out of stock"
+            nextValue ? "available" : "unavailable"
           }.`,
           "success"
         );
@@ -1638,7 +1655,7 @@ const prepareFormData = (formData, file) => {
         );
         notify(
           `"${categoryLabel}" marked ${
-            nextValue ? "in stock" : "out of stock"
+            nextValue ? "available" : "unavailable"
           }.`,
           "success"
         );
@@ -1760,12 +1777,14 @@ const prepareFormData = (formData, file) => {
             <TabButton
               active={activeTab === "editor"}
               onClick={() => setActiveTab("editor")}
+              isDarkMode={isDarkMode}
             >
               Menu editor
             </TabButton>
             <TabButton
               active={activeTab === "inventory"}
               onClick={() => setActiveTab("inventory")}
+              isDarkMode={isDarkMode}
             >
               Manage inventory
             </TabButton>
@@ -1916,7 +1935,7 @@ const prepareFormData = (formData, file) => {
                             paddingLeft: "12px"
                           } : {}}
                         >
-                          <span className="min-w-0 flex-1 truncate max-w-[160px] sm:max-w-none">
+                          <span className="min-w-0 flex-1 block truncate max-w-[130px] sm:max-w-[200px]">
                             {category.label}
                           </span>
                         </button>
@@ -1935,9 +1954,11 @@ const prepareFormData = (formData, file) => {
               <div className="flex min-h-0 flex-col rounded-xl border border-[#ede8e3] bg-white dark:border-slate-700/60 dark:bg-[#1e293b]">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ede8e3] px-4 py-3 dark:border-slate-700/60">
                   <div className="flex items-center gap-2">
-                    <p className="text-base font-semibold text-[#1c1917] dark:text-slate-100">
-                      {selectedCategory || "All items"}
-                      <span className="ml-2 text-sm font-medium text-[#a8a29e] dark:text-slate-400">
+                    <p className="flex items-center gap-1 text-base font-semibold text-[#1c1917] dark:text-slate-100 max-w-[160px] sm:max-w-[320px] md:max-w-[450px] min-w-0">
+                      <span className="truncate">
+                        {selectedCategory || "All items"}
+                      </span>
+                      <span className="ml-1 text-sm font-medium text-[#a8a29e] dark:text-slate-400 shrink-0">
                         ({menuEditorItems.length})
                       </span>
                     </p>
@@ -1946,6 +1967,7 @@ const prepareFormData = (formData, file) => {
                         state={getCategoryVisibilityState(selectedCategory)}
                         onToggle={() => handleToggleCategoryVisibility(selectedCategory)}
                         disabled={togglingCategory === selectedCategory}
+                        isDarkMode={isDarkMode}
                       />
                     )}
                   </div>
@@ -2184,19 +2206,19 @@ const prepareFormData = (formData, file) => {
                             <button
                               type="button"
                               onClick={() => toggleInventoryCategory(categoryKey)}
-                              className="flex items-center gap-2 text-left"
+                              className="flex max-w-[70%] sm:max-w-[80%] min-w-0 items-center gap-2 text-left"
                             >
-                              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                 {isOpen ? (
                                   <ChevronDown size={16} />
                                 ) : (
                                   <ChevronRight size={16} />
                                 )}
                               </span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                              <span className="truncate text-sm font-semibold text-gray-900 dark:text-slate-100 block">
                                 {category.label}
                               </span>
-                              <span className="text-xs text-[#a8a29e] dark:text-slate-400">
+                              <span className="text-xs text-[#a8a29e] dark:text-slate-400 shrink-0">
                                 ({category.items.length})
                               </span>
                             </button>
@@ -2216,6 +2238,7 @@ const prepareFormData = (formData, file) => {
                                 )
                               }
                               disabled={!isAdmin || category.items.length === 0}
+                              isDarkMode={isDarkMode}
                             />
                           </div>
 
@@ -2256,6 +2279,7 @@ const prepareFormData = (formData, file) => {
                                           handleToggleItemAvailability(item)
                                         }
                                         disabled={!isAdmin}
+                                        isDarkMode={isDarkMode}
                                       />
                                     </div>
                                   );
@@ -2286,3 +2310,4 @@ const prepareFormData = (formData, file) => {
 };
 
 export default Menu;
+// test

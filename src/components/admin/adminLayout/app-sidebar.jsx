@@ -6,6 +6,8 @@ import {
   TrendingUp,
   Boxes,
   ChefHat,
+  PanelLeftClose,
+  PanelRightClose,
 } from "lucide-react";
 import { NavMain } from "@/components/admin/adminLayout/nav-main";
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -20,12 +22,14 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import logo from "@/assets/tapNbite-176x96.png";
 
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function AppSidebar({ isDarkMode = false, ...props }) {
-  const { isMobile, open, setOpen, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, open, setOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
+  const colors = useSelector((state) => state.admin.theme.colors) || { primary: "#f97316" };
   const location = useLocation();
   const previousPathRef = React.useRef(location.pathname);
   const openRef = React.useRef(open);
@@ -109,6 +113,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
+    /*
     ...(isAdmin
       ? [
           {
@@ -121,6 +126,7 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
           },
         ]
       : []),
+    */
     {
       title: "Profile",
       url: "/admin/profile",
@@ -170,31 +176,45 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
       {...props}
     >
       {/* Header */}
-      <SidebarHeader className={`px-14 py-3 group-data-[collapsible=icon]:px-3 group-data-[collapsible=icon]:py-4 group-data-[collapsible=icon]:items-center ${sidebarSectionClass}`}>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              asChild
-              className={`mt-0 sm:mt-20 group-data-[collapsible=icon]:mt-20 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:justify-center hover:!bg-transparent active:!bg-transparent focus:!bg-transparent ${sidebarSectionClass}`}
-              style={{ backgroundColor: 'transparent' }}
-            >
-              <Link
-                to={homeRoute}
-                onClick={closeSidebarForViewport}
-              >
-                <img
-                  src={logo}
-                  alt="Logo"
-                  width="88"
-                  height="48"
-                  decoding="async"
-                  className="h-12 w-auto group-data-[collapsible=icon]:hidden"
-                />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className={`mt-0 sm:mt-14 px-4 py-3 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-4 ${sidebarSectionClass}`}>
+        <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
+          <Link
+            to={homeRoute}
+            onClick={closeSidebarForViewport}
+            className="flex-1 group-data-[collapsible=icon]:hidden flex justify-center pl-6"
+          >
+            <img
+              src={logo}
+              alt="Logo"
+              width="88"
+              height="48"
+              decoding="async"
+              className="h-12 w-auto"
+            />
+          </Link>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="h-8 w-8 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-105 active:scale-95 shrink-0 group-data-[collapsible=icon]:mx-auto shadow-sm"
+            style={{
+              backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+              borderColor: isDarkMode ? "#334155" : "#ede8e3",
+              color: colors.primary,
+            }}
+            aria-label="Toggle sidebar"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? "#334155" : `${colors.primary}0a`;
+              e.currentTarget.style.borderColor = colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = isDarkMode ? "#1e293b" : "#ffffff";
+              e.currentTarget.style.borderColor = isDarkMode ? "#334155" : "#ede8e3";
+            }}
+          >
+            <PanelLeftClose size={15} className="stroke-[1.8] group-data-[collapsible=icon]:hidden transition-transform duration-300 hover:-translate-x-0.5" />
+            <PanelRightClose size={15} className="stroke-[1.8] hidden group-data-[collapsible=icon]:block transition-transform duration-300 hover:translate-x-0.5" />
+          </button>
+        </div>
       </SidebarHeader>
       <SidebarContent className={sidebarSectionClass}>
         <NavMain

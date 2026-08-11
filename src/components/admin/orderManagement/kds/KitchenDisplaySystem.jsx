@@ -105,7 +105,7 @@ const checkAndClearAdminModifiedOrderId = (id) => {
     }
     sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
     return isFound;
-  } catch (_) {}
+  } catch (_) { }
   return false;
 };
 
@@ -277,7 +277,7 @@ const KitchenDisplaySystem = () => {
           notificationSound.pause();
           notificationSound.currentTime = 0;
           notificationSound.volume = 1;
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
     window.addEventListener("click", enableAudio, { once: true });
@@ -392,7 +392,7 @@ const KitchenDisplaySystem = () => {
               notificationSound.currentTime = 0;
               const playPromise = notificationSound.play();
               if (playPromise?.catch) {
-                playPromise.catch(() => {});
+                playPromise.catch(() => { });
               }
             } catch {
               // Ignore
@@ -488,7 +488,7 @@ const KitchenDisplaySystem = () => {
         try {
           notificationSound.currentTime = 0;
           const playPromise = notificationSound.play();
-          if (playPromise?.catch) playPromise.catch(() => {});
+          if (playPromise?.catch) playPromise.catch(() => { });
         } catch {
           // Ignore autoplay interruptions.
         }
@@ -591,9 +591,9 @@ const KitchenDisplaySystem = () => {
       }
 
       // API Call
-      await updateOrderApi({ 
-        orderId: normalizedOrderId, 
-        updatedData 
+      await updateOrderApi({
+        orderId: normalizedOrderId,
+        updatedData
       }).unwrap();
 
       if (options?.successMessage) {
@@ -601,12 +601,12 @@ const KitchenDisplaySystem = () => {
       } else if (!options?.silentSuccess) {
         notify("Order status updated.", "success");
       }
-      
+
       // Refetch for consistency
       refetchPending();
       refetchPreparing();
       refetchReady();
-      
+
       return true;
     } catch (error) {
       // Rollback
@@ -618,12 +618,12 @@ const KitchenDisplaySystem = () => {
 
       console.error("KDS update failed", error);
       notify("Unable to update order status. Please try again.", "error");
-      
+
       // Refetch to sync state
       refetchPending();
       refetchPreparing();
       refetchReady();
-      
+
       return false;
     } finally {
       setOptimisticStatusById((prev) => {
@@ -643,7 +643,7 @@ const KitchenDisplaySystem = () => {
 
   // Pagination Logic
   const totalPages = Math.max(1, Math.ceil(visibleOrders.length / ITEMS_PER_PAGE));
-  
+
   // Refined Pagination Clamping: Only clamp AFTER initial load to avoid resetting to Page 1 on refresh
   useEffect(() => {
     if (hasInitializedOrders.current && currentPage > totalPages) {
@@ -661,9 +661,8 @@ const KitchenDisplaySystem = () => {
 
   return (
     <div
-      className={`h-[100dvh] w-screen overflow-hidden overscroll-none select-none ${
-        isDarkMode ? "bg-[#0f172a] text-slate-100" : "bg-[#f7f3ef] text-[#1c1917]"
-      }`}
+      className={`h-[100dvh] w-screen overflow-hidden overscroll-none select-none ${isDarkMode ? "bg-[#0f172a] text-slate-100" : "bg-[#f7f3ef] text-[#1c1917]"
+        }`}
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
@@ -672,14 +671,12 @@ const KitchenDisplaySystem = () => {
       }}
     >
       <div className="h-full w-full p-2 md:p-3 flex flex-col overflow-hidden">
-        <div className={`flex flex-col gap-0 rounded-2xl border shadow-sm flex-1 min-h-0 overflow-hidden ${
-          isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
-        }`}>
+        <div className={`flex flex-col gap-0 rounded-2xl border shadow-sm flex-1 min-h-0 overflow-hidden ${isDarkMode ? "border-slate-700 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+          }`}>
 
           {/* ── Header ── */}
-          <div className={`relative flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0 ${
-            isDarkMode ? "bg-[#1e293b] border-b border-slate-700" : "bg-[#f7f3ef] border-b border-[#ede8e3]"
-          }`}>
+          <div className={`relative flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between md:gap-0 shrink-0 ${isDarkMode ? "bg-[#1e293b] border-b border-slate-700" : "bg-[#f7f3ef] border-b border-[#ede8e3]"
+            }`}>
             {/* Left: Brand + Title */}
             <div className="flex flex-col shrink-0 md:w-[250px]">
               <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
@@ -720,15 +717,14 @@ const KitchenDisplaySystem = () => {
                       key={dir}
                       onClick={action}
                       disabled={disabled}
-                      className={`flex h-8 items-center gap-1 rounded-lg border px-3 text-[10px] font-black uppercase tracking-widest transition-all ${
-                        disabled
+                      className={`flex h-8 items-center gap-1 rounded-lg border px-3 text-[10px] font-black uppercase tracking-widest transition-all ${disabled
                           ? isDarkMode
                             ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
                             : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
                           : isDarkMode
                             ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
                             : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
-                      }`}
+                        }`}
                     >
                       {dir === "prev" && icon}
                       <span>{label}</span>
@@ -739,13 +735,12 @@ const KitchenDisplaySystem = () => {
               </div>
 
               {/* Tab switcher */}
-              <div className={`flex items-center gap-1.5 rounded-xl border px-2 py-1.5 ${
-                isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
-              }`}>
+              <div className={`flex items-center gap-1.5 rounded-xl border px-2 py-1.5 ${isDarkMode ? "border-slate-700 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
+                }`}>
                 <span className={`text-[10px] font-black uppercase tracking-widest mr-1 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>Orders</span>
                 {[
                   { key: "active", color: "green", count: activeTabCount, dot: "bg-green-500" },
-                  { key: "ready",  color: "blue",  count: readyCount,     dot: "bg-blue-500" },
+                  { key: "ready", color: "blue", count: readyCount, dot: "bg-blue-500" },
                 ].map(({ key, color, count, dot }) => {
                   const isActive = activeTab === key;
                   const activeBg = color === "green" ? "bg-green-500" : "bg-blue-500";
@@ -753,19 +748,17 @@ const KitchenDisplaySystem = () => {
                     <button
                       key={key}
                       onClick={() => setActiveTab(key)}
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-black uppercase tracking-wide transition-all ${
-                        isActive
+                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-black uppercase tracking-wide transition-all ${isActive
                           ? `${activeBg} text-white shadow-sm`
                           : isDarkMode
                             ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
                             : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
-                      } ${key === "ready" && readyCount > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
+                        } ${key === "ready" && readyCount > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
                     >
                       <span className={`h-2.5 w-2.5 rounded-full ${dot}`}></span>
                       <span>{key === "active" ? "Active" : "Ready"}</span>
-                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                        isActive ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-white text-[#78716c]"
-                      }`}>{count}</span>
+                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${isActive ? "bg-white/20 text-white" : isDarkMode ? "bg-slate-700 text-slate-400" : "bg-white text-[#78716c]"
+                        }`}>{count}</span>
                     </button>
                   );
                 })}
@@ -774,9 +767,8 @@ const KitchenDisplaySystem = () => {
           </div>
 
           {/* ── Content ── */}
-          <div className={`m-2 rounded-xl border flex-1 min-h-0 flex flex-col ${
-            isDarkMode ? "border-slate-700/50 bg-[#0f172a]" : "border-[#ede8e3] bg-[#f7f3ef]"
-          }`}>
+          <div className={`m-2 rounded-xl border flex-1 min-h-0 flex flex-col ${isDarkMode ? "border-slate-700/50 bg-[#0f172a]" : "border-[#ede8e3] bg-[#f7f3ef]"
+            }`}>
             {isLoading && (
               <div className="flex items-center justify-center gap-2 py-2 shrink-0">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
@@ -804,12 +796,10 @@ const KitchenDisplaySystem = () => {
                   })}
                 </div>
               ) : (
-                <div className={`flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed m-3 px-8 py-12 text-center ${
-                  isDarkMode ? "border-slate-700 text-slate-400" : "border-[#d6cfc8] text-[#78716c]"
-                }`}>
-                  <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
-                    isDarkMode ? "bg-slate-800 text-orange-400" : "bg-orange-100 text-orange-600"
+                <div className={`flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed m-3 px-8 py-12 text-center ${isDarkMode ? "border-slate-700 text-slate-400" : "border-[#d6cfc8] text-[#78716c]"
                   }`}>
+                  <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${isDarkMode ? "bg-slate-800 text-orange-400" : "bg-orange-100 text-orange-600"
+                    }`}>
                     <Activity size={24} />
                   </div>
                   <p className={`text-lg font-bold ${isDarkMode ? "text-slate-200" : "text-[#1c1917]"}`}>Kitchen queue is clear</p>

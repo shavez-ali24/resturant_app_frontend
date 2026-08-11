@@ -28,7 +28,7 @@ const LOADER_MIN_DURATION = 2000;
 export default function Home() {
   const outletContext = useOutletContext() || {};
   const isDarkMode = Boolean(outletContext?.isDarkMode);
-  const toggleDarkMode = outletContext?.toggleDarkMode || (() => {});
+  const toggleDarkMode = outletContext?.toggleDarkMode || (() => { });
 
   const {
     data: menuData,
@@ -78,25 +78,25 @@ export default function Home() {
       ? restaurant.categories
       : Array.isArray(restaurantData?.restaurant?.categories) &&
         restaurantData.restaurant.categories.length
-      ? restaurantData.restaurant.categories
-      : [];
+        ? restaurantData.restaurant.categories
+        : [];
 
   const orderedCategories = Array.isArray(rawCategories)
     ? rawCategories
-        .map((category, index) => ({ category, index }))
-        .sort((a, b) => {
-          const aOrder = Number(a.category?.displayOrder);
-          const bOrder = Number(b.category?.displayOrder);
-          const aValid = Number.isFinite(aOrder);
-          const bValid = Number.isFinite(bOrder);
-          if (aValid && bValid && aOrder !== bOrder) {
-            return aOrder - bOrder;
-          }
-          if (aValid && !bValid) return -1;
-          if (!aValid && bValid) return 1;
-          return a.index - b.index;
-        })
-        .map(({ category }) => category)
+      .map((category, index) => ({ category, index }))
+      .sort((a, b) => {
+        const aOrder = Number(a.category?.displayOrder);
+        const bOrder = Number(b.category?.displayOrder);
+        const aValid = Number.isFinite(aOrder);
+        const bValid = Number.isFinite(bOrder);
+        if (aValid && bValid && aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        if (aValid && !bValid) return -1;
+        if (!aValid && bValid) return 1;
+        return a.index - b.index;
+      })
+      .map(({ category }) => category)
     : [];
 
   const categoryImages = useMemo(() => {
@@ -142,11 +142,10 @@ export default function Home() {
 
   if (showLoader)
     return (
-      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${
-        isDarkMode 
-          ? "bg-gradient-to-b from-[#0f172a] to-[#020617]" 
+      <div className={`relative flex min-h-screen max-h-screen items-center justify-center overflow-hidden ${isDarkMode
+          ? "bg-gradient-to-b from-[#0f172a] to-[#020617]"
           : "bg-gradient-to-b from-[#fffdf7] to-[#fef2d8]"
-      }`}>
+        }`}>
         <img
           src={loader}
           alt="Loading..."
@@ -167,8 +166,8 @@ export default function Home() {
           </div>
           <h2 className="mb-2 text-lg font-bold">Unable to Load Menu</h2>
           <p className={`text-sm mb-6 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{friendlyMsg}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-2.5 text-sm font-semibold text-white transition-all shadow-md"
           >
             Reload Page
@@ -235,9 +234,8 @@ export default function Home() {
               </p>
               <p className="text-[13px] font-semibold text-orange-800 sm:text-sm">
                 {restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt
-                  ? `Reopens at ${
-                      restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt
-                    }`
+                  ? `Reopens at ${restaurant?.reopenAt || restaurantData?.restaurant?.reopenAt
+                  }`
                   : "We'll be back soon"}
               </p>
             </div>
@@ -282,12 +280,12 @@ export default function Home() {
         {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
-              {filters.combo ? "No only combo items available" :
-               filters.veg ? "No veg items available" :
-               filters.nonVeg ? "No non-veg items available" : 
-               filters.mixed ? "No mixed items available" :
-               activeCategory ? `No items in ${activeCategory}` :
-               search.trim() ? "No items found" : "No items available"}
+              {filters.combo ? "No combo items available" :
+                filters.veg ? "No veg items available" :
+                  filters.nonVeg ? "No non-veg items available" :
+                    filters.mixed ? "No mixed items available" :
+                      activeCategory ? `No items in ${activeCategory}` :
+                        search.trim() ? "No items found" : "No items available"}
             </p>
             <p className="text-xs sm:text-sm max-w-xs">
               {search.trim() ? "Try adjusting your search to find the food you're craving." : "Check back later or try different filters."}

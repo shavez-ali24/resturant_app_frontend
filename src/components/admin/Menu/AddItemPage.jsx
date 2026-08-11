@@ -143,6 +143,16 @@ export default function AddItemPage() {
     setRestaurantCategories(sortUniqueCategories(cats));
   }, [restaurantData]);
 
+  useEffect(() => {
+    const preselected = sessionStorage.getItem("menuSelectedCategory");
+    if (preselected && !addFormData.category) {
+      setAddFormData((prev) => ({
+        ...prev,
+        category: preselected,
+      }));
+    }
+  }, []);
+
   const categoryMode = useMemo(
     () => resolveCategoryMode(restaurantData?.restaurant?.categories || []),
     [restaurantData]

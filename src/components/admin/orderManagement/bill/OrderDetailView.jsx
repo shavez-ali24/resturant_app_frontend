@@ -115,6 +115,11 @@ export default function OrderDetailView({ order, restaurantDetails = {}, onClose
         }`}>
           <span><span className="font-medium">Customer:</span> {order?.customerName || "Guest"}</span>
           <span><span className="font-medium">Type:</span> {order?.orderType || "N/A"}</span>
+          <span><span className="font-medium">Date:</span>{" "}
+            {order?.createdAt
+              ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
+              : "N/A"}
+          </span>
           <span><span className="font-medium">Time:</span>{" "}
             {order?.createdAt
               ? new Date(order.createdAt).toLocaleTimeString([], { hour12: true })

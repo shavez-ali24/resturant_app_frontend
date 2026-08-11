@@ -60,15 +60,13 @@ const CompletedOrders = () => {
     [currentPage, totalPages]
   );
 
-  const triggerCls = `h-9 w-full rounded-lg border px-3 text-xs font-semibold text-[#44403c] outline-none transition-all hover:border-[#d6cfc8] focus:ring-2 focus:ring-orange-200 ${
-    isDarkMode
+  const triggerCls = `h-9 w-full rounded-lg border px-3 text-xs font-semibold text-[#44403c] outline-none transition-all hover:border-[#d6cfc8] focus:ring-2 focus:ring-orange-200 ${isDarkMode
       ? "border-slate-700 bg-slate-800 text-slate-200 hover:border-slate-600 focus:ring-slate-600"
       : "border-[#ede8e3] bg-white"
-  }`;
+    }`;
 
-  const dropdownCls = `rounded-lg border p-1 shadow-lg ${
-    isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"
-  }`;
+  const dropdownCls = `rounded-lg border p-1 shadow-lg ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-[#ede8e3] bg-white"
+    }`;
 
   return (
     <div className={`flex h-screen flex-col overflow-hidden px-3 py-3 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
@@ -120,9 +118,8 @@ const CompletedOrders = () => {
       {/* ── Table card ── */}
       <div
         data-tour="completed-table"
-        className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${
-          isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
-        }`}
+        className={`min-h-0 flex-1 overflow-hidden rounded-xl border ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+          }`}
       >
         <OrdersTable
           orders={orders}
@@ -139,15 +136,13 @@ const CompletedOrders = () => {
         <div className="flex flex-shrink-0 justify-center pt-3 min-h-[44px]">
           <div className="w-full max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Pagination className="min-w-max">
-              <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${
-                isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
-              }`}>
+              <PaginationContent className={`w-max min-w-max gap-1 rounded-lg border px-2 py-1 ${isDarkMode ? "border-slate-700/60 bg-[#1e293b]" : "border-[#ede8e3] bg-white"
+                }`}>
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${
-                      currentPage === 1 ? "pointer-events-none opacity-40" : ""
-                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === 1 ? "pointer-events-none opacity-40" : ""
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
                 {pageNumbers.map((page, idx) => (
@@ -157,13 +152,12 @@ const CompletedOrders = () => {
                     ) : (
                       <PaginationLink
                         isActive={currentPage === page}
-                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm ${
-                          currentPage === page
+                        className={`h-8 w-8 rounded-md border p-0 text-xs cursor-pointer sm:text-sm ${currentPage === page
                             ? "bg-orange-500 text-white border-orange-500"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
                               : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
-                        }`}
+                          }`}
                         onClick={() => setCurrentPage(page)}
                       >
                         {page}
@@ -174,9 +168,8 @@ const CompletedOrders = () => {
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${
-                      currentPage === totalPages ? "pointer-events-none opacity-40" : ""
-                    } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                    className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === totalPages ? "pointer-events-none opacity-40" : ""
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
               </PaginationContent>

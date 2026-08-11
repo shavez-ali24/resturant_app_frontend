@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem("admin_token");
+  const token = useSelector((state) => state.admin.token) || localStorage.getItem("admin_token");
   const navigate = useNavigate();
 
   useEffect(() => {
