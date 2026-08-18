@@ -95,6 +95,7 @@ const normalizeFoodType = (value = "") => {
   const normalized = String(value || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
   if (["veg", "vegetarian", "vegitarian"].includes(normalized)) return "veg";
   if (["nonveg", "non-veg", "non-vegetarian", "nonvegetarian"].includes(normalized)) return "non-veg";
+  if (["egg", "eggitarian", "eggiterian"].includes(normalized)) return "egg";
   if (["mixed", "mix", "both"].includes(normalized)) return "mixed";
   return "";
 };

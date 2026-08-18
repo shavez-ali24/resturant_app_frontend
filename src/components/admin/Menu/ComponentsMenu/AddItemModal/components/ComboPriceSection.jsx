@@ -22,7 +22,7 @@ const ComboPriceSection = ({
           inputMode="numeric"
           placeholder="e.g. 599"
         />
-        <p className="mt-1 text-xs text-[#a8a29e]">
+        <p className="mt-1 text-xs text-gray-500">
           The final price customers will pay for the combo
         </p>
       </div>

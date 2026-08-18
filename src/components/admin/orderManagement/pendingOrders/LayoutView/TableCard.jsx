@@ -68,8 +68,8 @@ const getCardStyle = (rawStatus, status, isDark, themeColors) => {
 };
 
 const ICON_BTN = (isDark) => ({
-  width: 36,
-  height: 36,
+  width: 32,
+  height: 32,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -186,10 +186,19 @@ const TableCard = React.memo(function TableCard({
   return (
     <div
       onClick={handleClick}
-      className="transition-all duration-200 active:scale-95"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick(e);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${isRoom ? "Room" : "Table"} ${displayNum}, Status: ${rawStatus || (isAvailable ? "Available" : "Occupied")}`}
+      className="transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
       style={{
-        width: 140,
-        height: 112,
+        width: 120,
+        height: 96,
         borderRadius: 14,
         cursor: isLoading ? "wait" : "pointer",
         display: "flex",
@@ -236,7 +245,7 @@ const TableCard = React.memo(function TableCard({
 
       {/* Top status / time */}
       {!hasNewClientItems && !isAvailable && elapsedMinutes != null && (
-        <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: isDarkMode ? "#ffffff" : "#713f12", textTransform: "uppercase", letterSpacing: "0.6px" }}>
+        <div style={{ position: "absolute", top: 8, fontSize: 10, fontWeight: 800, color: isDarkMode ? "#ffffff" : "#713f12", textTransform: "uppercase", letterSpacing: "0.6px" }}>
           {getElapsedString(elapsedMinutes)}
         </div>
       )}
@@ -244,10 +253,10 @@ const TableCard = React.memo(function TableCard({
       {/* Main number - bold dark, matches mockup */}
       <div 
         style={{ 
-          fontSize: table.isVirtual ? 14 : 20, 
+          fontSize: table.isVirtual ? 13 : 18, 
           fontWeight: 700, 
           color: cardStyle.numColor, 
-          marginTop: table.isVirtual ? 18 : 14,
+          marginTop: table.isVirtual ? 14 : 8,
           textAlign: "center",
           textOverflow: "ellipsis",
           overflow: "hidden",
@@ -261,7 +270,7 @@ const TableCard = React.memo(function TableCard({
 
       {/* Room category + price or table amount */}
       {!isAvailable && (
-        <div style={{ fontSize: 13, color: isDarkMode ? "#ffffff" : "#713f12", marginTop: 2, fontWeight: 700, textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: isDarkMode ? "#ffffff" : "#713f12", marginTop: 1, fontWeight: 700, textAlign: 'center' }}>
           {table.currentAmount != null ? (
             formatAmount(table.currentAmount)
           ) : isRoom && roomCategory ? (
@@ -275,28 +284,31 @@ const TableCard = React.memo(function TableCard({
 
       {/* Bottom icons - only for occupied TABLES */}
       {showBottomIcons && (
-        <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10, zIndex: 10 }}>
+        <div style={{ position: "absolute", bottom: -16, display: "flex", gap: 6, zIndex: 10 }}>
           <button
             onClick={isBilled ? (e) => { e.stopPropagation(); onPay?.(table); } : handleEdit}
             style={ICON_BTN(isDarkMode)}
             title={isBilled ? "Pay Order" : "Edit Order"}
+            aria-label={isBilled ? "Pay Order" : "Edit Order"}
           >
-            {isBilled ? <IndianRupee size={18} /> : <SquarePen size={18} />}
+            {isBilled ? <IndianRupee size={20} /> : <SquarePen size={20} />}
           </button>
           <button
             onClick={handlePrint}
             style={ICON_BTN(isDarkMode)}
             title="Print"
+            aria-label="Print bill"
           >
-            <Printer size={18} />
+            <Printer size={20} />
           </button>
           {!isBilled && !table.isVirtual && (
             <button
               onClick={handleMove}
               style={ICON_BTN(isDarkMode)}
               title="Move Table/Room"
+              aria-label="Move table or room"
             >
-              <Move size={18} />
+              <Move size={20} />
             </button>
           )}
         </div>

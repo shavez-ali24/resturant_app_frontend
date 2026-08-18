@@ -430,7 +430,11 @@ const BillPage = ({
   // Backend billOrder saves roomCharge to order.stay.roomCharge
   // Only show when stay.enabled === true (room order)
   const isStayEnabled = activeOrder?.stay?.enabled === true;
-  const roomCharge = isStayEnabled ? parseAmount(activeOrder?.stay?.roomCharge || 0) : 0;
+  const getRoomCharge = () => {
+    if (!isStayEnabled) return 0;
+    return parseAmount(activeOrder?.stay?.roomCharge || 0);
+  };
+  const roomCharge = getRoomCharge();
 
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
   const backendSubtotal = parseAmount(activeOrder?.subtotal);
@@ -470,6 +474,12 @@ const BillPage = ({
       displayGrandTotal = backendGrandTotal;
     }
   }
+
+  const totalAdvancePaid = activeOrder?.advancePayments?.reduce((sum, p) => sum + parseAmount(p.amount), 0) || 0;
+  const isCompletedOrPaid = Boolean(
+    activeOrder?.paymentMethod || 
+    (activeOrder?.paymentMethods && activeOrder.paymentMethods.length > 0)
+  );
 
   const restaurantName =
     restaurantObj?.restaurantName ||
@@ -1801,6 +1811,39 @@ const BillPage = ({
                 <span>Grand Total</span>
                 <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
+
+              {activeOrder?.advancePayments && activeOrder.advancePayments.length > 0 && (
+                <>
+                  <div className={`mt-2 border-t pt-2 border-dashed ${billBorderClass}`}>
+                    <span className="text-xs font-bold block mb-1">Advance Payments:</span>
+                    {activeOrder.advancePayments.map((adv, idx) => {
+                      const fallbackDate = adv.paidAt || adv.createdAt || adv.date || activeOrder?.createdAt || new Date();
+                      const advDate = new Date(fallbackDate).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      });
+                      return (
+                        <div key={adv._id || idx} className={`flex justify-between text-xs mt-1 ${billTextClass}`}>
+                          <span>
+                            <span className="font-semibold uppercase">{adv.paymentMethod}</span> 
+                            <span className="text-[10px] font-bold text-gray-900 dark:text-white ml-1.5">({advDate})</span>
+                          </span>
+                          <span className="font-medium">₹{Number(adv.amount || 0).toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {!isCompletedOrPaid && (
+                    <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass}`}>
+                      <span>Net Payable</span>
+                      <span>₹{Math.max(0, displayGrandTotal - totalAdvancePaid).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
 
               {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
                 <>

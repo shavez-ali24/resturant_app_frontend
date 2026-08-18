@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     target: "es2018",
     minify: "esbuild",
-    sourcemap: true,
+    sourcemap: false,
     cssCodeSplit: true,
   },
   esbuild: {

@@ -386,6 +386,41 @@ export const adminApi = createApi({
       },
       invalidatesTags: ["Order", "Units", "Restaurant"],
     }),
+    addAdvancePayment: builder.mutation({
+      query: ({ orderId, amount, paymentMethod }) => ({
+        url: `/order/${orderId}/advance-payment`,
+        method: "POST",
+        body: { amount, paymentMethod }
+      }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
+      invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
+    }),
+    editAdvancePayment: builder.mutation({
+      query: ({ orderId, advancePaymentId, amount, paymentMethod }) => ({
+        url: `/order/${orderId}/advance-payment/${advancePaymentId}`,
+        method: "PATCH",
+        body: { amount, paymentMethod }
+      }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
+      invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
+    }),
+    deleteAdvancePayment: builder.mutation({
+      query: ({ orderId, advancePaymentId }) => ({
+        url: `/order/${orderId}/advance-payment/${advancePaymentId}`,
+        method: "DELETE"
+      }),
+      async onQueryStarted({ orderId }, { queryFulfilled }) {
+        addAdminModifiedOrderId(orderId);
+        try { await queryFulfilled; } catch (_) {}
+      },
+      invalidatesTags: (result, error, { orderId }) => [{ type: "Order", id: orderId }, { type: "Order", id: "LIST" }, "Units", "Restaurant"],
+    }),
     getOrderById: builder.query({
       query: (orderId) => `/order/${orderId}`,
       transformResponse: (response) => response?.order || response,
@@ -434,4 +469,7 @@ export const {
   useMoveOrderMutation,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
+  useAddAdvancePaymentMutation,
+  useEditAdvancePaymentMutation,
+  useDeleteAdvancePaymentMutation,
 } = adminApi;

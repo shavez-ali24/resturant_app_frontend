@@ -27,6 +27,8 @@ const LazyImage = ({ src, alt, className }) => {
         src={src}
         alt={alt}
         loading="lazy"
+        width="100%"
+        height="100%"
         onLoad={() => setLoaded(true)}
         className={`${className} transition-opacity duration-300 ${
           loaded ? "opacity-100" : "opacity-0"
@@ -387,6 +389,7 @@ export default function FoodListing({
                       switch (type?.toLowerCase()) {
                         case 'veg': return 'border-green-500';
                         case 'non-veg': return 'border-red-500';
+                        case 'egg': return 'border-yellow-500';
                         case 'mixed': return 'border-orange-500';
                         default: return 'border-gray-300';
                       }
@@ -432,6 +435,12 @@ export default function FoodListing({
                                 size={12}
                                 strokeWidth={12}
                                 className="border-2 border-current text-red-600"
+                              />
+                            ) : item.type === "egg" ? (
+                              <Dot
+                                size={12}
+                                strokeWidth={12}
+                                className="border-2 border-current text-yellow-500"
                               />
                             ) : (
                               <Dot
@@ -501,6 +510,7 @@ export default function FoodListing({
                                 }}
                                 className="text-gray-400 hover:text-orange-600 p-0.5 rounded hover:bg-orange-50 flex-shrink-0"
                                 title="Customize item"
+                                aria-label="Customize item"
                               >
                                 <Edit3 className="h-3 w-3" />
                               </button>
@@ -600,7 +610,7 @@ export default function FoodListing({
                               <div className="mt-1 flex items-center gap-1">
                                 {hasDiscount ? (
                                   <>
-                                    <span className="text-xs text-gray-400 line-through">
+                                    <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                       ₹{Number(variantPrice.price).toFixed(2)}
                                     </span>
                                     <span className="text-xs font-bold text-primary">
@@ -620,7 +630,7 @@ export default function FoodListing({
                               <div className="mt-1 flex items-center gap-1">
                                 {hasDiscount ? (
                                   <>
-                                    <span className="text-xs text-gray-400 line-through">
+                                    <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                       ₹{Number(originalPrice).toFixed(2)}
                                     </span>
                                     <span className="text-xs font-bold text-primary">
@@ -652,6 +662,7 @@ export default function FoodListing({
                                           }}
                                           disabled={!isRestaurantOpen}
                                           className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                          aria-label="Decrease quantity"
                                         >
                                           −
                                         </button>
@@ -685,6 +696,7 @@ export default function FoodListing({
                                           }}
                                           disabled={!isRestaurantOpen || !canAdd}
                                           className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                          aria-label="Increase quantity"
                                         >
                                           +
                                         </button>
@@ -804,6 +816,12 @@ export default function FoodListing({
                               size={12}
                               strokeWidth={12}
                               className="border-2 border-current text-red-600"
+                            />
+                          ) : item.type === "egg" ? (
+                            <Dot
+                              size={12}
+                              strokeWidth={12}
+                              className="border-2 border-current text-yellow-500"
                             />
                           ) : (
                             <Dot
@@ -981,7 +999,7 @@ export default function FoodListing({
                             <div className="mt-1 flex items-center gap-1">
                               {hasDiscount ? (
                                 <>
-                                  <span className="text-xs text-gray-400 line-through">
+                                  <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                     ₹{Number(variantPrice.price).toFixed(2)}
                                   </span>
                                   <span className="text-xs font-bold text-primary">
@@ -1001,7 +1019,7 @@ export default function FoodListing({
                             <div className="mt-1 flex items-center gap-1">
                               {hasDiscount ? (
                                 <>
-                                  <span className="text-xs text-gray-400 line-through">
+                                  <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                     ₹{Number(originalPrice).toFixed(2)}
                                   </span>
                                   <span className="text-xs font-bold text-primary">
@@ -1033,6 +1051,7 @@ export default function FoodListing({
                                         }}
                                         disabled={!isRestaurantOpen}
                                         className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                        aria-label="Decrease quantity"
                                       >
                                         −
                                       </button>
@@ -1066,6 +1085,7 @@ export default function FoodListing({
                                         }}
                                         disabled={!isRestaurantOpen || !canAdd}
                                         className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                        aria-label="Increase quantity"
                                       >
                                         +
                                       </button>
@@ -1174,6 +1194,12 @@ export default function FoodListing({
                         strokeWidth={12}
                         className="border-2 border-current text-red-600"
                       />
+                    ) : descModal.item.type === "egg" ? (
+                      <Dot
+                        size={16}
+                        strokeWidth={12}
+                        className="border-2 border-current text-yellow-500"
+                      />
                     ) : (
                       <Dot
                         size={16}
@@ -1245,7 +1271,7 @@ export default function FoodListing({
                             </span>
                             <div className="flex items-center gap-1.5 whitespace-nowrap">
                               {originalPrice > finalPrice && (
-                                <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-400"}`}>
+                                <span className={`text-xs line-through ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>
                                   ₹{Number(originalPrice).toFixed(2)}
                                 </span>
                               )}

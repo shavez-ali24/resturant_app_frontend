@@ -9,10 +9,11 @@ const DescriptionField = ({ value, onChange, error }) => {
 
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-500">
+      <label htmlFor="description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-500">
         Description
       </label>
       <textarea
+        id="description"
         name="description"
         value={value}
         onChange={onChange}

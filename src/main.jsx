@@ -78,23 +78,20 @@ const RouteFallback = () => {
 
   return (
     <div
-      className={`flex min-h-screen items-center justify-center ${
-        isDarkMode ? "bg-slate-950 text-slate-200" : "bg-white text-gray-600"
-      }`}
+      className={`flex min-h-screen items-center justify-center ${isDarkMode ? "bg-slate-950 text-slate-200" : "bg-white text-gray-600"
+        }`}
     >
       <div
-        className={`flex items-center gap-3 rounded-xl border px-4 py-3 shadow-sm ${
-          isDarkMode
+        className={`flex items-center gap-3 rounded-xl border px-4 py-3 shadow-sm ${isDarkMode
             ? "border-slate-700 bg-slate-900/80"
             : "border-orange-100 bg-orange-50/40"
-        }`}
+          }`}
       >
         <span
-          className={`h-4 w-4 animate-spin rounded-full border-2 ${
-            isDarkMode
+          className={`h-4 w-4 animate-spin rounded-full border-2 ${isDarkMode
               ? "border-orange-300 border-t-transparent"
               : "border-orange-500 border-t-transparent"
-          }`}
+            }`}
         />
         <span className="text-sm font-semibold tracking-wide">
           TapnBite Loading...
@@ -108,6 +105,8 @@ const SuperAdminPrivateRoute = ({ children }) => {
   const allowedDomains = [
     "app.flamendough.com",
     "www.app.flamendough.com",
+    "app.tapnbite.com",
+    "www.app.tapnbite.com",
     "localhost",
   ];
 
@@ -142,98 +141,98 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
             <Suspense fallback={<RouteFallback />}>
               <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<MainLayout />}>
-                <Route index element={<Home />} />
-                <Route path="filter" element={<Filter />} />
-                <Route path="track" element={<TrackOrder />} />
-              </Route>
+                {/* Public Routes */}
+                <Route path="/" element={<MainLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="filter" element={<Filter />} />
+                  <Route path="track" element={<TrackOrder />} />
+                </Route>
 
-            {/* Admin Login (Public) */}
-            <Route path="login" element={<LoginPage />} />
+                {/* Admin Login (Public) */}
+                <Route path="login" element={<LoginPage />} />
 
-            {/* Admin Protected Routes */}
-            <Route
-              path="admin"
-              element={
-                <PrivateRoute>
-                  <AdminLayout />
-                </PrivateRoute>
-              }
-            >
-              <Route index element={<Admin />} />
-              <Route path="menu" element={<Menu />} />
-              <Route path="menu/add" element={<AddItemPage />} />
-              <Route path="menu/edit/:itemId" element={<EditItemPage />} />
-              {/* <Route path="orderlist" element={<OrdersList />} /> */}
-              <Route path="completedorder" element={<CompletedOrders />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="cancelledorder" element={<CancelledOrders />} />
+                {/* Admin Protected Routes */}
+                <Route
+                  path="admin"
+                  element={
+                    <PrivateRoute>
+                      <AdminLayout />
+                    </PrivateRoute>
+                  }
+                >
+                  <Route index element={<Admin />} />
+                  <Route path="menu" element={<Menu />} />
+                  <Route path="menu/add" element={<AddItemPage />} />
+                  <Route path="menu/edit/:itemId" element={<EditItemPage />} />
+                  {/* <Route path="orderlist" element={<OrdersList />} /> */}
+                  <Route path="completedorder" element={<CompletedOrders />} />
+                  <Route path="orders" element={<Orders />} />
+                  <Route path="cancelledorder" element={<CancelledOrders />} />
 
-              <Route path="profile" element={<Adminprofile />} />
-              <Route
-                path="sales"
-                element={
-                  <AdminOnlyRoute>
-                    <Sales />
-                  </AdminOnlyRoute>
-                }
-              />
-              <Route
-                path="revenue"
-                element={
-                  <AdminOnlyRoute>
-                    <Revenue />
-                  </AdminOnlyRoute>
-                }
-              />
-              <Route
-                path="staff"
-                element={
-                  <AdminOnlyRoute>
-                    <StaffManagement />
-                  </AdminOnlyRoute>
-                }
-              />
-              <Route 
-                path="order-panel" 
-                element={
-                  <AdminOnlyRoute>
-                    <AdminOrderPanel />
-                  </AdminOnlyRoute>
-                } 
-              />
-              <Route path="tables" element={<AdminOnlyRoute><TableManagement /></AdminOnlyRoute>} />
-              <Route path="comingsoon" element={<ComingSoon />} />
-            </Route>
-            <Route path="kds" element={<PrivateRoute><KitchenDisplaySystem /></PrivateRoute>} />
+                  <Route path="profile" element={<Adminprofile />} />
+                  <Route
+                    path="sales"
+                    element={
+                      <AdminOnlyRoute>
+                        <Sales />
+                      </AdminOnlyRoute>
+                    }
+                  />
+                  <Route
+                    path="revenue"
+                    element={
+                      <AdminOnlyRoute>
+                        <Revenue />
+                      </AdminOnlyRoute>
+                    }
+                  />
+                  <Route
+                    path="staff"
+                    element={
+                      <AdminOnlyRoute>
+                        <StaffManagement />
+                      </AdminOnlyRoute>
+                    }
+                  />
+                  <Route
+                    path="order-panel"
+                    element={
+                      <AdminOnlyRoute>
+                        <AdminOrderPanel />
+                      </AdminOnlyRoute>
+                    }
+                  />
+                  <Route path="tables" element={<AdminOnlyRoute><TableManagement /></AdminOnlyRoute>} />
+                  <Route path="comingsoon" element={<ComingSoon />} />
+                </Route>
+                <Route path="kds" element={<PrivateRoute><KitchenDisplaySystem /></PrivateRoute>} />
 
-            {/* Super Admin Login (Public) */}
-            <Route path="super-login" element={<SuperLoginPage />} />
+                {/* Super Admin Login (Public) */}
+                <Route path="super-login" element={<SuperLoginPage />} />
 
-            {/* Super Admin Protected Routes */}
-            <Route
-              path="super-admin"
-              element={
-                <SuperAdminPrivateRoute>
-                  <SuperAdminLayout />
-                </SuperAdminPrivateRoute>
-              }
-            >
-              <Route index element={<Navigate to="user-list" replace />} />
-              <Route path="create-user" element={<Navigate to="/super-admin/user-list" replace />} />
-              <Route path="user-list" element={<UserListPage />} />
-              <Route path="admins" element={<Navigate to="/super-admin/user-list" replace />} />
-              <Route path="profile" element={<SuperAdminProfile />} />
-            </Route>
+                {/* Super Admin Protected Routes */}
+                <Route
+                  path="super-admin"
+                  element={
+                    <SuperAdminPrivateRoute>
+                      <SuperAdminLayout />
+                    </SuperAdminPrivateRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="user-list" replace />} />
+                  <Route path="create-user" element={<Navigate to="/super-admin/user-list" replace />} />
+                  <Route path="user-list" element={<UserListPage />} />
+                  <Route path="admins" element={<Navigate to="/super-admin/user-list" replace />} />
+                  <Route path="profile" element={<SuperAdminProfile />} />
+                </Route>
 
-            {/* 404 Error */}
-            <Route path="*" element={<ErrorPage />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </BellNotificationProvider>
-    </CommonNotificationProvider>
+                {/* 404 Error */}
+                <Route path="*" element={<ErrorPage />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </BellNotificationProvider>
+      </CommonNotificationProvider>
     </ErrorBoundary>
   </Provider>
 );

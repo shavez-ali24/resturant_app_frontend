@@ -152,10 +152,10 @@ const triggerAutoKOTPrint = (order, itemsToPrint, restaurantData) => {
         </thead>
         <tbody>
           ${itemsToPrint.map(item => {
-            const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
-            const name = item.name || item.menuItem?.name || "Item";
-            const variantName = item.variant || item.variantName;
-            return `
+    const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+    const name = item.name || item.menuItem?.name || "Item";
+    const variantName = item.variant || item.variantName;
+    return `
               <tr style="border-bottom:1px dotted #000">
                 <td style="padding:4px 0;color:#000">
                   ${name}${variantName ? ` <span style="color:#000">(${variantName})</span>` : ""}
@@ -164,7 +164,7 @@ const triggerAutoKOTPrint = (order, itemsToPrint, restaurantData) => {
                 <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -588,18 +588,23 @@ const Orders = () => {
   const layoutSections = useMemo(() => {
     const sourceSections = Array.isArray(liveUnitsData?.sections) ? liveUnitsData.sections : [];
 
-    // Build quick lookup for order totals using currentOrderId
-    const orderTotalMap = new Map();
-    combinedOrders.forEach((o) => {
-      const oid = getOrderIdValue(o) || o?._id || o?.id || o?.orderId;
-      if (oid != null && o?.totalAmount != null) {
-        orderTotalMap.set(String(oid), Number(o.totalAmount) || 0);
-      }
-    });
-
     const attachAmount = (unit) => {
       const oid = unit.currentOrderId || unit.orderId;
-      return oid != null ? (orderTotalMap.get(String(oid)) ?? null) : null;
+      if (oid == null) return null;
+
+      const o = combinedOrders.find(order => {
+        const orderIdVal = getOrderIdValue(order) || order?._id || order?.id || order?.orderId;
+        return String(orderIdVal) === String(oid);
+      });
+      if (!o) return null;
+
+      const amt = Number(o.totalAmount) || 0;
+      const advancePaid = (o.advancePayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const isBilled = 
+        String(unit.status || "").toLowerCase() === "billed" || 
+        String(unit.rawStatus || "").toLowerCase() === "billed" || 
+        String(o.status || "").toLowerCase() === "ready";
+      return isBilled ? Math.max(0, amt - advancePaid) : amt;
     };
 
     // Helper to map order object to TableCard unit format
@@ -617,6 +622,10 @@ const Orders = () => {
         rawStatus = "BILLED";
       }
 
+      const isBilledStatus = rawStatus === "BILLED";
+      const amt = Number(order.totalAmount) || 0;
+      const advancePaid = (order.advancePayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
       return {
         tableId: `virtual:${oid}`,
         tableNumber: customerName || "Guest",
@@ -629,7 +638,7 @@ const Orders = () => {
         occupiedSince: order.createdAt || null,
         currentOrderId: oid,
         orderId: oid,
-        currentAmount: Number(order.totalAmount) || 0,
+        currentAmount: isBilledStatus ? Math.max(0, amt - advancePaid) : amt,
         isVirtual: true,
       };
     };
@@ -885,6 +894,14 @@ const Orders = () => {
     fetchOrderById(incomingId).unwrap().then((fetchedOrder) => {
       if (!fetchedOrder) return;
 
+      // Real-time update for order currently being edited in AdminOrderPanel
+      if (editingOrder && String(editingOrder._id || editingOrder.id) === String(incomingId)) {
+        setEditingOrder(fetchedOrder);
+      }
+      if (urlFetchedOrder && String(urlFetchedOrder._id || urlFetchedOrder.id) === String(incomingId)) {
+        setUrlFetchedOrder(fetchedOrder);
+      }
+
       const normalizedOrder = normalizeIncomingOrder(fetchedOrder);
       if (!normalizedOrder) return;
       const normalizedStatus = String(normalizedOrder.status || "").toLowerCase();
@@ -906,9 +923,6 @@ const Orders = () => {
             next.add(String(incomingId));
             return next;
           });
-          if (setHasUnreadSidebarNotification) {
-            setHasUnreadSidebarNotification(true);
-          }
           if (Array.isArray(normalizedOrder.items)) {
             const itemKeys = new Set(normalizedOrder.items.map(getOrderItemCartKey));
             setNewBadgeItemsByOrderId((prevMap) => {
@@ -951,9 +965,6 @@ const Orders = () => {
               next.add(String(incomingId));
               return next;
             });
-            if (setHasUnreadSidebarNotification) {
-              setHasUnreadSidebarNotification(true);
-            }
           }
 
           if (previousVersion) {
@@ -995,7 +1006,7 @@ const Orders = () => {
                   const next = new Map(prevMap);
                   const existingMap = next.get(String(incomingId)) || new Map();
                   const updatedMap = new Map(existingMap);
-                  
+
                   normalizedOrder.items.forEach(item => {
                     const key = getOrderItemCartKey(item);
                     if (newKeys.has(key)) {
@@ -1082,7 +1093,7 @@ const Orders = () => {
       console.error("Failed to fetch order details on SSE event:", err);
     });
 
-  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected, refetchLiveUnits, fetchOrderById, sseOrders, pendingOrders, preparingOrders, readyOrders, completedOrders, restaurantData]);
+  }, [sseEvent, combinedFetchLimit, refetchPendingOrders, refetchPreparingOrders, refetchReadyOrders, refetchCompletedOrders, refetchRestaurant, sseConnected, refetchLiveUnits, fetchOrderById, sseOrders, pendingOrders, preparingOrders, readyOrders, completedOrders, restaurantData, editingOrder, urlFetchedOrder]);
 
   useEffect(() => {
     if (!showCreateOrder || urlOrderId) return;
@@ -1600,6 +1611,9 @@ const Orders = () => {
         customerName: payload.customerName || payload.guest?.name,
         customerPhone: payload.customerPhone || payload.guest?.phone,
       };
+      if (payload.advancePayments) {
+        requestBody.advancePayments = payload.advancePayments;
+      }
       await createRoomBookingApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked successfully`, "success");
       refetchLiveUnits?.();
@@ -1672,6 +1686,9 @@ const Orders = () => {
         customerName: payload.customerName || payload.guest?.name,
         customerPhone: payload.customerPhone || payload.guest?.phone,
       };
+      if (payload.advancePayments) {
+        requestBody.advancePayments = payload.advancePayments;
+      }
       console.log("Calling book-room with:", requestBody);
       await createRoomBookingApi(requestBody).unwrap();
       notify(`Room ${roomInfo.tableNumber} booked`, "success");
@@ -1814,7 +1831,7 @@ const Orders = () => {
               <div className={`flex h-full items-center justify-center ${isDarkMode ? "bg-[#0f172a]" : "bg-[#f7f3ef]"}`}>
                 <div className="text-center">
                   <div className="h-8 w-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin mx-auto mb-3" />
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-[#78716c]"}`}>
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-gray-600"}`}>
                     Loading order details...
                   </p>
                 </div>
@@ -1834,7 +1851,7 @@ const Orders = () => {
                   } catch (_) { }
                   return null;
                 })() : null)}
-                 onOrderSuccess={(mode, orderObj) => {
+                onOrderSuccess={(mode, orderObj) => {
                   closeCreateOrder();
                   if (orderObj) {
                     const incomingId = getOrderIdValue(orderObj);
@@ -1940,8 +1957,8 @@ const Orders = () => {
         <div className="grid grid-cols-4 gap-1.5 sm:gap-3 flex-1">
           {/* Card 1: Total Orders */}
           <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
-              ? "border-slate-800 bg-[#1e293b]"
-              : "border-slate-100 bg-white"
+            ? "border-slate-800 bg-[#1e293b]"
+            : "border-slate-100 bg-white"
             }`}>
             <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
               <p className={`text-sm sm:text-lg font-extrabold tracking-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
@@ -1959,8 +1976,8 @@ const Orders = () => {
 
           {/* Card 2: Pending */}
           <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
-              ? "border-slate-800 bg-[#1e293b]"
-              : "border-slate-100 bg-white"
+            ? "border-slate-800 bg-[#1e293b]"
+            : "border-slate-100 bg-white"
             }`}>
             <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
               <p className="text-sm sm:text-lg font-extrabold tracking-tight text-amber-500">
@@ -1975,8 +1992,8 @@ const Orders = () => {
 
           {/* Card 3: Preparing */}
           <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
-              ? "border-slate-800 bg-[#1e293b]"
-              : "border-slate-100 bg-white"
+            ? "border-slate-800 bg-[#1e293b]"
+            : "border-slate-100 bg-white"
             }`}>
             <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
               <p className="text-sm sm:text-lg font-extrabold tracking-tight text-emerald-500">
@@ -1991,8 +2008,8 @@ const Orders = () => {
 
           {/* Card 4: Ready */}
           <div className={`flex items-center justify-between sm:justify-between rounded-xl border p-1 sm:py-1.5 sm:px-2.5 shadow-sm transition-all duration-200 ${isDarkMode
-              ? "border-slate-800 bg-[#1e293b]"
-              : "border-slate-100 bg-white"
+            ? "border-slate-800 bg-[#1e293b]"
+            : "border-slate-100 bg-white"
             }`}>
             <div className="flex flex-col items-center justify-center text-center w-full sm:text-left sm:items-start sm:w-auto">
               <p className="text-sm sm:text-lg font-extrabold tracking-tight text-blue-500">
@@ -2023,15 +2040,15 @@ const Orders = () => {
               </SelectTrigger>
               <SelectContent
                 className={`z-[10050] rounded-xl border p-1 shadow-xl ${isDarkMode
-                    ? "border-slate-700 bg-[#1e293b]"
-                    : "border-[#ede8e3] bg-white"
+                  ? "border-slate-700 bg-[#1e293b]"
+                  : "border-[#ede8e3] bg-white"
                   }`}
               >
                 <SelectItem
                   value="all"
                   className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
-                      ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
-                      : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                    ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                    : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
                     }`}
                 >
                   All Types
@@ -2040,8 +2057,8 @@ const Orders = () => {
                   <SelectItem
                     value="eat_here"
                     className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
-                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
-                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                      : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
                       }`}
                   >
                     Eat Here
@@ -2051,8 +2068,8 @@ const Orders = () => {
                   <SelectItem
                     value="take_away"
                     className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
-                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
-                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                      : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
                       }`}
                   >
                     Take Away
@@ -2062,8 +2079,8 @@ const Orders = () => {
                   <SelectItem
                     value="delivery"
                     className={`cursor-pointer rounded-lg py-2 text-sm font-semibold transition-colors ${isDarkMode
-                        ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
-                        : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
+                      ? "text-slate-200 data-[highlighted]:bg-orange-950/40 data-[highlighted]:text-orange-400"
+                      : "text-[#1c1917] data-[highlighted]:bg-orange-50 data-[highlighted]:text-orange-900"
                       }`}
                   >
                     Delivery
@@ -2079,8 +2096,8 @@ const Orders = () => {
       {viewMode === "layout" ? (
         <div className="flex-1 min-h-0 flex flex-col gap-3">
           {/* Order Type filter buttons row above Live Tables */}
-          <div className="flex items-center justify-between gap-3 px-1 py-0.5 flex-wrap flex-shrink-0">
-            {/* Left side: Legend indicators bar */}
+          <div className="flex items-center justify-between gap-5 px-1 py-0.5 flex-wrap flex-shrink-0">
+            {/* Legend indicators bar */}
             <LegendBar isDarkMode={isDarkMode} />
 
             {/* Right side: filter buttons (only shown if multiple modes are enabled) */}
@@ -2099,10 +2116,10 @@ const Orders = () => {
                       type="button"
                       onClick={() => handleLayoutFilterChange(btn.key)}
                       className={`relative rounded-lg sm:rounded-xl px-2.5 py-1 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-bold transition-all duration-200 shadow-sm border flex items-center gap-1 sm:gap-1.5 ${isActive
-                          ? "text-white"
-                          : isDarkMode
-                            ? "border-slate-700 bg-slate-800 text-slate-350 hover:bg-slate-700/60"
-                            : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                        ? "text-white"
+                        : isDarkMode
+                          ? "border-slate-700 bg-slate-800 text-slate-350 hover:bg-slate-700/60"
+                          : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"
                         }`}
                       style={{
                         backgroundColor: isActive ? colors.primary : undefined,
@@ -2210,7 +2227,7 @@ const Orders = () => {
                       href="#"
                       onClick={(e) => { e.preventDefault(); if (currentPage > 1) handlePageChange(currentPage - 1); }}
                       className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === 1 ? "pointer-events-none opacity-40" : ""
-                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                     />
                   </PaginationItem>
                   {pageNumbers.map((pageNum, index) => {
@@ -2232,7 +2249,7 @@ const Orders = () => {
                               : "bg-orange-50 border border-orange-200 text-orange-700 font-extrabold shadow-sm"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                              : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"
                             }`}
                           onClick={(e) => { e.preventDefault(); handlePageChange(pageNum); }}
                         >
@@ -2246,7 +2263,7 @@ const Orders = () => {
                       href="#"
                       onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) handlePageChange(currentPage + 1); }}
                       className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:h-8 sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === totalPages ? "pointer-events-none opacity-40" : ""
-                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                        } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                     />
                   </PaginationItem>
                 </PaginationContent>

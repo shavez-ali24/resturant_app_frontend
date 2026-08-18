@@ -115,13 +115,13 @@ const OrderRow = ({
           {/* Customer */}
           <td className={`${tdBase} font-bold text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
           {/* Phone */}
-          <td className={`text-center ${tdBase} ${isDarkMode ? "text-slate-400" : "text-[#87807b]"}`}>{customerPhone || "—"}</td>
+          <td className={`text-center ${tdBase} ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{customerPhone || "—"}</td>
         </>
       ) : (
         <>
           <td className={`${tdBase} whitespace-nowrap text-center`}>{order.formattedTime || "—"}</td>
           <td className={`${tdBase} font-bold text-center ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>{customerName}</td>
-          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-[#87807b]"}`}>{customerPhone || "—"}</td>
+          <td className={`${tdBase} text-center ${isDarkMode ? "text-slate-400" : "text-gray-500"}`}>{customerPhone || "—"}</td>
         </>
       )}
 

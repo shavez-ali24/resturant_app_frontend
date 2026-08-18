@@ -38,6 +38,8 @@ export default function PayModal({ order, onClose }) {
 
   const totalAmount = Number(currentOrder?.totalAmount || 0);
   const isAlreadyPaid = Boolean(currentOrder?.paymentMethod || (currentOrder?.paymentMethods && currentOrder.paymentMethods.length > 0));
+  const totalAdvancePaid = currentOrder?.advancePayments?.reduce((sum, p) => sum + Number(p.amount || 0), 0) || 0;
+  const netPayable = Math.max(0, totalAmount - totalAdvancePaid);
 
   const getPaymentMethodName = (orderObj) => {
     if (orderObj?.paymentMethods && orderObj.paymentMethods.length > 0) {
@@ -52,8 +54,8 @@ export default function PayModal({ order, onClose }) {
     settlementAmount === "" ? 0 : Number(settlementAmount);
   const settlementValue =
     settlementMode === "percent"
-      ? totalAmount - (totalAmount * percentValue) / 100
-      : totalAmount - flatDiscountValue;
+      ? netPayable - (netPayable * percentValue) / 100
+      : netPayable - flatDiscountValue;
 
   const cashAmountNum = Number(splitAmounts.CASH || 0);
   const upiAmountNum = Number(splitAmounts.UPI || 0);
@@ -64,11 +66,11 @@ export default function PayModal({ order, onClose }) {
   const isValid =
     Number.isFinite(settlementValue) &&
     settlementValue >= 0 &&
-    settlementValue <= totalAmount &&
+    settlementValue <= netPayable &&
     (settlementMode !== "percent" ||
       (Number.isFinite(percentValue) && percentValue >= 0 && percentValue <= 100)) &&
     (settlementMode !== "amount" ||
-      (Number.isFinite(flatDiscountValue) && flatDiscountValue >= 0 && flatDiscountValue <= totalAmount)) &&
+      (Number.isFinite(flatDiscountValue) && flatDiscountValue >= 0 && flatDiscountValue <= netPayable)) &&
     !isAlreadyPaid &&
     (isSplitPayment
       ? totalEnteredSplitAmount === Number(settlementValue.toFixed(2)) &&
@@ -82,9 +84,9 @@ export default function PayModal({ order, onClose }) {
     hasSettlementInput &&
     (!Number.isFinite(settlementValue) ||
       settlementValue < 0 ||
-      settlementValue > totalAmount ||
+      settlementValue > netPayable ||
       (settlementMode === "percent" && (percentValue < 0 || percentValue > 100)) ||
-      (settlementMode === "amount" && (flatDiscountValue < 0 || flatDiscountValue > totalAmount)));
+      (settlementMode === "amount" && (flatDiscountValue < 0 || flatDiscountValue > netPayable)));
 
   const handleGenerateBill = async () => {
     if (!currentOrder?._id) return;
@@ -106,10 +108,12 @@ export default function PayModal({ order, onClose }) {
     if (!isValid || (!isSplitPayment && !paymentMethod) || !currentOrder?._id) return;
 
     try {
+      const discount = netPayable - settlementValue;
+      const overallSettledAmount = totalAmount - discount;
       const payArgs = {
         orderId: currentOrder._id,
         settlementAmount:
-          settlementValue === totalAmount ? undefined : Number(settlementValue.toFixed(2)),
+          overallSettledAmount === totalAmount ? undefined : Number(overallSettledAmount.toFixed(2)),
         totalAmount,
       };
 
@@ -120,7 +124,7 @@ export default function PayModal({ order, onClose }) {
         if (cardAmountNum > 0) methods.push({ method: "CARD", amount: cardAmountNum });
         payArgs.paymentMethods = methods;
       } else {
-        payArgs.paymentMethod = paymentMethod;
+        payArgs.paymentMethods = [{ method: paymentMethod, amount: Number(settlementValue.toFixed(2)) }];
       }
 
       await payOrder(payArgs).unwrap();
@@ -225,15 +229,25 @@ export default function PayModal({ order, onClose }) {
           </div>
         ) : (
           <form onSubmit={handleConfirm} className="space-y-5" noValidate>
-            {/* Total */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-slate-600 dark:bg-slate-700/50">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-500 dark:text-slate-300">
-                  Total Amount
+            {/* Total breakdown */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 dark:border-slate-650 dark:bg-slate-700/50 space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-slate-350">
+                <span>Total Amount</span>
+                <span>₹{totalAmount.toFixed(2)}</span>
+              </div>
+              {totalAdvancePaid > 0 && (
+                <div className="flex items-center justify-between text-xs font-semibold text-red-550 dark:text-red-450">
+                  <span>Advance Deductions</span>
+                  <span>-₹{totalAdvancePaid.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between border-t pt-2 border-gray-200/60 dark:border-slate-650/60">
+                <span className="text-sm font-extrabold text-gray-700 dark:text-slate-200">
+                  Net Balance Due
                 </span>
-                <span className="flex items-center gap-1 text-xl font-extrabold text-gray-800 dark:text-slate-100">
-                  <IndianRupee size={18} />
-                  {totalAmount.toFixed(2)}
+                <span className="flex items-center gap-1 text-lg font-black text-gray-800 dark:text-slate-100">
+                  <IndianRupee size={16} />
+                  {netPayable.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -430,12 +444,12 @@ export default function PayModal({ order, onClose }) {
                   Percentage cannot exceed 100
                 </p>
               )}
-              {settlementMode === "amount" && settlementAmount && Number(settlementAmount) > totalAmount && (
+              {settlementMode === "amount" && settlementAmount && Number(settlementAmount) > netPayable && (
                 <p className="mt-1 text-xs font-semibold text-red-500">
-                  Discount cannot exceed total amount
+                  Discount cannot exceed net payable amount
                 </p>
               )}
-              {settlementValue >= 0 && settlementValue <= totalAmount && settlementValue !== totalAmount && (
+              {settlementValue >= 0 && settlementValue <= netPayable && settlementValue !== netPayable && (
                 <p className="mt-1 text-xs font-semibold" style={{ color: colors.primary }}>
                   Final settlement: ₹{settlementValue.toFixed(2)}
                 </p>

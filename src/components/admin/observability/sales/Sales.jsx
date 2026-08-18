@@ -884,14 +884,14 @@ export default function TopSellingAnalytics() {
                 {/* Products Table */}
                 <div className={`rounded-xl border overflow-hidden ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
                   <div className={`px-4 py-3 border-b ${divider}`}>
-                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Products (Sorted by Revenue)</h4>
-                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top products sorted by highest revenue</p>
+                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Products</h4>
+                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top products sorted by quantity sold</p>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className={tableHeaderBg}>
                         <tr>
-                          {["Rank", "Date", "Top Product", "Quantity Sold", "Revenue"].map((h) => (
+                          {["Rank", "Date", "Top Product", "Quantity Sold"].map((h) => (
                             <th key={h} className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>{h}</th>
                           ))}
                         </tr>
@@ -933,9 +933,6 @@ export default function TopSellingAnalytics() {
                               >
                                 {item.quantity.toLocaleString()}
                               </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="font-bold" style={{ color: colors.primary }}>{formatCurrency(item.revenue)}</span>
                             </td>
                           </tr>
                         ))}
@@ -1035,14 +1032,14 @@ export default function TopSellingAnalytics() {
                 {/* Categories Table */}
                 <div className={`rounded-xl border overflow-hidden ${isDarkMode ? "border-slate-700" : "border-[#ede8e3]"}`}>
                   <div className={`px-4 py-3 border-b ${divider}`}>
-                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Categories (Sorted by Revenue)</h4>
-                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top categories sorted by highest revenue</p>
+                    <h4 className={`text-sm font-semibold ${textPrimary}`}>Daily Top Selling Categories</h4>
+                    <p className={`text-xs mt-0.5 ${textSecondary}`}>Showing top categories sorted by quantity sold</p>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className={tableHeaderBg}>
                         <tr>
-                          {["Rank", "Date", "Top Category", "Quantity Sold", "Revenue"].map((h) => (
+                          {["Rank", "Date", "Top Category", "Quantity Sold"].map((h) => (
                             <th key={h} className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>{h}</th>
                           ))}
                         </tr>
@@ -1084,9 +1081,6 @@ export default function TopSellingAnalytics() {
                               >
                                 {item.quantity.toLocaleString()}
                               </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="font-bold" style={{ color: colors.primary }}>{formatCurrency(item.revenue)}</span>
                             </td>
                           </tr>
                         ))}

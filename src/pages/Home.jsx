@@ -23,7 +23,7 @@ const normalizeCategoryValue = (value) =>
     .toLowerCase();
 
 // ── Static config ──
-const LOADER_MIN_DURATION = 2000;
+const LOADER_MIN_DURATION = 100;
 
 export default function Home() {
   const outletContext = useOutletContext() || {};
@@ -41,7 +41,7 @@ export default function Home() {
     error: restaurantError,
   } = useGetPublicRestaurantQuery();
 
-  const [filters, setFilters] = useState({ veg: false, nonVeg: false, mixed: false, combo: false });
+  const [filters, setFilters] = useState({ veg: false, nonVeg: false, egg: false, mixed: false, combo: false });
   const [search, setSearch] = useState("");
   const [, setTotal] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -147,8 +147,10 @@ export default function Home() {
           : "bg-gradient-to-b from-[#fffdf7] to-[#fef2d8]"
         }`}>
         <img
-          src={loader}
+          src="/loader.gif"
           alt="Loading..."
+          width="240"
+          height="240"
           className="relative h-60 w-auto"
         />
       </div>
@@ -189,8 +191,9 @@ export default function Home() {
 
     if (!matchesSearch) return false;
 
-    if (filters.veg && !filters.nonVeg && !filters.mixed && item.type !== "veg") return false;
-    if (filters.nonVeg && !filters.veg && !filters.mixed && item.type !== "non-veg") return false;
+    if (filters.veg && !filters.nonVeg && !filters.egg && !filters.mixed && item.type !== "veg") return false;
+    if (filters.nonVeg && !filters.veg && !filters.egg && !filters.mixed && item.type !== "non-veg") return false;
+    if (filters.egg && !filters.veg && !filters.nonVeg && !filters.mixed && item.type !== "egg") return false;
     if (filters.mixed && item.type !== "mixed") return false;
     if (filters.combo && item.pricingType !== "combo") return false;
     if (
@@ -218,7 +221,7 @@ export default function Home() {
       return normalizedPrev === normalizedNext ? null : category;
     });
     // Category select hone par saare type filters reset karo
-    setFilters({ veg: false, nonVeg: false, mixed: false, combo: false });
+    setFilters({ veg: false, nonVeg: false, egg: false, mixed: false, combo: false });
   };
 
   return (
@@ -264,7 +267,7 @@ export default function Home() {
           onCategoryClick={handleCategoryClick}
           activeCategory={activeCategory}
           categoryImages={categoryImages}
-          hasActiveFilter={filters.veg || filters.nonVeg || filters.mixed || filters.combo}
+          hasActiveFilter={filters.veg || filters.nonVeg || filters.egg || filters.mixed || filters.combo}
           hideAllButton={false}
         />
         <Filter
@@ -277,13 +280,14 @@ export default function Home() {
       </div>
 
       <div className={`flex-1 overflow-y-auto overscroll-contain ios-scroll-container ${isDarkMode ? "bg-slate-950/60" : "bg-[#fffcf9]"}`}>
-        {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.mixed || filters.combo || activeCategory) ? (
+        {filteredMenu.length === 0 && (search.trim() || filters.veg || filters.nonVeg || filters.egg || filters.mixed || filters.combo || activeCategory) ? (
           <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${isDarkMode ? "text-slate-300" : "text-gray-500"}`}>
             <p className={`mb-1 text-base sm:text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-gray-700"}`}>
               {filters.combo ? "No combo items available" :
                 filters.veg ? "No veg items available" :
                   filters.nonVeg ? "No non-veg items available" :
-                    filters.mixed ? "No mixed items available" :
+                    filters.egg ? "No egg items available" :
+                      filters.mixed ? "No mixed items available" :
                       activeCategory ? `No items in ${activeCategory}` :
                         search.trim() ? "No items found" : "No items available"}
             </p>

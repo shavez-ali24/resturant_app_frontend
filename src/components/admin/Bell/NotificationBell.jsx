@@ -231,7 +231,7 @@ export default function NotificationBell() {
   const border = isDarkMode ? (colors.dark?.border || "border-slate-700/60") : (colors.border || "border-[#ede8e3]");
   const textPri = isDarkMode ? (colors.dark?.textPrimary || "#f1f5f9") : (colors.textPrimary || "#1c1917");
   const textSec = isDarkMode ? (colors.dark?.textSecondary || "#94a3b8") : (colors.textSecondary || "#57524e");
-  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#87807b");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#4b5563");
   const footerBg = isDarkMode ? "rgba(15, 23, 42, 0.4)" : (colors.pageBg || "#faf7f4");
 
   const statusBadge = (status) => {
@@ -285,6 +285,7 @@ export default function NotificationBell() {
         onClick={() => setIsDropdownOpen((p) => !p)}
         className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
         title="Order Notifications"
+        aria-label="Order notifications"
       >
         <Bell size={20} className="stroke-[1.5]" />
         {pendingOrdersCount > 0 && (

@@ -94,12 +94,15 @@ const normalizeFoodType = (value = "") => {
     return "veg";
   }
 
+  if (["egg", "eggitarian", "eggiterian"].includes(normalized)) {
+    return "egg";
+  }
+
   if (
     normalized === "nonveg" ||
     normalized === "non-veg" ||
     normalized === "non-vegetarian" ||
-    normalized === "nonvegetarian" ||
-    normalized === "egg"
+    normalized === "nonvegetarian"
   ) {
     return "non-veg";
   }
@@ -503,7 +506,7 @@ const TabButton = ({ active, onClick, isDarkMode, children }) => {
       className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
         active
           ? "font-bold"
-          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
+          : "text-gray-600 hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
       }`}
       style={{
         color: active ? (isDarkMode ? "#fb923c" : colors.primary) : undefined
@@ -1723,7 +1726,7 @@ const prepareFormData = (formData, file) => {
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
                 aria-label="Toggle search"
               >
                 <Search size={18} />
@@ -1814,7 +1817,7 @@ const prepareFormData = (formData, file) => {
                   <h3 className="text-base font-bold text-[#1c1917] dark:text-slate-100">
                     Manage Categories
                   </h3>
-                  <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {restaurantCategories.length}
                   </span>
                 </div>
@@ -1822,7 +1825,7 @@ const prepareFormData = (formData, file) => {
               <button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 aria-label="Close category manager"
                 title="Close"
               >
@@ -1911,34 +1914,38 @@ const prepareFormData = (formData, file) => {
                   </div>
                 ) : (
                   <>
-                    {categoryGroups.map((category) => {
+                    {categoryGroups.map((category, index) => {
                       const categoryKey = normalizeCategoryKey(category.label);
                       const isActive =
                         normalizeCategoryKey(selectedCategory) === categoryKey;
                       return (
-                        <button
-                          key={categoryKey}
-                          type="button"
-                          onClick={() => setSelectedCategory(category.label)}
-                          className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
-                            isActive
-                              ? ""
-                              : isDarkMode
-                                ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
-                                : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
-                          }`}
-                          style={isActive ? {
-                            backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
-                            borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
-                            color: isDarkMode ? "#ffffff" : colors.primary,
-                            borderLeft: `4px solid ${colors.primary}`,
-                            paddingLeft: "12px"
-                          } : {}}
-                        >
-                          <span className="min-w-0 flex-1 block truncate max-w-[130px] sm:max-w-[200px]">
-                            {category.label}
-                          </span>
-                        </button>
+                        <React.Fragment key={categoryKey}>
+                          {index > 0 && (
+                            <div className="border-t border-[#ede8e3]/70 dark:border-slate-700/40 w-full" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategory(category.label)}
+                            className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
+                              isActive
+                                ? ""
+                                : isDarkMode
+                                  ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
+                                  : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
+                            }`}
+                            style={isActive ? {
+                              backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                              borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                              color: isDarkMode ? "#ffffff" : colors.primary,
+                              borderLeft: `4px solid ${colors.primary}`,
+                              paddingLeft: "12px"
+                            } : {}}
+                          >
+                            <span className="min-w-0 flex-1 block truncate max-w-[130px] sm:max-w-[200px]">
+                              {category.label}
+                            </span>
+                          </button>
+                        </React.Fragment>
                       );
                     })}
                     {categoryGroups.length === 0 && (
@@ -2059,7 +2066,7 @@ const prepareFormData = (formData, file) => {
                                 data-tour="menu-drag-item"
                                 {...dragHandleProps}
                                 onClick={(event) => event.stopPropagation()}
-                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
+                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
                                 aria-label="Drag to reorder"
                                 title="Drag to reorder"
                               >
@@ -2085,7 +2092,7 @@ const prepareFormData = (formData, file) => {
                                   {item?.name || "Unnamed Item"}
                                 </span>
                               </div>
-                              <p className="text-xs text-[#a8a29e] dark:text-slate-400">
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
                                 {item?.pricingType === "variant"
                                   ? "Variant"
                                   : item?.pricingType === "combo"
@@ -2101,7 +2108,7 @@ const prepareFormData = (formData, file) => {
                                 <VisibilityBadge visibility={item?.visibility} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
-                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#a8a29e] dark:text-slate-400">
+                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-gray-500 dark:text-slate-400">
                                   {variantDetails.map((variant, index) => (
                                     <span key={variant.key} className="inline-flex items-center gap-1">
                                       <span>
@@ -2119,7 +2126,7 @@ const prepareFormData = (formData, file) => {
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-[#a8a29e] dark:text-slate-400">
+                                <span className="text-[11px] text-gray-500 dark:text-slate-400">
                                   {item?.pricingType === "combo" && comboPrice != null ? (
                                     <>Combo {formatCurrency(comboPrice)}</>
                                   ) : item?.pricingType === "single" && singleDetails?.current != null ? (
@@ -2171,7 +2178,7 @@ const prepareFormData = (formData, file) => {
                       })}
 
                       {menuEditorItems.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
+                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
                           No menu items found for this category.
                         </div>
                       )}
@@ -2190,7 +2197,7 @@ const prepareFormData = (formData, file) => {
 
               <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#f0ebe5] pr-1 dark:divide-slate-700/60">
                 {isLoading ? (
-                  <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
+                  <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
                     Loading inventory...
                   </div>
                 ) : (
@@ -2208,7 +2215,7 @@ const prepareFormData = (formData, file) => {
                               onClick={() => toggleInventoryCategory(categoryKey)}
                               className="flex max-w-[70%] sm:max-w-[80%] min-w-0 items-center gap-2 text-left"
                             >
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                 {isOpen ? (
                                   <ChevronDown size={16} />
                                 ) : (

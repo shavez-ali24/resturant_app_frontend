@@ -95,9 +95,10 @@ const DiscountSection = ({
         <div className="mt-3 grid grid-cols-2 gap-3">
           {/* Type */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#78716c] dark:text-slate-400">Type *</label>
+            <label htmlFor={`${prefix}-type`} className="mb-1 block text-xs font-medium text-gray-600 dark:text-slate-400">Type *</label>
             <Select value={safeDiscount.type} onValueChange={handleTypeChange}>
               <SelectTrigger
+                id={`${prefix}-type`}
                 onFocus={() => setSelectFocused(true)}
                 onBlur={() => setSelectFocused(false)}
                 className={`h-9 w-full rounded-lg border px-3 text-sm outline-none transition-all ${
@@ -127,9 +128,10 @@ const DiscountSection = ({
 
           {/* Value */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-[#78716c] dark:text-slate-400">Value *</label>
+            <label htmlFor={`${prefix}-value`} className="mb-1 block text-xs font-medium text-gray-600 dark:text-slate-400">Value *</label>
             <div className="relative">
               <input
+                id={`${prefix}-value`}
                 type="text"
                 value={safeDiscount.value}
                 onChange={handleValueChange}

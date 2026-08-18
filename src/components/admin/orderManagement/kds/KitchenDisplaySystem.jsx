@@ -718,12 +718,12 @@ const KitchenDisplaySystem = () => {
                       onClick={action}
                       disabled={disabled}
                       className={`flex h-8 items-center gap-1 rounded-lg border px-3 text-[10px] font-black uppercase tracking-widest transition-all ${disabled
-                          ? isDarkMode
-                            ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                            : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
-                          : isDarkMode
-                            ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
-                            : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+                        ? isDarkMode
+                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
+                          : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
+                        : isDarkMode
+                          ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
+                          : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
                         }`}
                     >
                       {dir === "prev" && icon}
@@ -749,10 +749,10 @@ const KitchenDisplaySystem = () => {
                       key={key}
                       onClick={() => setActiveTab(key)}
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-black uppercase tracking-wide transition-all ${isActive
-                          ? `${activeBg} text-white shadow-sm`
-                          : isDarkMode
-                            ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
-                            : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
+                        ? `${activeBg} text-white shadow-sm`
+                        : isDarkMode
+                          ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+                          : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
                         } ${key === "ready" && readyCount > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
                     >
                       <span className={`h-2.5 w-2.5 rounded-full ${dot}`}></span>

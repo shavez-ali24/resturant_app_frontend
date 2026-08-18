@@ -1099,7 +1099,7 @@ export default function Header({
                         ? "text-slate-300 hover:text-slate-100"
                         : "text-slate-600 hover:text-slate-900"
                         }`}
-                      aria-label="Close"
+                      aria-label="Close cart"
                     >
                       <X className="w-6 h-6" />
                     </button>
@@ -1161,6 +1161,7 @@ export default function Header({
                                   <button
                                     className="flex h-6 w-6 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary/20 sm:h-7 sm:w-7"
                                     onClick={() => dispatch(removeFromCart(id))}
+                                    aria-label="Decrease quantity"
                                   >
                                     −
                                   </button>
@@ -1191,6 +1192,7 @@ export default function Header({
                                         })
                                       )
                                     }
+                                    aria-label="Increase quantity"
                                   >
                                     +
                                   </button>
@@ -1389,6 +1391,7 @@ export default function Header({
                   ? "bg-transparent text-primary hover:bg-slate-800"
                   : "bg-transparent text-primary hover:bg-primary/10"
                 }`}
+              aria-label="Search items"
             >
               <Search className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
@@ -1406,6 +1409,7 @@ export default function Header({
                   ? "bg-transparent text-primary hover:bg-slate-800"
                   : "bg-transparent text-primary hover:bg-primary/10"
                 }`}
+              aria-label="Open cart"
             >
               {isPreparingBanner && (
                 <span className="pointer-events-none absolute inset-0 rounded-full">
@@ -1465,6 +1469,7 @@ export default function Header({
                       }}
                       className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all duration-150 hover:bg-primary/90 hover:shadow-lg active:scale-95"
                       title="Close search"
+                      aria-label="Close search"
                     >
                       <X size={18} />
                     </button>
@@ -1558,6 +1563,7 @@ export default function Header({
                     onSidebarToggle?.(false);
                   }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 transition-colors hover:bg-gray-200 dark:hover:bg-slate-700 shrink-0"
+                  aria-label="Close sidebar"
                 >
                   <X className="w-4 h-4 text-gray-500 dark:text-slate-400" />
                 </button>
@@ -1651,7 +1657,7 @@ export default function Header({
                             </div>
 
                             {/* Row 2: Order Type and details text */}
-                            <div className={`flex items-center gap-1.5 text-xs ${isDarkMode ? "text-slate-400" : "text-[#78716c]"}`}>
+                            <div className={`flex items-center gap-1.5 text-xs ${isDarkMode ? "text-slate-400" : "text-gray-600"}`}>
                               {typeIcon}
                               <span>{typeDetailText}</span>
                             </div>
@@ -1685,7 +1691,7 @@ export default function Header({
                               {(order.gstAmount !== undefined || (isDelivery && typeof order.deliveryCharges === "number")) && (
                                 <>
                                   <div className="border-t border-dashed border-gray-100 dark:border-slate-800 my-2" />
-                                  <div className="space-y-1 text-xs text-gray-400 dark:text-slate-500">
+                                  <div className="space-y-1 text-xs text-gray-600 dark:text-slate-400">
                                     {order.gstAmount !== undefined && (
                                       <div className="flex items-center justify-between">
                                         <span>GST{order.gstRate ? ` (${order.gstRate}%)` : ""}</span>

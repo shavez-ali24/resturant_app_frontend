@@ -97,6 +97,12 @@ export const NotificationProvider = ({ children }) => {
           lastEventSignatureRef.current = eventSignature;
         }
 
+        if (["NEW_ORDER", "ORDER_UPDATED"].includes(payload?.type)) {
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/admin/orders")) {
+            setHasUnreadSidebarNotification(true);
+          }
+        }
+
         setSseEvent({ ...payload, ts: Date.now() });
       },
     });

@@ -96,6 +96,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
             <button
               type="button"
               className="flex items-center justify-center rounded-full transition-transform duration-200 active:scale-95 focus:outline-none"
+              aria-label="User profile menu"
             >
               {isLoading ? (
                 <div 

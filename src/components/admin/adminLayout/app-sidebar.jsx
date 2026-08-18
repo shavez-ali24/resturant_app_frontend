@@ -100,18 +100,18 @@ export function AppSidebar({ isDarkMode = false, ...props }) {
       : []),
     ...(isAdmin
       ? [
-          {
-            title: "Analytics",
-            url: "#",
-            icon: TrendingUp,
-            isActive: true,
-            roles: ["admin"],
-            items: [
-              { title: "Revenue", url: "/admin/revenue" },
-              { title: "Sales", url: "/admin/sales" },
-            ],
-          },
-        ]
+        {
+          title: "Analytics",
+          url: "#",
+          icon: TrendingUp,
+          isActive: true,
+          roles: ["admin"],
+          items: [
+            { title: "Revenue", url: "/admin/revenue" },
+            { title: "Sales", url: "/admin/sales" },
+          ],
+        },
+      ]
       : []),
     /*
     ...(isAdmin

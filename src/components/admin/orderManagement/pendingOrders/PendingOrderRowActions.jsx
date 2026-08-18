@@ -70,7 +70,7 @@ const PendingOrderRowActions = ({
             </span>
           </button>
         ) : (
-          <span className={`text-xs font-bold opacity-30 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
+          <span className={`text-xs font-bold opacity-30 ${isDarkMode ? "text-slate-500" : "text-gray-500"}`}>
             —
           </span>
         )}
@@ -92,6 +92,7 @@ const PendingOrderRowActions = ({
               onClick={() => setPayModalOrder?.(order)}
               className="rounded-lg p-2 text-emerald-600 dark:text-emerald-400 transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-955/20"
               title="Pay order"
+              aria-label="Pay order"
             >
               <IndianRupee size={15} />
             </button>
@@ -102,6 +103,7 @@ const PendingOrderRowActions = ({
               onClick={() => setMoveModalOrder?.(order)}
               className="rounded-lg p-2 text-sky-600 dark:text-sky-400 transition-colors hover:bg-sky-50 dark:hover:bg-sky-955/20"
               title="Move table/room"
+              aria-label="Move table or room"
             >
               <Move size={15} />
             </button>
@@ -112,6 +114,7 @@ const PendingOrderRowActions = ({
               onClick={() => setEditingOrder?.(order)}
               className="rounded-lg p-2 text-slate-500 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               title="Edit order"
+              aria-label="Edit order"
             >
               <SquarePen size={15} />
             </button>
@@ -122,6 +125,7 @@ const PendingOrderRowActions = ({
               onClick={() => setShowConfirmDelete?.(order)}
               className="rounded-lg p-2 text-rose-500 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-955/20"
               title="Cancel order"
+              aria-label="Cancel order"
             >
               <Trash size={15} />
             </button>

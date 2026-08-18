@@ -1,7 +1,22 @@
 import { useState, useEffect, Suspense, lazy } from "react";
-import { PanelRightClose, Store, AlertTriangle, CheckCircle, Moon, Sun, LayoutGrid } from "lucide-react";
+import { 
+  PanelRightClose, 
+  Store, 
+  AlertTriangle, 
+  CheckCircle, 
+  Moon, 
+  Sun, 
+  LayoutGrid,
+  ChevronDown,
+  ChefHat,
+  ClipboardList,
+  Utensils,
+  TrendingUp,
+  Settings
+} from "lucide-react";
 import { useSelector } from "react-redux";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import logo from "@/assets/tapNbite-176x96.png";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -10,6 +25,12 @@ import {
   useGetRestaurantQuery,
   useUpdateRestaurantStatusMutation,
 } from "@/redux/adminRedux/adminAPI";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 const NotificationBell = lazy(() => import("../Bell/NotificationBell"));
 import { NavUser } from "@/components/admin/adminLayout/nav-user";
@@ -133,12 +154,65 @@ export function SiteHeader({
 
   const loading = profileLoading || toggleLoading;
 
+  const navMainConfig = [
+    {
+      title: "Kitchen KDS",
+      icon: ChefHat,
+      roles: ["admin", "staff"],
+      items: [{ title: "Kitchen View", url: "/kds", target: "_blank" }],
+    },
+    {
+      title: "Orders",
+      icon: ClipboardList,
+      roles: ["admin", "staff"],
+      items: [
+        { title: "Live orders", url: "/admin/orders" },
+        { title: "Completed orders", url: "/admin/completedorder" },
+        { title: "Cancelled orders", url: "/admin/cancelledorder" },
+      ],
+    },
+    {
+      title: "Digital menu",
+      icon: Utensils,
+      roles: ["admin", "staff"],
+      items: [{ title: "Edit Menu", url: "/admin/menu" }],
+    },
+    {
+      title: "Analytics",
+      icon: TrendingUp,
+      roles: ["admin"],
+      items: [
+        { title: "Revenue", url: "/admin/revenue" },
+        { title: "Sales", url: "/admin/sales" },
+      ],
+    },
+  ];
+
+  const filteredNavItems = navMainConfig.filter(
+    (item) => item.roles.includes(userRole || "admin")
+  );
+
+  const isGroupActive = (items) => {
+    return items.some(item => {
+      if (!item.url || item.url === "#") return false;
+      return location.pathname.startsWith(item.url);
+    });
+  };
+
+  const getGroupLabel = (item) => {
+    const activeSubItem = item.items.find(subItem => {
+      if (!subItem.url || subItem.url === "#") return false;
+      return location.pathname.startsWith(subItem.url);
+    });
+    return activeSubItem ? activeSubItem.title : item.title;
+  };
+
   return (
     <>
       {/* Main Header */}
       <header className={`sticky top-0 z-30 w-full border-b shadow-sm backdrop-blur-sm ${isDarkMode
-          ? "border-slate-700/60 bg-[#0f172a]/95"
-          : "border-[#ede8e3] bg-white/95"
+        ? "border-slate-700/60 bg-[#0f172a]/95"
+        : "border-[#ede8e3] bg-white/95"
         }`}>
         <div className="flex h-14 w-full flex-nowrap items-center justify-between gap-1.5 px-2.5 md:px-6">
           {/* Left Side - Menu Toggle */}
@@ -157,20 +231,107 @@ export function SiteHeader({
             />
 
             {/* Restaurant Info - only show on md+ */}
-            <div className="hidden items-center md:flex">
-              <div>
-                <p
-                  className={`text-[9px] font-bold uppercase tracking-[0.16em] ${isDarkMode ? "text-slate-400" : "text-[#87807b]"
-                    }`}
-                >
-                  TapNbite
-                </p>
-                <h1 className={`text-sm font-extrabold leading-tight ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-                  {restaurantName}
-                </h1>
-              </div>
+            <div className="hidden items-center md:flex select-none shrink-0">
+              <img src={logo} alt="TapnBite Logo" className="h-8 w-auto object-contain" />
             </div>
           </div>
+
+          <Separator
+            orientation="vertical"
+            className={`hidden md:block h-6 ${isDarkMode ? "bg-slate-700/40" : "bg-gray-300"} mx-1.5`}
+          />
+
+          {/* Middle Side - Horizontal Navigation (Desktop only) */}
+          <nav className="hidden md:flex items-center gap-1.5 lg:gap-2.5 mx-4 flex-1 justify-start">
+            {filteredNavItems.map((item, index) => {
+              const IconComponent = item.icon;
+              const isActive = isGroupActive(item.items);
+
+              return (
+                <div key={item.title} className="flex items-center gap-1.5 lg:gap-2.5">
+                  {index > 0 && (
+                    <Separator
+                      orientation="vertical"
+                      className={`h-5 ${isDarkMode ? "bg-slate-700/40" : "bg-gray-300"}`}
+                    />
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs lg:text-sm font-bold rounded-lg transition-all duration-200 focus:outline-none select-none border border-transparent ${
+                          isActive
+                            ? ""
+                            : isDarkMode
+                            ? "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
+                            : "text-[#57524e] hover:bg-gray-100 hover:text-[#1c1917]"
+                        }`}
+                        style={{
+                          backgroundColor: isActive
+                            ? (isDarkMode ? `${colors.primary}20` : `${colors.primary}12`)
+                            : undefined,
+                          borderColor: isActive
+                            ? (isDarkMode ? `${colors.primary}40` : `${colors.primary}25`)
+                            : undefined,
+                          color: isActive ? colors.primary : undefined,
+                        }}
+                      >
+                        <IconComponent size={15} className="shrink-0" />
+                        <span>{getGroupLabel(item)}</span>
+                        <ChevronDown size={12} className="transition-transform duration-200 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      sideOffset={6}
+                      className={`w-44 p-1 rounded-xl shadow-lg border z-[999] ${
+                        isDarkMode
+                          ? "bg-[#0f172a] border-slate-700/80 text-slate-100"
+                          : "bg-white border-[#ede8e3] text-gray-900"
+                      }`}
+                    >
+                      {item.items.map((subItem) => {
+                        const isSubActive = location.pathname === subItem.url;
+                        return (
+                          <DropdownMenuItem
+                            key={subItem.title}
+                            asChild
+                            className={`rounded-lg cursor-pointer text-xs lg:text-sm font-semibold ${
+                              isSubActive
+                                ? isDarkMode
+                                  ? "bg-slate-800 text-white"
+                                  : "bg-gray-50 text-gray-900"
+                                : ""
+                            }`}
+                          >
+                            {subItem.target === "_blank" ? (
+                              <a
+                                href={subItem.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full px-2.5 py-1.5 block"
+                              >
+                                {subItem.title}
+                              </a>
+                            ) : (
+                              <Link
+                                to={subItem.url}
+                                className="w-full px-2.5 py-1.5 block"
+                                style={{
+                                  color: isSubActive ? colors.primary : undefined,
+                                }}
+                              >
+                                {subItem.title}
+                              </Link>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })}
+          </nav>
 
           {/* Right Side - Controls */}
           <div className="mt-0 flex shrink-0 items-center gap-1.5 sm:gap-2.5 md:gap-4">
@@ -203,11 +364,10 @@ export function SiteHeader({
               <>
                 <button
                   onClick={handleGoToLiveTables}
-                  className={`flex h-9 items-center justify-center rounded-full px-2 sm:px-3.5 text-xs font-black transition-all duration-150 active:scale-[0.95] border shadow-sm ${
-                    isDarkMode
+                  className={`flex h-9 items-center justify-center rounded-full px-2 sm:px-3.5 text-xs font-black transition-all duration-150 active:scale-[0.95] border shadow-sm ${isDarkMode
                       ? "border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
                       : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
-                  }`}
+                    }`}
                   style={{
                     backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}08`,
                     borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}30`,
@@ -259,8 +419,15 @@ export function SiteHeader({
               />
             )}
 
-            {/* Profile Dropdown */}
-            <NavUser user={userData} isDarkMode={isDarkMode} inHeader={true} />
+            {/* Profile Settings Link (Replaces dropdown) */}
+            <button
+              onClick={() => navigate("/admin/profile")}
+              className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
+              aria-label="Admin Profile Settings"
+              title="Profile / Settings"
+            >
+              <Settings size={20} className="stroke-[1.8]" />
+            </button>
           </div>
         </div>
       </header>
@@ -328,8 +495,8 @@ export function SiteHeader({
                 onClick={handleConfirmToggle}
                 disabled={toggleLoading}
                 className={`h-11 flex-1 rounded-xl border text-sm font-semibold transition-all duration-200 ${pendingStatus
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-green-600'
-                    : 'bg-gradient-to-r from-red-500 to-red-500 hover:from-red-600 hover:to-red-600 text-white border-red-600'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-green-600'
+                  : 'bg-gradient-to-r from-red-500 to-red-500 hover:from-red-600 hover:to-red-600 text-white border-red-600'
                   }`}
               >
                 {toggleLoading ? (

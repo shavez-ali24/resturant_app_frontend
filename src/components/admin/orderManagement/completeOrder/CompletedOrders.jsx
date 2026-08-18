@@ -142,7 +142,7 @@ const CompletedOrders = () => {
                   <PaginationPrevious
                     onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
                     className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === 1 ? "pointer-events-none opacity-40" : ""
-                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
                 {pageNumbers.map((page, idx) => (
@@ -156,7 +156,7 @@ const CompletedOrders = () => {
                             ? "bg-orange-500 text-white border-orange-500"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                              : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"
                           }`}
                         onClick={() => setCurrentPage(page)}
                       >
@@ -169,7 +169,7 @@ const CompletedOrders = () => {
                   <PaginationNext
                     onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
                     className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === totalPages ? "pointer-events-none opacity-40" : ""
-                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
               </PaginationContent>

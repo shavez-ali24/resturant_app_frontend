@@ -11,6 +11,7 @@ import {
   Store,
   Users,
   SlidersHorizontal,
+  Truck,
 } from 'lucide-react';
 
 import { useSelector } from 'react-redux';
@@ -36,7 +37,7 @@ export default function ProfileDetails({ profileData }) {
           style={{ backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight }}
         >
           <h2 className="flex items-center gap-2.5 text-base font-extrabold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
-            <Users className="h-5 w-5 shrink-0" style={{ color: colors.primary }} />
+            <Users className="h-5 w-5 shrink-0" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             Staff Information
           </h2>
         </div>
@@ -61,7 +62,7 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 1: Business Profile */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Store className="h-4 w-4" style={{ color: colors.primary }} />
+            <Store className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Business Profile
             </h3>
@@ -87,13 +88,13 @@ export default function ProfileDetails({ profileData }) {
             {/* Billing & Taxes Column */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <Building className="h-4 w-4" style={{ color: colors.primary }} />
+                <Building className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Billing & Taxes
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <ProfileField label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} />
+                <ProfileField icon={<Truck className="w-4 h-4" />} label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} />
                 <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
                 <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Rate (%)" value={`${profileData?.gstRate}%`} />
                 <ProfileField icon={<Building className="w-4 h-4" />} label="Tax ID / GSTIN" value={profileData?.gstNumber} />
@@ -103,7 +104,7 @@ export default function ProfileDetails({ profileData }) {
             {/* Service Modes Column */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <SlidersHorizontal className="h-4 w-4" style={{ color: colors.primary }} />
+                <SlidersHorizontal className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Service Modes
                 </h3>
@@ -120,7 +121,7 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 3: Brand Identity */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Image className="h-4 w-4" style={{ color: colors.primary }} />
+            <Image className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Brand Identity
             </h3>

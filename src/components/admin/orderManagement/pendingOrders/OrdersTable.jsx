@@ -150,22 +150,22 @@ const OrdersTable = ({
             >
               <tr className={`border-b ${isDarkMode ? "border-slate-800" : "border-slate-100"}`}>
                 {tableType === "pending" ? (
-                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Order ID</th>
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Order ID</th>
                 ) : (
-                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Date</th>
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Date</th>
                 )}
-                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Placed At</th>
-                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Customer</th>
-                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Phone</th>
-                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Type</th>
-                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Order Details</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Placed At</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Customer</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Phone</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Type</th>
+                <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Order Details</th>
                 {tableType === "pending" && (
-                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Note</th>
+                  <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Note</th>
                 )}
                 {tableType === "pending" && (
                   <>
-                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Status</th>
-                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Manage</th>
+                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Status</th>
+                    <th className={`px-4 py-3 text-center align-middle text-xs font-semibold tracking-wider ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>Manage</th>
                   </>
                 )}
               </tr>

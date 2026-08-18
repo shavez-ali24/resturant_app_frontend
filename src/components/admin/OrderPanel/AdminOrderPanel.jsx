@@ -1241,7 +1241,7 @@ function OrderSummaryPanel({
 export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false, editingOrder = null }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const dispatch = useDispatch();
-  const { notify, newItemsByOrderId } = useNotification() || {};
+  const { notify, newItemsByOrderId, sseEvent } = useNotification() || {};
   useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
@@ -1250,9 +1250,16 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     0
   );
 
-  const { data: restaurantData } = useGetPublicRestaurantQuery();
+  const { data: restaurantData, refetch: refetchPublicRestaurant } = useGetPublicRestaurantQuery();
   const { data: liveUnitsData } = useGetLiveOccupancyQuery();
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
+
+  useEffect(() => {
+    if (sseEvent?.type === "RESTAURANT_UPDATED") {
+      refetchPublicRestaurant?.();
+    }
+  }, [sseEvent, refetchPublicRestaurant]);
+
   const [createOrder, { isLoading: isCreating }] = useCreateOrderByAdminMutation();
   const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
   const [billOrder] = useBillOrderMutation();

@@ -41,14 +41,14 @@ const broadcastOrderStatus = (orderId, status) => {
 };
 
 const listenForItemReady = (callback) => {
-  if (typeof BroadcastChannel === "undefined") return () => {};
+  if (typeof BroadcastChannel === "undefined") return () => { };
   const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
   channel.onmessage = (event) => callback(event.data);
   return () => channel.close();
 };
 
 const listenForOrderStatus = (callback) => {
-  if (typeof BroadcastChannel === "undefined") return () => {};
+  if (typeof BroadcastChannel === "undefined") return () => { };
   const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
   channel.onmessage = (event) => callback(event.data);
   return () => channel.close();
@@ -93,109 +93,109 @@ const getItemQuantity = (item) => {
   return Number.isFinite(quantity) ? Math.max(1, quantity) : 1;
 };
 
- const KitchenDisplayCard = ({
-   order,
-   isDarkMode,
-   isNewOrder,
-   updateOrder,
-   onStatusReady,
-   onDismiss,
- }) => {
-   const [toggleItemReady] = useToggleItemReadyMutation();
-   const orderId = getOrderIdValue(order) || "-";
-   const orderIdShort = getOrderIdShortValue(order) || orderId;
-   const createdAtMs = order?.createdAt ? new Date(order.createdAt).getTime() : Date.now();
+const KitchenDisplayCard = ({
+  order,
+  isDarkMode,
+  isNewOrder,
+  updateOrder,
+  onStatusReady,
+  onDismiss,
+}) => {
+  const [toggleItemReady] = useToggleItemReadyMutation();
+  const orderId = getOrderIdValue(order) || "-";
+  const orderIdShort = getOrderIdShortValue(order) || orderId;
+  const createdAtMs = order?.createdAt ? new Date(order.createdAt).getTime() : Date.now();
 
-   const formattedAcceptedTime = new Date(createdAtMs).toLocaleTimeString([], {
-     hour: "2-digit",
-     minute: "2-digit",
-     hour12: true,
-   });
+  const formattedAcceptedTime = new Date(createdAtMs).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 
-   const status = String(order?.status || "pending").trim().toLowerCase();
-   const colors = getStatusColors(status);
-   const items = useMemo(() => getOrderItemsList(order), [order]);
+  const status = String(order?.status || "pending").trim().toLowerCase();
+  const colors = getStatusColors(status);
+  const items = useMemo(() => getOrderItemsList(order), [order]);
 
-   const orderTypeKey = getOrderTypeKey(order?.orderType);
-   const orderTypeLabel = getOrderTypeLabel(order?.orderType);
-   const customerName = getOrderCustomerName(order);
-   const tableId = formatOrderTableId(
-     order?.tableId ||
-       order?.table ||
-       order?.tableNumber ||
-       order?.table?.name ||
-       order?.table?.tableNumber ||
-       order?.table?.number,
-     order?.source
-   );
+  const orderTypeKey = getOrderTypeKey(order?.orderType);
+  const orderTypeLabel = getOrderTypeLabel(order?.orderType);
+  const customerName = getOrderCustomerName(order);
+  const tableId = formatOrderTableId(
+    order?.tableId ||
+    order?.table ||
+    order?.tableNumber ||
+    order?.table?.name ||
+    order?.table?.tableNumber ||
+    order?.table?.number,
+    order?.source
+  );
 
-    const displayOrderType =
-      orderTypeKey === "eat_here" && tableId
-        ? `${orderTypeLabel} • ${tableId}`
-        : orderTypeLabel;
+  const displayOrderType =
+    orderTypeKey === "eat_here" && tableId
+      ? `${orderTypeLabel} • ${tableId}`
+      : orderTypeLabel;
 
-    // Timer for elapsed time calculation
-    const [nowMs, setNowMs] = useState(Date.now());
-    const preparingStartedAtMs = useMemo(() => getOrderPreparingStartedAt(order), [order]);
-    const preparingElapsedMs = (status === "preparing" || status === "ready") && preparingStartedAtMs ? Math.max(0, nowMs - preparingStartedAtMs) : 0;
+  // Timer for elapsed time calculation
+  const [nowMs, setNowMs] = useState(Date.now());
+  const preparingStartedAtMs = useMemo(() => getOrderPreparingStartedAt(order), [order]);
+  const preparingElapsedMs = (status === "preparing" || status === "ready") && preparingStartedAtMs ? Math.max(0, nowMs - preparingStartedAtMs) : 0;
 
-    useEffect(() => {
-      const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
-      return () => window.clearInterval(timerId);
-    }, []);
+  useEffect(() => {
+    const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
-    // Optimistic overrides for item ready state (key: itemId, value: isReady)
-    // Empty means use server state from order.items
-    const [itemOverrides, setItemOverrides] = useState({});
-    const [togglingItems, setTogglingItems] = useState(new Set());
+  // Optimistic overrides for item ready state (key: itemId, value: isReady)
+  // Empty means use server state from order.items
+  const [itemOverrides, setItemOverrides] = useState({});
+  const [togglingItems, setTogglingItems] = useState(new Set());
 
-    // Cleanup overrides that have been confirmed by server or are stale
-    useEffect(() => {
-      if (!order?.items) return;
+  // Cleanup overrides that have been confirmed by server or are stale
+  useEffect(() => {
+    if (!order?.items) return;
 
-      setItemOverrides(prev => {
-        const next = { ...prev };
-        let changed = false;
-        Object.keys(next).forEach(key => {
-          if (togglingItems.has(key)) return; // still pending, keep override
-          const serverItem = order.items.find(i => i._id === key);
-          if (serverItem) {
-            const serverReady = !!serverItem.isReady;
-            if (next[key] === serverReady) {
-              delete next[key];
-              changed = true;
-            } else {
-              // Server state differs; remove override to use server truth
-              delete next[key];
-              changed = true;
-            }
+    setItemOverrides(prev => {
+      const next = { ...prev };
+      let changed = false;
+      Object.keys(next).forEach(key => {
+        if (togglingItems.has(key)) return; // still pending, keep override
+        const serverItem = order.items.find(i => i._id === key);
+        if (serverItem) {
+          const serverReady = !!serverItem.isReady;
+          if (next[key] === serverReady) {
+            delete next[key];
+            changed = true;
           } else {
-            // Item no longer in order, clean up
+            // Server state differs; remove override to use server truth
             delete next[key];
             changed = true;
           }
-        });
-        return changed ? next : prev;
+        } else {
+          // Item no longer in order, clean up
+          delete next[key];
+          changed = true;
+        }
       });
-    }, [order?.items, order?.updatedAt, togglingItems]);
+      return changed ? next : prev;
+    });
+  }, [order?.items, order?.updatedAt, togglingItems]);
 
-    const itemRows = useMemo(() => items
-      .filter(item => item?._id) // Only include items with _id
-      .map((item, index) => {
-        const variant = String(item?.variantName || item?.variant || "").trim();
-        const name = getItemName(item);
+  const itemRows = useMemo(() => items
+    .filter(item => item?._id) // Only include items with _id
+    .map((item, index) => {
+      const variant = String(item?.variantName || item?.variant || "").trim();
+      const name = getItemName(item);
 
-        return {
-          itemId: item._id,
-          itemName: variant ? `${name} (${variant})` : name,
-          itemCustomization: getItemCustomizationText(item),
-          itemKitchenNote: item?.specialInstructions || item?.notes || "",
-          quantity: getItemQuantity(item),
-          // Use override if present, else server state
-          isReady: itemOverrides[item._id] !== undefined ? itemOverrides[item._id] : !!item.isReady,
-          isToggling: togglingItems.has(item._id),
-        };
-      }), [items, togglingItems, itemOverrides]);
+      return {
+        itemId: item._id,
+        itemName: variant ? `${name} (${variant})` : name,
+        itemCustomization: getItemCustomizationText(item),
+        itemKitchenNote: item?.specialInstructions || item?.notes || "",
+        quantity: getItemQuantity(item),
+        // Use override if present, else server state
+        isReady: itemOverrides[item._id] !== undefined ? itemOverrides[item._id] : !!item.isReady,
+        isToggling: togglingItems.has(item._id),
+      };
+    }), [items, togglingItems, itemOverrides]);
 
   const allItemsReady = itemRows.length > 0 && itemRows.every(item => item.isReady);
 
@@ -222,147 +222,147 @@ const getItemQuantity = (item) => {
     }
   };
 
-    const toggleReady = async (itemId) => {
-      if (togglingItems.has(itemId)) return; // Prevent double-clicks
+  const toggleReady = async (itemId) => {
+    if (togglingItems.has(itemId)) return; // Prevent double-clicks
 
-      const currentItem = itemRows.find(i => i.itemId === itemId);
-      if (!currentItem) return;
+    const currentItem = itemRows.find(i => i.itemId === itemId);
+    if (!currentItem) return;
 
-      // Get current effective ready state (considering overrides)
-      const currentIsReady = itemOverrides[itemId] !== undefined ? itemOverrides[itemId] : !!currentItem.isReady;
-      const newIsReady = !currentIsReady;
+    // Get current effective ready state (considering overrides)
+    const currentIsReady = itemOverrides[itemId] !== undefined ? itemOverrides[itemId] : !!currentItem.isReady;
+    const newIsReady = !currentIsReady;
 
-      // Optimistic override update for instant UI feedback
-      setItemOverrides(prev => ({
-        ...prev,
-        [itemId]: newIsReady
-      }));
+    // Optimistic override update for instant UI feedback
+    setItemOverrides(prev => ({
+      ...prev,
+      [itemId]: newIsReady
+    }));
 
-      // Add to toggling set to show loading state
-      setTogglingItems(prev => new Set(prev).add(itemId));
+    // Add to toggling set to show loading state
+    setTogglingItems(prev => new Set(prev).add(itemId));
 
-      try {
-        await toggleItemReady({ orderId, itemId }).unwrap();
-        // Broadcast to other tabs/windows
-        broadcastItemReady(orderId, itemId, newIsReady);
-      } catch (err) {
-        // Revert override on error
-        setItemOverrides(prev => {
-          const next = { ...prev };
-          delete next[itemId];
-          return next;
-        });
-        console.error("Failed to toggle item ready status", err);
-      } finally {
-        // Remove from toggling set
-        setTogglingItems(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(itemId);
-          return newSet;
-        });
-      }
-    };
-
-    useEffect(() => {
-      const cleanup = listenForItemReady(({ orderId: broadcastOrderId, itemId: broadcastItemId, isReady: newIsReady }) => {
-        if (String(broadcastOrderId) === String(orderId) && broadcastItemId) {
-          // Update override immediately for cross-tab sync
-          setItemOverrides(prev => ({
-            ...prev,
-            [broadcastItemId]: newIsReady
-          }));
-        }
-      });
-      return cleanup;
-    }, [orderId]);
-
-   // Listen for order status changes from other tabs (e.g., BillPage)
-   useEffect(() => {
-     const cleanup = listenForOrderStatus(({ orderId: broadcastOrderId, status: newStatus }) => {
-       if (String(broadcastOrderId) === String(orderId)) {
-         // Trigger a local update by calling updateOrder optimistically
-         // The actual update will be confirmed via SSE
-         if (String(newStatus) !== String(status)) {
-           // Update local UI immediately via the parent's SSE handling or force a re-render
-           // Since order prop comes from parent, we rely on parent SSE update
-           // But we can also trigger a manual refetch if needed
-           window.dispatchEvent(new CustomEvent("order-status-changed", { 
-             detail: { orderId: broadcastOrderId, status: newStatus } 
-           }));
-         }
-       }
-     });
-     return cleanup;
-   }, [orderId, status]);
-
-    // When order status becomes "ready", mark all items as ready
-    useEffect(() => {
-      if (status === "ready" && order?.items?.length) {
-        // Use server state to determine items that need marking, avoid items already optimistically ready
-        const itemsToMark = order.items.filter(item => 
-          item._id && 
-          !item.isReady && 
-          itemOverrides[item._id] !== true
-        );
-
-        itemsToMark.forEach(item => {
-          const itemId = item._id;
-          if (togglingItems.has(itemId)) return;
-
-          // Set optimistic override
-          setItemOverrides(prev => ({ ...prev, [itemId]: true }));
-          setTogglingItems(prev => new Set(prev).add(itemId));
-
-          toggleItemReady({ orderId, itemId }).unwrap()
-            .then(() => {
-              broadcastItemReady(orderId, itemId, true);
-            })
-            .catch(err => {
-              console.error("Failed to mark item ready", err);
-              setItemOverrides(prev => {
-                const next = { ...prev };
-                delete next[itemId];
-                return next;
-              });
-            })
-            .finally(() => {
-              setTogglingItems(prev => {
-                const next = new Set(prev);
-                next.delete(itemId);
-                return next;
-              });
-            });
-        });
-      }
-    }, [status, orderId, order?.items, itemOverrides, toggleItemReady, broadcastItemReady]);
-
-    // Cleanup: Remove overrides that are confirmed by server or are outdated
-    useEffect(() => {
-      if (!order?.items) return;
-
+    try {
+      await toggleItemReady({ orderId, itemId }).unwrap();
+      // Broadcast to other tabs/windows
+      broadcastItemReady(orderId, itemId, newIsReady);
+    } catch (err) {
+      // Revert override on error
       setItemOverrides(prev => {
         const next = { ...prev };
-        let changed = false;
-        Object.keys(next).forEach(key => {
-          // Skip items that are currently being toggled (pending)
-          if (togglingItems.has(key)) return;
-          const serverItem = order.items.find(i => i._id === key);
-          if (serverItem) {
-            const serverReady = !!serverItem.isReady;
-            if (next[key] === serverReady) {
-              delete next[key];
-              changed = true;
-            }
-            // else: override differs from server, keep it until server confirms
-          } else {
-            // Item no longer exists in order
+        delete next[itemId];
+        return next;
+      });
+      console.error("Failed to toggle item ready status", err);
+    } finally {
+      // Remove from toggling set
+      setTogglingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemId);
+        return newSet;
+      });
+    }
+  };
+
+  useEffect(() => {
+    const cleanup = listenForItemReady(({ orderId: broadcastOrderId, itemId: broadcastItemId, isReady: newIsReady }) => {
+      if (String(broadcastOrderId) === String(orderId) && broadcastItemId) {
+        // Update override immediately for cross-tab sync
+        setItemOverrides(prev => ({
+          ...prev,
+          [broadcastItemId]: newIsReady
+        }));
+      }
+    });
+    return cleanup;
+  }, [orderId]);
+
+  // Listen for order status changes from other tabs (e.g., BillPage)
+  useEffect(() => {
+    const cleanup = listenForOrderStatus(({ orderId: broadcastOrderId, status: newStatus }) => {
+      if (String(broadcastOrderId) === String(orderId)) {
+        // Trigger a local update by calling updateOrder optimistically
+        // The actual update will be confirmed via SSE
+        if (String(newStatus) !== String(status)) {
+          // Update local UI immediately via the parent's SSE handling or force a re-render
+          // Since order prop comes from parent, we rely on parent SSE update
+          // But we can also trigger a manual refetch if needed
+          window.dispatchEvent(new CustomEvent("order-status-changed", {
+            detail: { orderId: broadcastOrderId, status: newStatus }
+          }));
+        }
+      }
+    });
+    return cleanup;
+  }, [orderId, status]);
+
+  // When order status becomes "ready", mark all items as ready
+  useEffect(() => {
+    if (status === "ready" && order?.items?.length) {
+      // Use server state to determine items that need marking, avoid items already optimistically ready
+      const itemsToMark = order.items.filter(item =>
+        item._id &&
+        !item.isReady &&
+        itemOverrides[item._id] !== true
+      );
+
+      itemsToMark.forEach(item => {
+        const itemId = item._id;
+        if (togglingItems.has(itemId)) return;
+
+        // Set optimistic override
+        setItemOverrides(prev => ({ ...prev, [itemId]: true }));
+        setTogglingItems(prev => new Set(prev).add(itemId));
+
+        toggleItemReady({ orderId, itemId }).unwrap()
+          .then(() => {
+            broadcastItemReady(orderId, itemId, true);
+          })
+          .catch(err => {
+            console.error("Failed to mark item ready", err);
+            setItemOverrides(prev => {
+              const next = { ...prev };
+              delete next[itemId];
+              return next;
+            });
+          })
+          .finally(() => {
+            setTogglingItems(prev => {
+              const next = new Set(prev);
+              next.delete(itemId);
+              return next;
+            });
+          });
+      });
+    }
+  }, [status, orderId, order?.items, itemOverrides, toggleItemReady, broadcastItemReady]);
+
+  // Cleanup: Remove overrides that are confirmed by server or are outdated
+  useEffect(() => {
+    if (!order?.items) return;
+
+    setItemOverrides(prev => {
+      const next = { ...prev };
+      let changed = false;
+      Object.keys(next).forEach(key => {
+        // Skip items that are currently being toggled (pending)
+        if (togglingItems.has(key)) return;
+        const serverItem = order.items.find(i => i._id === key);
+        if (serverItem) {
+          const serverReady = !!serverItem.isReady;
+          if (next[key] === serverReady) {
             delete next[key];
             changed = true;
           }
-        });
-        return changed ? next : prev;
+          // else: override differs from server, keep it until server confirms
+        } else {
+          // Item no longer exists in order
+          delete next[key];
+          changed = true;
+        }
       });
-    }, [order?.items, order?.updatedAt, togglingItems]);
+      return changed ? next : prev;
+    });
+  }, [order?.items, order?.updatedAt, togglingItems]);
 
 
 
@@ -409,13 +409,12 @@ const getItemQuantity = (item) => {
                 <div className="shrink-0">
                   <div
                     onClick={() => !isLoading && toggleReady(item.itemId)}
-                    className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-all ${
-                      isLoading
+                    className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-all ${isLoading
                         ? "border-slate-400 bg-slate-100 cursor-not-allowed"
                         : isFullyDone
-                        ? `${colors.bg} ${colors.border} text-white shadow-sm cursor-pointer`
-                        : "border-slate-300 bg-white hover:border-slate-400 cursor-pointer"
-                    }`}
+                          ? `${colors.bg} ${colors.border} text-white shadow-sm cursor-pointer`
+                          : "border-slate-300 bg-white hover:border-slate-400 cursor-pointer"
+                      }`}
                   >
                     {isLoading ? (
                       <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
@@ -431,9 +430,8 @@ const getItemQuantity = (item) => {
                   onClick={() => toggleReady(item.itemId)}
                 >
                   <div className="flex justify-between items-start gap-2">
-                    <h4 className={`text-[15px] font-bold leading-tight break-words overflow-hidden transition-all ${
-                      isFullyDone ? "text-slate-400 line-through" : "text-slate-800"
-                    }`}>
+                    <h4 className={`text-[15px] font-bold leading-tight break-words overflow-hidden transition-all ${isFullyDone ? "text-slate-400 line-through" : "text-slate-800"
+                      }`}>
                       {item.itemName}
                     </h4>
                     <div className={`${colors.bg} text-white text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0`}>
@@ -443,17 +441,15 @@ const getItemQuantity = (item) => {
                   </div>
 
                   {item.itemCustomization && (
-                    <p className={`text-[13px] mt-1 leading-relaxed transition-all break-all ${
-                      isFullyDone ? "text-slate-300" : "text-slate-500"
-                    }`}>
+                    <p className={`text-[13px] mt-1 leading-relaxed transition-all break-all ${isFullyDone ? "text-slate-300" : "text-slate-500"
+                      }`}>
                       <span className="font-black uppercase text-[11px] mr-1">Note:</span>
                       {item.itemCustomization}
                     </p>
                   )}
                   {item.itemKitchenNote && (
-                    <p className={`text-[13px] font-medium mt-1 italic transition-all break-all ${
-                      isFullyDone ? "text-slate-300" : "text-orange-600"
-                    }`}>
+                    <p className={`text-[13px] font-medium mt-1 italic transition-all break-all ${isFullyDone ? "text-slate-300" : "text-orange-600"
+                      }`}>
                       <span className="font-black uppercase text-[11px] not-italic mr-1">Instruction:</span>
                       {item.itemKitchenNote}
                     </p>

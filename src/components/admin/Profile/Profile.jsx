@@ -15,6 +15,7 @@ import UpdateOrderModeForm from "./Components/UpdateOrderModeForm";
 import UpdateFinancialsForm from "./Components/UpdateFinancialsForm";
 import UpdateBrandingForm from "./Components/UpdateBrandingForm";
 import UpdateFormActions from "./Components/UpdateFormActions";
+import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
 // ── Inner edit form — only rendered after resData is loaded ──────────────────
 // Separate component so hooks always run with real data
@@ -96,6 +97,14 @@ const Profile = () => {
 
   const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantQuery();
   const resData = restaurant?.data || restaurant?.restaurant;
+
+  const { sseEvent } = useNotification() || {};
+
+  useEffect(() => {
+    if (sseEvent?.type === "RESTAURANT_UPDATED") {
+      refetch();
+    }
+  }, [sseEvent, refetch]);
 
   const handleUpdateSuccess = () => {
     setIsEditing(false);
