@@ -133,11 +133,14 @@ export default function Home() {
     return Array.isArray(menu) && menu.some((item) => item?.pricingType === "combo");
   }, [menu]);
 
+  const showEggFilter = useMemo(() => {
+    return Array.isArray(menu) && menu.some((item) => item?.type === "egg");
+  }, [menu]);
+
   const showVegNonVegFilters = useMemo(() => {
     if (!Array.isArray(menu)) return false;
-    const hasVeg = menu.some((item) => item?.type === "veg");
-    const hasNonVeg = menu.some((item) => item?.type === "non-veg");
-    return hasVeg && hasNonVeg;
+    const types = new Set(menu.map((item) => item?.type).filter(Boolean));
+    return types.size > 1;
   }, [menu]);
 
   if (showLoader)
@@ -276,6 +279,7 @@ export default function Home() {
           isDarkMode={isDarkMode}
           hasCombo={hasCombo}
           showVegNonVegFilters={showVegNonVegFilters}
+          showEggFilter={showEggFilter}
         />
       </div>
 
