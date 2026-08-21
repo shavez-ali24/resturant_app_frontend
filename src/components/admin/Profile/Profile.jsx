@@ -7,8 +7,7 @@ import { LoadingSpinner } from "./Components/commanProfile/LoadingSpinner";
 import { ErrorMessage } from "./Components/commanProfile/ErrorMessage";
 import { useNotify } from "../common/NotificationModal";
 import { useGetRestaurantQuery } from "@/redux/adminRedux/adminAPI";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getProfileSteps } from "../../../utils/adminTour";
+
 import { useUpdateProfileForm } from "./Hooks/useUpdateProfileForm";
 import UpdateCoreProfileForm from "./Components/UpdateCoreProfileForm";
 import UpdateOrderModeForm from "./Components/UpdateOrderModeForm";
@@ -93,7 +92,7 @@ const Profile = () => {
     return () => obs.disconnect();
   }, []);
 
-  useAdminTour(TOUR_KEYS.profile, getProfileSteps, isDarkMode, 800);
+
 
   const { data: restaurant, isLoading: loading, isError: error, refetch } = useGetRestaurantQuery();
   const resData = restaurant?.data || restaurant?.restaurant;
@@ -118,7 +117,7 @@ const Profile = () => {
   if (error) return <ErrorMessage error={error?.data?.message || error?.message || "Failed to load profile"} />;
 
   return (
-    <div 
+    <div
       className="flex h-full flex-col overflow-hidden animate-in fade-in duration-300"
       style={{ backgroundColor: isDarkMode ? "#0f172a" : "#f8f3ef" }}
     >

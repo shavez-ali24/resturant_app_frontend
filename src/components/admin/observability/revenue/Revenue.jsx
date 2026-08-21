@@ -22,8 +22,7 @@ import { useGetAnalyticsQuery } from "@/redux/adminRedux/adminAPI"
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice"
 import Heading from "../../common/Heading"
 import { useNotify } from "../../common/NotificationModal"
-import { useAdminTour } from "../../../../hooks/useAdminTour"
-import { TOUR_KEYS, getRevenueSteps } from "../../../../utils/adminTour"
+
 
 // --- Helpers ---
 const formatCurrency = (amount) =>
@@ -111,7 +110,7 @@ export default function RevenueAnalytics() {
     return () => obs.disconnect()
   }, [])
 
-  useAdminTour(TOUR_KEYS.revenue, getRevenueSteps, isDarkMode, 700)
+
   // --- State ---
   const [timeRange, setTimeRange] = useState("1d")
   const [fromDate, setFromDate] = useState("")

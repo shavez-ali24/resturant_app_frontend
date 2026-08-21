@@ -1,5 +1,5 @@
 // src/components/admin/orderManagement/OrdersTable.jsx
-import React, { useState, Suspense, lazy } from "react";
+import React, { useState, Suspense, lazy, useMemo, useCallback } from "react";
 import OrderRow from "./OrderRow";
 import { useDispatch } from "react-redux";
 import { showBill } from "@/redux/adminRedux/billSlice";
@@ -17,7 +17,6 @@ import {
   getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
-  getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
 
@@ -44,13 +43,26 @@ const formatTime = (dateString) => {
   });
 };
 
+// Static Icon Helper at file scope to prevent recreation on every render/loop
+const getOrderTypeIcon = (type) => {
+  switch (getOrderTypeKey(type)) {
+    case "eat_here":
+      return <Utensils size={13} />;
+    case "take_away":
+      return <House size={13} />;
+    case "delivery":
+      return <Truck size={13} />;
+    default:
+      return <Utensils size={13} />;
+  }
+};
+
 const OrdersTable = ({
   orders,
   loading,
   error,
   setEditingOrder,
   setShowConfirmDelete,
-  setOrderForBillModal,
   setPayModalOrder,
   setMoveModalOrder,
   updateOrder,
@@ -63,48 +75,54 @@ const OrdersTable = ({
 }) => {
   const dispatch = useDispatch();
   const [selectedCustomizationOrder, setSelectedCustomizationOrder] = useState(null);
+  
   const [seenBillOrderId, setSeenBillOrderId] = useState(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("billViewedOrderId") || "";
+    try {
+      return localStorage.getItem("billViewedOrderId") || "";
+    } catch {
+      return "";
+    }
   });
+
   const columnCount = tableType === "pending" ? 9 : 6;
   const skeletonRows = Array.from({ length: 8 });
   const mobileSkeletons = Array.from({ length: 4 });
 
   // Function to handle customizations button click
-  const handleCustomizationsClick = (order) => {
+  const handleCustomizationsClick = useCallback((order) => {
     if (order) {
       setSelectedCustomizationOrder(order);
     }
-  };
+  }, []);
 
   // Modal background click handler
-  const handleModalClose = () => {
+  const handleModalClose = useCallback(() => {
     setSelectedCustomizationOrder(null);
-  };
+  }, []);
 
-  const getOrderId = (order) =>
-    getOrderIdValue(order) || order?.createdAt || "";
-  const getOrderIdShort = (order) => getOrderIdShortValue(order);
   const latestId = latestOrderId ? String(latestOrderId) : "";
-  const isLatestUnseen = (order) => {
+
+  const isLatestUnseen = useCallback((resolvedId) => {
     if (!latestId) return false;
-    const id = String(getOrderId(order) || "");
-    return id && id === latestId && id !== seenBillOrderId;
-  };
-  const markLatestSeen = (order) => {
-    if (typeof window === "undefined") return;
-    const id = String(getOrderId(order) || "");
-    if (!id || id !== latestId) return;
-    localStorage.setItem("billViewedOrderId", id);
-    setSeenBillOrderId(id);
-  };
+    return resolvedId && resolvedId === latestId && resolvedId !== seenBillOrderId;
+  }, [latestId, seenBillOrderId]);
+
+  const markLatestSeen = useCallback((resolvedId) => {
+    if (typeof window === "undefined" || !resolvedId || resolvedId !== latestId) return;
+    try {
+      localStorage.setItem("billViewedOrderId", resolvedId);
+    } catch (e) {
+      console.warn("Storage write failed", e);
+    }
+    setSeenBillOrderId(resolvedId);
+  }, [latestId]);
 
   const { setNewlyAddedItemsOrderIds } = useNotification() || {};
 
-  const handleBillClick = async (order) => {
-    // Clear NEW ORDER badge when bill is viewed
-    const oid = getOrderId(order);
+  // Single Source of Truth for Bill clicks
+  const handleBillClick = useCallback((order) => {
+    const oid = order._resolvedId;
     if (oid && setNewlyAddedItemsOrderIds) {
       setNewlyAddedItemsOrderIds((prev) => {
         const key = String(oid);
@@ -114,9 +132,24 @@ const OrdersTable = ({
         return next;
       });
     }
-    markLatestSeen(order);
+    markLatestSeen(oid);
     dispatch(showBill(order));
-  };
+  }, [dispatch, setNewlyAddedItemsOrderIds, markLatestSeen]);
+
+  // Memoize formatted orders to prevent expensive date processing on every render cycle
+  const formattedOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders.map((order) => {
+      const oid = getOrderIdValue(order) || order?.createdAt || "";
+      return {
+        ...order,
+        _resolvedId: String(oid),
+        formattedDate: formatDate(order.createdAt),
+        formattedTime: formatTime(order.createdAt),
+        hasNewClientItems: newlyAddedItemsOrderIds?.has(String(oid)) || false,
+      };
+    });
+  }, [orders, newlyAddedItemsOrderIds]);
 
   const containerClassName =
     containerVariant === "plain"
@@ -144,7 +177,7 @@ const OrdersTable = ({
       <div className="hidden md:flex md:h-full md:flex-col">
         <div className="overflow-auto flex-1">
           <table className="min-w-full">
-            <thead 
+            <thead
               className="sticky top-0 z-10 backdrop-blur-sm"
               style={{ backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.9)" : "rgba(248, 243, 239, 0.9)" }}
             >
@@ -188,34 +221,27 @@ const OrdersTable = ({
                     {error}
                   </td>
                 </tr>
-              ) : orders.length === 0 ? (
+              ) : formattedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={columnCount} className={`py-16 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
                     No orders yet
                   </td>
                 </tr>
               ) : (
-                orders.map((order, index) => (
+                formattedOrders.map((order, index) => (
                   <OrderRow
-                    key={getOrderId(order) || order?.createdAt || index}
-                    order={{
-                      ...order,
-                      formattedDate: formatDate(order.createdAt),
-                      formattedTime: formatTime(order.createdAt),
-                      hasNewClientItems: newlyAddedItemsOrderIds?.has(String(getOrderId(order))),
-                    }}
-                    index={index}
+                    key={order._resolvedId}
+                    order={order}
                     setEditingOrder={setEditingOrder}
                     setShowConfirmDelete={setShowConfirmDelete}
-                    setOrderForBillModal={setOrderForBillModal}
                     setPayModalOrder={setPayModalOrder}
                     setMoveModalOrder={setMoveModalOrder}
                     updateOrder={updateOrder}
                     tableType={tableType}
                     isDarkMode={isDarkMode}
                     onCustomizationsClick={onCustomizationsClick || handleCustomizationsClick}
-                    showBillAttention={isLatestUnseen(order)}
-                    onBillOpen={() => markLatestSeen(order)}
+                    showBillAttention={isLatestUnseen(order._resolvedId)}
+                    handleBillClick={handleBillClick}
                   />
                 ))
               )}
@@ -234,19 +260,11 @@ const OrdersTable = ({
           </div>
         ) : error ? (
           <p className="py-6 text-center text-sm text-red-500">{error}</p>
-        ) : orders.length === 0 ? (
+        ) : formattedOrders.length === 0 ? (
           <p className={`py-12 text-center text-sm ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>No orders yet</p>
         ) : (
           <div className="space-y-3">
-            {orders.map((order) => {
-              const getOrderTypeIcon = (type) => {
-                switch (getOrderTypeKey(type)) {
-                  case "eat_here": return <Utensils size={13} />;
-                  case "take_away": return <House size={13} />;
-                  case "delivery": return <Truck size={13} />;
-                  default: return <Utensils size={13} />;
-                }
-              };
+            {formattedOrders.map((order) => {
               const orderTypeLabel = getOrderTypeLabel(order.orderType);
               const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
               const tableLabel = formatOrderTableId(
@@ -255,12 +273,10 @@ const OrdersTable = ({
                 order.source
               );
               const handlePendingCustomizationsClick = onCustomizationsClick || handleCustomizationsClick;
-              const orderId = getOrderId(order);
-              const hasNewClientItems = newlyAddedItemsOrderIds?.has(String(orderId));
-
+              
               return (
                 <div
-                  key={getOrderId(order) || order?.createdAt}
+                  key={order._resolvedId}
                   className={`w-full rounded-xl border p-3 space-y-2.5 ${isDarkMode
                     ? "border-slate-700/60 bg-slate-800/60"
                     : "border-[#ede8e3] bg-white"
@@ -270,9 +286,9 @@ const OrdersTable = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${isDarkMode ? "bg-slate-700 text-orange-300" : "bg-[#f7f3ef] text-orange-600"}`}>
-                        {getOrderIdShort(order)}
+                        {getOrderIdShortValue(order)}
                       </span>
-                      {hasNewClientItems && (
+                      {order.hasNewClientItems && (
                         <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-white animate-pulse shadow-sm border border-white">
                           <Bell size={10} className="animate-bounce" />
                         </span>
@@ -280,8 +296,8 @@ const OrdersTable = ({
                     </div>
                     <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-[#a8a29e]"}`}>
                       {tableType === "pending"
-                        ? formatTime(order.createdAt)
-                        : `${formatDate(order.createdAt)} · ${formatTime(order.createdAt)}`}
+                        ? order.formattedTime
+                        : `${order.formattedDate} · ${order.formattedTime}`}
                     </span>
                   </div>
 
@@ -298,13 +314,13 @@ const OrdersTable = ({
                   </div>
 
                   {/* Row 3: Type badge */}
-                  <div 
+                  <div
                     className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold min-w-[130px] ${orderTypeClass}`}
-                     style={order.orderType === "Room Stay" ? {
-                       backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
-                       color: isDarkMode ? '#e2e8f0' : '#57524e',
-                       border: isDarkMode ? '1px solid rgba(148, 163, 184, 0.25)' : '1px solid #e7e5e4'
-                     } : {}}
+                    style={order.orderType === "Room Stay" ? {
+                      backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
+                      color: isDarkMode ? '#e2e8f0' : '#57524e',
+                      border: isDarkMode ? '1px solid rgba(148, 163, 184, 0.25)' : '1px solid #e7e5e4'
+                    } : {}}
                   >
                     {getOrderTypeIcon(order.orderType)}
                     <span>{isEatHereOrder(order.orderType) && tableLabel ? `${tableLabel} : ` : ''}{orderTypeLabel}</span>
@@ -314,12 +330,16 @@ const OrdersTable = ({
                   <div className="grid grid-cols-2 gap-2">
                     {tableType === "pending" && (
                       <Suspense fallback={null}>
-                        <PendingOrderMobileNote order={order} onCustomizationsClick={handlePendingCustomizationsClick} />
+                        <PendingOrderMobileNote
+                          order={order}
+                          onCustomizationsClick={handlePendingCustomizationsClick}
+                          isDarkMode={isDarkMode}
+                        />
                       </Suspense>
                     )}
                     <button
                       onClick={() => handleBillClick(order)}
-                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${isLatestUnseen(order) ? "bill-border-animate" : ""
+                      className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${isLatestUnseen(order._resolvedId) ? "bill-border-animate" : ""
                         } ${isDarkMode
                           ? "border-slate-600 bg-slate-700/50 text-slate-200 hover:bg-slate-700"
                           : "border-[#ede8e3] bg-white text-[#1c1917] hover:bg-[#f7f3ef]"

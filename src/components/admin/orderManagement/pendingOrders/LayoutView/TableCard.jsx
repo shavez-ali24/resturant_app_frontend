@@ -5,14 +5,6 @@ import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
-const formatElapsed = (minutes) => {
-  if (minutes == null) return "";
-  if (minutes < 60) return ` • ${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return ` • ${h}h${m > 0 ? ` ${m}m` : ""}`;
-};
-
 const getElapsedString = (minutes) => {
   if (minutes == null) return "";
   if (minutes < 60) return `${minutes}m`;
@@ -21,7 +13,7 @@ const getElapsedString = (minutes) => {
   return `${h}h${m > 0 ? ` ${m}m` : ""}`;
 };
 
-const getCardStyle = (rawStatus, status, isDark, themeColors) => {
+const getCardStyle = (rawStatus, status, isDark) => {
   // AVAILABLE / Blank status
   if (rawStatus === "AVAILABLE" || status === "blank") {
     return {
@@ -67,7 +59,7 @@ const getCardStyle = (rawStatus, status, isDark, themeColors) => {
   };
 };
 
-const ICON_BTN = (isDark) => ({
+const ICON_BTN = (isDark, isDisabled) => ({
   width: 32,
   height: 32,
   display: "flex",
@@ -75,7 +67,8 @@ const ICON_BTN = (isDark) => ({
   justifyContent: "center",
   border: `1px solid ${isDark ? "#475569" : "#d4d4d8"}`,
   background: isDark ? "#334155" : "#f4f4f5",
-  cursor: "pointer",
+  cursor: isDisabled ? "not-allowed" : "pointer",
+  opacity: isDisabled ? 0.5 : 1,
   borderRadius: 8,
   color: isDark ? "#f1f5f9" : "#1c1917",
   padding: 0,
@@ -92,7 +85,7 @@ const TableCard = React.memo(function TableCard({
   onRoomClick,
   isLoading = false,
   isDarkMode = false,
-  newlyAddedItemsOrderIds,
+  newlyAddedItemsOrderIds = [],
 }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const [elapsedMinutes, setElapsedMinutes] = React.useState(null);
@@ -131,11 +124,17 @@ const TableCard = React.memo(function TableCard({
   const isOccupied = rawStatus === "OCCUPIED" || status === "running" || status === "running_kot" || status === "printed" || status === "booked";
   const isBilled = rawStatus === "BILLED" || status === "paid" || status === "billed";
 
-  const cardStyle = getCardStyle(rawStatus, status, isDarkMode, colors);
+  const cardStyle = getCardStyle(rawStatus, status, isDarkMode);
 
   const { newlyAddedItemsOrderIds: ctxOrderIds, setNewlyAddedItemsOrderIds } = useNotification() || {};
 
+  const orderId = table.currentOrderId || table.orderId;
+  const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
+  const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
+
   const handleClick = () => {
+    if (isLoading) return;
+
     // Clear NEW ORDER badge when card is clicked
     if (orderId && setNewlyAddedItemsOrderIds) {
       setNewlyAddedItemsOrderIds((prev) => {
@@ -150,8 +149,8 @@ const TableCard = React.memo(function TableCard({
       onRoomClick?.(table);
       return;
     }
-    if (isBilled) {
-      onPay?.(table);
+    if (isBilled || isOccupied) {
+      onTableClick?.(table);
       return;
     }
     onTableClick?.(table);
@@ -159,26 +158,31 @@ const TableCard = React.memo(function TableCard({
 
   const handleEdit = (e) => {
     e.stopPropagation();
+    if (isLoading) return;
     if (isBilled) {
       onPay?.(table);
       return;
     }
     onEdit?.(table);
   };
-  const handlePrint = (e) => { e.stopPropagation(); onPrint?.(table); };
-  const handleMove = (e) => { e.stopPropagation(); onMove?.(table); };
+  const handlePrint = (e) => {
+    e.stopPropagation();
+    if (isLoading) return;
+    onPrint?.(table);
+  };
+  const handleMove = (e) => {
+    e.stopPropagation();
+    if (isLoading) return;
+    onMove?.(table);
+  };
 
   const formatAmount = (val) => {
     const n = Number(val);
     return Number.isFinite(n) ? `₹${n.toFixed(2)}` : "";
   };
 
-  // 🔧 FIX: Show bottom icons (Edit/Print/Move) for both rooms AND tables
+  // Action icons for active orders
   const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
-
-  const orderId = table.currentOrderId || table.orderId;
-  const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
-  const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
 
   // Prefix T to numeric numbers only for tables (not rooms)
   const displayNum = !isRoom && /^\d+$/.test(String(tableNumber || "")) ? `T${tableNumber}` : tableNumber;
@@ -189,7 +193,7 @@ const TableCard = React.memo(function TableCard({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          handleClick(e);
+          handleClick();
         }
       }}
       role="button"
@@ -282,12 +286,13 @@ const TableCard = React.memo(function TableCard({
         </div>
       )}
 
-      {/* Bottom icons - only for occupied TABLES */}
+      {/* Bottom Action icons for active orders */}
       {showBottomIcons && (
         <div style={{ position: "absolute", bottom: -16, display: "flex", gap: 6, zIndex: 10 }}>
           <button
-            onClick={isBilled ? (e) => { e.stopPropagation(); onPay?.(table); } : handleEdit}
-            style={ICON_BTN(isDarkMode)}
+            onClick={isBilled ? (e) => { e.stopPropagation(); if (!isLoading) onPay?.(table); } : handleEdit}
+            disabled={isLoading}
+            style={ICON_BTN(isDarkMode, isLoading)}
             title={isBilled ? "Pay Order" : "Edit Order"}
             aria-label={isBilled ? "Pay Order" : "Edit Order"}
           >
@@ -295,7 +300,8 @@ const TableCard = React.memo(function TableCard({
           </button>
           <button
             onClick={handlePrint}
-            style={ICON_BTN(isDarkMode)}
+            disabled={isLoading}
+            style={ICON_BTN(isDarkMode, isLoading)}
             title="Print"
             aria-label="Print bill"
           >
@@ -304,7 +310,8 @@ const TableCard = React.memo(function TableCard({
           {!isBilled && !table.isVirtual && (
             <button
               onClick={handleMove}
-              style={ICON_BTN(isDarkMode)}
+              disabled={isLoading}
+              style={ICON_BTN(isDarkMode, isLoading)}
               title="Move Table/Room"
               aria-label="Move table or room"
             >

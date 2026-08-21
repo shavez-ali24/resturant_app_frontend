@@ -4,8 +4,7 @@ import { clearCart } from "../../../../features/cartSlice";
 import { useNotification } from "../../Bell/NotificationContext";
 import { ArrowLeft, LayoutGrid, Plus, IndianRupee, Move, ClipboardList, Hourglass, Timer, CheckCircle, Filter, Bell } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { useAdminTour } from "../../../../hooks/useAdminTour";
-import { TOUR_KEYS, getOrdersSteps } from "../../../../utils/adminTour";
+
 
 import {
   Pagination,
@@ -255,8 +254,6 @@ const Orders = () => {
     }
   }, [showCreateOrder, urlOrderId]);
 
-  // Auto onboarding tour — first visit only
-  useAdminTour(TOUR_KEYS.orders, getOrdersSteps, isDarkMode, 800);
 
   const normalizeIncomingOrder = (incomingOrder) => {
     const incomingId = getOrderIdValue(incomingOrder);
@@ -287,6 +284,17 @@ const Orders = () => {
   const [selectedType, setSelectedType] = useState("all");
   const [layoutFilter, setLayoutFilter] = useState("eat_here"); // "eat_here" | "take_away" | "delivery"
   const [editingOrder, setEditingOrder] = useState(null);
+  const editingOrderRef = React.useRef(null);
+  const urlFetchedOrderRef = React.useRef(null);
+
+  React.useEffect(() => {
+    editingOrderRef.current = editingOrder;
+  }, [editingOrder]);
+
+  React.useEffect(() => {
+    urlFetchedOrderRef.current = urlFetchedOrder;
+  }, [urlFetchedOrder]);
+
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
   const [orderForBillModal, setOrderForBillModal] = useState(null);
   const [payModalOrder, setPayModalOrder] = useState(null);
@@ -600,9 +608,9 @@ const Orders = () => {
 
       const amt = Number(o.totalAmount) || 0;
       const advancePaid = (o.advancePayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-      const isBilled = 
-        String(unit.status || "").toLowerCase() === "billed" || 
-        String(unit.rawStatus || "").toLowerCase() === "billed" || 
+      const isBilled =
+        String(unit.status || "").toLowerCase() === "billed" ||
+        String(unit.rawStatus || "").toLowerCase() === "billed" ||
         String(o.status || "").toLowerCase() === "ready";
       return isBilled ? Math.max(0, amt - advancePaid) : amt;
     };
@@ -895,10 +903,10 @@ const Orders = () => {
       if (!fetchedOrder) return;
 
       // Real-time update for order currently being edited in AdminOrderPanel
-      if (editingOrder && String(editingOrder._id || editingOrder.id) === String(incomingId)) {
+      if (editingOrderRef.current && String(editingOrderRef.current._id || editingOrderRef.current.id) === String(incomingId)) {
         setEditingOrder(fetchedOrder);
       }
-      if (urlFetchedOrder && String(urlFetchedOrder._id || urlFetchedOrder.id) === String(incomingId)) {
+      if (urlFetchedOrderRef.current && String(urlFetchedOrderRef.current._id || urlFetchedOrderRef.current.id) === String(incomingId)) {
         setUrlFetchedOrder(fetchedOrder);
       }
 

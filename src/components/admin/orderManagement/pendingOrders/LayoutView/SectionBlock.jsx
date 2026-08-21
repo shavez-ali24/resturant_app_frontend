@@ -18,7 +18,7 @@ const SectionBlock = React.memo(function SectionBlock({
   onRoomClick,
   roomActionLoadingId,
   isDarkMode = false,
-  newlyAddedItemsOrderIds,
+  newlyAddedItemsOrderIds = [],
 }) {
   const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
   const tables = React.useMemo(
@@ -55,7 +55,7 @@ const SectionBlock = React.memo(function SectionBlock({
 
   if (!units || units.length === 0) return null;
 
-  const isRoomSection = sectionName.toLowerCase() === "room";
+  const isRoomSection = String(sectionName || "").trim().toLowerCase() === "room";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

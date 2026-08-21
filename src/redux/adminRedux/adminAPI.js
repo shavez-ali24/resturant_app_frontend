@@ -182,13 +182,14 @@ export const adminApi = createApi({
       query: ({ status = "pending", range = "all", page = 1, limit = 10 }) => ({
         url: "/order", params: { status, range, page, limit },
       }),
-      transformResponse: (response) => {
-        if (Array.isArray(response)) return { orders: response, totalOrders: response.length, totalPages: Math.ceil(response.length / 10), currentPage: 1 };
+      transformResponse: (response, meta, arg) => {
+        const limit = arg?.limit ?? 10;
+        if (Array.isArray(response)) return { orders: response, totalOrders: response.length, totalPages: Math.ceil(response.length / limit), currentPage: 1 };
         if (response && typeof response === "object") {
-          if (Array.isArray(response.orders)) return { orders: response.orders, totalOrders: response.totalOrders || response.orders.length, totalPages: response.totalPages || Math.ceil(response.orders.length / 10), currentPage: response.currentPage || 1 };
-          if (Array.isArray(response.data)) return { orders: response.data, totalOrders: response.total || response.data.length, totalPages: response.pages || Math.ceil(response.data.length / 10), currentPage: response.page || 1 };
+          if (Array.isArray(response.orders)) return { orders: response.orders, totalOrders: response.totalOrders || response.orders.length, totalPages: response.totalPages || Math.ceil(response.orders.length / limit), currentPage: response.currentPage || 1 };
+          if (Array.isArray(response.data)) return { orders: response.data, totalOrders: response.total || response.data.length, totalPages: response.pages || Math.ceil(response.data.length / limit), currentPage: response.page || 1 };
           const ordersArray = Object.values(response).filter((item) => item && typeof item === "object" && item._id);
-          if (ordersArray.length > 0) return { orders: ordersArray, totalOrders: ordersArray.length, totalPages: Math.ceil(ordersArray.length / 10), currentPage: 1 };
+          if (ordersArray.length > 0) return { orders: ordersArray, totalOrders: ordersArray.length, totalPages: Math.ceil(ordersArray.length / limit), currentPage: 1 };
         }
         return { orders: [], totalOrders: 0, totalPages: 0, currentPage: 1 };
       },
@@ -215,11 +216,18 @@ export const adminApi = createApi({
     }),
     cancelOrder: builder.mutation({
       query: (orderId) => ({ url: `/order/${orderId}`, method: "DELETE" }),
-      invalidatesTags: ["Order"],
+      invalidatesTags: (result, error, orderId) => [
+        { type: "Order", id: orderId },
+        { type: "Order", id: "LIST" }
+      ],
     }),
     cancelRoomBooking: builder.mutation({
       query: (orderId) => ({ url: `/order/${orderId}/cancel-booking`, method: "POST" }),
-      invalidatesTags: ["Order"],
+      invalidatesTags: (result, error, orderId) => [
+        { type: "Order", id: orderId },
+        { type: "Order", id: "LIST" },
+        "Units"
+      ],
     }),
     getAnalytics: builder.query({
       query: ({ domain, range, from, to }) => {
@@ -360,7 +368,7 @@ export const adminApi = createApi({
     payOrder: builder.mutation({
       query: ({ orderId, paymentMethod, paymentMethods, settlementAmount, totalAmount }) => {
         const finalSettlement = settlementAmount !== undefined ? settlementAmount : totalAmount;
-        const body = { settlementAmount };
+        const body = { settlementAmount: finalSettlement };
         if (paymentMethods) {
           body.paymentMethods = paymentMethods;
         } else {
@@ -424,6 +432,7 @@ export const adminApi = createApi({
     getOrderById: builder.query({
       query: (orderId) => `/order/${orderId}`,
       transformResponse: (response) => response?.order || response,
+      providesTags: (result, error, orderId) => [{ type: "Order", id: orderId }],
     }),
   }),
 });

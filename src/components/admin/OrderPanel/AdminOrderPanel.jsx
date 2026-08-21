@@ -23,8 +23,7 @@ import {
   useGetMenuQuery,
 } from "../../../redux/adminRedux/adminAPI";
 import { showBill } from "../../../redux/adminRedux/billSlice";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
+
 import { ADMIN_COLORS } from "../../../redux/adminRedux/adminSlice";
 import { useNotification } from "../Bell/NotificationContext";
 
@@ -1242,7 +1241,7 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
   const colors = useSelector((state) => state.admin.theme.colors);
   const dispatch = useDispatch();
   const { notify, newItemsByOrderId, sseEvent } = useNotification() || {};
-  useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
+
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
   const cartCount = Object.values(cartItems).reduce(

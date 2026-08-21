@@ -1,24 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AdminHeader from "@/components/admin/adminLayout/AdminHeader";
 import { NotificationProvider } from "@/components/admin/Bell/NotificationContext";
 
 export default function AdminLayout() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("admin_token");
-    if (!token) {
-      navigate("/login", { replace: true });
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("admin-theme");
-    setIsDarkMode(savedTheme === "dark");
-  }, []);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("admin-theme") === "dark";
+  });
 
   useEffect(() => {
     const root = document.documentElement;

@@ -21,7 +21,7 @@ export default function RoomActionModal({
   const colors = useSelector((state) => state.admin.theme.colors);
   const isOccupied = room?.rawStatus === "OCCUPIED";
   const isBilled = room?.rawStatus === "BILLED";
-  const price = room?.roomCategory?.pricePerNight || room?.roomCategory?.priceConfig?.pricePerNight || 0;
+  const price = room?.roomCategory?.pricePerNight ?? room?.roomCategory?.priceConfig?.pricePerNight ?? 0;
 
   const [getOrder, { data: orderData, isLoading: isOrderLoading, error: orderError }] = useLazyGetOrderByIdQuery();
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -63,7 +63,7 @@ export default function RoomActionModal({
     }
 
     const payload = {
-      unitId: room?.unitId || room?.unitId,
+      unitId: room?.unitId,
       customerName: guestName.trim(),
       customerPhone: phone.trim(),
     };

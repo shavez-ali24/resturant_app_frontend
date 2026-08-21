@@ -6,7 +6,7 @@ export const clientApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: config.BASE_URL,
     prepareHeaders: (headers) => {
-      headers.set('Content-Type', 'application/json');
+      headers.set("Accept", "application/json");
       return headers;
     },
   }),
@@ -40,10 +40,17 @@ export const clientApi = createApi({
     }),
     getOrdersByFingerprint: builder.query({
       query: ({ fingerPrint }) => ({
-        url: '/api/order/fingerprint',
+        url: "/api/order/fingerprint",
         params: { fingerPrint },
       }),
-      providesTags: ['Order'],
+      transformResponse: (response) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.orders)) return response.orders;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
+      providesTags: ["Order"],
+      keepUnusedDataFor: 60,
     }),
     getQrInfo: builder.query({
       query: (unitId) => ({

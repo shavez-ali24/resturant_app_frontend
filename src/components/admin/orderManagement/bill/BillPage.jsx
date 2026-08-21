@@ -36,42 +36,12 @@ import {
   isEatHereOrder,
 } from "../commonOrderFile/utils";
 
-const ITEM_READY_CHANNEL = "kds-bill-item-ready-sync";
-const ORDER_STATUS_CHANNEL = "kds-bill-order-status-sync";
-
-const broadcastItemReady = (orderId, itemId, isReady) => {
-  try {
-    const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
-    channel.postMessage({ orderId, itemId, isReady });
-    channel.close();
-  } catch (e) {
-    console.warn("BroadcastChannel not supported:", e);
-  }
-};
-
-const broadcastOrderStatus = (orderId, status) => {
-  try {
-    const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
-    channel.postMessage({ orderId, status });
-    channel.close();
-  } catch (e) {
-    console.warn("BroadcastChannel not supported:", e);
-  }
-};
-
-const listenForItemReady = (callback) => {
-  if (typeof BroadcastChannel === "undefined") return () => {};
-  const channel = new BroadcastChannel(ITEM_READY_CHANNEL);
-  channel.onmessage = (event) => callback(event.data);
-  return () => channel.close();
-};
-
-const listenForOrderStatus = (callback) => {
-  if (typeof BroadcastChannel === "undefined") return () => {};
-  const channel = new BroadcastChannel(ORDER_STATUS_CHANNEL);
-  channel.onmessage = (event) => callback(event.data);
-  return () => channel.close();
-};
+import {
+  broadcastItemReady,
+  broadcastOrderStatus,
+  listenForItemReady,
+  listenForOrderStatus,
+} from "@/utils/orderSyncBroadcast";
 
 const BillPage = ({
   order,

@@ -26,20 +26,87 @@ import { useNotification } from "@/components/admin/Bell/NotificationContext";
    ─────────────────────────────────────────── */
 
 /** Trigger a file download from a URL */
-const downloadQR = async (url, filename) => {
+const downloadQR = async (url, filename, unitType, unitName, categoryName, sectionName) => {
   try {
     const response = await fetch(url);
     const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = filename || "qr-code.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  } catch {
-    // fallback: open in new tab
+
+    const hasCategoryOrSection =
+      (unitType === "ROOM" && categoryName) ||
+      (unitType === "TABLE" && sectionName);
+
+    if (hasCategoryOrSection) {
+      const blobUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = blobUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      URL.revokeObjectURL(blobUrl);
+
+      const canvas = document.createElement("canvas");
+      const qrSize = img.width || 1000;
+      const labelHeight = (img.height || 1120) - qrSize;
+      
+      canvas.width = qrSize;
+      canvas.height = qrSize + labelHeight;
+      const ctx = canvas.getContext("2d");
+
+      // Draw original image
+      ctx.drawImage(img, 0, 0);
+
+      // Draw white rect to cover old label
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, qrSize, qrSize, labelHeight);
+
+      // Draw separator line
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, qrSize);
+      ctx.lineTo(qrSize, qrSize);
+      ctx.stroke();
+
+      // Draw new text label
+      ctx.fillStyle = "#000000";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 72px Arial";
+      
+      let label = unitName;
+      if (unitType === "ROOM") {
+        const cat = categoryName ? categoryName.trim().toUpperCase() : "";
+        label = cat ? `${cat} ROOM - ${unitName}` : `ROOM - ${unitName}`;
+      } else if (unitType === "TABLE") {
+        const sec = sectionName ? sectionName.trim().toUpperCase() : "";
+        label = sec ? `${sec} TABLE - ${unitName}` : `TABLE - ${unitName}`;
+      }
+      ctx.fillText(label, qrSize / 2, qrSize + labelHeight / 2);
+
+      const finalBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      const finalUrl = URL.createObjectURL(finalBlob);
+      
+      const link = document.createElement("a");
+      link.href = finalUrl;
+      link.download = filename || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(finalUrl);
+    } else {
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }
+  } catch (err) {
+    console.error("Canvas QR download failed:", err);
     window.open(url, "_blank");
   }
 };
@@ -550,7 +617,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
    UNIT CARD (single table/room)
    ─────────────────────────────────────────── */
 
-function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
+function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode, sectionName }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const [imgError, setImgError] = useState(false);
   const { notify } = useNotification();
@@ -563,7 +630,14 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
 
   const handleDownload = () => {
     const filename = `${unit.type}_${unit.name}_qr.png`;
-    downloadQR(unit.qrCode?.url, filename);
+    downloadQR(
+      unit.qrCode?.url,
+      filename,
+      unit.type,
+      unit.name,
+      unit.roomCategory?.name,
+      sectionName
+    );
   };
 
   const handleToggleUnitActive = async (e) => {
@@ -904,9 +978,9 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <Table2 size={16} /> Tables ({tables.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(175px,1fr))] gap-3.5">
               {tables.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} sectionName={section.name} />
               ))}
             </div>
           </div>
@@ -917,9 +991,9 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <BedDouble size={16} /> {group.categoryName} ({group.units.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(175px,1fr))] gap-3.5">
               {group.units.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} sectionName={section.name} />
               ))}
             </div>
           </div>

@@ -255,7 +255,7 @@ export function SiteHeader({
                       className={`h-5 ${isDarkMode ? "bg-slate-700/40" : "bg-gray-300"}`}
                     />
                   )}
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <button
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs lg:text-sm font-bold rounded-lg transition-all duration-200 focus:outline-none select-none border border-transparent ${

@@ -39,8 +39,7 @@ import {
 import Heading from "../../common/Heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotify } from "../../common/NotificationModal";
-import { useAdminTour } from "../../../../hooks/useAdminTour";
-import { TOUR_KEYS, getSalesSteps } from "../../../../utils/adminTour";
+
 
 // Helper functions
 const formatCurrency = (amount) => {
@@ -156,7 +155,7 @@ export default function TopSellingAnalytics() {
     return () => obs.disconnect();
   }, []);
 
-  useAdminTour(TOUR_KEYS.sales, getSalesSteps, isDarkMode, 700);
+
   const [activeTab, setActiveTab] = useState("products");
   const [timeRange, setTimeRange] = useState("1d");
   const [showDatePicker, setShowDatePicker] = useState(false);

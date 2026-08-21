@@ -5,8 +5,7 @@ import {
   SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
-import { useAdminTour } from "../../../../hooks/useAdminTour";
-import { TOUR_KEYS, getCancelledSteps } from "../../../../utils/adminTour";
+
 import OrdersTable from "../pendingOrders/OrdersTable";
 import {
   Pagination, PaginationItem, PaginationLink,
@@ -36,7 +35,7 @@ const CancelledOrders = () => {
     return () => obs.disconnect();
   }, []);
 
-  useAdminTour(TOUR_KEYS.cancelled, getCancelledSteps, isDarkMode, 600);
+
 
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);

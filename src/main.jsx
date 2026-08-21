@@ -1,3 +1,8 @@
+try {
+  sessionStorage.removeItem("chunk_reload_attempted");
+} catch (_) {
+  // ignore
+}
 
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
@@ -38,16 +43,28 @@ const StaffManagement = lazy(() => import("./components/admin/Staff/StaffManagem
 const AdminOrderPanel = lazy(() => import("./components/admin/OrderPanel/AdminOrderPanel"));
 const TableManagement = lazy(() => import("./components/admin/tableManagement/TableManagement"));
 
-// Dynamic import failure (Chunk load error) catch karne ke liye
+// Dynamic import failure (Chunk load error) catch karne ke liye (one-time reload logic)
+const handleChunkError = () => {
+  try {
+    const hasReloaded = sessionStorage.getItem("chunk_reload_attempted");
+    if (!hasReloaded) {
+      sessionStorage.setItem("chunk_reload_attempted", "true");
+      window.location.reload();
+    }
+  } catch (_) {
+    window.location.reload();
+  }
+};
+
 window.addEventListener("error", (e) => {
   if (e.message && e.message.includes("Failed to fetch dynamically imported module")) {
-    window.location.reload();
+    handleChunkError();
   }
 }, true);
 
 window.addEventListener("unhandledrejection", (e) => {
   if (e.reason && e.reason.message && e.reason.message.includes("Failed to fetch dynamically imported module")) {
-    window.location.reload();
+    handleChunkError();
   }
 });
 

@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 import Heading from "../common/Heading";
 import { useNotify } from "../common/NotificationModal";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getStaffSteps } from "../../../utils/adminTour";
+
 
 const StaffManagement = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -43,7 +42,7 @@ const StaffManagement = () => {
     return () => obs.disconnect();
   }, []);
 
-  useAdminTour(TOUR_KEYS.staff, getStaffSteps, isDarkMode, 700);
+
 
   const navigate = useNavigate();
   const { data: staffData, isLoading, refetch } = useGetStaffQuery();

@@ -23,8 +23,7 @@ import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
 import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
 import { useNotify } from "../common/NotificationModal";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getMenuSteps } from "../../../utils/adminTour";
+
 
 import {
   useGetMenuQuery,
@@ -547,7 +546,7 @@ const Menu = () => {
   }, []);
   const navigate = useNavigate();
   const location = useLocation();
-  useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
+
 
   // Get user role
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;

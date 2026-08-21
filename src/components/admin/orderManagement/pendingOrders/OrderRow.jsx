@@ -1,8 +1,6 @@
-import React, { Suspense, lazy, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { showBill } from "@/redux/adminRedux/billSlice";
+import React, { useCallback, useMemo } from "react";
+import { useSelector } from "react-redux";
 import { Truck, Utensils, House, Bell } from "lucide-react";
-import { useNotification } from "@/components/admin/Bell/NotificationContext";
 import {
   formatOrderTableId,
   getOrderTypeBadgeClass,
@@ -11,19 +9,23 @@ import {
   getOrderIdShortValue,
   getOrderTypeKey,
   getOrderTypeLabel,
-  getStatusRowClass,
   isEatHereOrder,
 } from "../commonOrderFile/utils";
+import PendingOrderRowActions from "./PendingOrderRowActions";
 
-const PendingOrderRowActions = lazy(() => import("./PendingOrderRowActions"));
-
-const PendingOrderRowActionsFallback = () => (
-  <>
-    <td className="border py-2" aria-hidden="true" />
-    <td className="border py-2" aria-hidden="true" />
-    <td className="border py-2" aria-hidden="true" />
-  </>
-);
+// Static helper moved outside of the component to prevent recreation on every render
+const getOrderTypeIcon = (type) => {
+  switch (getOrderTypeKey(type)) {
+    case "eat_here":
+      return <Utensils size={13} />;
+    case "take_away":
+      return <House size={13} />;
+    case "delivery":
+      return <Truck size={13} />;
+    default:
+      return <Utensils size={13} />;
+  }
+};
 
 const OrderRow = ({
   order,
@@ -35,55 +37,49 @@ const OrderRow = ({
   tableType,
   onCustomizationsClick,
   showBillAttention,
-  onBillOpen,
+  handleBillClick,
   isDarkMode = false,
 }) => {
-  const dispatch = useDispatch();
-  const colors = useSelector((state) => state.admin.theme.colors);
+  // Safe Redux theme selection with reliable default fallbacks
+  const colors = useSelector((state) => state.admin.theme?.colors || {
+    primary: "#f97316",
+    primaryHover: "#ea580c",
+    primaryLight: "#fff7ed",
+    primaryText: "#ea580c",
+  });
 
-  const { setNewlyAddedItemsOrderIds } = useNotification() || {};
-
-  const handleBillClick = useCallback(() => {
-    // Clear NEW ORDER badge when bill is viewed
-    const oid = order?._id || order?.id || order?.orderId;
-    if (oid && setNewlyAddedItemsOrderIds) {
-      setNewlyAddedItemsOrderIds((prev) => {
-        const key = String(oid);
-        if (!prev.has(key)) return prev;
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
-    }
-    if (onBillOpen) onBillOpen();
-    dispatch(showBill(order));
-  }, [order, dispatch, onBillOpen, setNewlyAddedItemsOrderIds]);
-
-  const getOrderTypeIcon = (type) => {
-    switch (getOrderTypeKey(type)) {
-      case "eat_here": return <Utensils size={13} />;
-      case "take_away": return <House size={13} />;
-      case "delivery": return <Truck size={13} />;
-      default: return <Utensils size={13} />;
-    }
-  };
+  const onBillClick = useCallback(() => {
+    handleBillClick(order);
+  }, [order, handleBillClick]);
 
   const orderTypeLabel = getOrderTypeLabel(order.orderType);
   const orderTypeClass = getOrderTypeBadgeClass(order.orderType);
+  
   const tableLabel = formatOrderTableId(
     order.tableId || order.table || order.tableNumber ||
     order?.table?.name || order?.table?.tableNumber || order?.table?.number,
     order.source
   );
+  
   const customerName = getOrderCustomerName(order);
   const customerPhone = getOrderCustomerPhone(order);
   const orderIdDisplay = getOrderIdShortValue(order);
 
   const tdBase = `px-4 py-3 text-sm align-middle ${isDarkMode ? "text-slate-300" : "text-[#44403c]"}`;
 
+  // CSS variables style object for hover states instead of manual DOM mutations
+  const hoverStyles = useMemo(() => ({
+    "--hover-bg": isDarkMode ? "rgba(51, 65, 85, 0.6)" : `${colors.primary}08`,
+    "--hover-border": isDarkMode ? colors.primary : `${colors.primary}80`,
+    "--hover-text": isDarkMode ? colors.primary : colors.primaryText,
+    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#ffffff",
+    borderColor: isDarkMode ? "#475569" : "#ede8e3",
+    borderWidth: "1px",
+    color: isDarkMode ? "rgba(241, 245, 249, 0.9)" : "#57524e",
+  }), [isDarkMode, colors.primary, colors.primaryText]);
+
   return (
     <tr className={`transition-colors ${isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-50/60"}`}>
-
       {/* Date (non-pending) */}
       {tableType !== "pending" && (
         <td className={`${tdBase} text-center`}>{order.formattedDate || "—"}</td>
@@ -143,46 +139,31 @@ const OrderRow = ({
       {/* View Items & Bill */}
       <td className="px-4 py-3 align-middle text-center">
         <button
-          onClick={handleBillClick}
-          className={`rounded-xl px-4 py-2 text-xs font-extrabold transition-all duration-200 shadow-sm ${showBillAttention ? "bill-border-animate" : ""}`}
-          style={{
-            backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#ffffff',
-            borderColor: isDarkMode ? '#475569' : '#ede8e3',
-            borderWidth: '1px',
-            color: isDarkMode ? 'rgba(241, 245, 249, 0.9)' : '#57524e'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(51, 65, 85, 0.6)' : `${colors.primary}08`;
-            e.currentTarget.style.borderColor = isDarkMode ? colors.primary : `${colors.primary}80`;
-            e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#ffffff';
-            e.currentTarget.style.borderColor = isDarkMode ? '#475569' : '#ede8e3';
-            e.currentTarget.style.color = isDarkMode ? 'rgba(241, 245, 249, 0.9)' : '#57524e';
-          }}
+          type="button"
+          onClick={onBillClick}
+          className={`rounded-xl px-4 py-2 text-xs font-extrabold transition-all duration-200 shadow-sm hover:bg-[var(--hover-bg)] hover:border-[var(--hover-border)] hover:text-[var(--hover-text)] ${showBillAttention ? "bill-border-animate" : ""}`}
+          style={hoverStyles}
         >
           View Items & Bill
         </button>
       </td>
 
-      {/* Pending-only actions */}
+      {/* Pending-only actions (Statically imported action component instead of overhead row-level lazy loading) */}
       {tableType === "pending" && (
-        <Suspense fallback={<PendingOrderRowActionsFallback />}>
-          <PendingOrderRowActions
-            order={order}
-            setEditingOrder={setEditingOrder}
-            setShowConfirmDelete={setShowConfirmDelete}
-            setPayModalOrder={setPayModalOrder}
-            setMoveModalOrder={setMoveModalOrder}
-            updateOrder={updateOrder}
-            onCustomizationsClick={onCustomizationsClick}
-            isDarkMode={isDarkMode}
-          />
-        </Suspense>
+        <PendingOrderRowActions
+          order={order}
+          setEditingOrder={setEditingOrder}
+          setShowConfirmDelete={setShowConfirmDelete}
+          setPayModalOrder={setPayModalOrder}
+          setMoveModalOrder={setMoveModalOrder}
+          updateOrder={updateOrder}
+          onCustomizationsClick={onCustomizationsClick}
+          isDarkMode={isDarkMode}
+        />
       )}
     </tr>
   );
 };
 
-export default OrderRow;
+// Memoize the entire row to prevent unnecessary list re-renders
+export default React.memo(OrderRow);
