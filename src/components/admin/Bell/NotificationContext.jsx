@@ -16,7 +16,7 @@ export const useNotification = () => useContext(NotificationContext);
 
 const MAX_NOTIFICATIONS = 2; // Better UX - limit concurrent toasts on screen
 
-const NotificationToasts = lazy(() => import("./NotificationToasts"));
+const NotificationToasts = lazy(() => import("../common/AppNotificationToasts"));
 
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
 import { getFriendlyAdminMessage } from "@/utils/errorHelpers";

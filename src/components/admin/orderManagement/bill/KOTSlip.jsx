@@ -4,9 +4,9 @@
  * items with quantity. All text dark for clean print.
  */
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
-export default function KOTSlip({ order, restaurantDetails }) {
+const KOTSlip = ({ order, restaurantDetails }) => {
   const restaurantName =
     restaurantDetails?.restaurantName ||
     restaurantDetails?.name ||
@@ -18,15 +18,23 @@ export default function KOTSlip({ order, restaurantDetails }) {
     const number = order?.source?.number;
     if (section && number != null) {
       const labels = { indoor: "Indoor", outdoor: "Outdoor", rooftop: "Rooftop", rooms: "Room" };
-      const secLabel = labels[section] || section.charAt(0).toUpperCase() + section.slice(1);
+      const secLabel = labels[section] || (String(section).charAt(0).toUpperCase() + String(section).slice(1));
       const unit = order?.source?.type === "ROOM" ? "" : "Table";
       const loc = unit ? `${secLabel} ${unit} ${number}` : `${secLabel} ${number}`;
       return `${orderType} · ${loc}`;
     }
     return orderType || "N/A";
-  }, [order]);
+  }, [order?.orderType, order?.source]);
 
   const orderId = order?.orderId || order?._id?.slice(-4) || "N/A";
+
+  const formattedTime = useMemo(() => {
+    if (!order?.createdAt) return "N/A";
+    const date = new Date(order.createdAt);
+    return isNaN(date.getTime())
+      ? "N/A"
+      : date.toLocaleString("en-IN", { hour12: true });
+  }, [order?.createdAt]);
 
   return (
     <div className="p-6 text-sm" style={{ fontFamily: "monospace", color: "#000" }}>
@@ -55,11 +63,7 @@ export default function KOTSlip({ order, restaurantDetails }) {
         </div>
         <div className="flex justify-between">
           <span className="font-semibold">Time</span>
-          <span>
-            {order?.createdAt
-              ? new Date(order.createdAt).toLocaleString("en-IN", { hour12: true })
-              : "N/A"}
-          </span>
+          <span>{formattedTime}</span>
         </div>
       </div>
 
@@ -89,4 +93,6 @@ export default function KOTSlip({ order, restaurantDetails }) {
       </table>
     </div>
   );
-}
+};
+
+export default React.memo(KOTSlip);

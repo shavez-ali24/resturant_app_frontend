@@ -1,9 +1,18 @@
 import React from "react";
 import { useSelector } from "react-redux";
 
-export const OrderModeStatus = React.memo(({ label, isEnabled }) => {
-  const colors = useSelector((state) => state.admin.theme.colors);
-  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+export const OrderModeStatus = React.memo(({ label, isEnabled, isDarkMode: propIsDarkMode }) => {
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
+  const isDarkMode =
+    propIsDarkMode !== undefined
+      ? propIsDarkMode
+      : typeof document !== "undefined" &&
+        (document.documentElement.classList.contains("admin-dark") ||
+          document.documentElement.classList.contains("dark"));
 
   return (
     <div className="flex items-center justify-between py-2 px-1 border-b border-[#ede8e3]/50 last:border-b-0 dark:border-slate-700/50">

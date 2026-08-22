@@ -5,7 +5,11 @@ import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 
 export const FormCard = ({ title, icon, children, customIndex }) => {
-  const colors = useSelector((state) => state.admin.theme.colors);
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
 
   return (
     <motion.div

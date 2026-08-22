@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, Suspense, lazy, useMemo } from "react";
 import { 
   PanelRightClose, 
   Store, 
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const NotificationBell = lazy(() => import("../Bell/NotificationBell"));
-import { NavUser } from "@/components/admin/adminLayout/nav-user";
+import { NavUser } from "@/components/admin/adminLayout/NavUser";
 
 export function SiteHeader({
   isDarkMode = false,
@@ -41,7 +41,11 @@ export function SiteHeader({
 }) {
   const toggleSidebar = useSidebar().toggleSidebar;
   const { notify } = useNotification();
-  const colors = useSelector((state) => state.admin.theme.colors);
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryMid: "#fde68a",
+    primaryLight: "#fff8f5"
+  };
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -54,11 +58,6 @@ export function SiteHeader({
       navigate("/admin/orders");
     }
   };
-
-  const [hoverSidebarToggle, setHoverSidebarToggle] = useState(false);
-  const [hoverToggleCard, setHoverToggleCard] = useState(false);
-  const [hoverDarkToggle, setHoverDarkToggle] = useState(false);
-  const [hoverCancelBtn, setHoverCancelBtn] = useState(false);
 
   const { data: profileData, isLoading: profileLoading } =
     useGetRestaurantQuery();
@@ -188,9 +187,11 @@ export function SiteHeader({
     },
   ];
 
-  const filteredNavItems = navMainConfig.filter(
-    (item) => item.roles.includes(userRole || "admin")
-  );
+  const filteredNavItems = useMemo(() => {
+    return navMainConfig.filter(
+      (item) => item.roles.includes(userRole || "admin")
+    );
+  }, [userRole]);
 
   const isGroupActive = (items) => {
     return items.some(item => {
@@ -207,13 +208,20 @@ export function SiteHeader({
     return activeSubItem ? activeSubItem.title : item.title;
   };
 
+  // Reusable hover values based on CSS variables instead of dynamic inline JS event listeners
+  const cancelBtnStyle = {
+    "--hover-bg": isDarkMode ? "rgba(51, 65, 85, 0.95)" : colors.primaryLight,
+    borderColor: isDarkMode ? '#334155' : colors.primaryMid,
+    backgroundColor: isDarkMode ? '#0f172a' : '#ffffff',
+    color: isDarkMode ? '#e2e8f0' : '#374151'
+  };
+
   return (
     <>
       {/* Main Header */}
-      <header className={`sticky top-0 z-30 w-full border-b shadow-sm backdrop-blur-sm ${isDarkMode
-        ? "border-slate-700/60 bg-[#0f172a]/95"
-        : "border-[#ede8e3] bg-white/95"
-        }`}>
+      <header className={`sticky top-0 z-30 w-full border-b shadow-sm backdrop-blur-sm ${
+        isDarkMode ? "border-slate-700/60 bg-[#0f172a]/95" : "border-[#ede8e3] bg-white/95"
+      }`}>
         <div className="flex h-14 w-full flex-nowrap items-center justify-between gap-1.5 px-2.5 md:px-6">
           {/* Left Side - Menu Toggle */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -335,7 +343,7 @@ export function SiteHeader({
 
           {/* Right Side - Controls */}
           <div className="mt-0 flex shrink-0 items-center gap-1.5 sm:gap-2.5 md:gap-4">
-            {/* Status Toggle - styled as a clean indicator dot and text like the image */}
+            {/* Status Toggle */}
             {isAdmin && (
               <>
                 <button
@@ -347,8 +355,9 @@ export function SiteHeader({
                   <span
                     className={`h-2.5 w-2.5 rounded-full shrink-0 ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}
                   />
-                  <span className={`text-[10px] sm:text-xs md:text-sm font-black transition-colors select-none ${isDarkMode ? "text-slate-200 hover:text-slate-100" : "text-[#57524e] hover:text-[#1c1917]"
-                    }`}>
+                  <span className={`text-[10px] sm:text-xs md:text-sm font-black transition-colors select-none ${
+                    isDarkMode ? "text-slate-200 hover:text-slate-100" : "text-[#57524e] hover:text-[#1c1917]"
+                  }`}>
                     {isOpen === true ? 'Restaurant Open' : isOpen === false ? 'Restaurant Closed' : '...'}
                   </span>
                 </button>
@@ -359,15 +368,16 @@ export function SiteHeader({
               </>
             )}
 
-            {/* Live Orders shortcut button - only visible on other pages */}
+            {/* Live Orders shortcut button */}
             {location.pathname !== "/admin/orders" && (
               <>
                 <button
                   onClick={handleGoToLiveTables}
-                  className={`flex h-9 items-center justify-center rounded-full px-2 sm:px-3.5 text-xs font-black transition-all duration-150 active:scale-[0.95] border shadow-sm ${isDarkMode
+                  className={`flex h-9 items-center justify-center rounded-full px-2 sm:px-3.5 text-xs font-black transition-all duration-150 active:scale-[0.95] border shadow-sm ${
+                    isDarkMode
                       ? "border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
                       : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
-                    }`}
+                  }`}
                   style={{
                     backgroundColor: isDarkMode ? `${colors.primary}20` : `${colors.primary}08`,
                     borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}30`,
@@ -419,7 +429,7 @@ export function SiteHeader({
               />
             )}
 
-            {/* Profile Settings Link (Replaces dropdown) */}
+            {/* Profile Settings Link */}
             <button
               onClick={() => navigate("/admin/profile")}
               className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
@@ -432,7 +442,7 @@ export function SiteHeader({
         </div>
       </header>
 
-      {/* Confirmation Dialog - Fixed positioning */}
+      {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onClick={handleCancelToggle}>
           <div
@@ -477,17 +487,9 @@ export function SiteHeader({
             >
               <Button
                 onClick={handleCancelToggle}
-                onMouseEnter={() => setHoverCancelBtn(true)}
-                onMouseLeave={() => setHoverCancelBtn(false)}
                 variant="outline"
-                className="h-11 flex-1 rounded-xl border text-sm font-semibold transition-colors"
-                style={{
-                  borderColor: isDarkMode ? '#334155' : colors.primaryMid,
-                  backgroundColor: hoverCancelBtn
-                    ? (isDarkMode ? 'rgba(51, 65, 85, 0.95)' : colors.primaryLight)
-                    : (isDarkMode ? '#0f172a' : '#ffffff'),
-                  color: isDarkMode ? '#e2e8f0' : '#374151'
-                }}
+                style={cancelBtnStyle}
+                className="h-11 flex-1 rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--hover-bg)]"
               >
                 Cancel
               </Button>
@@ -497,7 +499,7 @@ export function SiteHeader({
                 className={`h-11 flex-1 rounded-xl border text-sm font-semibold transition-all duration-200 ${pendingStatus
                   ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-green-600'
                   : 'bg-gradient-to-r from-red-500 to-red-500 hover:from-red-600 hover:to-red-600 text-white border-red-600'
-                  }`}
+                }`}
               >
                 {toggleLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -514,9 +516,7 @@ export function SiteHeader({
           </div>
         </div>
       )}
-
     </>
   );
 }
-
 export default SiteHeader;

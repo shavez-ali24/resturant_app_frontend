@@ -78,7 +78,7 @@ export default function PayModal({ order, onClose }) {
 
   const percentValue = settlementPercent === "" ? 0 : Number(settlementPercent);
   const flatDiscountValue = settlementAmount === "" ? 0 : Number(settlementAmount);
-  
+
   const settlementValue = useMemo(() => {
     return settlementMode === "percent"
       ? netPayable - (netPayable * percentValue) / 100
@@ -88,7 +88,7 @@ export default function PayModal({ order, onClose }) {
   const cashAmountNum = Number(splitAmounts.CASH || 0);
   const upiAmountNum = Number(splitAmounts.UPI || 0);
   const cardAmountNum = Number(splitAmounts.CARD || 0);
-  
+
   const totalEnteredSplitAmount = useMemo(() => {
     return Number((cashAmountNum + upiAmountNum + cardAmountNum).toFixed(2));
   }, [cashAmountNum, upiAmountNum, cardAmountNum]);
@@ -109,7 +109,7 @@ export default function PayModal({ order, onClose }) {
       !isAlreadyPaid &&
       (isSplitPayment
         ? totalEnteredSplitAmount === Number(settlementValue.toFixed(2)) &&
-          [cashAmountNum, upiAmountNum, cardAmountNum].every(a => a >= 0)
+        [cashAmountNum, upiAmountNum, cardAmountNum].every(a => a >= 0)
         : paymentMethod !== null
       )
     );
@@ -129,7 +129,7 @@ export default function PayModal({ order, onClose }) {
   ]);
 
   const hasSettlementInput = settlementMode === "percent" ? settlementPercent !== "" : settlementAmount !== "";
-  
+
   const settlementInputInvalid = useMemo(() => {
     return (
       hasSettlementInput &&
@@ -505,11 +505,10 @@ export default function PayModal({ order, onClose }) {
                         }
                       }
                     }}
-                    className={`w-full rounded-xl border-2 py-2.5 pl-9 pr-3 text-sm font-bold outline-none transition-all focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary-alpha)] ${
-                      settlementInputInvalid
+                    className={`w-full rounded-xl border-2 py-2.5 pl-9 pr-3 text-sm font-bold outline-none transition-all focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary-alpha)] ${settlementInputInvalid
                         ? "border-red-400 bg-red-50 text-red-600 dark:border-red-500 dark:bg-red-900/20 dark:text-red-300"
                         : "border-gray-200 bg-white text-gray-800 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                    }`}
+                      }`}
                   />
                 </div>
                 {settlementMode === "percent" && percentValue > 100 && (
@@ -535,8 +534,8 @@ export default function PayModal({ order, onClose }) {
                   {!isSplitPayment && !paymentMethod
                     ? "⚠ Please select a payment method"
                     : isSplitPayment && remainingSplitAmount !== 0
-                    ? `⚠ Split total must match bill (₹${settlementValue.toFixed(2)}). Current sum is ₹${totalEnteredSplitAmount.toFixed(2)}`
-                    : "⚠ Invalid payment values"}
+                      ? `⚠ Split total must match bill (₹${settlementValue.toFixed(2)}). Current sum is ₹${totalEnteredSplitAmount.toFixed(2)}`
+                      : "⚠ Invalid payment values"}
                 </p>
               )}
 
@@ -544,11 +543,10 @@ export default function PayModal({ order, onClose }) {
               <button
                 type="submit"
                 disabled={!isValid || isLoading}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold transition-all active:scale-[0.97] ${
-                  isValid && !isLoading
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-extrabold transition-all active:scale-[0.97] ${isValid && !isLoading
                     ? "text-white hover:opacity-90 shadow-sm"
                     : "cursor-not-allowed bg-gray-200 text-gray-400 border border-transparent dark:bg-slate-700 dark:text-slate-500"
-                }`}
+                  }`}
                 style={isValid && !isLoading ? {
                   backgroundColor: colors.primary,
                   borderColor: colors.primary

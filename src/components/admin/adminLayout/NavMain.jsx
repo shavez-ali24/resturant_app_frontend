@@ -29,14 +29,17 @@ export function NavMain({ items, isDarkMode = false }) {
   const location = useLocation();
   const { hasUnreadSidebarNotification } = useNotification() || {};
   const hasNewItems = location.pathname !== "/admin/orders" && hasUnreadSidebarNotification;
-  const colors = useSelector((state) => state.admin.theme.colors) || { primary: "#f97316" };
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryMid: "#fde68a",
+    primaryLight: "#fff8f5"
+  };
 
   const { open, isMobile } = useSidebar();
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className={`text-[10px] font-semibold uppercase tracking-widest ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"
-        }`}>
+      <SidebarGroupLabel className={`text-[10px] font-semibold uppercase tracking-widest ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
         ADMIN
       </SidebarGroupLabel>
       <SidebarMenu className="mt-2">
@@ -61,15 +64,13 @@ export function NavMain({ items, isDarkMode = false }) {
                           ${isActive
                             ? "font-bold"
                             : isDarkMode
-                              ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
-                              : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
+                              ? "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
+                              : "text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
                           }
                         `}
                         style={{
                           borderLeft: '4px solid transparent',
-                          color: isActive
-                            ? (isDarkMode ? colors.primary : colors.primary)
-                            : undefined,
+                          color: isActive ? colors.primary : undefined,
                           backgroundColor: 'transparent'
                         }}
                       >
@@ -83,9 +84,7 @@ export function NavMain({ items, isDarkMode = false }) {
                               }
                             `}
                             style={{
-                              color: isActive
-                                ? (isDarkMode ? colors.primary : colors.primary)
-                                : undefined
+                              color: isActive ? colors.primary : undefined
                             }}
                           />
                           {item.title === "Orders" && hasNewItems && (
@@ -112,8 +111,9 @@ export function NavMain({ items, isDarkMode = false }) {
                     `}
                   >
                     {/* Header: Group Title */}
-                    <div className={`px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider border-b mb-1 ${isDarkMode ? "text-slate-500 border-slate-750" : "text-gray-400 border-gray-100"
-                      }`}>
+                    <div className={`px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider border-b mb-1 ${
+                      isDarkMode ? "text-slate-500 border-slate-750" : "text-gray-400 border-gray-100"
+                    }`}>
                       {item.title}
                     </div>
 
@@ -162,15 +162,13 @@ export function NavMain({ items, isDarkMode = false }) {
                       ${isDirectActive
                         ? "font-bold"
                         : isDarkMode
-                          ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
-                          : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
+                          ? "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
+                          : "text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
                       }
                     `}
                     style={{
                       borderLeft: '4px solid transparent',
-                      color: isDirectActive
-                        ? (isDarkMode ? colors.primary : colors.primary)
-                        : undefined,
+                      color: isDirectActive ? colors.primary : undefined,
                       backgroundColor: 'transparent'
                     }}
                   >
@@ -184,9 +182,7 @@ export function NavMain({ items, isDarkMode = false }) {
                           }
                         `}
                         style={{
-                          color: isDirectActive
-                            ? (isDarkMode ? colors.primary : colors.primary)
-                            : undefined
+                          color: isDirectActive ? colors.primary : undefined
                         }}
                       />
                     </div>
@@ -216,73 +212,69 @@ export function NavMain({ items, isDarkMode = false }) {
               <SidebarMenuItem className="rounded-md">
 
                 {/* Trigger Button */}
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className={`
-                      flex items-center w-full text-left py-2 text-[13px] transition-all duration-150 group
-                      group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
-                      ${isDirectActive
-                        ? "font-bold"
-                        : isDarkMode
-                          ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
-                          : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
-                      }
-                    `}
-                    style={{
-                      borderLeft: isDirectActive
-                        ? `4px solid ${colors.primary}`
-                        : '4px solid transparent',
-                      paddingLeft: isDirectActive ? '10px' : '14px',
-                      color: isDirectActive
-                        ? (isDarkMode ? colors.primary : colors.primary)
-                        : undefined,
-                      backgroundColor: 'transparent'
-                    }}
-                  >
-                    <div className="relative mr-2.5 flex shrink-0 group-data-[collapsible=icon]:mr-0">
-                      <item.icon
-                        className={`
-                          w-4 h-4 transition-colors duration-150
-                          ${!isDirectActive
-                            ? (isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#87807b] group-hover:text-[#1c1917]")
-                            : ""
-                          }
-                        `}
-                        style={{
-                          color: isDirectActive
-                            ? (isDarkMode ? colors.primary : colors.primary)
-                            : undefined
-                        }}
-                      />
-                      {item.title === "Orders" && hasNewItems && (
-                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className={`
+                        flex items-center w-full text-left py-2 text-[13px] transition-all duration-150 group
+                        group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2
+                        ${isDirectActive
+                          ? "font-bold"
+                          : isDarkMode
+                            ? "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
+                            : "text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
+                        }
+                      `}
+                      style={{
+                        borderLeft: isDirectActive
+                          ? `4px solid ${colors.primary}`
+                          : '4px solid transparent',
+                        paddingLeft: isDirectActive ? '10px' : '14px',
+                        color: isDirectActive ? colors.primary : undefined,
+                        backgroundColor: 'transparent'
+                      }}
+                    >
+                      <div className="relative mr-2.5 flex shrink-0 group-data-[collapsible=icon]:mr-0">
+                        <item.icon
+                          className={`
+                            w-4 h-4 transition-colors duration-150
+                            ${!isDirectActive
+                              ? (isDarkMode ? "text-slate-500 group-hover:text-slate-300" : "text-[#87807b] group-hover:text-[#1c1917]")
+                              : ""
+                            }
+                          `}
+                          style={{
+                            color: isDirectActive ? colors.primary : undefined
+                          }}
+                        />
+                        {item.title === "Orders" && hasNewItems && (
+                          <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="flex-1 truncate font-semibold group-data-[collapsible=icon]:hidden">{item.title}</span>
+
+                      {item.items?.length && (
+                        <ChevronRight
+                          className={`
+                            w-3.5 h-3.5 transition-transform duration-150 group-data-[collapsible=icon]:hidden
+                            ${isActive
+                              ? "rotate-90"
+                              : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#87807b] group-data-[state=open]:rotate-90"
+                            }
+                          `}
+                          style={{
+                            color: isDirectActive ? colors.primary : undefined
+                          }}
+                        />
                       )}
-                    </div>
-
-                    <span className="flex-1 truncate font-semibold group-data-[collapsible=icon]:hidden">{item.title}</span>
-
-                    {item.items?.length && (
-                      <ChevronRight
-                        className={`
-                          w-3.5 h-3.5 transition-transform duration-150 group-data-[collapsible=icon]:hidden
-                          ${isActive
-                            ? "rotate-90"
-                            : isDarkMode ? "text-slate-500 group-data-[state=open]:rotate-90" : "text-[#87807b] group-data-[state=open]:rotate-90"
-                          }
-                        `}
-                        style={{
-                          color: isDirectActive
-                            ? (isDarkMode ? colors.primary : colors.primary)
-                            : undefined
-                        }}
-                      />
-                    )}
-                  </button>
-                </CollapsibleTrigger>
+                    </button>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
 
                 {/* Submenu */}
                 {item.items?.length && (
@@ -301,15 +293,13 @@ export function NavMain({ items, isDarkMode = false }) {
                                 ${isSubActive
                                   ? "font-extrabold"
                                   : isDarkMode
-                                    ? "text-slate-400 hover:!bg-slate-800/40 hover:!text-slate-100"
-                                    : "text-[#57524e] hover:!bg-[#fbfaf8] hover:!text-[#1c1917]"
+                                    ? "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
+                                    : "text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917]"
                                 }
                               `}
                               style={{
                                 backgroundColor: 'transparent',
-                                color: isSubActive
-                                  ? (isDarkMode ? colors.primary : colors.primary)
-                                  : undefined,
+                                color: isSubActive ? colors.primary : undefined,
                                 borderLeft: isSubActive
                                   ? `3px solid ${colors.primary}`
                                   : '3px solid transparent',
@@ -340,3 +330,4 @@ export function NavMain({ items, isDarkMode = false }) {
     </SidebarGroup>
   );
 }
+export default NavMain;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import Heading from "../../common/Heading";
 import {
   Select, SelectContent, SelectGroup,
@@ -18,13 +18,13 @@ const selectItemCls =
   "cursor-pointer rounded-lg text-sm font-medium text-[#44403c] hover:bg-[#f7f3ef] data-[highlighted]:bg-[#f0ebe5] data-[highlighted]:text-[#1c1917] dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100";
 
 const CancelledOrders = () => {
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
     const update = () =>
@@ -34,8 +34,6 @@ const CancelledOrders = () => {
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
-
-
 
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,8 +49,15 @@ const CancelledOrders = () => {
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalPages = ordersResponse?.totalPages || 1;
 
-  const handleDateRangeChange = (v) => { setDateRange(v); setCurrentPage(1); };
-  const handlePageSizeChange = (v) => { setOrdersPerPage(Number(v)); setCurrentPage(1); };
+  const handleDateRangeChange = useCallback((v) => {
+    setDateRange(v);
+    setCurrentPage(1);
+  }, []);
+
+  const handlePageSizeChange = useCallback((v) => {
+    setOrdersPerPage(Number(v));
+    setCurrentPage(1);
+  }, []);
 
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
@@ -81,7 +86,7 @@ const CancelledOrders = () => {
           {/* Date range */}
           <Select value={dateRange} onValueChange={handleDateRangeChange}>
             <SelectTrigger className={`${triggerCls} sm:w-[145px]`}>
-              <SelectValue placeholder="Time Range" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent className={dropdownCls}>
               <SelectGroup>

@@ -1,17 +1,8 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import PayModal from "../pendingOrders/PayModal";
 import { useNotification } from "../../Bell/NotificationContext";
-
-const getOrderItemCartKey = (orderItem) => {
-  if (!orderItem) return "";
-  const itemId = orderItem.menuItemId || orderItem._id || orderItem.id;
-  const variant = orderItem.variant || orderItem.variantKey || orderItem.variantName;
-  const variantPart = variant ? `${itemId}-${variant}` : `${itemId}`;
-  const customizations = orderItem.customizations ? `:${String(orderItem.customizations).trim()}` : "";
-  return `${variantPart}${customizations}`;
-};
 import {
   useBillOrderMutation,
   useToggleItemReadyMutation,
@@ -25,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, ClipboardList, ListChecks, Printer } from "lucide-react";
+import { Plus, Minus, Trash2, Home, Truck, Utensils, Edit3, Save, X, Table2, Settings, LogOut, AlertTriangle, Printer } from "lucide-react";
 import {
   getOrderTypeBadgeClass,
   getOrderTypeItemClass,
@@ -43,6 +34,120 @@ import {
   listenForOrderStatus,
 } from "@/utils/orderSyncBroadcast";
 
+const getOrderItemCartKey = (orderItem) => {
+  if (!orderItem) return "";
+  const itemId = orderItem.menuItemId || orderItem._id || orderItem.id;
+  const variant = orderItem.variant || orderItem.variantKey || orderItem.variantName;
+  const variantPart = variant ? `${itemId}-${variant}` : `${itemId}`;
+  const customizations = orderItem.customizations ? `:${String(orderItem.customizations).trim()}` : "";
+  return `${variantPart}${customizations}`;
+};
+
+const getItemName = (item) => {
+  return item?.name || item?.menuItem?.name || "Item";
+};
+
+const getOrderTypeIcon = (type) => {
+  switch (getOrderTypeKey(type)) {
+    case "eat_here":
+      return <Utensils size={16} />;
+    case "take_away":
+      return <Home size={16} />;
+    case "delivery":
+      return <Truck size={16} />;
+    default:
+      return <Utensils size={16} />;
+  }
+};
+
+const buildItemCheckBase = (item) => {
+  const baseId =
+    item?.menuItemId ||
+    item?.menuItem?._id ||
+    item?.name ||
+    "item";
+  const variant = item?.variantName || item?.variant || "";
+  const customizations = item?.customizations || "";
+  return `${baseId}::${variant}::${customizations}`;
+};
+
+const normalizeItemsWithBillKeys = (items = [], previousItems = []) => {
+  const previousQueues = new Map();
+  previousItems.forEach((item) => {
+    const baseKey = buildItemCheckBase(item);
+    if (!baseKey) return;
+    if (!previousQueues.has(baseKey)) previousQueues.set(baseKey, []);
+    const key =
+      item?.billItemKey ||
+      `${baseKey}::${previousQueues.get(baseKey).length + 1}`;
+    previousQueues.get(baseKey).push(key);
+  });
+
+  const used = new Set();
+  const counters = new Map();
+
+  return items.map((item) => {
+    const baseKey = buildItemCheckBase(item);
+    let key;
+
+    const queue = previousQueues.get(baseKey);
+    if (queue && queue.length) {
+      while (queue.length && used.has(queue[0])) queue.shift();
+      if (queue.length) key = queue.shift();
+    }
+
+    if (!key) {
+      const nextCount = (counters.get(baseKey) || 0) + 1;
+      counters.set(baseKey, nextCount);
+      key = `${baseKey}::${nextCount}`;
+    }
+
+    used.add(key);
+    return { ...item, billItemKey: key };
+  });
+};
+
+const getNextBillItemKey = (items, baseKey) => {
+  let max = 0;
+  items.forEach((item) => {
+    const key = item?.billItemKey;
+    if (!key || !key.startsWith(`${baseKey}::`)) return;
+    const parts = key.split("::");
+    const last = parts[parts.length - 1];
+    const num = Number(last);
+    if (Number.isFinite(num)) max = Math.max(max, num);
+  });
+  return `${baseKey}::${max + 1}`;
+};
+
+const parseAmount = (value) => {
+  if (value == null) return 0;
+  if (typeof value === "number") return value;
+  const cleaned = String(value).replace(/[^\d.]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getFinalQR = (restaurantObj) => {
+  const rawQR =
+    (typeof restaurantObj?.qrCode === "string" ||
+      typeof restaurantObj?.qrCode === "number")
+      ? String(restaurantObj?.qrCode)
+      : (
+        restaurantObj?.qrCode?.url ||
+        restaurantObj?.qrCode?.secure_url ||
+        restaurantObj?.qrCode?.secureUrl ||
+        restaurantObj?.qrCode?.path ||
+        restaurantObj?.qrCode?.base64 ||
+        ""
+      );
+  const cleanedQR = String(rawQR || "").replace(/\s/g, "");
+  if (!cleanedQR) return "";
+  if (cleanedQR.startsWith("data:image")) return cleanedQR;
+  if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
+  return `data:image/png;base64,${cleanedQR}`;
+};
+
 const BillPage = ({
   order,
   restaurantDetails,
@@ -53,7 +158,7 @@ const BillPage = ({
   autoPrint = false
 }) => {
   const billRef = useRef();
-  const user = useSelector((state) => state.admin.user);
+  const user = useSelector((state) => state.admin?.user);
   const isStaff = user?.role === "staff";
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -74,7 +179,6 @@ const BillPage = ({
   const [billOrder, { isLoading: isBilling }] = useBillOrderMutation();
   const [fetchOrderById] = useLazyGetOrderByIdQuery();
 
-  // ✅ FIX: Ref to block SSE overwrite during post-save restore window
   const restoringRef = useRef(false);
 
   const activeOrder = localOrderData || order;
@@ -83,7 +187,6 @@ const BillPage = ({
 
   const notificationCtx = useNotification();
   const newItemsMap = notificationCtx?.newItemsByOrderId;
-  const newlyAddedSet = notificationCtx?.newlyAddedItemsOrderIds;
   const setNewItemsMap = notificationCtx?.setNewItemsByOrderId;
   const setNewlyAddedSet = notificationCtx?.setNewlyAddedItemsOrderIds;
 
@@ -91,74 +194,11 @@ const BillPage = ({
   const newItemsMapForThisOrder = newItemsMap && orderIdVal ? newItemsMap.get(String(orderIdVal)) : null;
   const hasNewClientItems = newItemsMapForThisOrder && newItemsMapForThisOrder.size > 0;
 
-  // ✅ FIX: Use activeOrder.status so checkboxes don't disappear after edit
   const showItemChecks = !isPreviewOnly && ["pending", "preparing", "ready"].includes(
     String(activeOrder?.status || "").toLowerCase()
   );
 
-  const orderStorageKey =
-    order?._id || order?.orderId || order?.id || "";
-
-  // Helper to build a stable key for an item (for matching across edit saves)
-  const buildItemCheckBase = (item) => {
-    const baseId =
-      item?.menuItemId ||
-      item?.menuItem?._id ||
-      item?.name ||
-      "item";
-    const variant = item?.variantName || item?.variant || "";
-    const customizations = item?.customizations || "";
-    return `${baseId}::${variant}::${customizations}`;
-  };
-
-  const normalizeItemsWithBillKeys = (items = [], previousItems = []) => {
-    const previousQueues = new Map();
-    previousItems.forEach((item) => {
-      const baseKey = buildItemCheckBase(item);
-      if (!baseKey) return;
-      if (!previousQueues.has(baseKey)) previousQueues.set(baseKey, []);
-      const key =
-        item?.billItemKey ||
-        `${baseKey}::${previousQueues.get(baseKey).length + 1}`;
-      previousQueues.get(baseKey).push(key);
-    });
-
-    const used = new Set();
-    const counters = new Map();
-
-    return items.map((item) => {
-      const baseKey = buildItemCheckBase(item);
-      let key;
-
-      const queue = previousQueues.get(baseKey);
-      if (queue && queue.length) {
-        while (queue.length && used.has(queue[0])) queue.shift();
-        if (queue.length) key = queue.shift();
-      }
-
-      if (!key) {
-        const nextCount = (counters.get(baseKey) || 0) + 1;
-        counters.set(baseKey, nextCount);
-        key = `${baseKey}::${nextCount}`;
-      }
-
-      used.add(key);
-      return { ...item, billItemKey: key };
-    });
-  };
-
-  const getNextBillItemKey = (items, baseKey) => {
-    let max = 0;
-    items.forEach((item) => {
-      const key = item?.billItemKey;
-      if (!key || !key.startsWith(`${baseKey}::`)) return;
-      const parts = key.split("::");
-      const last = parts[parts.length - 1];
-      const num = Number(last);
-      if (Number.isFinite(num)) max = Math.max(max, num);
-    });
-    return `${baseKey}::${max + 1}`;
-  };
+  const orderStorageKey = order?._id || order?.orderId || order?.id || "";
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -188,7 +228,6 @@ const BillPage = ({
           variantName: item.variant || item.variantName || null,
           variants: item.variants || item.menuItem?.variantRates || null,
           customizations: item.customizations || "",
-          // ✅ FIX: Preserve isReady when normalizing
           isReady: item.isReady || false,
         })),
         localOrderData?.items || []
@@ -220,12 +259,9 @@ const BillPage = ({
     }
   }, [order]);
 
-  // ✅ FIX: itemChecks — only update from backend when NOT in edit mode
-  // AND not in restore window (restoringRef)
+  // itemChecks — only update from backend when NOT in edit mode
   useEffect(() => {
-    // Do NOT overwrite during edit mode — user is actively editing
     if (isEditMode) return;
-    // Do NOT overwrite during restore window after save
     if (restoringRef.current) return;
 
     if (!showItemChecks || !orderStorageKey) {
@@ -243,7 +279,7 @@ const BillPage = ({
     setItemChecks(checks);
   }, [order, showItemChecks, orderStorageKey, isEditMode]);
 
-  // ✅ FIX: SSE updates — skip during edit mode and restore window
+  // SSE updates — skip during edit mode and restore window
   useEffect(() => {
     if (
       sseEvent?.type !== "ORDER_UPDATED" ||
@@ -253,9 +289,7 @@ const BillPage = ({
       return;
     }
 
-    // Skip SSE overwrite during restore window
     if (restoringRef.current) return;
-    // Skip SSE overwrite during edit mode
     if (isEditMode) return;
 
     const incomingData = sseEvent.data;
@@ -287,7 +321,7 @@ const BillPage = ({
     }
   }, [sseEvent, orderStorageKey, showItemChecks, isEditMode, fetchOrderById]);
 
-  const toggleItemCheck = async (itemKey) => {
+  const toggleItemCheck = useCallback(async (itemKey) => {
     const currentValue = itemChecks[itemKey] || false;
     const newValue = !currentValue;
 
@@ -311,11 +345,11 @@ const BillPage = ({
         }));
       }
     }
-  };
+  }, [itemChecks, isEditMode, localOrderData, order, orderStorageKey, toggleItemReady]);
 
   // Listen for BroadcastChannel updates from other tabs
   useEffect(() => {
-    if (!showItemChecks || !orderStorageKey) return () => {};
+    if (!showItemChecks || !orderStorageKey) return () => { };
 
     const cleanup = listenForItemReady(({ orderId, itemId, isReady }) => {
       if (String(orderId) === String(orderStorageKey)) {
@@ -330,7 +364,7 @@ const BillPage = ({
 
   // Listen for order status changes from KDS
   useEffect(() => {
-    if (!orderStorageKey) return () => {};
+    if (!orderStorageKey) return () => { };
 
     const cleanup = listenForOrderStatus(({ orderId, status }) => {
       if (String(orderId) === String(orderStorageKey)) {
@@ -370,14 +404,6 @@ const BillPage = ({
 
   const activeOrderTypeKey = getOrderTypeKey(activeOrder?.orderType);
 
-  const parseAmount = (value) => {
-    if (value == null) return 0;
-    if (typeof value === "number") return value;
-    const cleaned = String(value).replace(/[^\d.]/g, "");
-    const parsed = Number(cleaned);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
   const restaurantObj = restaurantDetails?.restaurant || restaurantDetails;
 
   const restaurantDeliveryCharge = parseAmount(restaurantObj?.deliveryCharges);
@@ -396,15 +422,8 @@ const BillPage = ({
       ? resolvedDeliveryCharge
       : 0;
 
-  // 🔧 FIX: Room charge from order document (source of truth)
-  // Backend billOrder saves roomCharge to order.stay.roomCharge
-  // Only show when stay.enabled === true (room order)
   const isStayEnabled = activeOrder?.stay?.enabled === true;
-  const getRoomCharge = () => {
-    if (!isStayEnabled) return 0;
-    return parseAmount(activeOrder?.stay?.roomCharge || 0);
-  };
-  const roomCharge = getRoomCharge();
+  const roomCharge = isStayEnabled ? parseAmount(activeOrder?.stay?.roomCharge || 0) : 0;
 
   const itemsSubtotal = recalcTotal(activeOrder?.items || []);
   const backendSubtotal = parseAmount(activeOrder?.subtotal);
@@ -429,7 +448,6 @@ const BillPage = ({
     ? computedGstAmount
     : (backendGstAmount || computedGstAmount);
 
-  // 🔧 FIX: Include roomCharge in grand total
   const computedGrandTotal = displaySubtotal + displayGstAmount + deliveryCharges + roomCharge;
   const backendGrandTotal = parseAmount(activeOrder?.totalAmount || 0);
   let displayGrandTotal = computedGrandTotal;
@@ -447,7 +465,7 @@ const BillPage = ({
 
   const totalAdvancePaid = activeOrder?.advancePayments?.reduce((sum, p) => sum + parseAmount(p.amount), 0) || 0;
   const isCompletedOrPaid = Boolean(
-    activeOrder?.paymentMethod || 
+    activeOrder?.paymentMethod ||
     (activeOrder?.paymentMethods && activeOrder.paymentMethods.length > 0)
   );
 
@@ -473,10 +491,6 @@ const BillPage = ({
   const billSurfaceClass = billThemeIsDark
     ? "bg-slate-950 text-slate-100"
     : "bg-white text-gray-900";
-  const billPanelClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
-  const billBorderClass = billThemeIsDark ? "border-slate-700" : "border-gray-200";
-  const billTextClass = billThemeIsDark ? "text-slate-100" : "text-gray-900";
-  const billMutedTextClass = billThemeIsDark ? "text-slate-300" : "text-gray-700";
   const billContentBgClass = billThemeIsDark ? "bg-slate-950" : "bg-white";
   const billInputClass = billThemeIsDark
     ? "border-slate-600 bg-slate-900 text-slate-100 hover:border-slate-500 focus:border-slate-500 focus:ring-2 focus:ring-slate-600"
@@ -494,32 +508,7 @@ const BillPage = ({
     ? "border-slate-600 bg-slate-900 text-orange-300 accent-orange-400"
     : "border-gray-300 text-orange-600 accent-orange-500";
 
-  const getFinalQR = () => {
-    const rawQR =
-      (typeof restaurantObj?.qrCode === "string" ||
-      typeof restaurantObj?.qrCode === "number")
-        ? String(restaurantObj?.qrCode)
-        : (
-            restaurantObj?.qrCode?.url ||
-            restaurantObj?.qrCode?.secure_url ||
-            restaurantObj?.qrCode?.secureUrl ||
-            restaurantObj?.qrCode?.path ||
-            restaurantObj?.qrCode?.base64 ||
-            ""
-          );
-    const cleanedQR = String(rawQR || "").replace(/\s/g, "");
-    if (!cleanedQR) return "";
-    if (cleanedQR.startsWith("data:image")) return cleanedQR;
-    if (/^https?:\/\//i.test(cleanedQR)) return cleanedQR;
-    return `data:image/png;base64,${cleanedQR}`;
-  };
-  const qrSrc = getFinalQR();
-
-  // =============================
-  // EDIT MODE FUNCTIONS
-  // =============================
-
-  const handleAddItem = (menuItemId) => {
+  const handleAddItem = useCallback((menuItemId) => {
     if (!localOrderData) return;
     const selected = menuItems.find(m => m._id === menuItemId);
     if (!selected) return;
@@ -543,7 +532,7 @@ const BillPage = ({
         price: selected.variantRates[firstVariant],
         customizations: "",
         billItemKey: nextKey,
-        isReady: false, // new item — always false
+        isReady: false,
       };
     } else {
       newItem = {
@@ -555,7 +544,7 @@ const BillPage = ({
         price: selected.price,
         customizations: "",
         billItemKey: nextKey,
-        isReady: false, // new item — always false
+        isReady: false,
       };
     }
 
@@ -566,9 +555,9 @@ const BillPage = ({
       items,
       totalAmount: recalcTotal(items)
     }));
-  };
+  }, [localOrderData, menuItems]);
 
-  const handleRemoveItem = (idx) => {
+  const handleRemoveItem = useCallback((idx) => {
     if (!localOrderData) return;
     if (localOrderData.items.length <= 1) {
       setError("Minimum 1 item required");
@@ -583,9 +572,9 @@ const BillPage = ({
       totalAmount: recalcTotal(items)
     }));
     setError("");
-  };
+  }, [localOrderData]);
 
-  const handleQuantityChange = (idx, qty) => {
+  const handleQuantityChange = useCallback((idx, qty) => {
     if (!localOrderData) return;
     const quantity = Math.max(1, parseInt(qty) || 1);
     const items = [...localOrderData.items];
@@ -596,9 +585,9 @@ const BillPage = ({
       items,
       totalAmount: recalcTotal(items)
     }));
-  };
+  }, [localOrderData]);
 
-  const handleVariantChange = (idx, variant) => {
+  const handleVariantChange = useCallback((idx, variant) => {
     if (!localOrderData) return;
     const items = [...localOrderData.items];
     const item = { ...items[idx] };
@@ -615,9 +604,9 @@ const BillPage = ({
       items,
       totalAmount: recalcTotal(items)
     }));
-  };
+  }, [localOrderData]);
 
-  const handleOrderTypeChange = (orderType) => {
+  const handleOrderTypeChange = useCallback((orderType) => {
     if (!localOrderData) return;
     const currentType = getOrderTypeKey(localOrderData.orderType);
     const newType = getOrderTypeKey(orderType);
@@ -639,20 +628,17 @@ const BillPage = ({
       orderType,
       deliveryCharges: newType === "delivery" ? defaultDeliveryCharge : 0
     }));
-  };
+  }, [localOrderData, order, restaurantDetails]);
 
-  const handleTableChange = (tableId) => {
+  const handleTableChange = useCallback((tableId) => {
     setSelectedTableId(tableId);
-  };
+  }, []);
 
-  const handleAddressChange = (e) => {
+  const handleAddressChange = useCallback((e) => {
     setAddress(e.target.value);
-  };
+  }, []);
 
-  // =============================
-  // SAVE CHANGES — MAIN FIX HERE
-  // =============================
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = useCallback(async () => {
     if (isSubmitting || !localOrderData) return;
 
     if (localOrderData.items.length === 0) {
@@ -675,7 +661,6 @@ const BillPage = ({
     setIsSubmitting(true);
     setError("");
 
-    // Helper to map selectedTableId to unitId from restaurantDetails sections
     const findUnitId = (tableIdVal, restDetails) => {
       if (!tableIdVal || !restDetails || !Array.isArray(restDetails.sections)) {
         return null;
@@ -809,9 +794,9 @@ const BillPage = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [localOrderData, selectedTableId, address, initialOrderSnapshot, order, restaurantDetails, updateOrder]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     const orderItems = Array.isArray(order?.items) ? order.items : [];
     const normalizedItems = normalizeItemsWithBillKeys(
       orderItems.map((item) => ({
@@ -838,9 +823,9 @@ const BillPage = ({
     setAddress(order.address || "");
     setIsEditMode(false);
     setError("");
-  };
+  }, [order, localOrderData]);
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     const printFrame = document.createElement("iframe");
     printFrame.style.position = "fixed";
     printFrame.style.right = "0";
@@ -911,9 +896,9 @@ const BillPage = ({
         document.body.removeChild(printFrame);
       }, 1000);
     };
-  };
+  }, []);
 
-  const handleBillOrder = async () => {
+  const handleBillOrder = useCallback(async () => {
     const orderId = activeOrder?._id || activeOrder?.id || activeOrder?.orderId;
     if (!orderId || isBilling || isAlreadyBilled || isPreviewOnly) return;
 
@@ -939,9 +924,9 @@ const BillPage = ({
     } catch (err) {
       setError(err?.data?.message || err?.message || "Failed to bill order");
     }
-  };
+  }, [activeOrder, isBilling, isAlreadyBilled, isPreviewOnly, billOrder]);
 
-  // Auto-print support for the layout card printer icon (one-click bill print)
+  // Auto-print support
   useEffect(() => {
     if (!autoPrint) return;
     const t = setTimeout(() => {
@@ -951,9 +936,9 @@ const BillPage = ({
       }
     }, 700);
     return () => clearTimeout(t);
-  }, [autoPrint, onClose]);
+  }, [autoPrint, onClose, handlePrint]);
 
-  const handleKOTPrint = () => {
+  const handleKOTPrint = useCallback(() => {
     const kotRestName =
       restaurantDetails?.restaurantName ||
       restaurantDetails?.name ||
@@ -961,7 +946,6 @@ const BillPage = ({
     const kotOrderId = activeOrder?.orderId || activeOrder?._id?.slice(-4) || "N/A";
     const kotItems = activeOrder?.items || [];
 
-    // Build type info with location
     const orderType = activeOrder?.orderType || "";
     const section = activeOrder?.source?.section;
     const number = activeOrder?.source?.number;
@@ -999,8 +983,8 @@ const BillPage = ({
           </thead>
           <tbody>
             ${kotItems.map(item => {
-              const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
-              return `
+      const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+      return `
                 <tr style="border-bottom:1px dotted #000">
                   <td style="padding:4px 0;color:#000">
                     ${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}
@@ -1009,7 +993,7 @@ const BillPage = ({
                   <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
                 </tr>
               `;
-            }).join("")}
+    }).join("")}
           </tbody>
         </table>
 
@@ -1053,9 +1037,9 @@ const BillPage = ({
         document.body.removeChild(printFrame);
       }, 1000);
     };
-  };
+  }, [activeOrder, restaurantDetails]);
 
-  const handleNewOrderKOTPrint = () => {
+  const handleNewOrderKOTPrint = useCallback(() => {
     if (!newItemsMapForThisOrder || newItemsMapForThisOrder.size === 0) return;
 
     const kotRestName =
@@ -1063,8 +1047,7 @@ const BillPage = ({
       restaurantDetails?.name ||
       "Restaurant";
     const kotOrderId = activeOrder?.orderId || activeOrder?._id?.slice(-4) || "N/A";
-    
-    // Filter activeOrder.items to find new items and map their quantities
+
     const kotItems = [];
     (activeOrder?.items || []).forEach(item => {
       const key = getOrderItemCartKey(item);
@@ -1081,7 +1064,6 @@ const BillPage = ({
 
     if (kotItems.length === 0) return;
 
-    // Build type info with location
     const orderType = activeOrder?.orderType || "";
     const section = activeOrder?.source?.section;
     const number = activeOrder?.source?.number;
@@ -1119,8 +1101,8 @@ const BillPage = ({
           </thead>
           <tbody>
             ${kotItems.map(item => {
-              const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
-              return `
+      const cust = item.customizations ? `<div style="font-size:10px;color:#333;margin-top:2px;font-style:italic;">* Customization: ${item.customizations}</div>` : "";
+      return `
                 <tr style="border-bottom:1px dotted #000">
                   <td style="padding:4px 0;color:#000">
                     ${getItemName(item)}${(item.variant || item.variantName) ? ` <span style="color:#000">(${item.variant || item.variantName})</span>` : ""}
@@ -1129,7 +1111,7 @@ const BillPage = ({
                   <td style="padding:4px 0;text-align:right;font-weight:500;color:#000;vertical-align:top;">${item.quantity || 1}</td>
                 </tr>
               `;
-            }).join("")}
+    }).join("")}
           </tbody>
         </table>
 
@@ -1170,8 +1152,7 @@ const BillPage = ({
         printFrame.contentWindow.print();
         setTimeout(() => {
           document.body.removeChild(printFrame);
-          
-          // Clear notification keys so button goes away!
+
           if (setNewItemsMap && orderIdVal) {
             setNewItemsMap((prev) => {
               const next = new Map(prev);
@@ -1179,34 +1160,12 @@ const BillPage = ({
               return next;
             });
           }
-          if (setNewlyAddedSet && orderIdVal) {
-            setNewlyAddedSet((prev) => {
-              const next = new Set(prev);
-              next.delete(String(orderIdVal));
-              return next;
-            });
-          }
         }, 1000);
       }, 500);
     };
-  };
+  }, [newItemsMapForThisOrder, activeOrder, restaurantDetails, setNewItemsMap, orderIdVal]);
 
-  const getItemName = (item) => {
-    return item?.name || item?.menuItem?.name || "Item";
-  };
-
-  const getOrderTypeIcon = (type) => {
-    switch (getOrderTypeKey(type)) {
-      case "eat_here":
-        return <Utensils size={16} />;
-      case "take_away":
-        return <Home size={16} />;
-      case "delivery":
-        return <Truck size={16} />;
-      default:
-        return <Utensils size={16} />;
-    }
-  };
+  const qrSrc = getFinalQR(restaurantObj);
   const getOrderTypeBadge = (type) => getOrderTypeBadgeClass(type);
 
   const MotionDiv = motion.div;
@@ -1217,47 +1176,47 @@ const BillPage = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
-      onClick={onClose}
+      onClick={(e) => {
+        // Only close when clicking the backdrop itself, not when PayModal or
+        // any child triggers a bubbled click on this wrapper.
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <MotionDiv
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.4)] ${
-          isDarkMode
+        className={`relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-[0_20px_45px_-24px_rgba(249,115,22,0.4)] ${isDarkMode
             ? "border-slate-700 bg-[#1e293b] text-slate-100"
             : "border-[#ede8e3] bg-white"
-        }`}
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between border-b p-4 ${
-            isDarkMode
+          className={`flex items-center justify-between border-b p-4 ${isDarkMode
               ? "border-slate-700 bg-slate-800/60"
               : "border-[#ede8e3] bg-[#f7f3ef]"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
               {isPreviewOnly ? "New Items Bill Preview" : "Order Details & Bill"}
             </h3>
             {isPreviewOnly && (
-              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                isDarkMode
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${isDarkMode
                   ? "border-sky-500/40 bg-sky-500/20 text-sky-200"
                   : "border-sky-200 bg-sky-100 text-sky-700"
-              }`}>
+                }`}>
                 {order?.previewLabel || "New Items Only"}
               </span>
             )}
-            {isStaff && !isEditMode && (
-              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                isDarkMode
+            {isStaff && !isEditMode && !isPreviewOnly && (
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${isDarkMode
                   ? "border-orange-500/40 bg-orange-500/20 text-orange-200"
                   : "border-orange-200 bg-orange-100 text-orange-700"
-              }`}>
+                }`}>
                 Staff View
               </span>
             )}
@@ -1266,11 +1225,10 @@ const BillPage = ({
             {isStaff && !isEditMode && !isPreviewOnly && (
               <button
                 onClick={() => setIsEditMode(true)}
-                className={`relative rounded-lg p-2 transition-colors ${
-                  isDarkMode
+                className={`relative rounded-lg p-2 transition-colors ${isDarkMode
                     ? "text-orange-300 hover:bg-slate-800"
                     : "text-orange-700 hover:bg-orange-100"
-                }`}
+                  }`}
                 title="Edit Order"
               >
                 <Edit3 size={18} />
@@ -1278,11 +1236,10 @@ const BillPage = ({
             )}
             <button
               onClick={onClose}
-              className={`rounded-full p-1 transition-colors ${
-                isDarkMode
+              className={`rounded-full p-1 transition-colors ${isDarkMode
                   ? "text-slate-400 hover:bg-slate-800 hover:text-orange-300"
                   : "text-gray-400 hover:bg-orange-100 hover:text-orange-700"
-              }`}
+                }`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor">
                 <path
@@ -1298,18 +1255,16 @@ const BillPage = ({
 
         {/* Edit Mode Header */}
         {isEditMode && (
-          <div className={`flex items-center justify-between border-b px-4 py-2 ${
-            isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-100 bg-orange-50/80"
-          }`}>
+          <div className={`flex items-center justify-between border-b px-4 py-2 ${isDarkMode ? "border-slate-700 bg-slate-900" : "border-orange-100 bg-orange-50/80"
+            }`}>
             <span className={`text-sm font-medium ${isDarkMode ? "text-orange-300" : "text-orange-700"}`}>Edit Mode</span>
             <div className="flex gap-2">
               <button
                 onClick={handleCancelEdit}
-                className={`rounded-lg p-1.5 transition-colors ${
-                  isDarkMode
+                className={`rounded-lg p-1.5 transition-colors ${isDarkMode
                     ? "text-slate-400 hover:bg-slate-800"
                     : "text-gray-500 hover:bg-orange-100"
-                }`}
+                  }`}
                 title="Cancel"
               >
                 <X size={16} />
@@ -1317,11 +1272,10 @@ const BillPage = ({
               <button
                 onClick={handleSaveChanges}
                 disabled={isSubmitting}
-                className={`rounded-lg p-1.5 transition-colors disabled:opacity-50 ${
-                  isDarkMode
+                className={`rounded-lg p-1.5 transition-colors disabled:opacity-50 ${isDarkMode
                     ? "text-emerald-300 hover:bg-emerald-500/15"
                     : "text-green-600 hover:bg-green-100"
-                }`}
+                  }`}
                 title="Save"
               >
                 <Save size={16} />
@@ -1332,9 +1286,8 @@ const BillPage = ({
 
         {/* Error Message */}
         {error && (
-          <div className={`border-b px-4 py-2 ${
-            isDarkMode ? "border-red-500/40 bg-red-500/15" : "border-red-200 bg-red-50"
-          }`}>
+          <div className={`border-b px-4 py-2 ${isDarkMode ? "border-red-500/40 bg-red-500/15" : "border-red-200 bg-red-50"
+            }`}>
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
@@ -1344,18 +1297,18 @@ const BillPage = ({
           <div ref={billRef} className={`printable-bill ${billSurfaceClass}`}>
 
             {/* Restaurant Header */}
-            <div className={`mb-4 border-b pb-4 ${billBorderClass}`}>
+            <div className="mb-4 border-b pb-4 border-gray-200">
               <div className="flex flex-col items-center text-center">
-                <h2 className={`text-xl font-bold ${billTextClass}`}>{restaurantName}</h2>
-                <p className={`text-sm ${billTextClass}`}>{restaurantAddress}</p>
-                <p className={`text-sm ${billTextClass}`}>Phone: {restaurantPhone}</p>
+                <h2 className="text-xl font-bold text-gray-900">{restaurantName}</h2>
+                <p className="text-sm text-gray-900">{restaurantAddress}</p>
+                <p className="text-sm text-gray-900">Phone: {restaurantPhone}</p>
                 {restaurantGstin && (
-                  <p className={`text-sm ${billTextClass}`}>GSTIN: {restaurantGstin}</p>
+                  <p className="text-sm text-gray-900">GSTIN: {restaurantGstin}</p>
                 )}
               </div>
             </div>
- 
-            {/* Order Creator (screen only, hidden on print) */}
+
+            {/* Order Creator */}
             {(() => {
               const role = (activeOrder?.createdByRole || "user").toLowerCase();
               const label = role === "admin" ? "Admin" : role === "staff" ? "Staff" : "User";
@@ -1363,20 +1316,20 @@ const BillPage = ({
                 role === "admin"
                   ? "border-orange-200 bg-orange-100 text-orange-700"
                   : role === "staff"
-                  ? "border-blue-200 bg-blue-100 text-blue-700"
-                  : "border-green-200 bg-green-100 text-green-700";
+                    ? "border-blue-200 bg-blue-100 text-blue-700"
+                    : "border-green-200 bg-green-100 text-green-700";
               return (
-                <div className="no-print mb-3 flex items-center gap-2 text-sm">
-                  <span className={`${billTextClass} font-medium`}>Order Created By:</span>
+                <div className="no-print mb-3 flex items-center gap-2 text-sm text-gray-900">
+                  <span className="font-medium text-gray-900">Order Created By:</span>
                   <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${badgeClass}`}>
                     {label}
                   </span>
                 </div>
               );
             })()}
- 
+
             {/* Customer & Order Info */}
-            <div className={`mb-4 grid grid-cols-2 gap-x-4 text-sm ${billTextClass}`}>
+            <div className="mb-4 grid grid-cols-2 gap-x-4 text-sm text-gray-900">
               <p>
                 <strong>Customer:</strong> {activeOrder?.customerName || "Guest"}
               </p>
@@ -1390,9 +1343,9 @@ const BillPage = ({
                   </strong>{" "}
                   {(activeOrder?.source?.section || activeOrder?.source?.sectionName)
                     ? (() => {
-                        const label = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
-                        return label || "—";
-                      })()
+                      const label = formatOrderTableId(activeOrder?.tableId, activeOrder?.source);
+                      return label || "—";
+                    })()
                     : activeOrder.tableId
                   }
                 </p>
@@ -1415,7 +1368,7 @@ const BillPage = ({
             </div>
 
             {activeOrderTypeKey === "delivery" && displayAddress && (
-              <div className={`mb-4 rounded border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
+              <div className="mb-4 rounded border p-3 text-sm border-gray-250 bg-gray-50">
                 <strong>Delivery Address:</strong>
                 <br />
                 {displayAddress}
@@ -1425,7 +1378,6 @@ const BillPage = ({
             {/* EDIT MODE: Order Type & Table/Address */}
             {isEditMode && (
               <div className="mb-4 space-y-3">
-                {/* Order Type */}
                 <div>
                   <label className={`mb-1 block text-sm font-medium ${billMutedTextClass}`}>
                     Order Type
@@ -1434,7 +1386,7 @@ const BillPage = ({
                     value={localOrderData?.orderType}
                     onValueChange={handleOrderTypeChange}
                   >
-                    <SelectTrigger 
+                    <SelectTrigger
                       className={`h-10 w-full rounded-xl border px-3 text-sm font-medium shadow-sm ring-1 ring-black/5 transition-all outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 ${getOrderTypeBadge(localOrderData?.orderType)}`}
                       style={localOrderData?.orderType === "Room Stay" ? {
                         backgroundColor: isDarkMode ? 'rgba(71, 85, 105, 0.35)' : '#f5f5f4',
@@ -1482,18 +1434,18 @@ const BillPage = ({
                 </div>
 
                 {/* Table / Room Selection - Eat Here */}
-                 {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && order?.orderType !== "Eat Here" && order?.orderType !== "Room Stay" && (() => {
+                {getOrderTypeKey(localOrderData?.orderType) === "eat_here" && order?.orderType !== "Eat Here" && order?.orderType !== "Room Stay" && (() => {
                   const sec = restaurantDetails?.sections || {};
-                  const indoorCount  = sec.indoor?.tables  || restaurantDetails?.tableNumbers || 0;
+                  const indoorCount = sec.indoor?.tables || restaurantDetails?.tableNumbers || 0;
                   const outdoorCount = sec.outdoor?.tables || 0;
                   const rooftopCount = sec.rooftop?.tables || 0;
-                  const roomsCount   = sec.rooms?.rooms    || 0;
+                  const roomsCount = sec.rooms?.rooms || 0;
 
                   const sectionDefs = [
-                    { key: "indoor",  label: "Indoor",  count: indoorCount,  unit: "Table" },
+                    { key: "indoor", label: "Indoor", count: indoorCount, unit: "Table" },
                     { key: "outdoor", label: "Outdoor", count: outdoorCount, unit: "Table" },
                     { key: "rooftop", label: "Rooftop", count: rooftopCount, unit: "Table" },
-                    { key: "rooms",   label: "Rooms",   count: roomsCount,   unit: "Room"  },
+                    { key: "rooms", label: "Rooms", count: roomsCount, unit: "Room" },
                   ].filter(s => s.count > 0);
 
                   const [selSection, selNum] = selectedTableId ? selectedTableId.split(":") : ["", ""];
@@ -1537,13 +1489,12 @@ const BillPage = ({
                                 <button
                                   type="button"
                                   onClick={() => handleTableChange(isSelected ? "" : `${key}:1`)}
-                                  className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
-                                    isSelected
+                                  className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${isSelected
                                       ? "border-orange-500 bg-orange-500 text-white"
                                       : billThemeIsDark
                                         ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-orange-400"
                                         : "border-gray-200 bg-white text-gray-700 hover:border-orange-400"
-                                  }`}
+                                    }`}
                                 >
                                   <span className="flex-1 text-left">{label}</span>
                                   <span className={`text-xs font-normal ${isSelected ? "text-white/80" : billThemeIsDark ? "text-slate-400" : "text-gray-400"}`}>
@@ -1594,7 +1545,7 @@ const BillPage = ({
             )}
 
             {/* Items Table */}
-            <table className={`mb-4 w-full border-y text-sm ${billBorderClass}`}>
+            <table className="mb-4 w-full border-y text-sm border-gray-300">
               <thead>
                 <tr className="bg-transparent">
                   <th className="py-2 px-2 text-left">Item</th>
@@ -1622,15 +1573,15 @@ const BillPage = ({
                   const itemVariant = item.variantName || item.variant;
 
                   return (
-                    <tr key={i} className={`border-b ${billBorderClass}`}>
+                    <tr key={i} className="border-b border-gray-200">
                       <td className="py-1.5 px-2">
                         <div>
                           {getItemName(item)}
                           {itemVariant && (
-                            <div className={`text-xs ${billTextClass}`}>({itemVariant})</div>
+                            <div className="text-xs text-gray-900">({itemVariant})</div>
                           )}
                           {item.comboItems && (
-                            <div className={`text-xs ${billTextClass}`}>
+                            <div className="text-xs text-gray-900">
                               Combo: {item.comboItems.length} items
                             </div>
                           )}
@@ -1749,7 +1700,7 @@ const BillPage = ({
             )}
 
             {/* Totals */}
-            <div className={`ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm ${billBorderClass} ${billPanelClass}`}>
+            <div className="ml-auto max-w-xs space-y-1 rounded-xl border p-3 text-sm border-gray-300 bg-gray-50 text-gray-900">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>₹{displaySubtotal.toFixed(2)}</span>
@@ -1762,7 +1713,6 @@ const BillPage = ({
                 </div>
               )}
 
-              {/* 🔧 FIX: Show room charge only when stay.enabled === true (room order) */}
               {isStayEnabled && roomCharge > 0 && (
                 <div className="flex justify-between">
                   <span>Room Charges</span>
@@ -1777,14 +1727,14 @@ const BillPage = ({
                 </div>
               )}
 
-              <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass}`}>
+              <div className="flex justify-between font-bold border-t pt-2 mt-2 border-gray-300">
                 <span>Grand Total</span>
                 <span>₹{displayGrandTotal.toFixed(2)}</span>
               </div>
 
               {activeOrder?.advancePayments && activeOrder.advancePayments.length > 0 && (
                 <>
-                  <div className={`mt-2 border-t pt-2 border-dashed ${billBorderClass}`}>
+                  <div className="mt-2 border-t pt-2 border-dashed border-gray-300">
                     <span className="text-xs font-bold block mb-1">Advance Payments:</span>
                     {activeOrder.advancePayments.map((adv, idx) => {
                       const fallbackDate = adv.paidAt || adv.createdAt || adv.date || activeOrder?.createdAt || new Date();
@@ -1796,10 +1746,10 @@ const BillPage = ({
                         hour12: true,
                       });
                       return (
-                        <div key={adv._id || idx} className={`flex justify-between text-xs mt-1 ${billTextClass}`}>
+                        <div key={adv._id || idx} className="flex justify-between text-xs mt-1 text-gray-900">
                           <span>
-                            <span className="font-semibold uppercase">{adv.paymentMethod}</span> 
-                            <span className="text-[10px] font-bold text-gray-900 dark:text-white ml-1.5">({advDate})</span>
+                            <span className="font-semibold uppercase">{adv.paymentMethod}</span>
+                            <span className="text-[10px] font-bold text-gray-900 ml-1.5">({advDate})</span>
                           </span>
                           <span className="font-medium">₹{Number(adv.amount || 0).toFixed(2)}</span>
                         </div>
@@ -1807,7 +1757,7 @@ const BillPage = ({
                     })}
                   </div>
                   {!isCompletedOrPaid && (
-                    <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass}`}>
+                    <div className="flex justify-between font-bold border-t pt-2 mt-2 border-gray-300">
                       <span>Net Payable</span>
                       <span>₹{Math.max(0, displayGrandTotal - totalAdvancePaid).toFixed(2)}</span>
                     </div>
@@ -1818,12 +1768,12 @@ const BillPage = ({
               {!isEditMode && activeOrder?.settlementAmount !== null && activeOrder?.settlementAmount !== undefined && (
                 <>
                   {displayGrandTotal - activeOrder.settlementAmount > 0.01 && (
-                    <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                    <div className="flex justify-between text-xs font-semibold mt-1 text-gray-900">
                       <span>Discount (Settlement)</span>
                       <span>-₹{(displayGrandTotal - activeOrder.settlementAmount).toFixed(2)}</span>
                     </div>
                   )}
-                  <div className={`flex justify-between font-bold border-t pt-2 mt-2 ${billBorderClass} ${billTextClass}`}>
+                  <div className="flex justify-between font-bold border-t pt-2 mt-2 border-gray-300 text-gray-900">
                     <span>Settled Amount</span>
                     <span>₹{parseAmount(activeOrder.settlementAmount).toFixed(2)}</span>
                   </div>
@@ -1832,39 +1782,37 @@ const BillPage = ({
 
               {!isEditMode && activeOrder?.paymentMethods && activeOrder.paymentMethods.length > 0 ? (
                 activeOrder.paymentMethods.map((p, idx) => (
-                  <div key={idx} className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                  <div key={idx} className="flex justify-between text-xs font-semibold mt-1 text-gray-900">
                     <span className="uppercase">{p.method} Payment</span>
                     <span>₹{Number(p.amount || 0).toFixed(2)}</span>
                   </div>
                 ))
               ) : !isEditMode && activeOrder?.paymentMethod ? (
-                <div className={`flex justify-between text-xs font-semibold mt-1 ${billTextClass}`}>
+                <div className="flex justify-between text-xs font-semibold mt-1 text-gray-900">
                   <span>Payment Method</span>
                   <span className="uppercase">{activeOrder.paymentMethod}</span>
                 </div>
               ) : null}
             </div>
 
-            <p className={`mt-4 border-t pt-3 text-center text-xs ${billBorderClass} ${billTextClass}`}>
+            <p className="mt-4 border-t pt-3 text-center text-xs border-gray-300 text-gray-900">
               Hope to serve you again soon! 😊🍽️
             </p>
           </div>
         </div>
 
         {/* Footer - Responsive buttons */}
-        <div className={`flex flex-wrap items-center justify-end gap-2.5 border-t p-4 sm:p-5 ${
-          isDarkMode
+        <div className={`flex flex-wrap items-center justify-end gap-2.5 border-t p-4 sm:p-5 ${isDarkMode
             ? "border-slate-700 bg-slate-800/40"
             : "border-[#ede8e3] bg-[#fbfaf8]"
-        }`}>
+          }`}>
           {isEditMode && (
             <button
               onClick={handleCancelEdit}
-              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 ${
-                isDarkMode
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 ${isDarkMode
                   ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
                   : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
-              }`}
+                }`}
             >
               Cancel
             </button>
@@ -1873,11 +1821,10 @@ const BillPage = ({
           {hasNewClientItems && (
             <button
               onClick={handleNewOrderKOTPrint}
-              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
-                isDarkMode
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${isDarkMode
                   ? "border-amber-500 bg-amber-950/40 text-amber-300 hover:bg-amber-950/60"
                   : "border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100/90"
-              }`}
+                }`}
             >
               New Order KOT
             </button>
@@ -1886,27 +1833,25 @@ const BillPage = ({
           {(isPreviewOnly || !isAlreadyBilled) && (
             <button
               onClick={handleKOTPrint}
-              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
-                isDarkMode
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${isDarkMode
                   ? "border-orange-500/35 bg-orange-950/20 text-orange-400 hover:bg-orange-950/40"
                   : "border-orange-200 bg-[#fff8f5] text-orange-700 hover:bg-[#ffedd5] hover:border-orange-350"
-              }`}
+                }`}
             >
               KOT
             </button>
           )}
- 
+
           {!isPreviewOnly && !isAlreadyBilled && (
             <button
               onClick={handleBillOrder}
               disabled={isBilling}
-              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 shadow-sm ${
-                isBilling
+              className={`flex h-11 items-center rounded-xl border px-5 text-sm font-black transition-all duration-200 shadow-sm ${isBilling
                   ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-60"
                   : isDarkMode
                     ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-950/40 active:scale-[0.97]"
                     : "border-emerald-200 bg-[#f0fdf4] text-emerald-700 hover:bg-[#dcfce7] hover:border-emerald-300 active:scale-[0.97]"
-              }`}
+                }`}
             >
               {isBilling ? "Billing..." : "Bill Order"}
             </button>
@@ -1915,11 +1860,10 @@ const BillPage = ({
           {!isPreviewOnly && (
             <button
               onClick={handlePrint}
-              className={`flex h-11 items-center gap-1.5 rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${
-                isDarkMode
+              className={`flex h-11 items-center gap-1.5 rounded-xl border px-5 text-sm font-black transition-all duration-200 active:scale-[0.97] ${isDarkMode
                   ? "border-sky-500/30 bg-sky-950/20 text-sky-400 hover:bg-sky-950/40"
                   : "border-sky-200 bg-[#f0f9ff] text-sky-700 hover:bg-[#e0f2fe] hover:border-sky-300"
-              }`}
+                }`}
             >
               <Printer size={15} strokeWidth={2.5} />
               Print Bill
@@ -1928,25 +1872,24 @@ const BillPage = ({
 
           <button
             onClick={onClose}
-            className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 sm:ml-auto ${
-              isDarkMode
+            className={`flex h-11 items-center rounded-xl border px-5 text-sm font-extrabold transition-all duration-200 sm:ml-auto ${isDarkMode
                 ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
                 : "border-[#ede8e3] bg-white text-[#57524e] hover:bg-orange-50/40 hover:text-orange-700 hover:border-orange-200"
-            }`}
+              }`}
           >
             Close
           </button>
-         </div>
-       </MotionDiv>
-       {showPayModal && (
-         <PayModal
-           order={localOrderData || activeOrder}
-           onClose={() => {
-             setShowPayModal(false);
-             onClose();
-           }}
-         />
-       )}
+        </div>
+      </MotionDiv>
+      {showPayModal && (
+        <PayModal
+          order={localOrderData || activeOrder}
+          onClose={() => {
+            setShowPayModal(false);
+            onClose();
+          }}
+        />
+      )}
     </MotionDiv>
   );
 };

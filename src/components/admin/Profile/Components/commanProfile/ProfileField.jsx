@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 
 const formatValue = (value) => {
   if (value === null || value === undefined || value === "") return "N/A";
@@ -51,11 +52,18 @@ const formatValue = (value) => {
   return String(value);
 };
 
-import { useSelector } from "react-redux";
-
-export const ProfileField = React.memo(({ label, value, icon }) => {
-  const colors = useSelector((state) => state.admin.theme.colors);
-  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+export const ProfileField = React.memo(({ label, value, icon, isDarkMode: propIsDarkMode }) => {
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
+  const isDarkMode =
+    propIsDarkMode !== undefined
+      ? propIsDarkMode
+      : typeof document !== "undefined" &&
+        (document.documentElement.classList.contains("admin-dark") ||
+          document.documentElement.classList.contains("dark"));
   const primaryColor = isDarkMode ? colors.primary : colors.primaryText;
 
   return (

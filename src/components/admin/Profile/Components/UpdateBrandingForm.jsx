@@ -14,7 +14,11 @@ export default function UpdateBrandingForm({
   fileError,
   currentLogo,
 }) {
-  const colors = useSelector((state) => state.admin.theme.colors);
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
   const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
 
   const fileInputRef = useRef(null);
@@ -22,7 +26,6 @@ export default function UpdateBrandingForm({
   const [rawPreview, setRawPreview] = useState("");
   const [rawFile, setRawFile]       = useState(null);
   const [showCropper, setShowCropper] = useState(false);
-  const [isHovered, setIsHovered]     = useState(false);
 
   const croppedPreviewUrl = useMemo(
     () => (file ? URL.createObjectURL(file) : ""),
@@ -71,23 +74,19 @@ export default function UpdateBrandingForm({
         </p>
 
         <div
-          className={`relative cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+          className={`relative cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 hover:!border-[var(--hover-border)] hover:!bg-[var(--hover-bg)] ${
             displayImage ? "flex w-fit" : "flex w-full"
           }`}
           style={{
             borderColor: fileError
               ? "#f87171"
-              : isHovered 
-                ? colors.primary 
-                : (isDarkMode ? "rgb(71, 85, 105)" : "#d6cfc8"),
+              : isDarkMode ? "rgb(71, 85, 105)" : "#d6cfc8",
             backgroundColor: fileError
               ? (isDarkMode ? "rgba(239, 68, 68, 0.1)" : "#fef2f2")
-              : isHovered 
-                ? (isDarkMode ? `${colors.primary}20` : colors.primaryLight) 
-                : (isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#f7f3ef")
+              : (isDarkMode ? "rgba(30, 41, 59, 0.6)" : "#f7f3ef"),
+            "--hover-border": colors.primary,
+            "--hover-bg": isDarkMode ? `${colors.primary}20` : colors.primaryLight,
           }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
           onClick={() => fileInputRef.current?.click()}
         >
           <div className={`relative ${displayImage ? "" : "h-36 w-full"}`}>

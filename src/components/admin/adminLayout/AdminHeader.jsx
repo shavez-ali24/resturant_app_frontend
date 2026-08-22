@@ -1,16 +1,15 @@
-import { useEffect, useState, Suspense, lazy } from "react";
+import { useEffect, useState, Suspense, lazy, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 const AppSidebar = lazy(() =>
-  import("@/components/admin/adminLayout/app-sidebar").then((module) => ({
+  import("@/components/admin/adminLayout/AppSidebar").then((module) => ({
     default: module.AppSidebar,
   }))
 );
 const SiteHeader = lazy(() =>
-  import("@/components/admin/adminLayout/site-header").then((module) => ({
+  import("@/components/admin/adminLayout/SiteHeader").then((module) => ({
     default: module.SiteHeader,
   }))
 );
-// import { SiteHeader } from "@/components/admin/adminLayout/SiteHeader/SiteHeader";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,7 +29,11 @@ export default function AdminHeader({
   const dispatch = useDispatch();
   const isBillOpen = useSelector((state) => state.bill?.open);
   
-  const colors = useSelector((state) => state.admin.theme.colors);
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryMid: "#fde68a",
+    primaryLight: "#fff8f5"
+  };
   
   // Fetch restaurant profile (includes tables)
   const { 
@@ -38,7 +41,6 @@ export default function AdminHeader({
     error: restaurantError, 
     isLoading: restaurantLoading 
   } = useGetRestaurantQuery();
-  // console.log("Restaurant Data:", restaurantData);
   
   // Fetch menu items
   const { data: menuItems } = useGetMenuQuery(undefined, {
@@ -54,8 +56,8 @@ export default function AdminHeader({
     }
   }, [restaurantData, dispatch]);
 
-  // Extract tables from restaurant profile
-  const extractTablesFromRestaurant = () => {
+  // Extract tables from restaurant profile (memoized)
+  const tables = useMemo(() => {
     if (!restaurantData) return [];
     
     const restaurant = restaurantData.restaurant || restaurantData;
@@ -72,21 +74,19 @@ export default function AdminHeader({
     
     // Format 3: tableNumbers se generate karna
     if (restaurant.tableNumbers && typeof restaurant.tableNumbers === 'number') {
-      const tables = [];
+      const generated = [];
       for (let i = 1; i <= restaurant.tableNumbers; i++) {
-        tables.push({
+        generated.push({
           _id: `table-${i}`,
           tableNumber: i,
           capacity: restaurant.tableCapacity || 4
         });
       }
-      return tables;
+      return generated;
     }
     
     return [];
-  };
-
-  const tables = extractTablesFromRestaurant();
+  }, [restaurantData]);
 
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
 
@@ -104,9 +104,15 @@ export default function AdminHeader({
   return (
     <div className={`h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none ${isDarkMode ? "bg-[#0f172a] text-slate-100" : "bg-[#f7f3ef]"}`}>
       <SidebarProvider className="flex flex-col h-full">
+        {/* Site Header Suspense with Dark Mode aware fallback skeleton */}
         <Suspense
           fallback={
-            <div className="h-16 w-full border-b bg-white/80" style={{ borderBottomColor: colors.primaryMid }} />
+            <div
+              className={`h-16 w-full border-b ${
+                isDarkMode ? "border-slate-800 bg-[#0f172a]/80" : "bg-white/80"
+              }`}
+              style={isDarkMode ? {} : { borderBottomColor: colors.primaryMid }}
+            />
           }
         >
           <SiteHeader
@@ -117,9 +123,16 @@ export default function AdminHeader({
 
         <div className="flex flex-1 overflow-hidden">
           <div className="lg:hidden">
+            {/* Sidebar Suspense with Dark Mode aware fallback skeleton */}
             <Suspense
               fallback={
-                <div className="hidden h-full w-64 border-r" style={{ borderRightColor: colors.primaryMid, backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.4)' : colors.primaryLight }} />
+                <div
+                  className="hidden h-full w-64 border-r lg:block"
+                  style={{
+                    borderRightColor: isDarkMode ? "#334155" : colors.primaryMid,
+                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : colors.primaryLight,
+                  }}
+                />
               }
             >
               <AppSidebar isDarkMode={isDarkMode} />
@@ -173,6 +186,5 @@ export default function AdminHeader({
         </div>
       </SidebarProvider>
     </div>
-
   );
 }

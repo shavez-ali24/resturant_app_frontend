@@ -297,7 +297,7 @@ export default function EditItemPage() {
   const sanitizeDiscount = (d) => {
     if (!d) return { type: "flat", value: 0, active: false };
     const isActive = d.active === true || d.active === "true";
-    const val = isActive ? parseInt((d.value || "0").toString().trim(), 10) : 0;
+    const val = isActive ? parseFloat((d.value || "0").toString().trim()) : 0;
     return {
       type: d.type === "flat" || d.type === "percentage" ? d.type : "flat",
       value: isNaN(val) ? 0 : val,
