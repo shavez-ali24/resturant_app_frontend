@@ -18,7 +18,7 @@ const SectionBlock = React.memo(function SectionBlock({
   onRoomClick,
   roomActionLoadingId,
   isDarkMode = false,
-  newlyAddedItemsOrderIds,
+  newlyAddedItemsOrderIds = [],
 }) {
   const C = isDarkMode ? ADMIN_COLORS.dark : ADMIN_COLORS;
   const tables = React.useMemo(
@@ -55,56 +55,41 @@ const SectionBlock = React.memo(function SectionBlock({
 
   if (!units || units.length === 0) return null;
 
+  const isRoomSection = String(sectionName || "").trim().toLowerCase() === "room";
+
   return (
-    <div
-      style={{
-        borderRadius: 10,
-        background: isDarkMode ? "#1e293b" : "#ffffff",
-        border: `1px solid ${C.border}`,
-      }}
-    >
-      {/* Section Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 16px",
-          borderBottom: `1px solid ${C.border}`,
-          background: isDarkMode ? "#0f172a" : "#faf9f7",
-        }}
-      >
-        <h3
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Section Header (Only for non-room sections) */}
+      {!isRoomSection && (
+        <div
           style={{
-            fontSize: 15,
-            fontWeight: 600,
-            fontFamily: "'Outfit', sans-serif",
-            color: C.textPrimary,
-            margin: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "2px 4px",
           }}
         >
-          {sectionName}
-        </h3>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: C.textSecondary,
-            background: C.border,
-            padding: "2px 8px",
-            borderRadius: 999,
-          }}
-        >
-          {units.length} {units.length === 1 ? "Unit" : "Units"}
-        </span>
-      </div>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              fontFamily: "'Outfit', sans-serif",
+              color: C.textPrimary,
+              margin: 0,
+              textTransform: "capitalize",
+            }}
+          >
+            {sectionName}
+          </h3>
+        </div>
+      )}
 
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 20,
-          padding: "16px 16px 34px",
+          gap: 12,
+          padding: "4px 4px 12px",
         }}
       >
         {tables.length > 0 && (
@@ -112,27 +97,13 @@ const SectionBlock = React.memo(function SectionBlock({
             {roomGroups.length > 0 && (
               <div style={rowTitleStyle}>
                 <span>Tables</span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: C.textSecondary,
-                    background: isDarkMode ? "#334155" : "#f3efea",
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    letterSpacing: "normal",
-                    textTransform: "none",
-                  }}
-                >
-                  {tables.length}
-                </span>
               </div>
             )}
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 24,
+                gap: "28px 14px",
               }}
             >
               {tables.map((table) => (
@@ -155,30 +126,43 @@ const SectionBlock = React.memo(function SectionBlock({
           </div>
         )}
 
-        {roomGroups.map((group) => (
-          <div key={`${sectionName}-${group.categoryName}`}>
-            <div style={rowTitleStyle}>
-              <span>{group.categoryName}</span>
-              <span
+        {roomGroups.map((group, index) => (
+          <div
+            key={`${sectionName}-${group.categoryName}`}
+            style={(index > 0 || tables.length > 0) ? { marginTop: 32 } : {}}
+          >
+            {isRoomSection ? (
+              <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: C.textSecondary,
-                  background: isDarkMode ? "#334155" : "#f3efea",
-                  padding: "2px 8px",
-                  borderRadius: 999,
-                  letterSpacing: "normal",
-                  textTransform: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "2px 4px",
+                  marginBottom: 10,
                 }}
               >
-                {group.units.length} {group.units.length === 1 ? "room" : "rooms"}
-              </span>
-            </div>
+                <h3
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    fontFamily: "'Outfit', sans-serif",
+                    color: C.textPrimary,
+                    margin: 0,
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {group.categoryName}
+                </h3>
+              </div>
+            ) : (
+              <div style={rowTitleStyle}>
+                <span>{group.categoryName}</span>
+              </div>
+            )}
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 24,
+                gap: "28px 14px",
               }}
             >
               {group.units.map((table) => (

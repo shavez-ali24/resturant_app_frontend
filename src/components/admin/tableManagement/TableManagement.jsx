@@ -26,20 +26,87 @@ import { useNotification } from "@/components/admin/Bell/NotificationContext";
    ─────────────────────────────────────────── */
 
 /** Trigger a file download from a URL */
-const downloadQR = async (url, filename) => {
+const downloadQR = async (url, filename, unitType, unitName, categoryName, sectionName) => {
   try {
     const response = await fetch(url);
     const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = filename || "qr-code.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  } catch {
-    // fallback: open in new tab
+
+    const hasCategoryOrSection =
+      (unitType === "ROOM" && categoryName) ||
+      (unitType === "TABLE" && sectionName);
+
+    if (hasCategoryOrSection) {
+      const blobUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = blobUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      URL.revokeObjectURL(blobUrl);
+
+      const canvas = document.createElement("canvas");
+      const qrSize = img.width || 1000;
+      const labelHeight = (img.height || 1120) - qrSize;
+      
+      canvas.width = qrSize;
+      canvas.height = qrSize + labelHeight;
+      const ctx = canvas.getContext("2d");
+
+      // Draw original image
+      ctx.drawImage(img, 0, 0);
+
+      // Draw white rect to cover old label
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, qrSize, qrSize, labelHeight);
+
+      // Draw separator line
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, qrSize);
+      ctx.lineTo(qrSize, qrSize);
+      ctx.stroke();
+
+      // Draw new text label
+      ctx.fillStyle = "#000000";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 72px Arial";
+      
+      let label = unitName;
+      if (unitType === "ROOM") {
+        const cat = categoryName ? categoryName.trim().toUpperCase() : "";
+        label = cat ? `${cat} ROOM - ${unitName}` : `ROOM - ${unitName}`;
+      } else if (unitType === "TABLE") {
+        const sec = sectionName ? sectionName.trim().toUpperCase() : "";
+        label = sec ? `${sec} TABLE - ${unitName}` : `TABLE - ${unitName}`;
+      }
+      ctx.fillText(label, qrSize / 2, qrSize + labelHeight / 2);
+
+      const finalBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      const finalUrl = URL.createObjectURL(finalBlob);
+      
+      const link = document.createElement("a");
+      link.href = finalUrl;
+      link.download = filename || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(finalUrl);
+    } else {
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename || "qr-code.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }
+  } catch (err) {
+    console.error("Canvas QR download failed:", err);
     window.open(url, "_blank");
   }
 };
@@ -130,6 +197,20 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
   const [isCreatingNewSection, setIsCreatingNewSection] = useState(false);
   const [newSectionInput, setNewSectionInput] = useState("");
 
+  const newSectionInputRef = React.useRef(null);
+
+  useEffect(() => {
+    if (isCreatingNewSection) {
+      const timer = setTimeout(() => {
+        newSectionInputRef.current?.focus();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isCreatingNewSection]);
+
+  const [shouldFocusLastUnit, setShouldFocusLastUnit] = useState(false);
+  const [focusCategoryNameIdx, setFocusCategoryNameIdx] = useState(null);
+
   const [type, setType] = useState("TABLE");
   const [customUnits, setCustomUnits] = useState([createCustomUnitDraft()]);
   const [formError, setFormError] = useState("");
@@ -151,6 +232,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
 
   const handleAddCustomRow = () => {
     setCustomUnits((prev) => [...prev, createCustomUnitDraft()]);
+    setShouldFocusLastUnit(true);
   };
 
   const handleRemoveCustomRow = (idx) => {
@@ -169,6 +251,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
         if (unitIdx !== idx) return unit;
 
         if (value === "__new__") {
+          setFocusCategoryNameIdx(idx);
           return {
             ...unit,
             categorySelection: "__new__",
@@ -262,7 +345,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
 
     try {
       await addUnits(body).unwrap();
-      onSuccess?.();
+      onSuccess?.(body);
       reset();
     } catch (err) {
       const backendMsg = err?.data?.message || "";
@@ -340,6 +423,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
 
         {isCreatingNewSection && (
           <input
+            ref={newSectionInputRef}
             type="text"
             placeholder="Enter new section name"
             value={newSectionInput}
@@ -395,6 +479,12 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
             <div key={idx} className="flex items-start gap-2">
               <div className="flex-1 space-y-2">
                 <input
+                  ref={el => {
+                    if (el && idx === customUnits.length - 1 && shouldFocusLastUnit) {
+                      el.focus();
+                      setShouldFocusLastUnit(false);
+                    }
+                  }}
                   type="text"
                   placeholder={type === "TABLE" ? "Table name" : "Room name / number (e.g. 101)"}
                   value={u.name}
@@ -440,6 +530,14 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
                     </Select>
                     {(!u.categorySelection || u.categorySelection === "__new__") && (
                       <input
+                        ref={el => {
+                          if (el && idx === focusCategoryNameIdx) {
+                            const timer = setTimeout(() => {
+                              el.focus();
+                            }, 60);
+                            setFocusCategoryNameIdx(null);
+                          }
+                        }}
                         type="text"
                         placeholder="Category name (e.g. Deluxe)"
                         value={u.categoryName}
@@ -519,7 +617,7 @@ function AddUnitsForm({ onSuccess, existingSectionNames, existingRoomCategories 
    UNIT CARD (single table/room)
    ─────────────────────────────────────────── */
 
-function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
+function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode, sectionName }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const [imgError, setImgError] = useState(false);
   const { notify } = useNotification();
@@ -532,7 +630,14 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
 
   const handleDownload = () => {
     const filename = `${unit.type}_${unit.name}_qr.png`;
-    downloadQR(unit.qrCode?.url, filename);
+    downloadQR(
+      unit.qrCode?.url,
+      filename,
+      unit.type,
+      unit.name,
+      unit.roomCategory?.name,
+      sectionName
+    );
   };
 
   const handleToggleUnitActive = async (e) => {
@@ -615,6 +720,7 @@ function UnitCard({ unit, onDeleteUnit, onEditRoom, isDarkMode }) {
 
   return (
     <div
+      id={`tm-unit-${unit.name.replace(/\s+/g, '-').toLowerCase()}`}
       className={`relative rounded-xl p-3 transition-all duration-150 hover:shadow-md flex flex-col justify-between`}
       style={{
         background: statusStyle.bg,
@@ -768,6 +874,18 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
     [section.units]
   );
 
+  const roomGroups = useMemo(() => {
+    const groups = new Map();
+    rooms.forEach((unit) => {
+      const categoryName = String(unit?.roomCategory?.name || "Uncategorized").trim() || "Uncategorized";
+      if (!groups.has(categoryName)) groups.set(categoryName, []);
+      groups.get(categoryName).push(unit);
+    });
+    return Array.from(groups.entries())
+      .map(([categoryName, groupUnits]) => ({ categoryName, units: groupUnits }))
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
+  }, [rooms]);
+
   const handleDeleteSection = (e) => {
     e.stopPropagation();
     onDeleteSection(section._id, section.name);
@@ -783,7 +901,10 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
   if (tables.length === 0 && rooms.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[#ede8e3] bg-white overflow-hidden dark:border-slate-700 dark:bg-[#1e293b]">
+    <div
+      id={`tm-section-${section.name.replace(/\s+/g, '-').toLowerCase()}`}
+      className="rounded-xl border border-[#ede8e3] bg-white overflow-hidden dark:border-slate-700 dark:bg-[#1e293b]"
+    >
       {/* HEADER */}
       <div className="flex items-center justify-between gap-2 border-b border-[#ede8e3] bg-[#faf9f7] px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
         <div className="flex items-center gap-2 flex-1">
@@ -857,26 +978,26 @@ function SectionBlock({ section, onDeleteSection, onDeleteUnit, onEditSection, o
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
               <Table2 size={16} /> Tables ({tables.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(175px,1fr))] gap-3.5">
               {tables.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} sectionName={section.name} />
               ))}
             </div>
           </div>
         )}
 
-        {rooms.length > 0 && (
-          <div>
+        {roomGroups.map((group) => (
+          <div key={group.categoryName}>
             <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#78716c] dark:text-slate-400">
-              <BedDouble size={16} /> Rooms ({rooms.length})
+              <BedDouble size={16} /> {group.categoryName} ({group.units.length})
             </p>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3.5">
-              {rooms.map((unit) => (
-                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} />
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(175px,1fr))] gap-3.5">
+              {group.units.map((unit) => (
+                <UnitCard key={unit._id || unit.name} unit={unit} onDeleteUnit={onDeleteUnit} onEditRoom={onEditRoom} isDarkMode={isDarkMode} sectionName={section.name} />
               ))}
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -902,6 +1023,9 @@ export default function TableManagement() {
   const [deleteUnit, { isLoading: isDeletingUnit }] = useDeleteUnitMutation();
   const [updateSectionsApi, { isLoading: isUpdatingSections }] = useUpdateSectionsMutation();
   const { notify } = useNotification();
+
+  const [newlyAddedSection, setNewlyAddedSection] = useState(null);
+  const [newlyAddedUnits, setNewlyAddedUnits] = useState([]);
 
   const handleSaveSectionRename = async (sectionId, newName) => {
     try {
@@ -992,7 +1116,39 @@ export default function TableManagement() {
     return () => obs.disconnect();
   }, []);
 
-  const handleSuccess = () => setShowForm(false);
+  const handleSuccess = (addedInfo) => {
+    setShowForm(false);
+    if (addedInfo?.sectionName) {
+      setNewlyAddedSection(addedInfo.sectionName);
+      setNewlyAddedUnits(addedInfo.units?.map(u => u.name) || []);
+    }
+  };
+
+  useEffect(() => {
+    if (newlyAddedSection && sections.length > 0) {
+      const timer = setTimeout(() => {
+        let targetEl = null;
+        if (newlyAddedUnits.length > 0) {
+          const firstUnitName = newlyAddedUnits[0];
+          const unitIdStr = `tm-unit-${firstUnitName.replace(/\s+/g, '-').toLowerCase()}`;
+          targetEl = document.getElementById(unitIdStr);
+        }
+        
+        if (!targetEl) {
+          const secIdStr = `tm-section-${newlyAddedSection.replace(/\s+/g, '-').toLowerCase()}`;
+          targetEl = document.getElementById(secIdStr);
+        }
+
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          setNewlyAddedSection(null);
+          setNewlyAddedUnits([]);
+        }
+      }, 150);
+
+      return () => clearTimeout(timer);
+    }
+  }, [newlyAddedSection, newlyAddedUnits, sections]);
 
   return (
     <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">

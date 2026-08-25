@@ -1,15 +1,32 @@
-// ─── IMPORTS ───────────────────────────────────────────
-// MainLayout — Client app shell (mobile-first, 520px max-width, dark mode support)
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("client-theme") === "dark";
+  });
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("client-theme");
-    setIsDarkMode(savedTheme === "dark");
-  }, []);
+    const root = document.documentElement;
+    const body = document.body;
+
+    if (isDarkMode) {
+      root.classList.add("client-dark");
+      root.classList.add("dark");
+      body.classList.add("client-dark");
+    } else {
+      root.classList.remove("client-dark");
+      root.classList.remove("dark");
+      body.classList.remove("client-dark");
+    }
+
+    return () => {
+      root.classList.remove("client-dark");
+      root.classList.remove("dark");
+      body.classList.remove("client-dark");
+    };
+  }, [isDarkMode]);
 
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => {
@@ -21,21 +38,39 @@ export default function MainLayout() {
 
   return (
     <div
-      className={`client-app-shell relative mx-auto min-h-screen max-w-[520px] overflow-hidden font-mostrate font-semibold ${
+      className={[
+        "client-app-shell relative mx-auto min-h-screen max-w-[520px]",
+        "overflow-hidden font-mostrate font-semibold",
         isDarkMode
           ? "client-dark dark bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 text-slate-100"
-          : "bg-gradient-to-b from-orange-50/80 via-[#fffcf9] to-[#fffbf6] text-slate-900"
-      }`}
+          : "bg-gradient-to-b from-orange-50/80 via-[#fffcf9] to-[#fffbf6] text-slate-900",
+      ].join(" ")}
     >
+      {/* Background decoration */}
       <div
-        className={`pointer-events-none absolute inset-0 ${
+        aria-hidden="true"
+        className={[
+          "pointer-events-none absolute inset-0",
           isDarkMode
             ? "bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.18),transparent_58%)]"
-            : "bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.14),transparent_58%)]"
-        }`}
+            : "bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.14),transparent_58%)]",
+        ].join(" ")}
       />
-      <main className={`relative min-h-screen ${isDarkMode ? "bg-slate-950/70" : "bg-[#fffcf9]"}`}>
-        <Outlet context={{ isDarkMode, toggleDarkMode }} />
+
+      <main
+        className={[
+          "relative min-h-screen",
+          isDarkMode
+            ? "bg-slate-950/70"
+            : "bg-[#fffcf9]",
+        ].join(" ")}
+      >
+        <Outlet
+          context={{
+            isDarkMode,
+            toggleDarkMode,
+          }}
+        />
       </main>
     </div>
   );

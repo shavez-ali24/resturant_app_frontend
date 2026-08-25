@@ -115,6 +115,14 @@ const normalizeFoodTypeValue = (value = "") => {
     return "non-veg";
   }
 
+  if (
+    normalized === "egg" ||
+    normalized === "eggitarian" ||
+    normalized === "eggiterian"
+  ) {
+    return "egg";
+  }
+
   if (normalized === "mixed" || normalized === "mix" || normalized === "both") {
     return "mixed";
   }
@@ -519,7 +527,7 @@ const CategoryTypeSelectors = ({
     <>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div data-field="category">
-        <label className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
+        <label htmlFor="category-select" className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
           Category *
         </label>
         <Select
@@ -542,6 +550,7 @@ const CategoryTypeSelectors = ({
           }}
         >
           <SelectTrigger
+            id="category-select"
             onFocus={() => setCategoryFocused(true)}
             onBlur={() => setCategoryFocused(false)}
             className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none dark:text-slate-100 ${
@@ -755,7 +764,7 @@ const CategoryTypeSelectors = ({
         </div>
 
         <div data-field="type">
-          <label className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
+          <label htmlFor="food-type-select" className="block text-sm font-semibold text-[#44403c] mb-1.5 dark:text-slate-200">
             Food Type *
           </label>
           <Select
@@ -766,6 +775,7 @@ const CategoryTypeSelectors = ({
             }}
           >
             <SelectTrigger
+              id="food-type-select"
               onFocus={() => setTypeFocused(true)}
               onBlur={() => setTypeFocused(false)}
               className={`h-10 w-full rounded-lg border px-3 text-sm transition-all outline-none dark:text-slate-100 ${
@@ -782,6 +792,7 @@ const CategoryTypeSelectors = ({
               <SelectGroup>
                 <SelectItem value="veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Veg</SelectItem>
                 <SelectItem value="non-veg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Non-Veg</SelectItem>
+                <SelectItem value="egg" className="data-[highlighted]:bg-[#f7f3ef] dark:data-[highlighted]:bg-slate-700 dark:text-slate-200">Egg</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

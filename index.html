@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./src/assets/tapNbite.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="./src/assets/tapNbite.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta
       name="description"
       content="TapnBite lets restaurants manage menus, orders, and operations from a single dashboard."
@@ -28,9 +28,62 @@
       />
     </noscript>
     <title>TapnBite</title>
+    <script>
+      (function() {
+        try {
+          const path = window.location.pathname;
+          const isSuperAdmin = path.startsWith('/super-admin');
+          const isAdmin = path.startsWith('/admin') || path.startsWith('/kds') || isSuperAdmin;
+          
+          let isDark = false;
+          if (isAdmin) {
+            const themeKey = isSuperAdmin ? 'superAdmin-theme' : 'admin-theme';
+            isDark = localStorage.getItem(themeKey) === 'dark';
+          } else {
+            isDark = localStorage.getItem('client-theme') === 'dark';
+          }
+          
+          if (isDark) {
+            document.documentElement.classList.add(isAdmin ? 'admin-dark' : 'client-dark', 'dark');
+            document.documentElement.style.backgroundColor = isAdmin ? '#020617' : '#0f172a';
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loading-container" style="display: flex; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; background-color: #fffcf9; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="text-align: center;">
+          <div style="width: 44px; height: 44px; border: 4px solid #f3f3f3; border-top: 4px solid #ef9f27; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p id="initial-loading-text" style="color: #ef9f27; font-weight: 600; font-size: 16px; margin: 0; letter-spacing: 0.05em;">TapnBite Loading...</p>
+        </div>
+      </div>
+      <script>
+        (function() {
+          try {
+            if (document.documentElement.classList.contains('dark')) {
+              var container = document.getElementById('initial-loading-container');
+              if (container) {
+                var path = window.location.pathname;
+                var isClient = !path.startsWith('/admin') && !path.startsWith('/kds') && !path.startsWith('/super-admin');
+                container.style.backgroundColor = isClient ? '#0f172a' : '#020617';
+              }
+              var text = document.getElementById('initial-loading-text');
+              if (text) {
+                text.style.color = '#f8fafc';
+              }
+            }
+          } catch (_) {}
+        })();
+      </script>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

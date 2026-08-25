@@ -1,4 +1,4 @@
-import Sales from "@/components/admin/observability/sales/Sales";
+// import Sales from "@/components/admin/observability/sales/Sales";
 import { Navigate } from "react-router-dom";
 
 export default function Admin() {

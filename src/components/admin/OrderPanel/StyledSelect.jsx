@@ -1,143 +1,441 @@
 /**
  * StyledSelect.jsx
  * ----------------------------------------------------------------------------
- * Custom dropdown select that opens upward (used near the bottom of the
- * panel to avoid clipping). Supports dark mode, shows 4 rows before
- * scrolling. Used primarily for table/room selection.
+ * Lightweight production-ready custom select.
+ *
+ * Features:
+ * - Opens upward
+ * - Dark mode
+ * - Disabled options
+ * - Outside click
+ * - Escape key support
+ * - Keyboard navigation
+ * - 4 visible rows before scrolling
+ * - Accessible button/listbox semantics
+ * - Stable event listeners
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSelector } from "react-redux";
-import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { SELECT_ITEM_HEIGHT, SELECT_VISIBLE_ROWS } from "./AdminOrderPanel.constants";
+import {
+  SELECT_ITEM_HEIGHT,
+  SELECT_VISIBLE_ROWS,
+} from "./AdminOrderPanel.constants";
 
-/**
- * StyledSelect
- * @param {Object} props
- * @param {string} props.value – Currently selected value.
- * @param {(v: string) => void} props.onChange
- * @param {Array<{ value: string, label: string }>} props.options
- * @param {string} [props.placeholder]
- * @param {boolean} props.isDarkMode
- * @param {string} [props.className]
- */
 const StyledSelect = React.memo(function StyledSelect({
   value,
   onChange,
-  options,
-  placeholder,
+  options = [],
+  placeholder = "Select...",
   isDarkMode,
   className = "",
   disabled = false,
 }) {
   const colors = useSelector((state) => state.admin.theme.colors);
+
   const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const containerRef = useRef(null);
+  const listRef = useRef(null);
+  const buttonRef = useRef(null);
 
-  const selectedOption = options.find((o) => o.value === value);
+  const listboxId = useId();
+
+  /**
+   * Keep options safe even if API temporarily returns invalid data.
+   */
+  const safeOptions = useMemo(
+    () => (Array.isArray(options) ? options : []),
+    [options]
+  );
+
+  const selectedIndex = useMemo(
+    () => safeOptions.findIndex((option) => option?.value === value),
+    [safeOptions, value]
+  );
+
+  const selectedOption =
+    selectedIndex >= 0 ? safeOptions[selectedIndex] : null;
+
   const dropdownHeight = Math.min(
-    options.length * SELECT_ITEM_HEIGHT,
+    safeOptions.length * SELECT_ITEM_HEIGHT,
     SELECT_VISIBLE_ROWS * SELECT_ITEM_HEIGHT
   );
 
+  /**
+   * Close dropdown when clicking outside.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isOpen]);
+
+  /**
+   * Escape closes dropdown and returns focus to trigger.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  /**
+   * Set initial highlighted option when opening.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (selectedIndex >= 0 && !safeOptions[selectedIndex]?.disabled) {
+      setHighlightedIndex(selectedIndex);
+      return;
+    }
+
+    const firstEnabledIndex = safeOptions.findIndex(
+      (option) => !option?.disabled
+    );
+
+    setHighlightedIndex(firstEnabledIndex);
+  }, [isOpen, selectedIndex, safeOptions]);
+
+  /**
+   * Scroll highlighted option into view.
+   */
+  useEffect(() => {
+    if (!isOpen || highlightedIndex < 0) return;
+
+    const list = listRef.current;
+    const item = list?.children?.[highlightedIndex];
+
+    item?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [highlightedIndex, isOpen]);
+
+  const selectOption = useCallback(
+    (option) => {
+      if (!option || option.disabled) return;
+
+      onChange?.(option.value);
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    },
+    [onChange]
+  );
+
+  const openDropdown = useCallback(() => {
+    if (disabled || safeOptions.length === 0) return;
+
+    setIsOpen((previous) => !previous);
+  }, [disabled, safeOptions.length]);
+
+  /**
+   * Keyboard interaction.
+   */
+  const handleKeyDown = useCallback(
+    (event) => {
+      if (disabled) return;
+
+      if (!isOpen) {
+        if (
+          event.key === "Enter" ||
+          event.key === " " ||
+          event.key === "ArrowDown" ||
+          event.key === "ArrowUp"
+        ) {
+          event.preventDefault();
+          setIsOpen(true);
+        }
+
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+
+        let nextIndex = highlightedIndex;
+
+        for (let i = 0; i < safeOptions.length; i += 1) {
+          nextIndex += direction;
+
+          if (nextIndex < 0) {
+            nextIndex = safeOptions.length - 1;
+          }
+
+          if (nextIndex >= safeOptions.length) {
+            nextIndex = 0;
+          }
+
+          if (!safeOptions[nextIndex]?.disabled) {
+            setHighlightedIndex(nextIndex);
+            break;
+          }
+        }
+
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+
+        const option = safeOptions[highlightedIndex];
+
+        if (option && !option.disabled) {
+          selectOption(option);
+        }
+
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+
+        const firstEnabled = safeOptions.findIndex(
+          (option) => !option?.disabled
+        );
+
+        if (firstEnabled >= 0) {
+          setHighlightedIndex(firstEnabled);
+        }
+
+        return;
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+
+        for (let i = safeOptions.length - 1; i >= 0; i -= 1) {
+          if (!safeOptions[i]?.disabled) {
+            setHighlightedIndex(i);
+            break;
+          }
+        }
+      }
+    },
+    [
+      disabled,
+      highlightedIndex,
+      isOpen,
+      safeOptions,
+      selectOption,
+    ]
+  );
+
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative ${className}`}
+    >
+      {/* Trigger */}
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => { if (!disabled) setIsOpen((p) => !p); }}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition-all duration-200 outline-none"
-        style={disabled ? {} : {
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? listboxId : undefined}
+        onClick={openDropdown}
+        onKeyDown={handleKeyDown}
+        className={`
+          flex w-full items-center justify-between gap-2
+          rounded-lg border px-3 py-2.5
+          text-sm font-medium
+          outline-none
+          transition-colors duration-150
+          focus-visible:ring-2
+          ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+        `}
+        style={{
           backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
           borderColor: isOpen
             ? colors.primary
-            : (isDarkMode ? "#475569" : "#ede8e3"),
-          color: isDarkMode ? "#cbd5e1" : "#1c1917"
+            : isDarkMode
+              ? "#475569"
+              : "#ede8e3",
+          color: isDarkMode ? "#cbd5e1" : "#1c1917",
+          "--tw-ring-color": colors.primary,
         }}
       >
-        <span className={selectedOption ? "" : isDarkMode ? "text-slate-500" : "text-slate-400"}>
-          {selectedOption ? selectedOption.label : placeholder || "Select..."}
+        <span
+          className={`min-w-0 truncate ${
+            selectedOption
+              ? ""
+              : isDarkMode
+                ? "text-slate-500"
+                : "text-slate-400"
+          }`}
+        >
+          {selectedOption?.label || placeholder}
         </span>
+
         <ChevronDown
-          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-          style={{ color: isOpen ? colors.primary : (isDarkMode ? "#64748b" : "#a8a29e") }}
+          aria-hidden="true"
+          className={`h-4 w-4 shrink-0 transition-transform duration-150 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          style={{
+            color: isOpen
+              ? colors.primary
+              : isDarkMode
+                ? "#64748b"
+                : "#a8a29e",
+          }}
         />
       </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className={`absolute z-[200] w-full rounded-lg border shadow-lg overflow-hidden ${
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div
+          id={listboxId}
+          ref={listRef}
+          role="listbox"
+          aria-label={placeholder}
+          className={`
+            absolute bottom-[calc(100%+6px)] left-0
+            z-[200] w-full overflow-y-auto
+            overscroll-contain rounded-lg border
+            shadow-lg
+            transition-all duration-150
+            ${
               isDarkMode
-                ? "bg-[#1e293b] border-slate-600 shadow-black/70"
-                : "bg-white border-[#ede8e3] shadow-md"
-            }`}
-            style={{
-              bottom: "calc(100% + 6px)",
-              top: "auto",
-              maxHeight: dropdownHeight,
-              overflowY: options.length > SELECT_VISIBLE_ROWS ? "auto" : "hidden",
-            }}
-          >
-            {options.map((opt) => {
-              const isDisabled = Boolean(opt.disabled);
+                ? "border-slate-600 bg-[#1e293b] shadow-black/70"
+                : "border-[#ede8e3] bg-white shadow-md"
+            }
+          `}
+          style={{
+            maxHeight: dropdownHeight,
+          }}
+        >
+          {safeOptions.length === 0 ? (
+            <div
+              className={`px-3 py-3 text-sm ${
+                isDarkMode
+                  ? "text-slate-500"
+                  : "text-slate-400"
+              }`}
+            >
+              No options available
+            </div>
+          ) : (
+            safeOptions.map((option, index) => {
+              const isSelected = option.value === value;
+              const isHighlighted = index === highlightedIndex;
+              const isOptionDisabled = Boolean(option.disabled);
+
               return (
                 <button
-                  key={opt.value}
+                  key={option.value}
                   type="button"
-                  onClick={() => { if (!isDisabled) { onChange(opt.value); setIsOpen(false); } }}
-                  disabled={isDisabled}
-                  aria-disabled={isDisabled}
-                  style={{ height: SELECT_ITEM_HEIGHT }}
-                  className="w-full text-left px-3 text-sm font-medium transition-all duration-150 flex items-center justify-between gap-2"
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={isOptionDisabled}
+                  disabled={isOptionDisabled}
+                  onClick={() => selectOption(option)}
+                  onMouseEnter={() => {
+                    if (!isOptionDisabled) {
+                      setHighlightedIndex(index);
+                    }
+                  }}
+                  className={`
+                    flex w-full items-center
+                    justify-between gap-2
+                    px-3 text-left
+                    text-sm font-medium
+                    transition-colors duration-100
+                    ${
+                      isOptionDisabled
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer"
+                    }
+                  `}
                   style={{
                     height: SELECT_ITEM_HEIGHT,
-                    backgroundColor: value === opt.value
-                      ? (isDarkMode ? `${colors.primary}25` : `${colors.primary}10`)
-                      : "transparent",
-                    color: value === opt.value
-                      ? (isDarkMode ? "#ffffff" : colors.primary)
-                      : (isDarkMode ? "#cbd5e1" : "#1c1917")
-                  }}
-                  onMouseEnter={(e) => {
-                    if (value !== opt.value) {
-                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(71, 85, 105, 0.4)" : "#f7f3ef";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (value !== opt.value) {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }
+                    backgroundColor: isSelected
+                      ? isDarkMode
+                        ? `${colors.primary}25`
+                        : `${colors.primary}10`
+                      : isHighlighted
+                        ? isDarkMode
+                          ? "rgba(71,85,105,0.4)"
+                          : "#f7f3ef"
+                        : "transparent",
+                    color: isSelected
+                      ? isDarkMode
+                        ? "#ffffff"
+                        : colors.primary
+                      : isDarkMode
+                        ? "#cbd5e1"
+                        : "#1c1917",
                   }}
                 >
-                  <div className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <span
-                      className="h-2 w-2 rounded-full shrink-0 transition-colors"
-                      style={{ backgroundColor: value === opt.value ? colors.primary : isDarkMode ? "#475569" : "#e2e8f0" }}
+                      aria-hidden="true"
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: isSelected
+                          ? colors.primary
+                          : isDarkMode
+                            ? "#475569"
+                            : "#e2e8f0",
+                      }}
                     />
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-                  {isDisabled && (
-                    <span className={`text-[11px] font-semibold ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Occupied</span>
+
+                    <span className="truncate">
+                      {option.label}
+                    </span>
+                  </span>
+
+                  {isOptionDisabled && (
+                    <span
+                      className={`shrink-0 text-[11px] font-semibold ${
+                        isDarkMode
+                          ? "text-slate-400"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      Occupied
+                    </span>
                   )}
                 </button>
               );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 });

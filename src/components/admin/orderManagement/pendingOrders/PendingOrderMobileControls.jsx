@@ -1,6 +1,7 @@
 import React from "react";
 import StatusDropdown from "./StatusDropdown";
 import { IndianRupee, Move } from "lucide-react";
+import { isEatHereOrder } from "../commonOrderFile/utils";
 
 const PendingOrderMobileControls = ({
   order,
@@ -11,10 +12,21 @@ const PendingOrderMobileControls = ({
   setMoveModalOrder,
   isDarkMode = false,
 }) => {
-  const isCompleted = order?.status === "completed";
-  const isCancelled = order?.status === "cancelled";
-  const isEatHere = order?.orderType === "Eat Here";
-  const alreadyPaid = Boolean(order?.paymentMethod || (order?.paymentMethods && order.paymentMethods.length > 0));
+  const status = String(order?.status || "").toLowerCase();
+
+  const isCompleted = status === "completed";
+  const isCancelled = status === "cancelled";
+  const isEatHere = isEatHereOrder(order?.orderType);
+
+  const alreadyPaid =
+    Boolean(order?.paymentMethod) ||
+    (Array.isArray(order?.paymentMethods) &&
+      order.paymentMethods.length > 0);
+
+  const canEdit = !isCompleted && !isCancelled;
+  const canMove = isEatHere && canEdit;
+  const canDelete = !isCancelled;
+  const canPay = isCompleted && !alreadyPaid;
 
   const btnSecondary = `flex h-9 w-full items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
     isDarkMode
@@ -26,19 +38,27 @@ const PendingOrderMobileControls = ({
     <>
       {/* Status */}
       <div className="flex flex-col gap-1.5">
-        <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>
+        <span
+          className={`text-[11px] font-semibold uppercase tracking-wider ${
+            isDarkMode ? "text-slate-500" : "text-gray-500"
+          }`}
+        >
           Status
         </span>
+
         <div data-tour="orders-mobile-status" className="w-full">
-          <StatusDropdown order={order} updateOrder={updateOrder} />
+          <StatusDropdown
+            order={order}
+            updateOrder={updateOrder}
+          />
         </div>
       </div>
 
-      {/* Pay / Move / Edit / Delete */}
+      {/* Actions */}
       <div className="grid grid-cols-2 gap-2 pt-0.5">
-        {/* Pay button */}
-        {isCompleted && !alreadyPaid && (
+        {canPay && (
           <button
+            type="button"
             onClick={() => setPayModalOrder?.(order)}
             className="flex h-9 w-full items-center justify-center gap-1 rounded-lg border border-green-200 bg-green-50 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100"
           >
@@ -46,9 +66,10 @@ const PendingOrderMobileControls = ({
             Pay
           </button>
         )}
-        {/* Move button */}
-        {isEatHere && !isCancelled && !isCompleted && (
+
+        {canMove && (
           <button
+            type="button"
             onClick={() => setMoveModalOrder?.(order)}
             className="flex h-9 w-full items-center justify-center gap-1 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
           >
@@ -56,18 +77,20 @@ const PendingOrderMobileControls = ({
             Move
           </button>
         )}
-        {/* Edit */}
-        {!isCompleted && !isCancelled && (
+
+        {canEdit && (
           <button
+            type="button"
             onClick={() => setEditingOrder?.(order)}
             className={btnSecondary}
           >
             Edit
           </button>
         )}
-        {/* Cancel */}
-        {!isCancelled && (
+
+        {canDelete && (
           <button
+            type="button"
             onClick={() => setShowConfirmDelete?.(order)}
             className="flex h-9 w-full items-center justify-center rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
           >

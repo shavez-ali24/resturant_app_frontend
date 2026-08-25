@@ -11,13 +11,23 @@ import {
   Store,
   Users,
   SlidersHorizontal,
+  Truck,
 } from 'lucide-react';
 
 import { useSelector } from 'react-redux';
 
-export default function ProfileDetails({ profileData }) {
-  const colors = useSelector((state) => state.admin.theme.colors);
-  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+export default function ProfileDetails({ profileData, isDarkMode: propIsDarkMode }) {
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
+  const isDarkMode =
+    propIsDarkMode !== undefined
+      ? propIsDarkMode
+      : typeof document !== "undefined" &&
+      (document.documentElement.classList.contains("admin-dark") ||
+        document.documentElement.classList.contains("dark"));
 
   const userRole = localStorage.getItem("userRole") || "";
   const isStaff = userRole === "staff";
@@ -31,23 +41,24 @@ export default function ProfileDetails({ profileData }) {
   if (isStaff) {
     return (
       <div className={cardClass}>
-        <div 
+        <div
           className={headerClass}
           style={{ backgroundColor: isDarkMode ? `${colors.primary}15` : colors.primaryLight }}
         >
           <h2 className="flex items-center gap-2.5 text-base font-extrabold" style={{ color: isDarkMode ? colors.primary : colors.primaryText }}>
-            <Users className="h-5 w-5 shrink-0" style={{ color: colors.primary }} />
+            <Users className="h-5 w-5 shrink-0" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             Staff Information
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          <ProfileField icon={<Image className="w-4 h-4" />} label="Name" value={userName} />
-          <ProfileField icon={<Mail className="w-4 h-4" />} label="Email" value={emailOfAdmin} />
-          <ProfileField icon={<Tag className="w-4 h-4" />} label="Role" value="Staff" />
+          <ProfileField icon={<Image className="w-4 h-4" />} label="Name" value={userName} isDarkMode={isDarkMode} />
+          <ProfileField icon={<Mail className="w-4 h-4" />} label="Email" value={emailOfAdmin} isDarkMode={isDarkMode} />
+          <ProfileField icon={<Tag className="w-4 h-4" />} label="Role" value="Staff" isDarkMode={isDarkMode} />
           <ProfileField
             icon={<Store className="w-4 h-4" />}
             label="Restaurant"
             value={profileData?.restaurantName || profileData?.name}
+            isDarkMode={isDarkMode}
           />
         </div>
       </div>
@@ -61,7 +72,7 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 1: Business Profile */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Store className="h-4 w-4" style={{ color: colors.primary }} />
+            <Store className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Business Profile
             </h3>
@@ -71,12 +82,13 @@ export default function ProfileDetails({ profileData }) {
               icon={<Tag className="w-4 h-4" />}
               label="Business Name"
               value={profileData?.restaurantName || profileData?.name}
+              isDarkMode={isDarkMode}
             />
-            <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} />
-            <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} />
-            <ProfileField icon={<Globe className="w-4 h-4" />} label="Web URL" value={profileData?.domain} />
+            <ProfileField icon={<Mail className="w-4 h-4" />} label="Contact Email" value={emailOfAdmin} isDarkMode={isDarkMode} />
+            <ProfileField icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profileData?.phoneNumber} isDarkMode={isDarkMode} />
+            <ProfileField icon={<Globe className="w-4 h-4" />} label="Web URL" value={profileData?.domain} isDarkMode={isDarkMode} />
             <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
-              <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} />
+              <ProfileField icon={<MapPin className="w-4 h-4" />} label="Business Address" value={profileData?.address} isDarkMode={isDarkMode} />
             </div>
           </div>
         </div>
@@ -87,31 +99,31 @@ export default function ProfileDetails({ profileData }) {
             {/* Billing & Taxes Column */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <Building className="h-4 w-4" style={{ color: colors.primary }} />
+                <Building className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Billing & Taxes
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <ProfileField label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} />
-                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} />
-                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Rate (%)" value={`${profileData?.gstRate}%`} />
-                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax ID / GSTIN" value={profileData?.gstNumber} />
+                <ProfileField icon={<Truck className="w-4 h-4" />} label="Delivery Fee" value={`₹${profileData?.deliveryCharges ?? 0}`} isDarkMode={isDarkMode} />
+                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Status" value={profileData?.gstEnabled ? "Enabled" : "Disabled"} isDarkMode={isDarkMode} />
+                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax Rate (%)" value={`${profileData?.gstRate}%`} isDarkMode={isDarkMode} />
+                <ProfileField icon={<Building className="w-4 h-4" />} label="Tax ID / GSTIN" value={profileData?.gstNumber} isDarkMode={isDarkMode} />
               </div>
             </div>
 
             {/* Service Modes Column */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <SlidersHorizontal className="h-4 w-4" style={{ color: colors.primary }} />
+                <SlidersHorizontal className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
                 <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
                   Service Modes
                 </h3>
               </div>
               <div className="space-y-1">
-                <OrderModeStatus label="Eat Here" isEnabled={profileData?.orderModes?.eathere} />
-                <OrderModeStatus label="Takeaway" isEnabled={profileData?.orderModes?.takeaway} />
-                <OrderModeStatus label="Delivery" isEnabled={profileData?.orderModes?.delivery} />
+                <OrderModeStatus label="Eat Here" isEnabled={profileData?.orderModes?.eathere} isDarkMode={isDarkMode} />
+                <OrderModeStatus label="Takeaway" isEnabled={profileData?.orderModes?.takeaway} isDarkMode={isDarkMode} />
+                <OrderModeStatus label="Delivery" isEnabled={profileData?.orderModes?.delivery} isDarkMode={isDarkMode} />
               </div>
             </div>
           </div>
@@ -120,14 +132,14 @@ export default function ProfileDetails({ profileData }) {
         {/* Section 3: Brand Identity */}
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Image className="h-4 w-4" style={{ color: colors.primary }} />
+            <Image className="h-4 w-4" style={{ color: isDarkMode ? colors.primary : colors.primaryText }} />
             <h3 className="text-sm font-bold text-[#1c1917] dark:text-slate-100 uppercase tracking-wider">
               Brand Identity
             </h3>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {profileData?.logo ? (
-              <div 
+              <div
                 className="relative overflow-hidden rounded-xl border p-2 shrink-0 animate-in fade-in duration-300"
                 style={{
                   borderColor: isDarkMode ? `${colors.primary}30` : `${colors.primary}20`,
@@ -141,7 +153,7 @@ export default function ProfileDetails({ profileData }) {
                 />
               </div>
             ) : (
-              <div 
+              <div
                 className="flex h-20 w-32 items-center justify-center rounded-xl border-2 border-dashed shrink-0"
                 style={{
                   borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,

@@ -98,7 +98,7 @@ const ImageUpload = ({
   return (
     <>
       <div className={`${displayUrl ? "flex flex-col w-fit" : ""} space-y-2`}>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400">
+        <label htmlFor="image-upload-input" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
           Product Image
         </label>
 
@@ -123,6 +123,8 @@ const ImageUpload = ({
                 src={displayUrl}
                 alt="Preview"
                 className="max-h-44 w-auto rounded-lg"
+                width="176"
+                height="176"
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
@@ -133,10 +135,10 @@ const ImageUpload = ({
                   />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-[#78716c] dark:text-slate-400">
+                  <p className="text-xs font-medium text-gray-600 dark:text-slate-400">
                     Click to upload image
                   </p>
-                  <p className="mt-0.5 text-[10px] text-[#a8a29e] dark:text-slate-500">
+                  <p className="mt-0.5 text-[10px] text-gray-500 dark:text-slate-500">
                     JPEG, PNG, WebP — max {MAX_IMAGE_KB}KB
                   </p>
                 </div>
@@ -151,6 +153,7 @@ const ImageUpload = ({
           </div>
 
           <input
+            id="image-upload-input"
             ref={fileInputRef}
             type="file"
             className="hidden"
@@ -168,7 +171,7 @@ const ImageUpload = ({
         )}
 
         {!addFile && existingImageUrl && (
-          <p className="text-xs text-[#a8a29e] dark:text-slate-500">
+          <p className="text-xs text-gray-500 dark:text-slate-500">
             Current image shown. Upload a new one to replace it.
           </p>
         )}

@@ -20,11 +20,9 @@ import {
 } from "lucide-react";
 import MenuFilter from "./ComponentsMenu/MenuFilter";
 import MenuItemViewModal from "./ComponentsMenu/MenuItemViewModal";
-import EditItemModal from "./ComponentsMenu/EditItemModal";
 import DeleteConfirmModal from "./ComponentsMenu/DeleteConfirmModal";
 import { useNotify } from "../common/NotificationModal";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getMenuSteps } from "../../../utils/adminTour";
+
 
 import {
   useGetMenuQuery,
@@ -40,7 +38,7 @@ import {
   useDeleteCategoryMutation,
 } from "../../../redux/adminRedux/adminAPI";
 
-const extractTextCandidate = (value, priorityKeys = []) => {
+const extractTextCandidate = (value, priorityKeys = [], visited = new WeakSet()) => {
   if (value === undefined || value === null) return "";
 
   if (typeof value === "string" || typeof value === "number") {
@@ -49,22 +47,25 @@ const extractTextCandidate = (value, priorityKeys = []) => {
 
   if (Array.isArray(value)) {
     for (const entry of value) {
-      const resolved = extractTextCandidate(entry, priorityKeys);
+      const resolved = extractTextCandidate(entry, priorityKeys, visited);
       if (resolved) return resolved;
     }
     return "";
   }
 
   if (typeof value === "object") {
+    if (visited.has(value)) return "";
+    visited.add(value);
+
     for (const key of priorityKeys) {
       if (Object.prototype.hasOwnProperty.call(value, key)) {
-        const resolved = extractTextCandidate(value[key], priorityKeys);
+        const resolved = extractTextCandidate(value[key], priorityKeys, visited);
         if (resolved) return resolved;
       }
     }
 
     for (const nestedValue of Object.values(value)) {
-      const resolved = extractTextCandidate(nestedValue, priorityKeys);
+      const resolved = extractTextCandidate(nestedValue, priorityKeys, visited);
       if (resolved) return resolved;
     }
   }
@@ -94,12 +95,15 @@ const normalizeFoodType = (value = "") => {
     return "veg";
   }
 
+  if (["egg", "eggitarian", "eggiterian"].includes(normalized)) {
+    return "egg";
+  }
+
   if (
     normalized === "nonveg" ||
     normalized === "non-veg" ||
     normalized === "non-vegetarian" ||
-    normalized === "nonvegetarian" ||
-    normalized === "egg"
+    normalized === "nonvegetarian"
   ) {
     return "non-veg";
   }
@@ -503,7 +507,7 @@ const TabButton = ({ active, onClick, isDarkMode, children }) => {
       className={`relative px-3 pb-2 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
         active
           ? "font-bold"
-          : "text-[#78716c] hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
+          : "text-gray-600 hover:text-[#1c1917] dark:text-slate-400 dark:hover:text-slate-200"
       }`}
       style={{
         color: active ? (isDarkMode ? "#fb923c" : colors.primary) : undefined
@@ -521,6 +525,16 @@ const TabButton = ({ active, onClick, isDarkMode, children }) => {
 };
 
 const Menu = () => {
+  const [categoryDragging, setCategoryDragging] = useState(null);
+  const [categoryDragOver, setCategoryDragOver] = useState(null);
+  const [isCategoryReordering, setIsCategoryReordering] = useState(false);
+  const categoryPointerRef = useRef({ pointerId: null });
+  const categoryStartRef = useRef([]);
+  const categoryReorderTimerRef = useRef(null);
+  const categoryReorderPendingRef = useRef([]);
+  const categoryReorderRequestIdRef = useRef(0);
+  const lastCategoryDragOverRef = useRef(null);
+
   const { data: items = [], isLoading, refetch } = useGetMenuQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
@@ -544,7 +558,7 @@ const Menu = () => {
   }, []);
   const navigate = useNavigate();
   const location = useLocation();
-  useAdminTour(TOUR_KEYS.menu, getMenuSteps, isDarkMode, 900);
+
 
   // Get user role
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
@@ -572,6 +586,8 @@ const Menu = () => {
   const dragStartOrderRef = useRef([]);
   const menuReorderTimerRef = useRef(null);
   const menuReorderPendingRef = useRef([]);
+  const menuReorderRequestIdRef = useRef(0);
+  const lastDragOverIdRef = useRef(null);
   const pointerDragRef = useRef({ pointerId: null });
 
   const [filters, setFilters] = useState({
@@ -593,11 +609,6 @@ const Menu = () => {
   const [viewingItem, setViewingItem] = useState(null);
   const [togglingCategory, setTogglingCategory] = useState("");
 
-  // Refetch on every navigation to this page
-  useEffect(() => {
-    refetch();
-  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Store requested category from add/edit in a ref so categoryGroups effect can use it
   const pendingCategoryRef = useRef(location.state?.selectCategory || "");
 
@@ -607,8 +618,11 @@ const Menu = () => {
     if (!cat) return;
     pendingCategoryRef.current = cat;
     // Clear state so browser back doesn't re-trigger
-    window.history.replaceState({}, "");
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    navigate(location.pathname, {
+      replace: true,
+      state: null,
+    });
+  }, [location.state?.selectCategory, location.pathname, navigate]);
 
   useEffect(() => {
     if (selectedCategory) {
@@ -693,9 +707,10 @@ const Menu = () => {
   }, []);
 
   useEffect(() => {
+    if (categoryDragging || isCategoryReordering) return;
     const incomingCategories = restaurantData?.restaurant?.categories || [];
     setRestaurantCategories(sortUniqueCategories(incomingCategories));
-  }, [restaurantData, sortUniqueCategories]);
+  }, [restaurantData, sortUniqueCategories, categoryDragging, isCategoryReordering]);
 
   const categoryLookup = useMemo(
     () => buildCategoryLookup(restaurantData?.restaurant?.categories || []),
@@ -725,7 +740,7 @@ const Menu = () => {
 
       return {
         ...item,
-        type: normalizedType || "veg",
+        type: normalizedType || item?.type || "veg",
         category: resolveCategoryValue(item, categoryLookup, restaurantCategories),
       };
     });
@@ -861,18 +876,34 @@ const Menu = () => {
     setTogglingCategory(catName);
 
     try {
-      await Promise.all(
-        itemsInCategory.map((item) =>
-          updateMenuItem({
+      let successfulCount = 0;
+      let failedCount = 0;
+      for (const item of itemsInCategory) {
+        if (!item?._id) continue;
+        try {
+          await updateMenuItem({
             itemId: item._id,
             updatedData: { visibility: nextVisibility },
-          }).unwrap()
-        )
-      );
-      notify(
-        `All items in "${catName}" are now ${nextVisibility === "ADMIN" ? "hidden" : "visible"}`,
-        "success"
-      );
+          }).unwrap();
+          successfulCount++;
+        } catch (err) {
+          console.error(`Failed to update item ${item._id} visibility:`, err);
+          failedCount++;
+        }
+        // Stagger requests by adding a 300ms delay between consecutive calls
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      if (failedCount > 0) {
+        notify(
+          `${successfulCount} items updated, ${failedCount} failed.`,
+          failedCount === itemsInCategory.length ? "error" : "warning"
+        );
+      } else {
+        notify(
+          `All items in "${catName}" are now ${nextVisibility === "ADMIN" ? "hidden" : "visible"}`,
+          "success"
+        );
+      }
     } catch (err) {
       console.error("Failed to toggle category visibility:", err);
       notify("Failed to update category visibility", "error");
@@ -980,15 +1011,15 @@ const Menu = () => {
         };
       }
 
-      const categoryObj = restaurantData?.restaurant?.categories?.find(
-        (c) =>
-          normalizeCategoryKey(c.name || c.label) ===
-          normalizeCategoryKey(currentCategoryName)
-      );
-      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+      const categoryObj = restaurantData?.restaurant?.categories?.find((c) => {
+        const name = typeof c === "string" ? c : (c?.name || c?.label || "");
+        return normalizeCategoryKey(name) === normalizeCategoryKey(currentCategoryName);
+      });
+      const categoryId = typeof categoryObj === "object" ? categoryObj?._id : categoryObj;
+      if (!categoryId) return { ok: false, message: "Category ID/Value not found." };
 
       try {
-        await updateCategory({ categoryId: categoryObj._id, newName: updatedCategory }).unwrap();
+        await updateCategory({ categoryId, newName: updatedCategory }).unwrap();
         notify(`Category renamed to "${updatedCategory}".`, "success");
         return { ok: true, oldCategory: currentCategory, category: updatedCategory };
       } catch (err) {
@@ -1023,15 +1054,15 @@ const Menu = () => {
         return { ok: false, message: "Only admins can delete categories." };
       }
 
-      const categoryObj = restaurantData?.restaurant?.categories?.find(
-        (c) =>
-          normalizeCategoryKey(c.name || c.label) ===
-          normalizeCategoryKey(categoryNameToDelete)
-      );
-      if (!categoryObj?._id) return { ok: false, message: "Category ID not found." };
+      const categoryObj = restaurantData?.restaurant?.categories?.find((c) => {
+        const name = typeof c === "string" ? c : (c?.name || c?.label || "");
+        return normalizeCategoryKey(name) === normalizeCategoryKey(categoryNameToDelete);
+      });
+      const categoryId = typeof categoryObj === "object" ? categoryObj?._id : categoryObj;
+      if (!categoryId) return { ok: false, message: "Category ID/Value not found." };
 
       try {
-        await deleteCategory(categoryObj._id).unwrap();
+        await deleteCategory(categoryId).unwrap();
         notify(`Category "${targetCategory}" deleted.`, "success");
         refetch();
         return { ok: true, deletedCategory: targetCategory };
@@ -1052,13 +1083,7 @@ const Menu = () => {
     ]
   );
 
-  const [categoryDragging, setCategoryDragging] = useState(null);
-  const [categoryDragOver, setCategoryDragOver] = useState(null);
-  const [isCategoryReordering, setIsCategoryReordering] = useState(false);
-  const categoryPointerRef = useRef({ pointerId: null });
-  const categoryStartRef = useRef([]);
-  const categoryReorderTimerRef = useRef(null);
-  const categoryReorderPendingRef = useRef([]);
+
 
   useEffect(() => {
     return () => {
@@ -1099,6 +1124,7 @@ const Menu = () => {
       event.stopPropagation();
       categoryPointerRef.current.pointerId = event.pointerId;
       categoryStartRef.current = restaurantCategories;
+      lastCategoryDragOverRef.current = category;
       setCategoryDragging(category);
       setCategoryDragOver(category);
       if (typeof event.currentTarget?.setPointerCapture === "function") {
@@ -1116,7 +1142,9 @@ const Menu = () => {
       const target = document.elementFromPoint(event.clientX, event.clientY);
       const chip = target?.closest?.("[data-category-chip]");
       const overCategory = chip?.getAttribute?.("data-category-chip");
-      if (!overCategory || overCategory === categoryDragging) return;
+      if (!overCategory || overCategory === categoryDragging || overCategory === lastCategoryDragOverRef.current) return;
+      
+      lastCategoryDragOverRef.current = overCategory;
       setCategoryDragOver(overCategory);
       setRestaurantCategories((prev) =>
         moveCategory(prev, categoryDragging, overCategory)
@@ -1128,6 +1156,7 @@ const Menu = () => {
       categoryPointerRef.current.pointerId = null;
       setCategoryDragging(null);
       setCategoryDragOver(null);
+      lastCategoryDragOverRef.current = null;
 
       if (!restaurantCategories.length) return;
       categoryReorderPendingRef.current = restaurantCategories;
@@ -1137,8 +1166,10 @@ const Menu = () => {
       categoryReorderTimerRef.current = setTimeout(async () => {
         const orderToSave = categoryReorderPendingRef.current;
         setIsCategoryReordering(true);
+        const reqId = ++categoryReorderRequestIdRef.current;
         try {
           const result = await reorderCategories(orderToSave).unwrap();
+          if (reqId !== categoryReorderRequestIdRef.current) return;
           const nextCategories = Array.isArray(result?.categories)
             ? result.categories.map((cat) => cat?.name).filter(Boolean)
             : orderToSave;
@@ -1147,13 +1178,16 @@ const Menu = () => {
           }
           notify("Category order updated.", "success");
         } catch (error) {
+          if (reqId !== categoryReorderRequestIdRef.current) return;
           notify(getFriendlyMenuError(error, "update"), "error");
           if (categoryStartRef.current?.length) {
             setRestaurantCategories(categoryStartRef.current);
           }
         } finally {
-          setIsCategoryReordering(false);
-          categoryReorderTimerRef.current = null;
+          if (reqId === categoryReorderRequestIdRef.current) {
+            setIsCategoryReordering(false);
+            categoryReorderTimerRef.current = null;
+          }
         }
       }, 1000);
     };
@@ -1371,8 +1405,9 @@ const Menu = () => {
 
   const handleDragOver = useCallback(
     (event, overId) => {
-      if (!draggingId || draggingId === overId) return;
+      if (!draggingId || draggingId === overId || overId === lastDragOverIdRef.current) return;
       event.preventDefault();
+      lastDragOverIdRef.current = overId;
       setDragOverId(overId);
       setMenuOrder((prev) => moveMenuItem(prev, draggingId, overId));
     },
@@ -1387,6 +1422,7 @@ const Menu = () => {
       event.stopPropagation();
       pointerDragRef.current.pointerId = event.pointerId;
       dragStartOrderRef.current = menuOrderRef.current;
+      lastDragOverIdRef.current = itemId;
       setDraggingId(itemId);
       setDragOverId(itemId);
       setIsPointerDragging(true);
@@ -1407,18 +1443,23 @@ const Menu = () => {
       menuReorderTimerRef.current = setTimeout(async () => {
         const orderToSave = menuReorderPendingRef.current;
         setIsReordering(true);
+        const reqId = ++menuReorderRequestIdRef.current;
         try {
           await reorderMenuItems(orderToSave).unwrap();
+          if (reqId !== menuReorderRequestIdRef.current) return;
           notify("Menu order updated.", "success");
           refetch();
         } catch (error) {
+          if (reqId !== menuReorderRequestIdRef.current) return;
           notify(getFriendlyMenuError(error, "update"), "error");
           if (dragStartOrderRef.current?.length) {
             setMenuOrder(dragStartOrderRef.current);
           }
         } finally {
-          setIsReordering(false);
-          menuReorderTimerRef.current = null;
+          if (reqId === menuReorderRequestIdRef.current) {
+            setIsReordering(false);
+            menuReorderTimerRef.current = null;
+          }
         }
       }, 1000);
     },
@@ -1429,6 +1470,7 @@ const Menu = () => {
     if (!draggingId) return;
     setDraggingId(null);
     setDragOverId(null);
+    lastDragOverIdRef.current = null;
     setIsPointerDragging(false);
     const finalOrder = menuOrderRef.current;
     scheduleMenuReorder(finalOrder);
@@ -1442,7 +1484,9 @@ const Menu = () => {
       const target = document.elementFromPoint(event.clientX, event.clientY);
       const card = target?.closest?.("[data-menu-id]");
       const overId = card?.getAttribute?.("data-menu-id");
-      if (!overId || overId === draggingId) return;
+      if (!overId || overId === draggingId || overId === lastDragOverIdRef.current) return;
+      
+      lastDragOverIdRef.current = overId;
       setDragOverId(overId);
       setMenuOrder((prev) => moveMenuItem(prev, draggingId, overId));
     };
@@ -1485,11 +1529,11 @@ const prepareFormData = (formData, file) => {
     // Check active - handle both boolean and string representations
     const isActive = discount.active === true || discount.active === "true";
     
-    // Parse the value as integer
+    // Parse the value as number (float)
     const rawValue = discount.value;
     let val = 0;
     if (isActive && rawValue !== undefined && rawValue !== null && rawValue !== "") {
-      val = parseInt(rawValue.toString().trim(), 10);
+      val = parseFloat(rawValue.toString().trim());
       if (isNaN(val)) val = 0;
     }
     
@@ -1618,6 +1662,11 @@ const prepareFormData = (formData, file) => {
           }.`,
           "success"
         );
+        setAvailabilityOverrides((prev) => {
+          const copy = { ...prev };
+          delete copy[item._id];
+          return copy;
+        });
       } catch (error) {
         notify(getFriendlyMenuError(error, "update"), "error");
         setAvailabilityOverrides((prev) => {
@@ -1645,20 +1694,61 @@ const prepareFormData = (formData, file) => {
       });
 
       try {
-        await Promise.all(
-          items.map((item) =>
-            updateMenuItem({
+        const results = [];
+        for (const item of items) {
+          if (!item?._id) continue;
+          try {
+            const res = await updateMenuItem({
               itemId: item._id,
               updatedData: { available: nextValue },
-            }).unwrap()
-          )
-        );
-        notify(
-          `"${categoryLabel}" marked ${
-            nextValue ? "available" : "unavailable"
-          }.`,
-          "success"
-        );
+            }).unwrap();
+            results.push({ status: "fulfilled", value: res });
+          } catch (err) {
+            results.push({ status: "rejected", reason: err });
+          }
+          // Stagger requests by adding a 300ms delay between consecutive calls
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+
+        const successfulIds = [];
+        const failedItems = [];
+        results.forEach((res, idx) => {
+          const item = items[idx];
+          if (res.status === "fulfilled") {
+            successfulIds.push(item._id);
+          } else {
+            failedItems.push(item);
+          }
+        });
+
+        if (failedItems.length > 0) {
+          notify(
+            `${successfulIds.length} items updated, ${failedItems.length} failed.`,
+            failedItems.length === items.length ? "error" : "warning"
+          );
+          setAvailabilityOverrides((prev) => {
+            const copy = { ...prev };
+            failedItems.forEach((f) => {
+              delete copy[f._id];
+            });
+            return copy;
+          });
+        } else {
+          notify(
+            `"${categoryLabel}" marked ${
+              nextValue ? "available" : "unavailable"
+            }.`,
+            "success"
+          );
+        }
+
+        setAvailabilityOverrides((prev) => {
+          const copy = { ...prev };
+          successfulIds.forEach((id) => {
+            delete copy[id];
+          });
+          return copy;
+        });
       } catch (error) {
         notify(getFriendlyMenuError(error, "update"), "error");
         setAvailabilityOverrides((prev) => {
@@ -1723,7 +1813,7 @@ const prepareFormData = (formData, file) => {
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:hidden"
                 aria-label="Toggle search"
               >
                 <Search size={18} />
@@ -1814,7 +1904,7 @@ const prepareFormData = (formData, file) => {
                   <h3 className="text-base font-bold text-[#1c1917] dark:text-slate-100">
                     Manage Categories
                   </h3>
-                  <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="rounded-md border border-[#ede8e3] bg-[#f7f3ef] px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {restaurantCategories.length}
                   </span>
                 </div>
@@ -1822,7 +1912,7 @@ const prepareFormData = (formData, file) => {
               <button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 aria-label="Close category manager"
                 title="Close"
               >
@@ -1911,34 +2001,38 @@ const prepareFormData = (formData, file) => {
                   </div>
                 ) : (
                   <>
-                    {categoryGroups.map((category) => {
+                    {categoryGroups.map((category, index) => {
                       const categoryKey = normalizeCategoryKey(category.label);
                       const isActive =
                         normalizeCategoryKey(selectedCategory) === categoryKey;
                       return (
-                        <button
-                          key={categoryKey}
-                          type="button"
-                          onClick={() => setSelectedCategory(category.label)}
-                          className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
-                            isActive
-                              ? ""
-                              : isDarkMode
-                                ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
-                                : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
-                          }`}
-                          style={isActive ? {
-                            backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
-                            borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
-                            color: isDarkMode ? "#ffffff" : colors.primary,
-                            borderLeft: `4px solid ${colors.primary}`,
-                            paddingLeft: "12px"
-                          } : {}}
-                        >
-                          <span className="min-w-0 flex-1 block truncate max-w-[130px] sm:max-w-[200px]">
-                            {category.label}
-                          </span>
-                        </button>
+                        <React.Fragment key={categoryKey}>
+                          {index > 0 && (
+                            <div className="border-t border-[#ede8e3]/70 dark:border-slate-700/40 w-full" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategory(category.label)}
+                            className={`w-full text-left px-4 py-2.5 text-xs font-extrabold transition-all duration-150 border rounded-r-xl rounded-l-none ${
+                              isActive
+                                ? ""
+                                : isDarkMode
+                                  ? "border-transparent text-slate-450 hover:bg-slate-800/80 hover:text-slate-100"
+                                  : "border-transparent text-[#57524e] hover:bg-[#fbfaf8] hover:text-[#1c1917] pl-4 border-l-4 border-l-transparent"
+                            }`}
+                            style={isActive ? {
+                              backgroundColor: isDarkMode ? `${colors.primary}25` : `${colors.primary}0d`,
+                              borderColor: isDarkMode ? `${colors.primary}60` : `${colors.primary}33`,
+                              color: isDarkMode ? "#ffffff" : colors.primary,
+                              borderLeft: `4px solid ${colors.primary}`,
+                              paddingLeft: "12px"
+                            } : {}}
+                          >
+                            <span className="min-w-0 flex-1 block truncate max-w-[130px] sm:max-w-[200px]">
+                              {category.label}
+                            </span>
+                          </button>
+                        </React.Fragment>
                       );
                     })}
                     {categoryGroups.length === 0 && (
@@ -2059,7 +2153,7 @@ const prepareFormData = (formData, file) => {
                                 data-tour="menu-drag-item"
                                 {...dragHandleProps}
                                 onClick={(event) => event.stopPropagation()}
-                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-[#ede8e3] bg-white text-[#78716c] transition hover:bg-[#f7f3ef] active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
+                                className="inline-flex h-7 w-7 self-start items-center justify-center rounded-md border border-[#ede8e3] bg-white text-gray-600 transition hover:bg-[#f7f3ef] active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
                                 aria-label="Drag to reorder"
                                 title="Drag to reorder"
                               >
@@ -2085,7 +2179,7 @@ const prepareFormData = (formData, file) => {
                                   {item?.name || "Unnamed Item"}
                                 </span>
                               </div>
-                              <p className="text-xs text-[#a8a29e] dark:text-slate-400">
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
                                 {item?.pricingType === "variant"
                                   ? "Variant"
                                   : item?.pricingType === "combo"
@@ -2101,7 +2195,7 @@ const prepareFormData = (formData, file) => {
                                 <VisibilityBadge visibility={item?.visibility} />
                               </div>
                               {item?.pricingType === "variant" && variantDetails.length ? (
-                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#a8a29e] dark:text-slate-400">
+                                <div className="flex flex-wrap items-center gap-1 text-[11px] text-gray-500 dark:text-slate-400">
                                   {variantDetails.map((variant, index) => (
                                     <span key={variant.key} className="inline-flex items-center gap-1">
                                       <span>
@@ -2119,7 +2213,7 @@ const prepareFormData = (formData, file) => {
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-[#a8a29e] dark:text-slate-400">
+                                <span className="text-[11px] text-gray-500 dark:text-slate-400">
                                   {item?.pricingType === "combo" && comboPrice != null ? (
                                     <>Combo {formatCurrency(comboPrice)}</>
                                   ) : item?.pricingType === "single" && singleDetails?.current != null ? (
@@ -2171,7 +2265,7 @@ const prepareFormData = (formData, file) => {
                       })}
 
                       {menuEditorItems.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
+                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
                           No menu items found for this category.
                         </div>
                       )}
@@ -2190,7 +2284,7 @@ const prepareFormData = (formData, file) => {
 
               <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#f0ebe5] pr-1 dark:divide-slate-700/60">
                 {isLoading ? (
-                  <div className="px-4 py-6 text-center text-sm text-[#a8a29e] dark:text-slate-400">
+                  <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
                     Loading inventory...
                   </div>
                 ) : (
@@ -2208,7 +2302,7 @@ const prepareFormData = (formData, file) => {
                               onClick={() => toggleInventoryCategory(categoryKey)}
                               className="flex max-w-[70%] sm:max-w-[80%] min-w-0 items-center gap-2 text-left"
                             >
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-[#78716c] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#ede8e3] bg-white text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                 {isOpen ? (
                                   <ChevronDown size={16} />
                                 ) : (

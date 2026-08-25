@@ -2,17 +2,20 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 
 const Filter = memo(function Filter({
-  filters = { veg: false, nonVeg: false, mixed: false, combo: false },
+  filters = { veg: false, nonVeg: false, egg: false, mixed: false, combo: false },
   onChange = () => {},
   isDarkMode = false,
   hasCombo = true,
   showVegNonVegFilters = true,
+  showEggFilter = false,
 }) {
   const currentMode =
-    filters.veg && !filters.nonVeg && !filters.mixed
+    filters.veg && !filters.nonVeg && !filters.egg && !filters.mixed
       ? "veg"
-      : filters.nonVeg && !filters.veg && !filters.mixed
+      : filters.nonVeg && !filters.veg && !filters.egg && !filters.mixed
       ? "nonVeg"
+      : filters.egg && !filters.veg && !filters.nonVeg && !filters.mixed
+      ? "egg"
       : filters.mixed
       ? "mixed"
       : filters.combo
@@ -23,18 +26,27 @@ const Filter = memo(function Filter({
     if (mode === "veg") {
       onChange("veg", true);
       onChange("nonVeg", false);
+      onChange("egg", false);
       onChange("mixed", false);
     } else if (mode === "nonVeg") {
       onChange("veg", false);
       onChange("nonVeg", true);
+      onChange("egg", false);
+      onChange("mixed", false);
+    } else if (mode === "egg") {
+      onChange("veg", false);
+      onChange("nonVeg", false);
+      onChange("egg", true);
       onChange("mixed", false);
     } else if (mode === "mixed") {
       onChange("veg", false);
       onChange("nonVeg", false);
+      onChange("egg", false);
       onChange("mixed", true);
     } else {
       onChange("veg", false);
       onChange("nonVeg", false);
+      onChange("egg", false);
       onChange("mixed", false);
     }
   };
@@ -104,6 +116,21 @@ const Filter = memo(function Filter({
             >
               Non-Veg
             </button>
+            {showEggFilter && (
+              <button
+                type="button"
+                onClick={() => setMode("egg")}
+                className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:text-sm ${
+                  currentMode === "egg"
+                    ? "bg-yellow-500 text-slate-900 shadow"
+                    : isDarkMode
+                    ? "text-yellow-300 hover:bg-slate-800"
+                    : "text-yellow-700 hover:bg-yellow-50/80"
+                }`}
+              >
+                Egg
+              </button>
+            )}
           </div>
         </div>
       )}

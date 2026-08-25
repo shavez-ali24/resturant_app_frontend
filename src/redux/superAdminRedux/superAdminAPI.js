@@ -9,7 +9,7 @@ const baseQuery = fetchBaseQuery({
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
-    headers.set("Content-Type", "application/json");
+    headers.set("Accept", "application/json");
     return headers;
   },
 });
@@ -31,7 +31,7 @@ const baseQueryWithAuthRedirect = async (args, api, extraOptions) => {
 export const superAdminApi = createApi({
   reducerPath: "superAdminApi",
   baseQuery: baseQueryWithAuthRedirect,
-  tagTypes: ["Admins"],
+  tagTypes: ["Admins", "Staff"],
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({
@@ -40,14 +40,23 @@ export const superAdminApi = createApi({
         body: credentials,
       }),
       transformResponse: (response) => {
-        if (response.user.role !== "superadmin") {
+        const user = response?.user;
+        const token = response?.token;
+
+        if (!user || !token) {
+          throw new Error("Invalid login response");
+        }
+
+        if (user.role !== "superadmin") {
           throw new Error("Access denied. Superadmin privileges required.");
         }
-        localStorage.setItem("sa_token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-        localStorage.setItem("userRole", response.user.role);
-        localStorage.setItem("userName", response.user.name);
-        localStorage.setItem("userEmail", response.user.email);
+
+        localStorage.setItem("sa_token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("userRole", user.role);
+        localStorage.setItem("userName", user.name || "");
+        localStorage.setItem("userEmail", user.email || "");
+
         return response;
       },
     }),
@@ -60,6 +69,8 @@ export const superAdminApi = createApi({
           url = "/auth/register/admin";
         } else if (userData.role === "staff") {
           url = "/auth/register/staff";
+        } else {
+          throw new Error("Invalid user role");
         }
         return {
           url,
@@ -67,6 +78,7 @@ export const superAdminApi = createApi({
           body: userData,
         };
       },
+      invalidatesTags: ["Admins", "Staff"],
     }),
 
     getAdmins: builder.query({
@@ -97,7 +109,7 @@ export const superAdminApi = createApi({
         method: "PUT",
         body: rest,
       }),
-      invalidatesTags: ["Admins"],
+      invalidatesTags: ["Admins", "Staff"],
     }),
 
     // Delete user (soft delete)
@@ -106,7 +118,7 @@ export const superAdminApi = createApi({
         url: `/auth/${userId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Admins"],
+      invalidatesTags: ["Admins", "Staff"],
     }),
 
     // Get all staff (superadmin only)

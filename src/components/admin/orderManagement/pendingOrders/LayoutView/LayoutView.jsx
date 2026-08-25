@@ -1,18 +1,21 @@
 // src/components/admin/orderManagement/pendingOrders/LayoutView/LayoutView.jsx
 import React, { useState, useCallback, useMemo } from "react";
-
 import SectionBlock from "./SectionBlock";
-import LegendBar from "./LegendBar";
 import CreateOrderModal from "./CreateOrderModal";
 import RoomActionModal from "./RoomActionModal";
+import TableActionModal from "./TableActionModal";
 
 /**
- * Main Layout View — renders restaurant sections with table cards in a flex-wrap row.
+ * Layout View Component
+ * Renders sections, handles interactions with blank/occupied tables and rooms.
  */
 export default function LayoutView({
-  sections,
-  onViewOrder,
+  sections = [],
+  isLoading = false,
+  error = null,
+  isDarkMode = false,
   onCreateOrder,
+  onViewOrder,
   onEditOrder,
   onMoveOrder,
   onPayOrder,
@@ -21,33 +24,33 @@ export default function LayoutView({
   onCheckoutRoom,
   onCancelBooking,
   roomActionLoadingId = null,
-  isDarkMode = false,
-  isLoading = false,
-  error = null,
   onRetry,
 }) {
   const [selectedBlankTable, setSelectedBlankTable] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedTable, setSelectedTable] = useState(null);
 
-  const handleTableClick = useCallback(
-    (table) => {
-      if (table?.unitType === "ROOM") {
-        setSelectedRoom(table);
-        return;
-      }
-      if (table.status === "blank") {
-        setSelectedBlankTable(table);
-      } else if (table.rawStatus === "BILLED" || table.status === "billed") {
-        onPayOrder?.(table);
-      } else {
-        try {
-          sessionStorage.setItem("selectedTable", JSON.stringify(table));
-        } catch (_) {}
-        onEditOrder?.(table);
-      }
-    },
-    [onEditOrder, onPayOrder]
-  );
+  const isBilled = (table) =>
+    table?.rawStatus === "BILLED" ||
+    table?.status === "billed";
+
+  const handleTableClick = useCallback((table) => {
+    if (table?.unitType === "ROOM") {
+      setSelectedRoom(table);
+      return;
+    }
+
+    const hasActiveOrder =
+      table?.rawStatus === "OCCUPIED" ||
+      table?.rawStatus === "BILLED" ||
+      ["running", "running_kot", "printed", "booked", "billed", "paid"].includes(table?.status);
+
+    if (hasActiveOrder) {
+      setSelectedTable(table);
+    } else {
+      setSelectedBlankTable(table);
+    }
+  }, []);
 
   const handleRoomClick = useCallback((room) => {
     setSelectedRoom(room);
@@ -69,7 +72,7 @@ export default function LayoutView({
 
   const handleViewOrder = useCallback((table) => onViewOrder?.(table), [onViewOrder]);
   const handleEditOrder = useCallback((table) => {
-    if (table?.rawStatus === "BILLED" || table?.status === "billed") {
+    if (isBilled(table)) {
       onPayOrder?.(table);
       return;
     }
@@ -90,6 +93,8 @@ export default function LayoutView({
 
   const handleCloseRoomModal = useCallback(() => setSelectedRoom(null), []);
 
+  const handleCloseTableModal = useCallback(() => setSelectedTable(null), []);
+
   const handleBookRoom = useCallback(async (payload, room) => {
     await onBookRoom?.(payload, room);
   }, [onBookRoom]);
@@ -107,6 +112,12 @@ export default function LayoutView({
   if (isLoading && sectionsList.length === 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: 4, height: "100%", overflowY: "auto" }}>
+        <style>{`
+          @keyframes layout-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+          }
+        `}</style>
         <div
           style={{
             display: "flex",
@@ -127,7 +138,7 @@ export default function LayoutView({
                   height: 14,
                   borderRadius: 3,
                   background: isDarkMode ? "#334155" : "#ede8e3",
-                  animation: "pulse 1.5s ease-in-out infinite",
+                  animation: "layout-pulse 1.5s ease-in-out infinite",
                 }}
               />
               <span
@@ -137,7 +148,7 @@ export default function LayoutView({
                   height: 12,
                   borderRadius: 4,
                   background: isDarkMode ? "#334155" : "#ede8e3",
-                  animation: "pulse 1.5s ease-in-out infinite",
+                  animation: "layout-pulse 1.5s ease-in-out infinite",
                 }}
               />
             </div>
@@ -152,7 +163,7 @@ export default function LayoutView({
                 height: 112,
                 borderRadius: 14,
                 background: isDarkMode ? "#334155" : "#ede8e3",
-                animation: "pulse 1.5s ease-in-out infinite",
+                animation: "layout-pulse 1.5s ease-in-out infinite",
               }}
             />
           ))}
@@ -165,7 +176,7 @@ export default function LayoutView({
   if (error && sectionsList.length === 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: 4, height: "100%", overflowY: "auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "64px 0", color: isDarkMode ? "#94a3b8" : "#78716c" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifycontent: "center", gap: 12, padding: "64px 0", color: isDarkMode ? "#94a3b8" : "#78716c" }}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -173,22 +184,24 @@ export default function LayoutView({
           </svg>
           <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>Could not load units. Please refresh the page</p>
           <p style={{ fontSize: 12, opacity: 0.7, margin: 0 }}>{error}</p>
-          <button
-            onClick={onRetry}
-            style={{
-              marginTop: 8,
-              borderRadius: 8,
-              background: "#f97316",
-              color: "#ffffff",
-              border: "none",
-              padding: "8px 16px",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                marginTop: 8,
+                borderRadius: 8,
+                background: "#f97316",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 16px",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     );
@@ -212,7 +225,7 @@ export default function LayoutView({
 
   // ── Main Render ──
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 4 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 32, padding: "2px 4px" }}>
 
       {sectionsList.map((section) => (
         <SectionBlock
@@ -252,7 +265,20 @@ export default function LayoutView({
           onMove={handleMoveOrder}
           onPay={handlePayOrder}
           onCancelBooking={onCancelBooking}
-          isLoading={roomActionLoadingId === selectedRoom.unitId}
+          isLoading={roomActionLoadingId && selectedRoom?.unitId && String(roomActionLoadingId) === String(selectedRoom.unitId)}
+        />
+      )}
+
+      {selectedTable && (
+        <TableActionModal
+          table={selectedTable}
+          isDarkMode={isDarkMode}
+          onClose={handleCloseTableModal}
+          onEdit={onEditOrder}
+          onView={onViewOrder}
+          onPay={onPayOrder}
+          onCancelBooking={onCancelBooking}
+          isLoading={roomActionLoadingId && selectedTable?.unitId && String(roomActionLoadingId) === String(selectedTable.unitId)}
         />
       )}
     </div>

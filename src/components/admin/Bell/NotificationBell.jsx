@@ -7,7 +7,13 @@ import audio from "@/assets/orderRing.mp3";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
 import { useNotification } from "./NotificationContext";
 
+// Constants
 const POLLING_INTERVAL = 60000;
+const REFETCH_DEBOUNCE_MS = 300;
+const MODIFIED_STALE_MS = 30000;
+const MODIFIED_RECENT_MS = 15000;
+const MAX_LATEST_ORDERS = 10;
+const MAX_RECENT_ORDERS = 15;
 
 const extractOrders = (response) => {
   if (!response) return [];
@@ -15,6 +21,20 @@ const extractOrders = (response) => {
   if (Array.isArray(response.orders)) return response.orders;
   if (Array.isArray(response.data)) return response.data;
   return [];
+};
+
+const getTotalCount = (response, fallback = 0) => {
+  return Number(
+    response?.totalOrders ??
+    response?.total ??
+    response?.count ??
+    fallback
+  );
+};
+
+const getTime = (date) => {
+  const time = Date.parse(date);
+  return Number.isFinite(time) ? time : 0;
 };
 
 const checkAndClearAdminModifiedOrderId = (id) => {
@@ -34,12 +54,12 @@ const checkAndClearAdminModifiedOrderId = (id) => {
     let isFound = false;
     const pruned = {};
     Object.entries(data).forEach(([key, val]) => {
-      if (now - Number(val) < 30000) {
+      if (now - Number(val) < MODIFIED_STALE_MS) {
         pruned[key] = val;
       }
     });
     const timestamp = data[String(id)];
-    if (timestamp && now - Number(timestamp) < 15000) {
+    if (timestamp && now - Number(timestamp) < MODIFIED_RECENT_MS) {
       isFound = true;
     }
     sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
@@ -48,18 +68,64 @@ const checkAndClearAdminModifiedOrderId = (id) => {
   return false;
 };
 
+// Styling badge helpers moved outside of component render
+const getStatusBadgeStyle = (status, isDarkMode) => {
+  const s = String(status || "").toLowerCase();
+  if (s === "preparing") {
+    return {
+      backgroundColor: isDarkMode ? "rgba(20, 184, 166, 0.15)" : "#f0fdf4",
+      borderColor: isDarkMode ? "rgba(20, 184, 166, 0.4)" : "rgba(34, 197, 94, 0.2)",
+      color: isDarkMode ? "#2dd4bf" : "#166534",
+      borderWidth: "1px"
+    };
+  }
+  return {
+    backgroundColor: isDarkMode ? "rgba(234, 179, 8, 0.15)" : "#fef9c3",
+    borderColor: isDarkMode ? "rgba(234, 179, 8, 0.4)" : "rgba(234, 179, 8, 0.2)",
+    color: isDarkMode ? "#facc15" : "#854d0e",
+    borderWidth: "1px"
+  };
+};
+
+const getTypeBadgeStyle = (type, colors, isDarkMode) => {
+  const t = String(type || "").toLowerCase().replace(/\s+/g, "");
+  if (t === "delivery") {
+    return {
+      backgroundColor: isDarkMode ? "rgba(239, 159, 39, 0.15)" : colors.primaryLight,
+      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}20`,
+      color: isDarkMode ? colors.primary : colors.primaryText,
+      borderWidth: "1px"
+    };
+  }
+  if (t === "takeaway") {
+    return {
+      backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.15)" : "#eff6ff",
+      borderColor: isDarkMode ? "rgba(59, 130, 246, 0.4)" : "rgba(59, 130, 246, 0.2)",
+      color: isDarkMode ? "#60a5fa" : "#1e40af",
+      borderWidth: "1px"
+    };
+  }
+  return {
+    backgroundColor: isDarkMode ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
+    borderColor: isDarkMode ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.2)",
+    color: isDarkMode ? "#34d399" : "#065f46",
+    borderWidth: "1px"
+  };
+};
+
 export default function NotificationBell() {
-  const MotionDiv = motion.div;
-  const MotionSpan = motion.span;
   const dispatch = useDispatch();
   const bellRef = useRef(null);
   const [latestOrders, setLatestOrders] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
   const knownOrderIds = useRef(new Set());
+  const dismissedOrderIds = useRef(new Set());
   const hasInitialized = useRef(false);
   const notificationSound = useMemo(() => new Audio(audio), []);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const { notify, sseEvent, sseConnected } = useNotification();
+  
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
@@ -69,11 +135,11 @@ export default function NotificationBell() {
   const pollingInterval = sseConnected ? 0 : POLLING_INTERVAL;
   const refetchOnAction = !sseConnected;
 
-  const { data: pendingResponse = {}, refetch: refetchPending } = useGetOrdersQuery(
+  const { data: pendingResponse = {}, refetch: refetchPending, isSuccess: isPendingSuccess } = useGetOrdersQuery(
     { status: "pending", page: 1, limit: 20, range: "all" },
     { pollingInterval, refetchOnFocus: refetchOnAction, refetchOnReconnect: refetchOnAction }
   );
-  const { data: preparingResponse = {}, refetch: refetchPreparing } = useGetOrdersQuery(
+  const { data: preparingResponse = {}, refetch: refetchPreparing, isSuccess: isPreparingSuccess } = useGetOrdersQuery(
     { status: "preparing", page: 1, limit: 20, range: "all" },
     { pollingInterval, refetchOnFocus: refetchOnAction, refetchOnReconnect: refetchOnAction }
   );
@@ -93,20 +159,81 @@ export default function NotificationBell() {
   }, [pendingOrders, preparingOrders]);
 
   const pendingOrdersCount = useMemo(() => {
-    if (typeof pendingResponse?.totalOrders === "number") return pendingResponse.totalOrders;
-    return pendingOrders.length;
+    return getTotalCount(pendingResponse, pendingOrders.length);
   }, [pendingResponse, pendingOrders]);
 
-  useEffect(() => {
-    if (!orders.length) return;
-    const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const recent = sorted.slice(0, 15);
+  // Debounced API invalidation scheduling to avoid race conditions
+  const pendingRefetchTimeoutRef = useRef(null);
+  const preparingRefetchTimeoutRef = useRef(null);
 
-    // First load — just mark all as known, don't play sound
+  const schedulePendingRefetch = useCallback(() => {
+    if (pendingRefetchTimeoutRef.current) clearTimeout(pendingRefetchTimeoutRef.current);
+    pendingRefetchTimeoutRef.current = setTimeout(() => {
+      refetchPending();
+    }, REFETCH_DEBOUNCE_MS);
+  }, [refetchPending]);
+
+  const schedulePreparingRefetch = useCallback(() => {
+    if (preparingRefetchTimeoutRef.current) clearTimeout(preparingRefetchTimeoutRef.current);
+    preparingRefetchTimeoutRef.current = setTimeout(() => {
+      refetchPreparing();
+    }, REFETCH_DEBOUNCE_MS);
+  }, [refetchPreparing]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingRefetchTimeoutRef.current) clearTimeout(pendingRefetchTimeoutRef.current);
+      if (preparingRefetchTimeoutRef.current) clearTimeout(preparingRefetchTimeoutRef.current);
+    };
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    if (audioEnabled) {
+      try {
+        notificationSound.currentTime = 0;
+        const p = notificationSound.play();
+        if (p?.catch) p.catch(() => { });
+      } catch { /* ignore */ }
+    }
+  }, [audioEnabled, notificationSound]);
+
+  // Invalidates queries target-wise according to SSE events
+  const handleSSEEventRefetch = useCallback((type, data) => {
+    const actualOrder = data?.order || data;
+    const status = actualOrder?.status;
+    const previousStatus = actualOrder?.previousStatus;
+
+    if (type === "NEW_ORDER") {
+      schedulePendingRefetch();
+    } else if (type === "ORDER_STATUS_CHANGED") {
+      schedulePendingRefetch();
+      schedulePreparingRefetch();
+    } else if (type === "ORDER_UPDATED") {
+      if (status === "pending" || previousStatus === "pending") {
+        schedulePendingRefetch();
+      }
+      if (status === "preparing" || previousStatus === "preparing") {
+        schedulePreparingRefetch();
+      }
+    }
+  }, [schedulePendingRefetch, schedulePreparingRefetch]);
+
+  // Initial load succeeds when both query results are fetched
+  const isInitialLoadComplete = isPendingSuccess && isPreparingSuccess;
+
+  useEffect(() => {
+    if (!isInitialLoadComplete) return;
+
+    const sorted = [...orders].sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
+    const recent = sorted.slice(0, MAX_RECENT_ORDERS);
+
+    // First load — mark all existing orders as known so they don't fire notifications
     if (!hasInitialized.current) {
       recent.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
       hasInitialized.current = true;
-      setLatestOrders(recent.slice(0, 10));
+      const visibleOrders = recent.filter((o) => o._id && !dismissedOrderIds.current.has(o._id));
+      setLatestOrders(visibleOrders.slice(0, MAX_LATEST_ORDERS));
       return;
     }
 
@@ -114,13 +241,18 @@ export default function NotificationBell() {
 
     if (fresh.length > 0) {
       fresh.forEach((o) => { if (o._id) knownOrderIds.current.add(o._id); });
+      playNotificationSound();
+      notify(`${fresh.length} new order${fresh.length > 1 ? "s" : ""} received`, "info");
     }
 
-    setLatestOrders(recent.slice(0, 10));
+    const visibleOrders = recent.filter((o) => o._id && !dismissedOrderIds.current.has(o._id));
+    setLatestOrders(visibleOrders.slice(0, MAX_LATEST_ORDERS));
+
     const currentIds = new Set(recent.map((o) => o._id).filter(Boolean));
     knownOrderIds.current = new Set([...knownOrderIds.current].filter((id) => currentIds.has(id)));
-  }, [orders]);
+  }, [orders, isInitialLoadComplete, playNotificationSound, notify]);
 
+  // Handle incoming SSE events
   useEffect(() => {
     if (!sseEvent?.type || !sseEvent?.data) return;
 
@@ -145,11 +277,7 @@ export default function NotificationBell() {
 
       if (message) {
         notify(message, "info");
-        try {
-          notificationSound.currentTime = 0;
-          const p = notificationSound.play();
-          if (p?.catch) p.catch(() => { });
-        } catch { /* ignore */ }
+        playNotificationSound();
       }
       return;
     }
@@ -158,23 +286,21 @@ export default function NotificationBell() {
     const orderId = actualOrder?._id || actualOrder?.id || actualOrder?.orderId;
     const isAdminAction = checkAndClearAdminModifiedOrderId(orderId);
 
-    if (["NEW_ORDER", "ORDER_UPDATED"].includes(sseEvent.type)) {
-      if (!isAdminAction) {
-        try {
-          notificationSound.currentTime = 0;
-          const p = notificationSound.play();
-          if (p?.catch) p.catch(() => { });
-        } catch { /* ignore */ }
-      }
+    const isNewOrder = sseEvent.type === "NEW_ORDER";
+    const isPendingUpdate = sseEvent.type === "ORDER_UPDATED" && actualOrder?.status === "pending";
+
+    if ((isNewOrder || isPendingUpdate) && !isAdminAction) {
+      playNotificationSound();
     }
 
     if (["NEW_ORDER", "ORDER_UPDATED", "ORDER_STATUS_CHANGED"].includes(sseEvent.type)) {
-      refetchPending();
-      refetchPreparing();
+      handleSSEEventRefetch(sseEvent.type, sseEvent.data);
     }
-  }, [sseEvent, refetchPending, refetchPreparing, notificationSound, notify]);
+  }, [sseEvent, handleSSEEventRefetch, playNotificationSound, notify]);
 
+  // Click outside to close dropdown
   useEffect(() => {
+    if (typeof document === "undefined") return;
     const handler = (e) => {
       if (bellRef.current && !bellRef.current.contains(e.target)) setIsDropdownOpen(false);
     };
@@ -182,11 +308,23 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Keyboard Escape key handler to close dropdown
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Pre-unlock audio so browser allows autoplay
   useEffect(() => {
     if (typeof window === "undefined") return;
     const enable = () => {
       setAudioEnabled(true);
-      // Pre-unlock audio so autoplay works on next SSE event
       if (notificationSound) {
         notificationSound.volume = 0;
         notificationSound.play().then(() => {
@@ -206,10 +344,22 @@ export default function NotificationBell() {
     };
   }, [notificationSound]);
 
+  // Audio cleanup on unmount
+  useEffect(() => {
+    return () => {
+      notificationSound.pause();
+      notificationSound.currentTime = 0;
+    };
+  }, [notificationSound]);
+
+  // Optimized dark mode observer
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    const update = () => setIsDarkMode(root.classList.contains("admin-dark") || root.classList.contains("dark"));
+    const update = () => {
+      const next = root.classList.contains("admin-dark") || root.classList.contains("dark");
+      setIsDarkMode((prev) => (prev === next ? prev : next));
+    };
     update();
     const obs = new MutationObserver(update);
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
@@ -220,63 +370,45 @@ export default function NotificationBell() {
     setIsDropdownOpen(false);
     dispatch(showBill(order));
   };
-  const handleClearAll = () => { setLatestOrders([]); knownOrderIds.current.clear(); setIsDropdownOpen(false); };
-  const handleManualRefresh = () => { refetchPending(); refetchPreparing(); };
+
+  const handleClearAll = () => {
+    latestOrders.forEach((o) => {
+      if (o._id) dismissedOrderIds.current.add(o._id);
+    });
+    setLatestOrders([]);
+    setIsDropdownOpen(false);
+  };
+
+  const handleManualRefresh = () => {
+    dismissedOrderIds.current.clear();
+    const sorted = [...orders].sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
+    const recent = sorted.slice(0, MAX_RECENT_ORDERS);
+    const visibleOrders = recent.filter((o) => o._id && !dismissedOrderIds.current.has(o._id));
+    setLatestOrders(visibleOrders.slice(0, MAX_LATEST_ORDERS));
+
+    refetchPending();
+    refetchPreparing();
+  };
 
   const displayCount = pendingOrdersCount > 99 ? "99+" : String(pendingOrdersCount);
 
-  // ── Dynamic Theme Tokens from Redux ──────────────────────────────────────────
+  // Dynamic Theme Tokens
   const colors = useSelector((state) => state.admin.theme.colors);
   const bg = isDarkMode ? (colors.dark?.cardBg || "#0f172a") : "#ffffff";
   const border = isDarkMode ? (colors.dark?.border || "border-slate-700/60") : (colors.border || "border-[#ede8e3]");
   const textPri = isDarkMode ? (colors.dark?.textPrimary || "#f1f5f9") : (colors.textPrimary || "#1c1917");
   const textSec = isDarkMode ? (colors.dark?.textSecondary || "#94a3b8") : (colors.textSecondary || "#57524e");
-  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#87807b");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#4b5563");
   const footerBg = isDarkMode ? "rgba(15, 23, 42, 0.4)" : (colors.pageBg || "#faf7f4");
 
-  const statusBadge = (status) => {
-    const s = String(status || "").toLowerCase();
-    if (s === "preparing") {
-      return {
-        backgroundColor: isDarkMode ? "rgba(20, 184, 166, 0.15)" : "#f0fdf4",
-        borderColor: isDarkMode ? "rgba(20, 184, 166, 0.4)" : "rgba(34, 197, 94, 0.2)",
-        color: isDarkMode ? "#2dd4bf" : "#166534",
-        borderWidth: "1px"
-      };
-    }
-    return {
-      backgroundColor: isDarkMode ? "rgba(234, 179, 8, 0.15)" : "#fef9c3",
-      borderColor: isDarkMode ? "rgba(234, 179, 8, 0.4)" : "rgba(234, 179, 8, 0.2)",
-      color: isDarkMode ? "#facc15" : "#854d0e",
-      borderWidth: "1px"
-    };
-  };
-
-  const typeBadge = (type) => {
-    const t = String(type || "").toLowerCase().replace(/\s+/g, "");
-    if (t === "delivery") {
-      return {
-        backgroundColor: isDarkMode ? "rgba(239, 159, 39, 0.15)" : colors.primaryLight,
-        borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}20`,
-        color: isDarkMode ? colors.primary : colors.primaryText,
-        borderWidth: "1px"
-      };
-    }
-    if (t === "takeaway") {
-      return {
-        backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.15)" : "#eff6ff",
-        borderColor: isDarkMode ? "rgba(59, 130, 246, 0.4)" : "rgba(59, 130, 246, 0.2)",
-        color: isDarkMode ? "#60a5fa" : "#1e40af",
-        borderWidth: "1px"
-      };
-    }
-    // Eat Here / Dine In
-    return {
-      backgroundColor: isDarkMode ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
-      borderColor: isDarkMode ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.2)",
-      color: isDarkMode ? "#34d399" : "#065f46",
-      borderWidth: "1px"
-    };
+  // Reusable hover values based on CSS variables instead of dynamic inline JS event listeners
+  const viewBillBtnStyle = {
+    "--hover-border": colors.primary,
+    "--hover-bg": isDarkMode ? `${colors.primary}1a` : colors.primaryLight,
+    "--hover-text": colors.primaryText,
+    backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+    borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+    color: isDarkMode ? colors.primary : colors.primaryText,
   };
 
   return (
@@ -285,24 +417,27 @@ export default function NotificationBell() {
         onClick={() => setIsDropdownOpen((p) => !p)}
         className="relative flex h-9 w-9 items-center justify-center transition-colors duration-200 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none"
         title="Order Notifications"
+        aria-label="Order notifications"
+        aria-expanded={isDropdownOpen}
+        aria-haspopup="true"
       >
         <Bell size={20} className="stroke-[1.5]" />
         {pendingOrdersCount > 0 && (
-          <MotionSpan
+          <motion.span
             key={pendingOrdersCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             className="pointer-events-none absolute right-0.5 top-0.5 z-20 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white dark:ring-slate-950"
           >
             {displayCount}
-          </MotionSpan>
+          </motion.span>
         )}
       </button>
 
-      {/* ── Dropdown ── */}
+      {/* Dropdown */}
       <AnimatePresence>
         {isDropdownOpen && (
-          <MotionDiv
+          <motion.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
@@ -341,7 +476,7 @@ export default function NotificationBell() {
 
             {/* Orders list */}
             <div
-              className="max-h-[420px] overflow-y-auto"
+              className="max-h-[420px] overflow-y-auto animate-none"
               style={{ backgroundColor: bg }}
             >
               {latestOrders.length > 0 ? (
@@ -350,18 +485,15 @@ export default function NotificationBell() {
                   style={{ borderColor: border }}
                 >
                   {latestOrders.map((order, index) => (
-                    <MotionDiv
+                    <motion.div
                       key={order._id || index}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.04 }}
-                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors duration-150"
-                      style={{ borderBottomColor: border }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(255,255,255,0.02)" : "rgba(239,159,39,0.02)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors duration-150 hover:bg-[var(--hover-bg)]"
+                      style={{
+                        "--hover-bg": isDarkMode ? "rgba(255,255,255,0.02)" : "rgba(239,159,39,0.02)",
+                        borderBottomColor: border,
                       }}
                     >
                       <div className="flex-1 min-w-0">
@@ -369,13 +501,13 @@ export default function NotificationBell() {
                         <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                           <span
                             className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border"
-                            style={statusBadge(order.status)}
+                            style={getStatusBadgeStyle(order.status, isDarkMode)}
                           >
                             {String(order.status || "").toLowerCase() === "preparing" ? "Preparing" : "Pending"}
                           </span>
                           <span
                             className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border"
-                            style={typeBadge(order.orderType)}
+                            style={getTypeBadgeStyle(order.orderType, colors, isDarkMode)}
                           >
                             {order.orderType || "Unknown"}
                           </span>
@@ -393,26 +525,12 @@ export default function NotificationBell() {
                       {/* View Bill button */}
                       <button
                         onClick={() => handleViewBill(order)}
-                        className="shrink-0 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97]"
-                        style={{
-                          backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
-                          borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
-                          color: isDarkMode ? colors.primary : colors.primaryText,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = colors.primary;
-                          e.currentTarget.style.color = colors.primaryText;
-                          e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
-                          e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
-                          e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
-                        }}
+                        className="shrink-0 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97] hover:border-[var(--hover-border)] hover:bg-[var(--hover-bg)] hover:text-[var(--hover-text)]"
+                        style={viewBillBtnStyle}
                       >
                         View Bill
                       </button>
-                    </MotionDiv>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -427,22 +545,8 @@ export default function NotificationBell() {
                   <p className="mt-1 text-xs font-medium" style={{ color: textMut }}>New pending orders will appear here</p>
                   <button
                     onClick={handleManualRefresh}
-                    className="mt-4 rounded-xl border px-4 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97] shadow-sm"
-                    style={{
-                      backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
-                      borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
-                      color: isDarkMode ? colors.primary : colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = colors.primary;
-                      e.currentTarget.style.color = colors.primaryText;
-                      e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
-                      e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
-                      e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
-                    }}
+                    className="mt-4 rounded-xl border px-4 py-1.5 text-xs font-extrabold transition-all duration-150 active:scale-[0.97] shadow-sm hover:border-[var(--hover-border)] hover:bg-[var(--hover-bg)] hover:text-[var(--hover-text)]"
+                    style={viewBillBtnStyle}
                   >
                     Check for orders
                   </button>
@@ -461,16 +565,11 @@ export default function NotificationBell() {
               <button
                 onClick={handleClearAll}
                 disabled={latestOrders.length === 0}
-                className="text-xs font-black transition-colors"
+                className="text-xs font-black transition-colors hover:text-[var(--hover-text)]"
                 style={{
+                  "--hover-text": colors.primaryHover,
                   color: latestOrders.length > 0 ? colors.primary : textMut,
                   cursor: latestOrders.length > 0 ? "pointer" : "not-allowed",
-                }}
-                onMouseEnter={(e) => {
-                  if (latestOrders.length > 0) e.currentTarget.style.color = colors.primaryHover;
-                }}
-                onMouseLeave={(e) => {
-                  if (latestOrders.length > 0) e.currentTarget.style.color = colors.primary;
                 }}
               >
                 Clear all
@@ -479,7 +578,7 @@ export default function NotificationBell() {
                 {latestOrders.length} order{latestOrders.length !== 1 ? "s" : ""}
               </span>
             </div>
-          </MotionDiv>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

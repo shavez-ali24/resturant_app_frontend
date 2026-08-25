@@ -5,14 +5,6 @@ import { IndianRupee, SquarePen, Printer, Move, Bell } from "lucide-react";
 import { ADMIN_COLORS } from "@/redux/adminRedux/adminSlice";
 import { useNotification } from "@/components/admin/Bell/NotificationContext";
 
-const formatElapsed = (minutes) => {
-  if (minutes == null) return "";
-  if (minutes < 60) return ` • ${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return ` • ${h}h${m > 0 ? ` ${m}m` : ""}`;
-};
-
 const getElapsedString = (minutes) => {
   if (minutes == null) return "";
   if (minutes < 60) return `${minutes}m`;
@@ -21,7 +13,7 @@ const getElapsedString = (minutes) => {
   return `${h}h${m > 0 ? ` ${m}m` : ""}`;
 };
 
-const getCardStyle = (rawStatus, status, isDark, themeColors) => {
+const getCardStyle = (rawStatus, status, isDark) => {
   // AVAILABLE / Blank status
   if (rawStatus === "AVAILABLE" || status === "blank") {
     return {
@@ -67,15 +59,16 @@ const getCardStyle = (rawStatus, status, isDark, themeColors) => {
   };
 };
 
-const ICON_BTN = (isDark) => ({
-  width: 36,
-  height: 36,
+const ICON_BTN = (isDark, isDisabled) => ({
+  width: 32,
+  height: 32,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   border: `1px solid ${isDark ? "#475569" : "#d4d4d8"}`,
   background: isDark ? "#334155" : "#f4f4f5",
-  cursor: "pointer",
+  cursor: isDisabled ? "not-allowed" : "pointer",
+  opacity: isDisabled ? 0.5 : 1,
   borderRadius: 8,
   color: isDark ? "#f1f5f9" : "#1c1917",
   padding: 0,
@@ -92,7 +85,7 @@ const TableCard = React.memo(function TableCard({
   onRoomClick,
   isLoading = false,
   isDarkMode = false,
-  newlyAddedItemsOrderIds,
+  newlyAddedItemsOrderIds = [],
 }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const [elapsedMinutes, setElapsedMinutes] = React.useState(null);
@@ -131,11 +124,17 @@ const TableCard = React.memo(function TableCard({
   const isOccupied = rawStatus === "OCCUPIED" || status === "running" || status === "running_kot" || status === "printed" || status === "booked";
   const isBilled = rawStatus === "BILLED" || status === "paid" || status === "billed";
 
-  const cardStyle = getCardStyle(rawStatus, status, isDarkMode, colors);
+  const cardStyle = getCardStyle(rawStatus, status, isDarkMode);
 
   const { newlyAddedItemsOrderIds: ctxOrderIds, setNewlyAddedItemsOrderIds } = useNotification() || {};
 
+  const orderId = table.currentOrderId || table.orderId;
+  const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
+  const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
+
   const handleClick = () => {
+    if (isLoading) return;
+
     // Clear NEW ORDER badge when card is clicked
     if (orderId && setNewlyAddedItemsOrderIds) {
       setNewlyAddedItemsOrderIds((prev) => {
@@ -150,8 +149,8 @@ const TableCard = React.memo(function TableCard({
       onRoomClick?.(table);
       return;
     }
-    if (isBilled) {
-      onPay?.(table);
+    if (isBilled || isOccupied) {
+      onTableClick?.(table);
       return;
     }
     onTableClick?.(table);
@@ -159,26 +158,31 @@ const TableCard = React.memo(function TableCard({
 
   const handleEdit = (e) => {
     e.stopPropagation();
+    if (isLoading) return;
     if (isBilled) {
       onPay?.(table);
       return;
     }
     onEdit?.(table);
   };
-  const handlePrint = (e) => { e.stopPropagation(); onPrint?.(table); };
-  const handleMove = (e) => { e.stopPropagation(); onMove?.(table); };
+  const handlePrint = (e) => {
+    e.stopPropagation();
+    if (isLoading) return;
+    onPrint?.(table);
+  };
+  const handleMove = (e) => {
+    e.stopPropagation();
+    if (isLoading) return;
+    onMove?.(table);
+  };
 
   const formatAmount = (val) => {
     const n = Number(val);
     return Number.isFinite(n) ? `₹${n.toFixed(2)}` : "";
   };
 
-  // 🔧 FIX: Show bottom icons (Edit/Print/Move) for both rooms AND tables
+  // Action icons for active orders
   const showBottomIcons = (isOccupied || isBilled) && (table.currentOrderId || table.orderId);
-
-  const orderId = table.currentOrderId || table.orderId;
-  const effectiveIds = ctxOrderIds || newlyAddedItemsOrderIds;
-  const hasNewClientItems = orderId && effectiveIds?.has(String(orderId));
 
   // Prefix T to numeric numbers only for tables (not rooms)
   const displayNum = !isRoom && /^\d+$/.test(String(tableNumber || "")) ? `T${tableNumber}` : tableNumber;
@@ -186,10 +190,19 @@ const TableCard = React.memo(function TableCard({
   return (
     <div
       onClick={handleClick}
-      className="transition-all duration-200 active:scale-95"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${isRoom ? "Room" : "Table"} ${displayNum}, Status: ${rawStatus || (isAvailable ? "Available" : "Occupied")}`}
+      className="transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
       style={{
-        width: 140,
-        height: 112,
+        width: 120,
+        height: 96,
         borderRadius: 14,
         cursor: isLoading ? "wait" : "pointer",
         display: "flex",
@@ -236,7 +249,7 @@ const TableCard = React.memo(function TableCard({
 
       {/* Top status / time */}
       {!hasNewClientItems && !isAvailable && elapsedMinutes != null && (
-        <div style={{ position: "absolute", top: 12, fontSize: 10, fontWeight: 800, color: isDarkMode ? "#ffffff" : "#713f12", textTransform: "uppercase", letterSpacing: "0.6px" }}>
+        <div style={{ position: "absolute", top: 8, fontSize: 10, fontWeight: 800, color: isDarkMode ? "#ffffff" : "#713f12", textTransform: "uppercase", letterSpacing: "0.6px" }}>
           {getElapsedString(elapsedMinutes)}
         </div>
       )}
@@ -244,10 +257,10 @@ const TableCard = React.memo(function TableCard({
       {/* Main number - bold dark, matches mockup */}
       <div 
         style={{ 
-          fontSize: table.isVirtual ? 14 : 20, 
+          fontSize: table.isVirtual ? 13 : 18, 
           fontWeight: 700, 
           color: cardStyle.numColor, 
-          marginTop: table.isVirtual ? 18 : 14,
+          marginTop: table.isVirtual ? 14 : 8,
           textAlign: "center",
           textOverflow: "ellipsis",
           overflow: "hidden",
@@ -261,7 +274,7 @@ const TableCard = React.memo(function TableCard({
 
       {/* Room category + price or table amount */}
       {!isAvailable && (
-        <div style={{ fontSize: 13, color: isDarkMode ? "#ffffff" : "#713f12", marginTop: 2, fontWeight: 700, textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: isDarkMode ? "#ffffff" : "#713f12", marginTop: 1, fontWeight: 700, textAlign: 'center' }}>
           {table.currentAmount != null ? (
             formatAmount(table.currentAmount)
           ) : isRoom && roomCategory ? (
@@ -273,30 +286,36 @@ const TableCard = React.memo(function TableCard({
         </div>
       )}
 
-      {/* Bottom icons - only for occupied TABLES */}
+      {/* Bottom Action icons for active orders */}
       {showBottomIcons && (
-        <div style={{ position: "absolute", bottom: -18, display: "flex", gap: 10, zIndex: 10 }}>
+        <div style={{ position: "absolute", bottom: -16, display: "flex", gap: 6, zIndex: 10 }}>
           <button
-            onClick={isBilled ? (e) => { e.stopPropagation(); onPay?.(table); } : handleEdit}
-            style={ICON_BTN(isDarkMode)}
+            onClick={isBilled ? (e) => { e.stopPropagation(); if (!isLoading) onPay?.(table); } : handleEdit}
+            disabled={isLoading}
+            style={ICON_BTN(isDarkMode, isLoading)}
             title={isBilled ? "Pay Order" : "Edit Order"}
+            aria-label={isBilled ? "Pay Order" : "Edit Order"}
           >
-            {isBilled ? <IndianRupee size={18} /> : <SquarePen size={18} />}
+            {isBilled ? <IndianRupee size={20} /> : <SquarePen size={20} />}
           </button>
           <button
             onClick={handlePrint}
-            style={ICON_BTN(isDarkMode)}
+            disabled={isLoading}
+            style={ICON_BTN(isDarkMode, isLoading)}
             title="Print"
+            aria-label="Print bill"
           >
-            <Printer size={18} />
+            <Printer size={20} />
           </button>
           {!isBilled && !table.isVirtual && (
             <button
               onClick={handleMove}
-              style={ICON_BTN(isDarkMode)}
+              disabled={isLoading}
+              style={ICON_BTN(isDarkMode, isLoading)}
               title="Move Table/Room"
+              aria-label="Move table or room"
             >
-              <Move size={18} />
+              <Move size={20} />
             </button>
           )}
         </div>

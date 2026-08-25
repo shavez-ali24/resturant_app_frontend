@@ -16,7 +16,7 @@ export const useNotification = () => useContext(NotificationContext);
 
 const MAX_NOTIFICATIONS = 2; // Better UX - limit concurrent toasts on screen
 
-const NotificationToasts = lazy(() => import("./NotificationToasts"));
+const NotificationToasts = lazy(() => import("../common/AppNotificationToasts"));
 
 import { SSEConnectionManager } from "@/utils/sseConnectionManager";
 import { getFriendlyAdminMessage } from "@/utils/errorHelpers";
@@ -95,6 +95,12 @@ export const NotificationProvider = ({ children }) => {
         }
         if (eventSignature) {
           lastEventSignatureRef.current = eventSignature;
+        }
+
+        if (["NEW_ORDER", "ORDER_UPDATED"].includes(payload?.type)) {
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/admin/orders")) {
+            setHasUnreadSidebarNotification(true);
+          }
         }
 
         setSseEvent({ ...payload, ts: Date.now() });

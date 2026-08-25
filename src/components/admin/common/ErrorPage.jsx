@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const ErrorPage = ({ 
+const ErrorPage = ({
   errorCode = 404,
   errorTitle = "Page Not Found",
   errorMessage = "The page you're looking for doesn't exist or may have been moved.",

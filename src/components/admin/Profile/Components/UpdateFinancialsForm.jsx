@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React from 'react'
 import { useSelector } from 'react-redux';
 import { FormCard } from './commanProfile/FormCard'
@@ -8,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 const Toggle = ({ id, checked, onChange, colors }) => (
     <label className="relative inline-flex cursor-pointer items-center">
         <input type="checkbox" id={id} className="sr-only peer" checked={checked} onChange={onChange} />
-        <div 
+        <div
             className={`
                 relative w-10 h-5 rounded-full transition-all duration-200
                 bg-[#ede8e3] dark:bg-slate-700
@@ -21,9 +20,18 @@ const Toggle = ({ id, checked, onChange, colors }) => (
     </label>
 );
 
-export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange }) {
-    const colors = useSelector((state) => state.admin.theme.colors);
-    const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+export default function UpdateFinancialsForm({ formData, handleGstToggle, handleChange, isDarkMode: propIsDarkMode }) {
+    const colors = useSelector((state) => state.admin?.theme?.colors) || {
+        primary: "#EF9F27",
+        primaryText: "#7c2d12",
+        primaryLight: "#fff8f5"
+    };
+    const isDarkMode =
+        propIsDarkMode !== undefined
+            ? propIsDarkMode
+            : typeof document !== "undefined" &&
+            (document.documentElement.classList.contains("admin-dark") ||
+                document.documentElement.classList.contains("dark"));
 
     const gstNumberError = formData.gstEnabled && !String(formData.gstNumber || "").trim()
         ? "GST number is required." : "";
@@ -41,23 +49,23 @@ export default function UpdateFinancialsForm({ formData, handleGstToggle, handle
                     onChange={handleChange}
                     placeholder="e.g. 50"
                 />
-                <div 
+                <div
                     className="flex items-center justify-between rounded-lg border px-3 py-2 transition-all duration-200"
                     style={{
-                        borderColor: formData.gstEnabled 
-                            ? (isDarkMode ? `${colors.primary}50` : `${colors.primary}33`) 
+                        borderColor: formData.gstEnabled
+                            ? (isDarkMode ? `${colors.primary}50` : `${colors.primary}33`)
                             : (isDarkMode ? "rgb(71, 85, 105)" : "#ede8e3"),
-                        backgroundColor: formData.gstEnabled 
-                            ? (isDarkMode ? `${colors.primary}20` : colors.primaryLight) 
+                        backgroundColor: formData.gstEnabled
+                            ? (isDarkMode ? `${colors.primary}20` : colors.primaryLight)
                             : (isDarkMode ? "rgba(30, 41, 59, 0.4)" : "#f7f3ef")
                     }}
                 >
-                    <label 
-                        htmlFor="gst-toggle" 
+                    <label
+                        htmlFor="gst-toggle"
                         className="text-xs font-semibold cursor-pointer"
                         style={{
-                            color: formData.gstEnabled 
-                                ? (isDarkMode ? colors.primary : colors.primaryText) 
+                            color: formData.gstEnabled
+                                ? (isDarkMode ? colors.primary : colors.primaryText)
                                 : (isDarkMode ? "#e2e8f0" : "#1c1917")
                         }}
                     >

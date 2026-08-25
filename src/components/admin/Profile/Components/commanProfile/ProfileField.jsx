@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 
 const formatValue = (value) => {
   if (value === null || value === undefined || value === "") return "N/A";
@@ -51,16 +52,25 @@ const formatValue = (value) => {
   return String(value);
 };
 
-import { useSelector } from "react-redux";
-
-export const ProfileField = React.memo(({ label, value, icon }) => {
-  const colors = useSelector((state) => state.admin.theme.colors);
+export const ProfileField = React.memo(({ label, value, icon, isDarkMode: propIsDarkMode }) => {
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryText: "#7c2d12",
+    primaryLight: "#fff8f5"
+  };
+  const isDarkMode =
+    propIsDarkMode !== undefined
+      ? propIsDarkMode
+      : typeof document !== "undefined" &&
+        (document.documentElement.classList.contains("admin-dark") ||
+          document.documentElement.classList.contains("dark"));
+  const primaryColor = isDarkMode ? colors.primary : colors.primaryText;
 
   return (
     <div className="flex flex-col min-w-0 transition-colors py-1">
       <div className="mb-1 flex items-center gap-1.5">
-        {icon && <span className="opacity-80 shrink-0" style={{ color: colors.primary }}>{icon}</span>}
-        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.primaryText }}>{label}</label>
+        {icon && <span className="opacity-80 shrink-0" style={{ color: primaryColor }}>{icon}</span>}
+        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: primaryColor }}>{label}</label>
       </div>
       <p className="text-sm font-extrabold text-[#1c1917] dark:text-slate-100 truncate">{formatValue(value)}</p>
     </div>

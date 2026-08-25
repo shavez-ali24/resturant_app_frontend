@@ -11,24 +11,35 @@ const BASE_URL = `${config.BASE_URL}/api`;
  * @returns {Promise<{ success: boolean }>}
  */
 export async function printKot(orderId) {
+  if (!orderId) {
+    throw new Error("Order ID is required");
+  }
+
   const token = localStorage.getItem("admin_token");
 
-  const response = await fetch(`${BASE_URL}/admin/orders/${orderId}/print-kot`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-  });
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  const response = await fetch(
+    `${BASE_URL}/admin/orders/${encodeURIComponent(orderId)}/print-kot`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const message =
+    const errorBody = await response.json().catch(() => null);
+
+    throw new Error(
       errorBody?.message ||
-      errorBody?.error ||
-      `Failed to print KOT (${response.status})`;
-    throw new Error(message);
+        errorBody?.error ||
+        `Failed to print KOT (${response.status})`
+    );
   }
 
   return { success: true };

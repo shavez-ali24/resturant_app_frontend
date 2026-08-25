@@ -5,7 +5,7 @@ import { X, ArrowRight } from "lucide-react";
 
 /**
  * Modal shown when a blank table is clicked in the Layout View.
- * Pre-fills table info, allows optional customer name and phone,
+ * Pre-fills table info, collects customer name and phone,
  * then navigates to the full AdminOrderPanel with pre-selected table.
  *
  * @param {object} props
@@ -24,15 +24,17 @@ export default function CreateOrderModal({
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const errors = {};
     if (!customerName.trim()) {
       errors.customerName = "Customer name is required";
     }
-    if (!customerPhone || customerPhone.length !== 10) {
+    if (!customerPhone || !/^[6-9]\d{9}$/.test(customerPhone)) {
       errors.customerPhone = "Valid 10-digit phone number is required";
     }
 
@@ -42,6 +44,7 @@ export default function CreateOrderModal({
     }
 
     setFormErrors({});
+    setIsSubmitting(true);
     onProceed({
       tableId: table.tableId,
       tableNumber: table.tableNumber,
@@ -94,7 +97,7 @@ export default function CreateOrderModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
 
 
-          {/* Customer Name (optional) */}
+          {/* Customer Name */}
           <div>
             <label
               className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#87807b]"
@@ -106,8 +109,8 @@ export default function CreateOrderModal({
               type="text"
               value={customerName}
               onChange={(e) => {
-                const filtered = e.target.value.replace(/[^A-Za-z\s]/g, "").slice(0, 15);
-                const capitalized = filtered.replace(/^(\s*)([a-z])/, (_, s, c) => `${s}${c.toUpperCase()}`);
+                const val = e.target.value.slice(0, 25);
+                const capitalized = val.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase());
                 setCustomerName(capitalized);
                 if (formErrors.customerName) {
                   setFormErrors((prev) => ({ ...prev, customerName: undefined }));
@@ -153,38 +156,6 @@ export default function CreateOrderModal({
             )}
           </div>
 
-          {/* Order Type (read-only) */}
-          <div>
-            <label
-              className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${isDarkMode ? "text-slate-300" : "text-[#87807b]"
-                }`}
-            >
-              Order Type
-            </label>
-            <div
-              className={`w-full rounded-xl px-4 py-3 text-sm font-bold flex items-center gap-2 border ${isDarkMode
-                  ? "bg-slate-800 text-slate-400 border-slate-700"
-                  : "bg-[#fbfaf8] text-[#57524e] border-[#ede8e3]"
-                }`}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
-                <path d="m12 4 4 5H8l4-5Z" />
-                <path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
-              </svg>
-              Eat Here
-            </div>
-          </div>
-
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
@@ -197,15 +168,16 @@ export default function CreateOrderModal({
             >
               Cancel
             </button>
-            <button
+             <button
               type="submit"
-              className="flex-1 rounded-xl py-3 text-sm font-black border transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm text-white hover:opacity-90"
+              disabled={isSubmitting}
+              className={`flex-1 rounded-xl py-3 text-sm font-black border transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm text-white ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
               style={{
                 backgroundColor: colors.primary,
                 borderColor: colors.primary
               }}
             >
-              Proceed
+              {isSubmitting ? "Processing..." : "Proceed"}
               <ArrowRight size={16} strokeWidth={2.5} />
             </button>
           </div>

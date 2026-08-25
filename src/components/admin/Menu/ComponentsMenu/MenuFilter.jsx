@@ -30,6 +30,7 @@ const typeOptions = [
   { value: "all",     label: "All Types" },
   { value: "veg",     label: "Veg" },
   { value: "non-veg", label: "Non-Veg" },
+  { value: "egg",     label: "Egg" },
 ];
 
 const availabilityOptions = [

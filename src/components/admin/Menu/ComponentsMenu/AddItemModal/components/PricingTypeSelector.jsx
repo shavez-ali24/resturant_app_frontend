@@ -12,7 +12,7 @@ const PricingTypeSelector = ({ pricingType, setPricingType }) => {
 
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-400">
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
         Pricing Type <span style={{ color: colors.primary }}>*</span>
       </label>
       <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-[#ede8e3] bg-[#f7f3ef] p-1 dark:border-slate-700 dark:bg-slate-800/60">
@@ -26,7 +26,7 @@ const PricingTypeSelector = ({ pricingType, setPricingType }) => {
               className={`h-9 rounded-md px-2 text-xs font-black transition-all border ${
                 isSelected
                   ? "shadow-sm"
-                  : "border-transparent bg-transparent text-[#78716c] hover:bg-white hover:text-[#1c1917] dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                  : "border-transparent bg-transparent text-gray-600 hover:bg-white hover:text-[#1c1917] dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
               }`}
               style={isSelected ? {
                 backgroundColor: isDarkMode ? `${colors.primary}25` : colors.primaryLight,

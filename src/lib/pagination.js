@@ -1,27 +1,40 @@
-export const getCompactPageNumbers = (currentPage, totalPages, maxVisiblePages = 5) => {
-  const safeTotalPages = Math.max(0, Number(totalPages) || 0);
+export const getCompactPageNumbers = (
+  currentPage,
+  totalPages,
+  maxVisiblePages = 5
+) => {
+  const total = Math.max(0, Number(totalPages) || 0);
 
-  if (safeTotalPages <= 1) {
+  if (total <= 1) {
     return [1];
   }
 
-  const safeCurrentPage = Math.min(
+  const current = Math.min(
     Math.max(1, Number(currentPage) || 1),
-    safeTotalPages
+    total
   );
 
-  // Keep compact behavior from page-count 5 onward, so controls do not stretch.
-  if (safeTotalPages <= Math.max(4, maxVisiblePages - 1)) {
-    return Array.from({ length: safeTotalPages }, (_, i) => i + 1);
+  // Show every page when pagination is small
+  if (total <= maxVisiblePages) {
+    return Array.from({ length: total }, (_, index) => index + 1);
   }
 
-  if (safeCurrentPage <= 2) {
-    return [1, 2, "ellipsis-right", safeTotalPages];
+  // Beginning
+  if (current <= 2) {
+    return [1, 2, "ellipsis-right", total];
   }
 
-  if (safeCurrentPage >= safeTotalPages - 1) {
-    return [1, "ellipsis-left", safeTotalPages - 1, safeTotalPages];
+  // End
+  if (current >= total - 1) {
+    return [1, "ellipsis-left", total - 1, total];
   }
 
-  return [1, "ellipsis-left", safeCurrentPage, "ellipsis-right", safeTotalPages];
+  // Middle
+  return [
+    1,
+    "ellipsis-left",
+    current,
+    "ellipsis-right",
+    total,
+  ];
 };

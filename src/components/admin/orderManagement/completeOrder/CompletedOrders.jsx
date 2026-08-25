@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import Heading from "../../common/Heading";
 import {
   Select, SelectContent, SelectGroup,
   SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useGetOrdersQuery } from "@/redux/adminRedux/adminAPI";
-import { useAdminTour } from "../../../../hooks/useAdminTour";
-import { TOUR_KEYS, getCompletedSteps } from "../../../../utils/adminTour";
+
 import OrdersTable from "../pendingOrders/OrdersTable";
 import {
   Pagination, PaginationItem, PaginationLink,
@@ -19,13 +18,13 @@ const selectItemCls =
   "cursor-pointer rounded-lg text-sm font-medium text-[#44403c] hover:bg-[#f7f3ef] data-[highlighted]:bg-[#f0ebe5] data-[highlighted]:text-[#1c1917] dark:text-slate-200 dark:hover:bg-slate-800 dark:data-[highlighted]:bg-slate-800 dark:data-[highlighted]:text-slate-100";
 
 const CompletedOrders = () => {
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof document === "undefined") return false;
     const root = document.documentElement;
     return root.classList.contains("admin-dark") || root.classList.contains("dark");
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
     const update = () =>
@@ -35,8 +34,6 @@ const CompletedOrders = () => {
     obs.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
-
-  useAdminTour(TOUR_KEYS.completed, getCompletedSteps, isDarkMode, 600);
 
   const [dateRange, setDateRange] = useState("7d");
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,8 +49,15 @@ const CompletedOrders = () => {
   const orders = Array.isArray(ordersResponse?.orders) ? ordersResponse.orders : [];
   const totalPages = ordersResponse?.totalPages || 1;
 
-  const handleDateRangeChange = (v) => { setDateRange(v); setCurrentPage(1); };
-  const handlePageSizeChange = (v) => { setOrdersPerPage(Number(v)); setCurrentPage(1); };
+  const handleDateRangeChange = useCallback((v) => {
+    setDateRange(v);
+    setCurrentPage(1);
+  }, []);
+
+  const handlePageSizeChange = useCallback((v) => {
+    setOrdersPerPage(Number(v));
+    setCurrentPage(1);
+  }, []);
 
   const pageNumbers = useMemo(
     () => getCompactPageNumbers(currentPage, totalPages),
@@ -142,7 +146,7 @@ const CompletedOrders = () => {
                   <PaginationPrevious
                     onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
                     className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === 1 ? "pointer-events-none opacity-40" : ""
-                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
                 {pageNumbers.map((page, idx) => (
@@ -156,7 +160,7 @@ const CompletedOrders = () => {
                             ? "bg-orange-500 text-white border-orange-500"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
-                              : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"
+                              : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"
                           }`}
                         onClick={() => setCurrentPage(page)}
                       >
@@ -169,7 +173,7 @@ const CompletedOrders = () => {
                   <PaginationNext
                     onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
                     className={`h-8 rounded-md border px-2 text-xs cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5 [&>span]:hidden sm:px-3 sm:text-sm sm:[&>span]:inline ${currentPage === totalPages ? "pointer-events-none opacity-40" : ""
-                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-[#78716c] hover:bg-[#f7f3ef]"}`}
+                      } ${isDarkMode ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700" : "border-[#ede8e3] bg-white text-gray-600 hover:bg-[#f7f3ef]"}`}
                   />
                 </PaginationItem>
               </PaginationContent>

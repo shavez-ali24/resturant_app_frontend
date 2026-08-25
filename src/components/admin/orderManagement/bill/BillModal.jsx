@@ -1,3 +1,4 @@
+import React, { useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import BillPage from "./BillPage";
 import { hideBill } from "@/redux/adminRedux/billSlice";
@@ -13,7 +14,11 @@ export default function BillModal({
 
   const { open, selectedOrder, restaurantDetails } = useSelector(
     (state) => state.bill
-  );
+  ) || {};
+
+  const handleClose = useCallback(() => {
+    dispatch(hideBill());
+  }, [dispatch]);
 
   if (!open || !selectedOrder) return null;
 
@@ -23,7 +28,7 @@ export default function BillModal({
         sseEvent={sseEvent}
         order={selectedOrder}
         restaurantDetails={restaurantDetails}
-        onClose={() => dispatch(hideBill())}
+        onClose={handleClose}
         menuItems={menuItems}
         tables={tables}
         updateOrder={updateOrder}

@@ -29,7 +29,7 @@ const LegendBar = React.memo(function LegendBar({ isDarkMode = false }) {
         <div
           key={item.label}
           className="flex items-center gap-1.5 text-xs sm:text-sm font-medium whitespace-nowrap"
-          style={{ color: isDarkMode ? "#94a3b8" : "#78716c" }}
+          style={{ color: isDarkMode ? "#94a3b8" : "#4b5563" }}
         >
           <span
             className="w-3.5 h-3.5 rounded-full shrink-0"

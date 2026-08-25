@@ -23,8 +23,7 @@ import {
   useGetMenuQuery,
 } from "../../../redux/adminRedux/adminAPI";
 import { showBill } from "../../../redux/adminRedux/billSlice";
-import { useAdminTour } from "../../../hooks/useAdminTour";
-import { TOUR_KEYS, getOrderPanelSteps } from "../../../utils/adminTour";
+
 import { ADMIN_COLORS } from "../../../redux/adminRedux/adminSlice";
 import { useNotification } from "../Bell/NotificationContext";
 
@@ -1241,8 +1240,8 @@ function OrderSummaryPanel({
 export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, asModal = false, editingOrder = null }) {
   const colors = useSelector((state) => state.admin.theme.colors);
   const dispatch = useDispatch();
-  const { notify, newItemsByOrderId } = useNotification() || {};
-  useAdminTour(TOUR_KEYS.orderPanel, getOrderPanelSteps, isDarkMode, 900);
+  const { notify, newItemsByOrderId, sseEvent } = useNotification() || {};
+
 
   const cartItems = useSelector((state) => state.client?.cart?.items || {});
   const cartCount = Object.values(cartItems).reduce(
@@ -1250,9 +1249,16 @@ export default function AdminOrderPanel({ isDarkMode = false, onOrderSuccess, as
     0
   );
 
-  const { data: restaurantData } = useGetPublicRestaurantQuery();
+  const { data: restaurantData, refetch: refetchPublicRestaurant } = useGetPublicRestaurantQuery();
   const { data: liveUnitsData } = useGetLiveOccupancyQuery();
   const { data: menuData, isLoading: menuLoading } = useGetMenuQuery();
+
+  useEffect(() => {
+    if (sseEvent?.type === "RESTAURANT_UPDATED") {
+      refetchPublicRestaurant?.();
+    }
+  }, [sseEvent, refetchPublicRestaurant]);
+
   const [createOrder, { isLoading: isCreating }] = useCreateOrderByAdminMutation();
   const [updateOrder, { isLoading: isUpdating }] = useUpdateOrderMutation();
   const [billOrder] = useBillOrderMutation();

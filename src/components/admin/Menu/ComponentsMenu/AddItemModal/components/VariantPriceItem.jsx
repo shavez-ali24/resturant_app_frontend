@@ -32,11 +32,12 @@ const VariantPriceItem = ({
       }}
     >
       <div className="mb-3">
-        <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1 capitalize">
+        <label htmlFor={`${variantKey}-price`} className="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1 capitalize">
           {variantLabels[variantKey]} Price
         </label>
         <div className="relative">
           <input
+            id={`${variantKey}-price`}
             type="text"
             name={`${variantKey}.price`}
             value={variantData?.price || ""}

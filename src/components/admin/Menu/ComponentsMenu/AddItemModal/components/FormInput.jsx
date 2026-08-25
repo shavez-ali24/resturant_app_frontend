@@ -14,12 +14,13 @@ const FormInput = ({
   return (
     <div>
       {label && (
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a29e] dark:text-slate-500">
+        <label htmlFor={name} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-500">
           {label} {required && <span style={{ color: colors.primary }}>*</span>}
         </label>
       )}
       <div className="relative">
         <input
+          id={name}
           type={type}
           name={name}
           value={value}

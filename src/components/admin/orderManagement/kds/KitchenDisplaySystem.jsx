@@ -17,14 +17,13 @@ import {
   Sun
 } from "lucide-react";
 import KitchenDisplayCard from "./KitchenDisplayCard";
-import ReadyOrdersView from "./ReadyOrdersView";
 import {
   clearOrderPreparingStartedAt,
   getOrderPreparingStartedAt,
   rememberOrderPreparingStartedAt,
 } from "../commonOrderFile/utils";
 
-const POLLING_INTERVAL = 60000;
+const POLLING_INTERVAL = 20000;
 const NEW_ORDER_HIGHLIGHT_MS = 12000;
 
 const getOrders = (response) => (Array.isArray(response?.orders) ? response.orders : []);
@@ -69,59 +68,15 @@ const areSetsEqual = (left, right) => {
   return true;
 };
 const keepKitchenStatusesOnly = (orders) =>
-  (Array.isArray(orders) ? orders : []).filter((order) =>
-    ["pending", "preparing", "ready"].includes(getOrderStatus(order))
-  );
-
-const readAdminTheme = () => {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem("admin-theme") === "dark";
-};
-
-const checkAndClearAdminModifiedOrderId = (id) => {
-  if (!id) return false;
-  try {
-    const data = JSON.parse(sessionStorage.getItem("adminModifiedOrderIds") || "{}");
-    if (Array.isArray(data)) {
-      const index = data.indexOf(String(id));
-      if (index !== -1) {
-        data.splice(index, 1);
-        sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(data));
-        return true;
-      }
-      return false;
-    }
-    const now = Date.now();
-    let isFound = false;
-    const pruned = {};
-    Object.entries(data).forEach(([key, val]) => {
-      if (now - Number(val) < 30000) {
-        pruned[key] = val;
-      }
-    });
-    const timestamp = data[String(id)];
-    if (timestamp && now - Number(timestamp) < 15000) {
-      isFound = true;
-    }
-    sessionStorage.setItem("adminModifiedOrderIds", JSON.stringify(pruned));
-    return isFound;
-  } catch (_) { }
-  return false;
-};
-
-const KitchenDisplaySystem = () => {
-  const { notify, sseEvent, sseConnected } = useNotification();
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [eventOrdersById, setEventOrdersById] = useState({});
-  const [currentPage, setCurrentPage] = useState(() => {
-    const savedPage = localStorage.getItem("kds_current_page");
-    return savedPage ? parseInt(savedPage, 10) : 1;
+  (Array.isArray(orders) ? orders : []).filter((order) => {
+    const status = getOrderStatus(order);
+    const hasItems = Array.isArray(order?.items) && order.items.length > 0;
+    return ["pending", "preparing", "ready"].includes(status) && hasItems;
   });
-  const ITEMS_PER_PAGE = 4;
 
-  useEffect(() => {
-    localStorage.setItem("kds_current_page", currentPage.toString());
-  }, [currentPage]);
+// Dedicated Clock Component to avoid KDS re-renders on every second tick
+function LiveClock({ isDarkMode }) {
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -134,6 +89,27 @@ const KitchenDisplaySystem = () => {
     second: "2-digit",
     hour12: true,
   });
+
+  return (
+    <div className={`text-2xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
+      {formattedTime}
+    </div>
+  );
+}
+
+const KitchenDisplaySystem = () => {
+  const { notify, sseEvent, sseConnected } = useNotification();
+  const [eventOrdersById, setEventOrdersById] = useState({});
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem("kds_current_page");
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
+  const ITEMS_PER_PAGE = 4;
+
+  useEffect(() => {
+    localStorage.setItem("kds_current_page", currentPage.toString());
+  }, [currentPage]);
+
   const [hiddenOrderIds, setHiddenOrderIds] = useState(new Set());
   const [newOrderIds, setNewOrderIds] = useState(new Set());
   const [optimisticStatusById, setOptimisticStatusById] = useState({});
@@ -289,8 +265,9 @@ const KitchenDisplaySystem = () => {
       window.removeEventListener("keydown", enableAudio);
       window.removeEventListener("touchstart", enableAudio);
     };
-  }, []);
+  }, [notificationSound]);
 
+  // Process KDS events in cache overlay
   useEffect(() => {
     if (
       !sseEvent?.type ||
@@ -312,13 +289,14 @@ const KitchenDisplaySystem = () => {
       const incomingStatus = getOrderStatus(normalizedOrder);
       const eventTimestamp = sseEvent?.ts || Date.now();
 
-      // Debug: Log all order status changes
-      console.log("KDS SSE received:", {
-        type: sseEvent.type,
-        orderId: incomingId,
-        status: incomingStatus,
-        willRemove: !["pending", "preparing", "ready"].includes(incomingStatus)
-      });
+      if (import.meta.env.DEV) {
+        console.log("KDS SSE received:", {
+          type: sseEvent.type,
+          orderId: incomingId,
+          status: incomingStatus,
+          willRemove: !["pending", "preparing", "ready"].includes(incomingStatus)
+        });
+      }
 
       if (incomingStatus === "preparing") {
         const preparingStartedAtMs =
@@ -406,15 +384,12 @@ const KitchenDisplaySystem = () => {
         }
         knownOrderIds.current.add(incomingId);
       }
-
-      // ALWAYS refetch queries for real-time update
-      refetchPending();
-      refetchPreparing();
-      refetchReady();
     }).catch((err) => {
-      console.error("Failed to fetch order details in KDS SSE:", err);
+      if (import.meta.env.DEV) {
+        console.error("Failed to fetch order details in KDS SSE:", err);
+      }
     });
-  }, [notificationSound, notify, sseEvent, fetchOrderById, refetchPending, refetchPreparing, refetchReady]);
+  }, [notificationSound, notify, sseEvent, fetchOrderById]);
 
   useEffect(() => {
     setEventOrdersById((prev) => {
@@ -616,7 +591,9 @@ const KitchenDisplaySystem = () => {
         clearOrderPreparingStartedAt(normalizedOrderId);
       }
 
-      console.error("KDS update failed", error);
+      if (import.meta.env.DEV) {
+        console.error("KDS update failed", error);
+      }
       notify("Unable to update order status. Please try again.", "error");
 
       // Refetch to sync state
@@ -634,11 +611,27 @@ const KitchenDisplaySystem = () => {
     }
   };
 
-  const pendingCount = activeOrders.filter((order) => getOrderStatus(order) === "pending").length;
-  const preparingCount = activeOrders.filter((order) => getOrderStatus(order) === "preparing").length;
-  const readyCount = activeOrders.filter((order) => getOrderStatus(order) === "ready").length;
-  const activeTabCount = pendingCount + preparingCount;
-  const orderCount = visibleOrders.length;
+  // Single-pass loop scanning activeOrders for tab counts
+  const orderCounts = useMemo(() => {
+    let pending = 0;
+    let preparing = 0;
+    let ready = 0;
+
+    for (const order of activeOrders) {
+      const status = getOrderStatus(order);
+      if (status === "pending") pending++;
+      else if (status === "preparing") preparing++;
+      else if (status === "ready") ready++;
+    }
+
+    return {
+      pending,
+      preparing,
+      ready,
+      active: pending + preparing,
+    };
+  }, [activeOrders]);
+
   const isLoading = loadingPending || loadingPreparing || loadingReady;
 
   // Pagination Logic
@@ -687,18 +680,14 @@ const KitchenDisplaySystem = () => {
                   {activeTab === "ready" ? "Ready Orders" : "Kitchen Display"}
                 </div>
                 <div className="md:hidden">
-                  <div className={`text-base font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-                    {formattedTime}
-                  </div>
+                  <LiveClock isDarkMode={isDarkMode} />
                 </div>
               </div>
             </div>
 
             {/* Center: Time (md+) */}
             <div className="hidden md:flex md:absolute md:left-1/2 md:-translate-x-1/2 md:justify-center">
-              <div className={`text-2xl font-black tracking-tighter tabular-nums ${isDarkMode ? "text-slate-100" : "text-[#1c1917]"}`}>
-                {formattedTime}
-              </div>
+              <LiveClock isDarkMode={isDarkMode} />
             </div>
 
             {/* Right: Pagination + Tabs */}
@@ -718,12 +707,12 @@ const KitchenDisplaySystem = () => {
                       onClick={action}
                       disabled={disabled}
                       className={`flex h-8 items-center gap-1 rounded-lg border px-3 text-[10px] font-black uppercase tracking-widest transition-all ${disabled
-                          ? isDarkMode
-                            ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                            : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
-                          : isDarkMode
-                            ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
-                            : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
+                        ? isDarkMode
+                          ? "border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed"
+                          : "border-[#ede8e3] bg-[#f7f3ef] text-[#a8a29e] cursor-not-allowed"
+                        : isDarkMode
+                          ? "border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600"
+                          : "border-[#d6cfc8] bg-white text-[#78716c] hover:bg-[#f7f3ef] hover:text-[#1c1917]"
                         }`}
                     >
                       {dir === "prev" && icon}
@@ -739,8 +728,8 @@ const KitchenDisplaySystem = () => {
                 }`}>
                 <span className={`text-[10px] font-black uppercase tracking-widest mr-1 ${isDarkMode ? "text-slate-500" : "text-[#a8a29e]"}`}>Orders</span>
                 {[
-                  { key: "active", color: "green", count: activeTabCount, dot: "bg-green-500" },
-                  { key: "ready", color: "blue", count: readyCount, dot: "bg-blue-500" },
+                  { key: "active", color: "green", count: orderCounts.active, dot: "bg-green-500" },
+                  { key: "ready", color: "blue", count: orderCounts.ready, dot: "bg-blue-500" },
                 ].map(({ key, color, count, dot }) => {
                   const isActive = activeTab === key;
                   const activeBg = color === "green" ? "bg-green-500" : "bg-blue-500";
@@ -749,11 +738,11 @@ const KitchenDisplaySystem = () => {
                       key={key}
                       onClick={() => setActiveTab(key)}
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-black uppercase tracking-wide transition-all ${isActive
-                          ? `${activeBg} text-white shadow-sm`
-                          : isDarkMode
-                            ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
-                            : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
-                        } ${key === "ready" && readyCount > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
+                        ? `${activeBg} text-white shadow-sm`
+                        : isDarkMode
+                          ? "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+                          : "text-[#78716c] hover:bg-white hover:text-[#1c1917]"
+                        } ${key === "ready" && orderCounts.ready > 0 && !isActive ? "ring-1 ring-blue-400" : ""}`}
                     >
                       <span className={`h-2.5 w-2.5 rounded-full ${dot}`}></span>
                       <span>{key === "active" ? "Active" : "Ready"}</span>

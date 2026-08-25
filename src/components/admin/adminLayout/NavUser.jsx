@@ -20,17 +20,18 @@ import {
 } from "@/components/ui/sidebar";
 import { useGetRestaurantQuery } from "@/redux/adminRedux/adminAPI";
 
-
 export function NavUser({ user, isDarkMode = false, inHeader = false }) {
   const sidebar = useSidebar();
   const isMobile = sidebar ? sidebar.isMobile : false;
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [restaurantImage, setRestaurantImage] = useState("");
-  const colors = useSelector((state) => state.admin.theme.colors);
   
-  const [hoverTrigger, setHoverTrigger] = useState(false);
-  const [hoverProfileItem, setHoverProfileItem] = useState(false);
+  const colors = useSelector((state) => state.admin?.theme?.colors) || {
+    primary: "#EF9F27",
+    primaryMid: "#fde68a",
+    primaryLight: "#fff8f5"
+  };
 
   const token = localStorage.getItem("admin_token");
 
@@ -88,6 +89,16 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
     }
     return user.name.charAt(0).toUpperCase();
   };
+
+  // Reusable hover values based on CSS variables instead of dynamic inline JS event listeners
+  const profileItemStyle = {
+    "--hover-bg": isDarkMode ? "rgba(51, 65, 85, 0.95)" : colors.primaryLight,
+  };
+
+  const triggerBtnStyle = {
+    "--hover-bg": isDarkMode ? "rgba(30, 41, 59, 0.8)" : colors.primaryLight,
+  };
+
   if (inHeader) {
     return (
       <div className="relative">
@@ -96,9 +107,10 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
             <button
               type="button"
               className="flex items-center justify-center rounded-full transition-transform duration-200 active:scale-95 focus:outline-none"
+              aria-label="User profile menu"
             >
               {isLoading ? (
-                <div 
+                <div
                   className="h-8 w-8 rounded-full border animate-pulse"
                   style={{
                     borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -106,7 +118,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                   }}
                 />
               ) : (
-                <Avatar 
+                <Avatar
                   className="h-8 w-8 rounded-full border shadow-sm"
                   style={{
                     borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -121,7 +133,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                     />
                   )}
 
-                  <AvatarFallback 
+                  <AvatarFallback
                     className="rounded-full text-white font-semibold text-xs flex items-center justify-center h-full w-full"
                     style={{ backgroundColor: colors.primary }}
                   >
@@ -144,19 +156,15 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div
-                onMouseEnter={() => setHoverProfileItem(true)}
-                onMouseLeave={() => setHoverProfileItem(false)}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 ${isDarkMode ? "text-slate-200" : "text-gray-900"}`}
-                style={{
-                  backgroundColor: hoverProfileItem
-                    ? (isDarkMode ? 'rgba(51, 65, 85, 0.95)' : colors.primaryLight)
-                    : 'transparent'
-                }}
+                style={profileItemStyle}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 hover:bg-[var(--hover-bg)] ${
+                  isDarkMode ? "text-slate-200" : "text-gray-900"
+                }`}
                 onClick={handleProfileClick}
               >
                 <div className="relative">
                   {isLoading ? (
-                    <div 
+                    <div
                       className="h-10 w-10 rounded-xl border animate-pulse"
                       style={{
                         borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -164,7 +172,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                       }}
                     ></div>
                   ) : (
-                    <Avatar 
+                    <Avatar
                       className="h-10 w-10 rounded-xl border"
                       style={{
                         borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -181,7 +189,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                           }}
                         />
                       ) : null}
-                      <AvatarFallback 
+                      <AvatarFallback
                         className="rounded-xl text-white font-semibold flex items-center justify-center h-full w-full"
                         style={{ backgroundColor: colors.primary }}
                       >
@@ -189,7 +197,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div 
+                  <div
                     className="absolute -bottom-1 -right-1 rounded-full p-0.5 border"
                     style={{
                       borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -218,8 +226,9 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
 
             <DropdownMenuItem
               onClick={handleLogout}
-              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
-                }`}
+              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${
+                isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
+              }`}
             >
               <div className={`rounded-lg p-1.5 ${isDarkMode ? "bg-red-500/20" : "bg-red-100"}`}>
                 <LogOut className="h-4 w-4" />
@@ -233,33 +242,28 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
   }
 
   return (
-    <SidebarMenu className={`rounded-xl border transition-shadow duration-200 hover:shadow-sm ${isDarkMode
-        ? "border-slate-700/60 bg-slate-800/60"
-        : "border-[#ede8e3] bg-[#f7f3ef]"
-      }`}>
+    <SidebarMenu className={`rounded-xl border transition-shadow duration-200 hover:shadow-sm ${
+      isDarkMode ? "border-slate-700/60 bg-slate-800/60" : "border-[#ede8e3] bg-[#f7f3ef]"
+    }`}>
       <SidebarMenuItem>
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              onMouseEnter={() => setHoverTrigger(true)}
-              onMouseLeave={() => setHoverTrigger(false)}
-              className={`h-14 rounded-xl px-2.5 transition-colors duration-200 ${isDarkMode ? "text-slate-100" : "text-gray-800"}`}
-              style={{
-                backgroundColor: hoverTrigger || isOpen
-                  ? (isDarkMode ? 'rgba(30, 41, 59, 0.8)' : colors.primaryLight)
-                  : 'transparent'
-              }}
+              style={triggerBtnStyle}
+              className={`h-14 rounded-xl px-2.5 transition-colors duration-200 hover:bg-[var(--hover-bg)] data-[state=open]:bg-[var(--hover-bg)] ${
+                isDarkMode ? "text-slate-100" : "text-gray-800"
+              }`}
             >
               {isLoading ? (
-                <div 
+                <div
                   className="flex h-10 w-10 items-center justify-center rounded-xl border animate-pulse"
                   style={{
                     borderColor: isDarkMode ? '#475569' : colors.primaryMid,
                     backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
                   }}
                 >
-                  <div 
+                  <div
                     className="h-6 w-6 rounded"
                     style={{
                       backgroundColor: isDarkMode ? '#475569' : colors.primaryMid
@@ -267,7 +271,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                   ></div>
                 </div>
               ) : (
-                <Avatar 
+                <Avatar
                   className="h-10 w-10 rounded-xl border"
                   style={{
                     borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -282,7 +286,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                     />
                   )}
 
-                  <AvatarFallback 
+                  <AvatarFallback
                     className="rounded-xl text-white font-semibold flex items-center justify-center h-full w-full"
                     style={{ backgroundColor: colors.primary }}
                   >
@@ -315,19 +319,15 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div
-                onMouseEnter={() => setHoverProfileItem(true)}
-                onMouseLeave={() => setHoverProfileItem(false)}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 ${isDarkMode ? "text-slate-200" : "text-gray-900"}`}
-                style={{
-                  backgroundColor: hoverProfileItem
-                    ? (isDarkMode ? 'rgba(51, 65, 85, 0.95)' : colors.primaryLight)
-                    : 'transparent'
-                }}
+                style={profileItemStyle}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors duration-150 hover:bg-[var(--hover-bg)] ${
+                  isDarkMode ? "text-slate-200" : "text-gray-900"
+                }`}
                 onClick={handleProfileClick}
               >
                 <div className="relative">
                   {isLoading ? (
-                    <div 
+                    <div
                       className="h-10 w-10 rounded-xl border animate-pulse"
                       style={{
                         borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -335,7 +335,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                       }}
                     ></div>
                   ) : (
-                    <Avatar 
+                    <Avatar
                       className="h-10 w-10 rounded-xl border"
                       style={{
                         borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -352,7 +352,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                           }}
                         />
                       ) : null}
-                      <AvatarFallback 
+                      <AvatarFallback
                         className="rounded-xl text-white font-semibold flex items-center justify-center h-full w-full"
                         style={{ backgroundColor: colors.primary }}
                       >
@@ -360,7 +360,7 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div 
+                  <div
                     className="absolute -bottom-1 -right-1 rounded-full p-0.5 border"
                     style={{
                       borderColor: isDarkMode ? '#475569' : colors.primaryMid,
@@ -389,8 +389,9 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
 
             <DropdownMenuItem
               onClick={handleLogout}
-              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
-                }`}
+              className={`mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors duration-150 ${
+                isDarkMode ? "hover:bg-red-500/20 hover:text-red-400" : "hover:bg-red-50 hover:text-red-700"
+              }`}
             >
               <div className={`rounded-lg p-1.5 ${isDarkMode ? "bg-red-500/20" : "bg-red-100"}`}>
                 <LogOut className="h-4 w-4" />
@@ -403,3 +404,4 @@ export function NavUser({ user, isDarkMode = false, inHeader = false }) {
     </SidebarMenu>
   );
 }
+export default NavUser;

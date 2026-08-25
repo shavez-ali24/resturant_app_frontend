@@ -1,6 +1,6 @@
-import React from "react";
-import { AlertTriangle } from "lucide-react";
-import { XCircleIcon } from "@heroicons/react/24/solid";
+import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { AlertTriangle, X, Utensils, Bed, Trash2, Loader2 } from "lucide-react";
 
 const DeleteModal = ({
   order,
@@ -9,108 +9,168 @@ const DeleteModal = ({
   onCancelRoomBooking = () => {},
   onCancelFoodOnly = () => {},
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeAction, setActiveAction] = useState(null); // 'food' | 'room' | 'delete'
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && !isSubmitting) {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel, isSubmitting]);
+
+  // Lock body scrolling when modal is open and restore it cleanly on unmount
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  const isDarkMode = typeof document !== "undefined" && (document.documentElement.classList.contains("admin-dark") || document.documentElement.classList.contains("dark"));
+  const colors = useSelector((state) => state.admin.theme.colors) || {};
+
+  const bg = isDarkMode ? (colors.dark?.cardBg || "#1e293b") : "#ffffff";
+  const border = isDarkMode ? (colors.dark?.border || "border-slate-700/60") : (colors.border || "border-[#ede8e3]");
+  const textPri = isDarkMode ? (colors.dark?.textPrimary || "text-slate-100") : (colors.textPrimary || "text-[#1c1917]");
+  const textSec = isDarkMode ? (colors.dark?.textSecondary || "text-slate-400") : (colors.textSecondary || "text-[#57524e]");
+  const textMut = isDarkMode ? "#64748b" : (colors.textMuted || "#a8a29e");
+
   if (!order) return null;
 
-  const isRoomStay = order.stay?.enabled;
-  const hasFoodItems = order.items && order.items.length > 0;
+  const isRoomStay = !!order.stay?.enabled;
+  const hasFoodItems = Array.isArray(order.items) && order.items.length > 0;
+
+  const handleAction = async (actionType, callback) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setActiveAction(actionType);
+    try {
+      await callback();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+      setActiveAction(null);
+    }
+  };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
-      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-description"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-sm transition-all animate-in fade-in duration-150"
+      onClick={() => {
+        if (!isSubmitting) onCancel();
+      }}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-orange-100 bg-white/95 shadow-[0_20px_45px_-24px_rgba(249,115,22,0.55)] dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-[0_20px_45px_-24px_rgba(2,6,23,0.95)]"
+        className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl transition-all duration-200 flex flex-col max-h-[90vh]"
+        style={{
+          backgroundColor: bg,
+          borderColor: border,
+          borderWidth: "1px"
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/90 via-orange-50 to-white p-4 dark:border-slate-700 dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-          <div className="flex items-center space-x-3">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm">
-              <AlertTriangle size={20} />
+        <div
+          className="flex items-center justify-between border-b px-5 py-4 shrink-0"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : "#ffffff",
+            borderBottomColor: border,
+          }}
+        >
+          <div className="flex items-center space-x-2.5">
+            <div className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-red-500 text-white shadow-sm shrink-0">
+              <AlertTriangle size={16} />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
-                {isRoomStay ? "Cancel Room Order" : "Delete Order"}
-              </h2>
-            </div>
+            <h2 id="delete-modal-title" className="text-base font-black tracking-tight" style={{ color: textPri }}>
+              {isRoomStay ? "Cancel Room Order" : "Delete Order"}
+            </h2>
           </div>
           <button
+            type="button"
             onClick={onCancel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-orange-100 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-orange-300"
+            disabled={isSubmitting}
+            aria-label="Close modal"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 transition-all hover:bg-orange-100 hover:text-orange-700 active:scale-[0.9] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-orange-300 disabled:opacity-40"
           >
-            <XCircleIcon className="h-6 w-6" />
+            <X size={16} strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-6">
+        {/* Modal Content Wrapper */}
+        <div id="delete-modal-description" className="overflow-y-auto p-5 space-y-5 flex-1 min-h-0">
           {isRoomStay ? (
             hasFoodItems ? (
               // Room booking with food items
-              <div className="mb-6">
-                <div className="text-center mb-5">
-                  <AlertTriangle className="mx-auto text-amber-500 mb-3" size={44} />
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-1">
+              <div className="space-y-4">
+                <div className="text-center pb-2">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center mb-3">
+                    <AlertTriangle className="text-amber-500" size={28} />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-gray-800 dark:text-slate-100 mb-1">
                     Cancel Stay & Food Items
                   </h3>
-                  <p className="text-sm text-gray-650 dark:text-slate-400">
-                    This order for room <strong>{order.source?.unitName}</strong> has both an active room stay and food items. Select what you would like to cancel:
+                  <p className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
+                    This order for room <strong>{order.source?.unitName || "Stay"}</strong> has both active room check-in and food items. Select an action:
                   </p>
                 </div>
 
-                {/* Option Actions List */}
-                <div className="space-y-3 mt-4">
+                {/* Options List */}
+                <div className="space-y-2.5">
                   {/* Option 1: Cancel Food Only */}
                   <button
-                    onClick={onCancelFoodOnly}
-                    className="w-full flex items-start gap-3 rounded-xl border border-orange-100 bg-orange-50/50 p-3 text-left transition hover:bg-orange-100/60 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:bg-slate-800/70"
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleAction('food', onCancelFoodOnly)}
+                    className="w-full flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-500/5 p-3.5 text-left transition hover:bg-amber-500/10 dark:border-amber-900/40 dark:bg-amber-950/10 dark:hover:bg-amber-950/20 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
                   >
-                    <div className="mt-0.5 rounded-lg bg-orange-100 p-2 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400">
-                      <AlertTriangle size={16} />
+                    <div className="mt-0.5 rounded-lg bg-amber-500 p-2 text-white shrink-0">
+                      {isSubmitting && activeAction === 'food' ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Utensils size={15} />
+                      )}
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-800 dark:text-slate-200">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-amber-800 dark:text-amber-400">
                         Cancel Food Items Only
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                        Cancel/clear food items, but keep the room stay check-in active.
+                      <div className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Clear all ordered food items, but keep the room check-in active.
                       </div>
                     </div>
                   </button>
 
-                  {/* Option 2: Cancel Room Stay Only */}
+                  {/* Option 2: Cancel Room Booking & Food */}
                   <button
-                    onClick={onCancelRoomBooking}
-                    className="w-full flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/30 p-3 text-left transition hover:bg-red-100/50 dark:border-slate-700/50 dark:bg-slate-900/30 dark:hover:bg-slate-900/50"
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleAction('room', onCancelRoomBooking)}
+                    className="w-full flex items-start gap-3 rounded-xl border border-red-200 bg-red-500/5 p-3.5 text-left transition hover:bg-red-500/10 dark:border-red-950/40 dark:bg-red-950/10 dark:hover:bg-red-950/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
                   >
-                    <div className="mt-0.5 rounded-lg bg-red-100 p-2 text-red-700 dark:bg-red-950/40 dark:text-red-400">
-                      <AlertTriangle size={16} />
+                    <div className="mt-0.5 rounded-lg bg-red-600 p-2 text-white shrink-0">
+                      {isSubmitting && activeAction === 'room' ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Bed size={15} />
+                      )}
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-800 dark:text-slate-200">
-                        Cancel Room Booking Only
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-red-700 dark:text-red-400">
+                        Cancel Room Booking & Food
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                        Cancel room stay and free the room.
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Option 3: Cancel Both Room & Food */}
-                  <button
-                    onClick={onCancelRoomBooking}
-                    className="w-full flex items-start gap-3 rounded-xl border border-red-200 bg-red-500/10 p-3 text-left transition hover:bg-red-500/20 dark:border-red-950/40 dark:bg-red-950/20 dark:hover:bg-red-950/30"
-                  >
-                    <div className="mt-0.5 rounded-lg bg-red-600 p-2 text-white">
-                      <AlertTriangle size={16} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900 dark:text-slate-100">
-                        Cancel Both (Room & Food)
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                        Cancel the room stay booking and clear all ordered food items.
+                      <div className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Cancel check-in stay, free the room, and clear all ordered food items.
                       </div>
                     </div>
                   </button>
@@ -118,78 +178,129 @@ const DeleteModal = ({
               </div>
             ) : (
               // Room booking ONLY, no food items
-              <div className="text-center mb-6">
-                <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-2">
+              <div className="text-center py-2">
+                <div className="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-3">
+                  <Bed className="text-red-500" size={26} />
+                </div>
+                <h3 className="text-sm font-extrabold text-gray-800 dark:text-slate-100 mb-1">
                   Cancel Room Booking
                 </h3>
-                <p className="text-gray-650 dark:text-slate-450">
-                  Are you sure you want to cancel the room booking for room <strong>{order.source?.unitName}</strong>? This will free the room and make it available.
+                <p className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to cancel the room booking for room <strong>{order.source?.unitName || "Stay"}</strong>? This will check out the guest and make the room available.
                 </p>
               </div>
             )
           ) : (
             // Standard Table/Delivery/Takeaway order
-            <div className="text-center mb-6">
-              <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-2">
-                Are you sure you want to delete this order?
+            <div className="text-center py-2">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-3">
+                <Trash2 className="text-red-500" size={24} />
+              </div>
+              <h3 className="text-sm font-extrabold text-gray-800 dark:text-slate-100 mb-1">
+                Permanently Delete Order?
               </h3>
-              <p className="text-gray-650 dark:text-slate-450">
-                This action cannot be undone. The order will be permanently deleted.
+              <p className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
+                This action cannot be undone. The order details, food items, and history will be permanently deleted.
               </p>
             </div>
           )}
 
-          {/* Order Summary */}
+          {/* Order Summary details */}
           {(!isRoomStay || !hasFoodItems) && (
-            <div className="mb-6 rounded-xl border border-orange-100 bg-orange-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-              <h4 className="font-semibold text-gray-850 dark:text-slate-205 mb-2">Order Details:</h4>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  <span className="font-medium">Customer:</span> {order.customerName}
-                </p>
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  <span className="font-medium">Phone:</span> {order.customerPhone}
-                </p>
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  <span className="font-medium">Order Type:</span> {order.orderType}
-                </p>
+            <div
+              className="rounded-xl border p-4"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(15,23,42,0.4)" : "#fcfaf7",
+                borderColor: border,
+              }}
+            >
+              <h4 className="text-xs font-black text-gray-800 dark:text-slate-200 mb-2.5 uppercase tracking-wider">
+                Order Details:
+              </h4>
+              <div className="space-y-2 text-xs text-gray-700 dark:text-slate-300">
+                <div className="flex justify-between gap-2">
+                  <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">Customer:</span>
+                  <span className="font-bold text-right truncate" style={{ color: textPri }}>{order.customerName || "Walk-in"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">Phone:</span>
+                  <span className="font-bold text-right truncate" style={{ color: textPri }}>{order.customerPhone || "Not provided"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">Order Type:</span>
+                  <span className="font-bold text-right truncate capitalize" style={{ color: textPri }}>{String(order.orderType || "").toLowerCase()}</span>
+                </div>
                 {order.source?.unitName && (
-                  <p className="text-sm text-gray-700 dark:text-slate-300">
-                    <span className="font-medium">{isRoomStay ? "Room:" : "Table:"}</span> {order.source.unitName}
-                  </p>
+                  <div className="flex justify-between gap-2">
+                    <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">
+                      {isRoomStay ? "Room:" : "Table:"}
+                    </span>
+                    <span className="font-bold text-right truncate" style={{ color: textPri }}>{order.source.unitName}</span>
+                  </div>
                 )}
-                {order.items?.length > 0 && (
-                  <p className="text-sm text-gray-700 dark:text-slate-300">
-                    <span className="font-medium">Total Items:</span> {order.items?.length || 0}
-                  </p>
+                {Array.isArray(order.items) && order.items.length > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">Total Items:</span>
+                    <span className="font-bold text-right" style={{ color: textPri }}>{order.items.length}</span>
+                  </div>
                 )}
-                <p className="text-sm text-gray-700 dark:text-slate-300">
-                  <span className="font-medium">Total Amount:</span> ₹{order.totalAmount || 0}
-                </p>
+                <div className="flex justify-between gap-2 border-t pt-1.5 mt-1" style={{ borderColor: border }}>
+                  <span className="font-semibold text-gray-400 uppercase text-[9px] tracking-wider shrink-0">Total Amount:</span>
+                  <span className="font-black text-right text-orange-500">₹{order.totalAmount || 0}</span>
+                </div>
               </div>
             </div>
           )}
+        </div>
 
-          {/* Modal Footer */}
-          <div className="flex justify-end space-x-3">
+        {/* Modal Footer */}
+        <div
+          className="flex justify-end space-x-3 border-t px-5 py-4 shrink-0"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.4)" : "rgba(252, 250, 247, 0.4)",
+            borderTopColor: border,
+          }}
+        >
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={onCancel}
+            className="h-10 rounded-xl border px-5 text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40"
+            style={{
+              backgroundColor: isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff",
+              borderColor: isDarkMode ? `${colors.primary}50` : `${colors.primary}33`,
+              color: isDarkMode ? colors.primary : colors.primaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (isSubmitting) return;
+              e.currentTarget.style.borderColor = colors.primary;
+              e.currentTarget.style.color = colors.primaryText;
+              e.currentTarget.style.backgroundColor = isDarkMode ? `${colors.primary}1a` : colors.primaryLight;
+            }}
+            onMouseLeave={(e) => {
+              if (isSubmitting) return;
+              e.currentTarget.style.borderColor = isDarkMode ? `${colors.primary}50` : `${colors.primary}33`;
+              e.currentTarget.style.color = isDarkMode ? colors.primary : colors.primaryText;
+              e.currentTarget.style.backgroundColor = isDarkMode ? "rgba(30,41,59,0.6)" : "#ffffff";
+            }}
+          >
+            {isRoomStay && hasFoodItems ? "Close" : "Cancel"}
+          </button>
+          {(!isRoomStay || (isRoomStay && !hasFoodItems)) && (
             <button
-              onClick={onCancel}
-              className="h-11 rounded-xl border border-orange-200 bg-white px-6 text-sm font-semibold text-gray-700 transition-colors hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleAction('delete', isRoomStay ? onCancelRoomBooking : onDelete)}
+              className="flex h-10 items-center justify-center space-x-2 rounded-xl bg-red-600 px-5 text-sm font-extrabold text-white shadow-sm transition-all duration-150 hover:bg-red-700 active:scale-[0.97] disabled:opacity-50"
             >
-              {isRoomStay && hasFoodItems ? "Close" : "Cancel"}
+              {isSubmitting && activeAction === 'delete' ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <AlertTriangle size={15} />
+              )}
+              <span>{isRoomStay ? "Cancel Booking" : "Delete Order"}</span>
             </button>
-            {(!isRoomStay || (isRoomStay && !hasFoodItems)) && (
-              <button
-                onClick={isRoomStay ? onCancelRoomBooking : onDelete}
-                className="flex h-11 items-center space-x-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:from-red-600 hover:to-red-600"
-              >
-                <AlertTriangle size={18} />
-                <span>{isRoomStay ? "Cancel Booking" : "Delete Order"}</span>
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>

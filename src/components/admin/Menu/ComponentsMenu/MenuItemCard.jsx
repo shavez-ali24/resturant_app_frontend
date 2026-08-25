@@ -197,6 +197,7 @@ const MenuItemCard = ({
                   setShowMenu((prev) => !prev);
                 }}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-slate-700 transition-colors hover:border-orange-200 hover:bg-orange-50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800 sm:h-8 sm:w-8"
+                aria-label="Item options"
               >
                 <MoreVertical size={16} />
               </button>

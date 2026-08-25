@@ -38,15 +38,27 @@ export default function TrackOrder() {
   const isDarkMode = Boolean(outletContext?.isDarkMode);
 
   const [fingerPrint, setFingerPrint] = useState(null);
-  const [sseOrders, setSseOrders] = useState([]);
   const [sseConnected, setSseConnected] = useState(false);
+  const [, setSseVersion] = useState(0); // Used to trigger re-renders on map changes
+  
+  const sseUpdatesRef = useRef(new Map());
   const sseManagerRef = useRef(null);
 
   useEffect(() => {
     getFingerprint().then(setFingerPrint);
   }, []);
 
-  // 🔧 FIX: Replace polling with SSE for live order updates
+  const {
+    data: orders = [],
+    isLoading,
+    error,
+    refetch,
+  } = useGetOrdersByFingerprintQuery(
+    { fingerPrint },
+    { skip: !fingerPrint }
+  );
+
+  // SSE connection for live updates
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     if (!fingerPrint || !config?.BASE_URL) return undefined;
@@ -58,6 +70,9 @@ export default function TrackOrder() {
       url: sseUrl,
       onConnectionChange: (connected) => {
         setSseConnected(connected);
+        if (connected) {
+          refetch(); // Refetch REST API as the source of truth on reconnect
+        }
       },
       onMessage: (event) => {
         if (!event?.data) return;
@@ -67,22 +82,18 @@ export default function TrackOrder() {
         } catch {
           return;
         }
+        
         // Ignore handshake
         if (!payload || payload.type === "CONNECTED") return;
-        // Only process ORDER_UPDATED events for guest fingerprint
+
+        // Process ORDER_UPDATED events
         if (payload.type === "ORDER_UPDATED" && payload.data) {
-          setSseOrders((prev) => {
-            const existing = [...prev];
-            const idx = existing.findIndex(
-              (o) => (o._id || o.id || o.orderId) === (payload.data._id || payload.data.id || payload.data.orderId)
-            );
-            if (idx >= 0) {
-              existing[idx] = { ...existing[idx], ...payload.data };
-            } else {
-              existing.push(payload.data);
-            }
-            return existing.slice(-2); // keep only last 2
-          });
+          const orderId = payload.data._id || payload.data.id || payload.data.orderId;
+          if (!orderId) return;
+
+          // Set update in persistent Map
+          sseUpdatesRef.current.set(String(orderId), payload.data);
+          setSseVersion((v) => v + 1); // Trigger UI sync
         }
       },
     });
@@ -96,32 +107,19 @@ export default function TrackOrder() {
       }
       setSseConnected(false);
     };
-  }, [fingerPrint]);
-
-  // 🔧 FIX: No polling — fetch once, SSE handles live updates
-  const {
-    data: ordersData,
-    isLoading,
-    error,
-  } = useGetOrdersByFingerprintQuery(
-    { fingerPrint },
-    { skip: !fingerPrint, pollingInterval: 0 }
-  );
-
-  const apiOrders = Array.isArray(ordersData)
-    ? ordersData
-    : ordersData?.orders || ordersData?.data || [];
+  }, [fingerPrint, refetch]);
 
   // Merge SSE updates into API orders
-  const mergedOrders = apiOrders.map((order) => {
-    const sseUpdate = sseOrders.find(
-      (sse) => (sse._id || sse.id || sse.orderId) === (order._id || order.id || order.orderId)
-    );
+  const mergedOrders = orders.map((order) => {
+    const orderIdStr = String(order._id || order.id || order.orderId || "");
+    const sseUpdate = sseUpdatesRef.current.get(orderIdStr);
     return sseUpdate ? { ...order, ...sseUpdate } : order;
   });
 
-  // Add any SSE orders not in API response
-  const recentOrders = mergedOrders.slice(-2).reverse();
+  // Sort by createdAt chronologically (latest first) and pick latest 2
+  const recentOrders = [...mergedOrders]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 2);
 
   if (isLoading || !fingerPrint) {
     return (
@@ -146,7 +144,7 @@ export default function TrackOrder() {
           to="/"
           className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${isDarkMode
             ? "bg-orange-600 text-white hover:bg-orange-500"
-            : "bg-orange-500 text-white hover:bg-orange-600"
+            : "bg-orange-50 text-white hover:bg-orange-600"
             }`}
         >
           <ArrowLeft size={16} />
@@ -168,7 +166,7 @@ export default function TrackOrder() {
           to="/"
           className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${isDarkMode
             ? "bg-orange-600 text-white hover:bg-orange-500"
-            : "bg-orange-500 text-white hover:bg-orange-600"
+            : "bg-orange-50 text-white hover:bg-orange-600"
             }`}
         >
           Browse Menu
@@ -192,7 +190,7 @@ export default function TrackOrder() {
 
       <h1 className="mb-5 text-xl font-extrabold">Your Orders</h1>
 
-      {/* 🔧 FIX: SSE live connection indicator (replaced polling) */}
+      {/* SSE live connection indicator */}
       <div className={`mb-4 flex items-center gap-2 text-[11px] font-medium tracking-wide ${isDarkMode ? "text-slate-500" : "text-gray-400"}`}>
         {sseConnected ? (
           <Wifi size={12} className="text-green-500" />
